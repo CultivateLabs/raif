@@ -79,7 +79,7 @@ Style/CommandLiteral:
 
 Style/FrozenStringLiteralComment:
   Exclude:
-    - 'db/schema.rb'
+    - 'spec/dummy/db/schema.rb'
 
 Lint/Debugger:
   DebuggerMethods:

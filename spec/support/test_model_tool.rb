@@ -4,7 +4,7 @@ class Raif::TestModelTool < Raif::ModelTool
   def process_invocation(tool_arguments)
   end
 
-  def tool_arguments_schema
+  def self.tool_arguments_schema
     {
       type: "array",
       items: {

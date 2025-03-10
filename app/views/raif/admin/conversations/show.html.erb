@@ -66,9 +66,6 @@
                   <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
                 <% end %>
               </div>
-              <% if entry.raif_completion.present? %>
-                <%= link_to t("raif.admin.common.view_completion"), raif.admin_completion_path(entry.raif_completion), class: "btn btn-sm btn-outline-primary" %>
-              <% end %>
             </div>
           </div>
         <% end %>

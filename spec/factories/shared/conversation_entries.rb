@@ -9,14 +9,6 @@ FactoryBot.define do
     trait :completed do
       sequence(:model_response_message){|i| "Model response #{i} #{SecureRandom.hex(4)}" }
       completed_at { Time.current }
-
-      after(:create) do |entry|
-        FB.create(
-          :raif_conversation_entry_completion,
-          raif_conversation_entry: entry,
-          creator: entry.creator
-        )
-      end
     end
   end
 end

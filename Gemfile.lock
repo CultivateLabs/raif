@@ -4,9 +4,12 @@ PATH
     raif (1.0.0)
       aws-sdk-bedrock
       aws-sdk-bedrockruntime
+      faraday
       json-schema
+      loofah
       pagy
       rails (>= 7.1)
+      reverse_markdown
       ruby-openai
       simple_form
 
@@ -327,6 +330,8 @@ GEM
     regexp_parser (2.10.0)
     reline (0.6.0)
       io-console (~> 0.5)
+    reverse_markdown (3.0.0)
+      nokogiri
     rspec (3.13.0)
       rspec-core (~> 3.13.0)
       rspec-expectations (~> 3.13.0)

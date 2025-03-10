@@ -11,9 +11,14 @@ require "raif/api_adapters/base"
 require "raif/api_adapters/open_ai"
 require "raif/api_adapters/bedrock"
 require "raif/model_tool"
+require "raif/model_response"
+require "raif/utils"
 
+require "faraday"
+require "loofah"
 require "openai"
 require "pagy"
+require "reverse_markdown"
 
 module Raif
   class << self

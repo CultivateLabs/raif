@@ -48,7 +48,6 @@ RSpec.describe "Admin::Conversations", type: :feature do
     it "displays the conversation details and entries" do
       expect(conversation.entries.count).to eq(3)
       conversation.entries.each do |entry|
-        expect(entry.raif_completion).to be_present
         expect(entry.user_message).to be_present
         expect(entry.model_response_message).to be_present
       end
@@ -72,12 +71,6 @@ RSpec.describe "Admin::Conversations", type: :feature do
 
       # Check status badges
       expect(page).to have_css(".badge.bg-success", text: I18n.t("raif.admin.common.completed"), count: 3)
-
-      # Check completion link
-      expect(page).to have_link(
-        I18n.t("raif.admin.common.view_completion"),
-        href: raif.admin_completion_path(conversation.entries.first.raif_completion)
-      )
 
       expect(page).to have_link(I18n.t("raif.admin.conversations.show.back_to_conversations"), href: raif.admin_conversations_path)
     end

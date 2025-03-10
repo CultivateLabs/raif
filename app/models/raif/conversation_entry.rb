@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Raif::ConversationEntry < Raif::ApplicationRecord
+  include Raif::Concerns::InvokesModelTools
+
   belongs_to :raif_conversation, counter_cache: true, class_name: "Raif::Conversation"
   belongs_to :creator, polymorphic: true
 
@@ -10,13 +12,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
     foreign_key: :raif_conversation_entry_id,
     inverse_of: :raif_conversation_entry
 
-  has_one :raif_completion,
-    class_name: "Raif::Completion",
-    dependent: :destroy,
-    foreign_key: :raif_conversation_entry_id,
-    inverse_of: :raif_conversation_entry
-
-  delegate :prompt, :response, to: :raif_completion, prefix: true
+  delegate :available_model_tools, to: :raif_conversation
 
   accepts_nested_attributes_for :raif_user_tool_invocation
 
@@ -36,35 +32,42 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
     end.strip
   end
 
-  def run_completion
-    llm_response = Raif::Completions::ConversationEntry.run(
-      creator: creator,
-      available_model_tools: raif_conversation.available_model_tools,
-      raif_conversation_entry: self
-    )
+  def generating_response?
+    started? && !completed? && !failed?
+  end
 
-    if llm_response.present?
-      self.model_response_message = llm_response["message"]
-      self.completed_at = Time.current
-      save!
+  def process_entry!
+    model_response = raif_conversation.prompt_model_for_response
+    self.model_raw_response = model_response.raw_response
+
+    if model_raw_response.present?
+      extract_message_and_invoke_tools!
     else
       failed!
     end
 
     self
-  rescue StandardError => e
-    logger.error "Raif::ConversationEntry#run_completion failed: #{e.message}"
-    logger.error e.backtrace.join("\n")
-    Airbrake.notify(e) if defined?(Airbrake)
-    failed!
   end
 
-  def generating_response?
-    started? && !completed? && !failed?
-  end
+private
 
-  def model_tool_invocations
-    raif_completion&.model_tool_invocations || []
+  # We expect the the model to respond with something like (tool being optional):
+  # <message>The message to display to the user</message>
+  # <tool>{ "name": "tool_name", "arguments": { "argument_name": "argument_value" } }</tool>
+  def extract_message_and_invoke_tools!
+    transaction do
+      self.model_response_message = model_raw_response.match(%r{<message>(.*?)</message>}m)[1].strip
+      save!
+
+      tool_json = model_raw_response.match(%r{<tool>(.*?)</tool>}m)[1].strip
+      tool_call = JSON.parse(tool_json) if tool_json.present?
+      tool_klass = available_model_tools_map[tool_call["name"]]
+      next unless tool_klass
+
+      tool_klass.invoke_tool(tool_arguments: tool_call["arguments"], source: self)
+
+      completed!
+    end
   end
 
 end

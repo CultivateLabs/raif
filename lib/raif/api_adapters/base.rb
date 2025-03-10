@@ -7,7 +7,7 @@ module Raif
 
       attr_accessor :client, :model_api_name
 
-      def chat(messages:, system_prompt: nil)
+      def chat(messages:, response_format: :text, system_prompt: nil)
         raise NotImplementedError, "#{self.class.name} must implement a chat method"
       end
     end

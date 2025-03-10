@@ -12,7 +12,7 @@ module Raif
         super(**args)
       end
 
-      def chat(messages:, system_prompt: nil)
+      def chat(messages:, response_format: :text, system_prompt: nil)
         assistant_message = messages.find { |message| message[:role] == "assistant" }
         messages = messages.map(&:symbolize_keys).map do |message|
           {
@@ -39,12 +39,12 @@ module Raif
           response_text = assistant_message[:content] + response_text
         end
 
-        {
-          response: response_text,
+        Raif::ModelResponse.new(
+          raw_response: response_text,
           completion_tokens: resp.usage.output_tokens,
           prompt_tokens: resp.usage.input_tokens,
           total_tokens: resp.usage.total_tokens,
-        }
+        )
       end
     end
   end

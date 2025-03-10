@@ -21,11 +21,6 @@ FactoryBot.define do
     end
   end
 
-  factory :raif_conversation_entry_completion, parent: :raif_completion, class: "Raif::Completions::ConversationEntry" do
-    type { "Raif::Completions::ConversationEntry" }
-    raif_conversation_entry
-  end
-
   factory :raif_test_completion, parent: :raif_completion, class: "Raif::TestCompletion" do
     type { "Raif::TestCompletion" }
   end

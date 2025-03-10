@@ -38,7 +38,6 @@ en:
         tool_invocations: Tool Invocations
         type: Type
         user_message: User Message
-        view_completion: View Completion
       completions:
         show:
           back_to_completions: Back to Completions

@@ -2,28 +2,24 @@
 
 module Raif
   class Completion < Raif::ApplicationRecord
+    include Raif::Concerns::HasLlm
+    include Raif::Concerns::HasRequestedLanguage
+    include Raif::Concerns::InvokesModelTools
+
     belongs_to :creator, polymorphic: true
     belongs_to :raif_conversation_entry, class_name: "Raif::ConversationEntry", optional: true
 
-    has_many :model_tool_invocations,
-      class_name: "Raif::ModelToolInvocation",
-      dependent: :destroy,
-      foreign_key: :raif_completion_id,
-      inverse_of: :raif_completion
-
-    enum :response_format, { text: 0, json: 1, html: 2 }, prefix: true
+    enum :response_format, Raif::Llm.valid_response_formats, prefix: true
 
     boolean_timestamp :started_at
     boolean_timestamp :completed_at
     boolean_timestamp :failed_at
 
     validates :response_format, presence: true, inclusion: { in: response_formats.keys }
-    validates :llm_model_name, presence: true, inclusion: { in: Raif.available_llm_keys.map(&:to_s) }
-    validates :requested_language_key, inclusion: { in: Raif.supported_languages, allow_blank: true }
 
     normalizes :prompt, :response, :system_prompt, with: ->(text){ text&.strip }
 
-    before_validation ->{ self.llm_model_name ||= default_llm }
+    attr_writer :model_response
 
     def self.llm_response_format(format)
       raise ArgumentError, "response_format must be one of: #{response_formats.keys.join(", ")}" unless response_formats.keys.include?(format.to_s)
@@ -47,27 +43,42 @@ module Raif
       [{ "role" => "user", "content" => prompt }]
     end
 
+    def model_response
+      @model_response ||= Raif::ModelResponse.new(
+        raw_response: response,
+        response_format: response_format,
+        prompt_tokens:,
+        completion_tokens:,
+        total_tokens: prompt_tokens + completion_tokens
+      )
+    end
+
+    def parsed_response
+      model_response.parsed_response
+    end
+
     def run
       update_columns(started_at: Time.current) if started_at.nil?
 
       populate_prompts
-      reply = llm.chat(messages: messages, system_prompt: system_prompt)
+      self.model_response = llm.chat(messages: messages, system_prompt: system_prompt, response_format: response_format.to_sym)
 
       update({
-        prompt_tokens: reply[:prompt_tokens],
-        completion_tokens: reply[:completion_tokens],
-        response: reply[:response]
+        prompt_tokens: model_response.prompt_tokens,
+        completion_tokens: model_response.completion_tokens,
+        response: model_response.raw_response
       })
 
       process_model_tool_invocations
       completed!
-      parsed_response
+      model_response
     end
 
     def self.run(creator:, available_model_tools: nil, llm_model_name: nil, **args)
       completion = new(creator:, llm_model_name:, available_model_tools:, started_at: Time.current, **args)
       completion.save!
       completion.run
+      completion
     rescue StandardError => e
       completion&.failed!
 
@@ -98,58 +109,9 @@ module Raif
     end
 
     def build_system_prompt
-      system_prompt = Raif.config.base_system_prompt.presence || "You are a friendly assistant."
-      system_prompt += " #{system_prompt_language_preference}" if requested_language_key.present?
-      system_prompt
-    end
-
-    def system_prompt_language_preference
-      return if requested_language_key.blank?
-
-      "You're collaborating with teammate who speaks #{requested_language_name}. Please respond in #{requested_language_name}."
-    end
-
-    def requested_language_name
-      @requested_language_name ||= I18n.t("raif.languages.#{requested_language_key}", locale: "en")
-    end
-
-    def default_llm
-      Raif.config.default_llm
-    end
-
-    def llm
-      @llm ||= Raif.llm_for_key(llm_model_name.to_sym)
-    end
-
-    def parsed_response
-      @parsed_response ||= if response_format_json?
-        json = response.gsub("```json", "").gsub("```", "")
-        JSON.parse(json)
-      elsif response_format_html?
-        html = response.strip.gsub("```html", "").chomp("```")
-        clean_html_fragment(html)
-      else
-        response.strip
-      end
-    end
-
-    def clean_html_fragment(html)
-      fragment = Nokogiri::HTML.fragment(html)
-
-      fragment.traverse do |node|
-        if node.text? && node.text.strip.empty?
-          node.remove
-        end
-      end
-
-      ActionController::Base.helpers.sanitize(fragment.to_html).strip
-    end
-
-    def available_model_tools_map
-      @available_model_tools_map ||= available_model_tools&.map do |tool|
-        tool_klass = tool.constantize
-        [tool_klass.tool_name, tool_klass]
-      end.to_h
+      sp = Raif.config.base_system_prompt.presence || "You are a friendly assistant."
+      sp += " #{system_prompt_language_preference}" if requested_language_key.present?
+      sp
     end
 
     def process_model_tool_invocations
@@ -161,7 +123,7 @@ module Raif
         tool_klass = available_model_tools_map[t["name"]]
         next unless tool_klass
 
-        tool_klass.invoke_tool(tool_arguments: t["arguments"], completion: self)
+        tool_klass.invoke_tool(tool_arguments: t["arguments"], source: self)
       end
     end
 
