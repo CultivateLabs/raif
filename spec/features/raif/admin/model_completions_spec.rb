@@ -11,6 +11,13 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
   let(:conversation_entry) { FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: user) }
   let(:agent_invocation) { FB.create(:raif_agent_invocation, creator: user) }
 
+  describe "admin root redirect" do
+    it "redirects from admin root to model completions index" do
+      visit raif.admin_root_path
+      expect(page).to have_current_path(raif.admin_model_completions_path)
+    end
+  end
+
   describe "index page" do
     let!(:model_completions) do
       [
