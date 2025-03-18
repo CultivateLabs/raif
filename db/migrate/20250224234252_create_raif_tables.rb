@@ -2,6 +2,10 @@
 
 class CreateRaifTables < ActiveRecord::Migration[8.0]
   def change
+    # Determine if we're using PostgreSQL or MySQL
+    is_postgres = connection.adapter_name.downcase.include?("postgres")
+    json_type = is_postgres ? :jsonb : :json
+
     create_table :raif_tasks do |t|
       t.string :type, null: false, index: true
       t.text :prompt
@@ -13,7 +17,7 @@ class CreateRaifTables < ActiveRecord::Migration[8.0]
       t.datetime :started_at
       t.datetime :completed_at
       t.datetime :failed_at
-      t.jsonb :available_model_tools
+      t.send(json_type, :available_model_tools)
       t.string :llm_model_key, null: false
 
       t.timestamps
@@ -45,8 +49,8 @@ class CreateRaifTables < ActiveRecord::Migration[8.0]
     create_table :raif_model_tool_invocations do |t|
       t.references :source, polymorphic: true, null: false, index: true
       t.string :tool_type, null: false
-      t.jsonb :tool_arguments, default: {}, null: false
-      t.jsonb :result, default: {}, null: false
+      t.send(json_type, :tool_arguments, default: {}, null: false)
+      t.send(json_type, :result, default: {}, null: false)
       t.datetime :completed_at
       t.datetime :failed_at
 
@@ -56,7 +60,7 @@ class CreateRaifTables < ActiveRecord::Migration[8.0]
     create_table :raif_user_tool_invocations do |t|
       t.references :raif_conversation_entry, null: false, foreign_key: true
       t.string :type, null: false
-      t.jsonb :tool_settings, default: {}, null: false
+      t.send(json_type, :tool_settings, default: {}, null: false)
 
       t.timestamps
     end
@@ -68,14 +72,14 @@ class CreateRaifTables < ActiveRecord::Migration[8.0]
       t.text :final_answer
       t.integer :max_iterations, default: 10, null: false
       t.integer :iteration_count, default: 0, null: false
-      t.jsonb :available_model_tools
+      t.send(json_type, :available_model_tools)
       t.references :creator, polymorphic: true, null: false, index: true
       t.string :requested_language_key
       t.datetime :started_at
       t.datetime :completed_at
       t.datetime :failed_at
       t.text :failure_reason
-      t.jsonb :conversation_history, default: [], null: false
+      t.send(json_type, :conversation_history, default: is_postgres ? [] : "[]", null: false)
 
       t.timestamps
     end
@@ -85,7 +89,7 @@ class CreateRaifTables < ActiveRecord::Migration[8.0]
       t.references :source, polymorphic: true, index: true
       t.string :llm_model_key, null: false
       t.string :model_api_name, null: false
-      t.jsonb :messages, default: [], null: false
+      t.send(json_type, :messages, default: is_postgres ? [] : "[]", null: false)
       t.text :system_prompt
       t.integer :response_format, default: 0, null: false
       t.decimal :temperature, precision: 5, scale: 3

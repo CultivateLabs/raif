@@ -26,6 +26,16 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    name: Test with ${{ matrix.db }} 
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [postgres, mysql]
+        include:
+          - db: postgres
+            db_url: postgres://postgres:postgres@localhost:5432/raif_dummy_test
+          - db: mysql
+            db_url: mysql2://root:root@127.0.0.1:3306/raif_dummy_test
 
     services:
       postgres:
@@ -38,20 +48,23 @@ jobs:
           - 5432:5432
         options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
 
-      # redis:
-      #   image: redis
-      #   ports:
-      #     - 6379:6379
-      #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: raif_dummy_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     env:
       RAILS_ENV: test
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/raif_dummy_test
-      # REDIS_URL: redis://localhost:6379/0
+      DATABASE_URL: ${{ matrix.db_url }}
+      DATABASE_ADAPTER: ${{ matrix.db }}
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev pkg-config google-chrome-stable
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev libmysqlclient-dev pkg-config google-chrome-stable
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -61,6 +74,34 @@ jobs:
         with:
           ruby-version: ruby-3.4.2
           bundler-cache: true
+
+      - name: Configure database.yml for MySQL
+        if: ${{ matrix.db == 'mysql' }}
+        run: |
+          cat << EOF > spec/dummy/config/database.yml
+          test:
+            adapter: mysql2
+            encoding: utf8mb4
+            database: raif_dummy_test
+            username: root
+            password: root
+            host: 127.0.0.1
+            port: 3306
+          EOF
+
+      - name: Configure database.yml for PostgreSQL
+        if: ${{ matrix.db == 'postgres' }}
+        run: |
+          cat << EOF > spec/dummy/config/database.yml
+          test:
+            adapter: postgresql
+            encoding: unicode
+            database: raif_dummy_test
+            username: postgres
+            password: postgres
+            host: localhost
+            port: 5432
+          EOF
 
       - name: Set up database
         run: bin/rails app:db:prepare
