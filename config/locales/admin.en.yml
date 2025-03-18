@@ -30,6 +30,7 @@ en:
         invalid_json: Invalid JSON
         iterations: Iterations
         language: Language
+        messages: Messages
         model: Model
         model_completion: Model Completion
         model_completions: Model Completions

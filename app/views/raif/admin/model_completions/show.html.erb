@@ -43,6 +43,22 @@
   </div>
 </div>
 
+<% if @model_completion.messages.present? %>
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t("raif.admin.common.messages") %></h5>
+  </div>
+  <div class="card-body">
+    <% @model_completion.messages.each do |message| %>
+      <div class="mb-3">
+        <strong><%= message["role"].titleize %>:</strong>
+        <pre class="mt-2"><%= message["content"] %></pre>
+      </div>
+    <% end %>
+  </div>
+</div>
+<% end %>
+
 <% if @model_completion.system_prompt.present? %>
 <div class="card mb-4">
   <div class="card-header">

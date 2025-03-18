@@ -126,7 +126,11 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
         raw_response: "This is a test response",
         prompt_tokens: 25,
         completion_tokens: 75,
-        total_tokens: 100
+        total_tokens: 100,
+        messages: [
+          { "role" => "user", "content" => "Test message" },
+          { "role" => "assistant", "content" => "This is a test response" }
+        ]
       )
     end
 
@@ -149,6 +153,13 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
       expect(page).to have_content("25") # prompt_tokens
       expect(page).to have_content("75") # completion_tokens
       expect(page).to have_content("100") # total_tokens
+
+      # Check messages section
+      expect(page).to have_content(I18n.t("raif.admin.common.messages"))
+      expect(page).to have_content("User:")
+      expect(page).to have_content("Test message")
+      expect(page).to have_content("Assistant:")
+      expect(page).to have_content("This is a test response")
 
       # Check response content
       expect(page).to have_content("This is a test response")
