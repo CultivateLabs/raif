@@ -16,4 +16,26 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     raise NotImplementedError, "Raif::ModelCompletion subclasses must implement #prompt_model_for_response!"
   end
 
+protected
+
+  def default_temperature
+    0.7
+  end
+
+private
+
+  def default_json_response_schema
+    {
+      type: "object",
+      properties: {
+        response: {
+          type: "string",
+          description: "The complete response text"
+        }
+      },
+      required: ["response"],
+      additionalProperties: false,
+      description: "Return a single text response containing your complete answer"
+    }
+  end
 end
