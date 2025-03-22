@@ -19,6 +19,7 @@ Raif is built by [Cultivate Labs](https://www.cultivatelabs.com) and is used to 
 - [Key Raif Concepts](#key-raif-concepts)
   - [Tasks](#tasks)
   - [Conversations](#conversations)
+    - [Conversation Types](#conversation-types)
   - [Agents](#agents)
   - [Model Tools](#model-tools)
 - [Web Admin](#web-admin)
@@ -254,6 +255,34 @@ If your app already includes Bootstrap styles, this will render a conversation i
 ![Conversation Interface](./screenshots/conversation-interface.png)
 
 If your app does not include Bootstrap, you can [override the views](#views) to update styles.
+
+### Conversation Types
+
+If your application has a specific type of conversation that you use frequently, you can create a custom conversation type by running the generator. For example, say you are implementing a customer support chatbot in your application and want to have a custom conversation type for doing this with the LLM:
+```bash
+rails generate raif:conversation CustomerSupport
+```
+
+This will create a new conversation type in `app/models/raif/conversations/customer_support.rb`.
+
+You can then customize the system prompt, initial message, and available [model tools](#model-tools) for that conversation type:
+
+```ruby
+class Raif::Conversations::CustomerSupport < Raif::Conversation
+  before_create -> { 
+    self.available_model_tools = [
+      "Raif::ModelTools::SearchKnowledgeBase",
+      "Raif::ModelTools::FileSupportTicket" 
+    ]
+  }
+
+  def system_prompt_intro
+    <<~PROMPT
+      You are a helpful assistant who specializes in customer support. You're working with a customer who is experiencing an issue with your product.
+    PROMPT
+  end
+end
+```
 
 
 ## Agents
