@@ -123,6 +123,49 @@ RSpec.describe Raif::Llms::OpenAi, type: :model do
     end
   end
 
+  describe "#validate_json_schema!" do
+    it "requires all objects to have additionalProperties set to false" do
+      schema = {
+        type: "object",
+        properties: {
+          foo: { type: "string" }
+        }
+      }
+      expect { llm.validate_json_schema!(schema) }.to raise_error(Raif::Errors::OpenAi::JsonSchemaError)
+    end
+
+    it "requires top level type to be object" do
+      schema = {
+        type: "array",
+        items: { type: "string" }
+      }
+      expect { llm.validate_json_schema!(schema) }.to raise_error(Raif::Errors::OpenAi::JsonSchemaError)
+    end
+
+    it "requires that all fields must be required" do
+      schema = {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          foo: { type: "string" }
+        }
+      }
+      expect { llm.validate_json_schema!(schema) }.to raise_error(Raif::Errors::OpenAi::JsonSchemaError)
+    end
+
+    it "returns true for a valid schema" do
+      schema = {
+        type: "object",
+        additionalProperties: false,
+        required: ["foo"],
+        properties: {
+          foo: { type: "string" }
+        }
+      }
+      expect(llm.validate_json_schema!(schema)).to eq(true)
+    end
+  end
+
   describe "#build_chat_parameters" do
     let(:parameters) { llm.send(:build_chat_parameters, model_completion) }
 
@@ -208,7 +251,8 @@ RSpec.describe Raif::Llms::OpenAi, type: :model do
               strict: true,
               schema: {
                 type: "object",
-                required: ["joke"],
+                additionalProperties: false,
+                required: ["joke", "answer"],
                 properties: {
                   joke: { type: "string" },
                   answer: { type: "string" }
@@ -277,6 +321,8 @@ RSpec.describe Raif::Llms::OpenAi, type: :model do
       let(:schema) do
         {
           type: "object",
+          additionalProperties: false,
+          required: ["result"],
           properties: {
             result: { type: "string" }
           }

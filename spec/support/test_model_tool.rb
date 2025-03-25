@@ -11,21 +11,29 @@ class Raif::TestModelTool < Raif::ModelTool
   def self.example_model_invocation
     {
       "name": tool_name,
-      "arguments": [{ "title": "foo", "description": "bar" }]
+      "arguments": { "items": [{ "title": "foo", "description": "bar" }] }
     }
   end
 
   def self.tool_arguments_schema
     {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          description: { type: "string" },
-        },
-        required: ["title", "description"],
-      },
+      type: "object",
+      additionalProperties: false,
+      required: ["items"],
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              title: { type: "string" },
+              description: { type: "string" },
+            },
+            required: ["title", "description"],
+          }
+        }
+      }
     }
   end
 

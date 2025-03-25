@@ -4,6 +4,7 @@ module Raif
   class Task < Raif::ApplicationRecord
     include Raif::Concerns::HasLlm
     include Raif::Concerns::HasRequestedLanguage
+    include Raif::Concerns::HasAvailableModelTools
     include Raif::Concerns::InvokesModelTools
     include Raif::Concerns::LlmResponseParsing
 
@@ -62,7 +63,14 @@ module Raif
 
       populate_prompts
       messages = [{ "role" => "user", "content" => prompt }]
-      mc = llm.chat(messages: messages, source: self, system_prompt: system_prompt, response_format: response_format.to_sym)
+      mc = llm.chat(
+        messages: messages,
+        source: self,
+        system_prompt: system_prompt,
+        response_format: response_format.to_sym,
+        available_model_tools: available_model_tools
+      )
+
       self.raif_model_completion = mc.becomes(Raif::ModelCompletion)
 
       update(raw_response: raif_model_completion.raw_response)

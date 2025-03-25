@@ -2,6 +2,7 @@
 
 class Raif::ModelCompletion < Raif::ApplicationRecord
   include Raif::Concerns::LlmResponseParsing
+  include Raif::Concerns::HasAvailableModelTools
 
   belongs_to :source, polymorphic: true, optional: true
 
@@ -13,12 +14,13 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   before_save :set_total_tokens
 
   after_initialize -> { self.messages ||= [] }
+  after_initialize -> { self.available_model_tools ||= [] }
+
+  def json_response_schema
+    source.json_response_schema if source&.respond_to?(:json_response_schema)
+  end
 
 protected
-
-  def default_temperature
-    0.7
-  end
 
   def set_total_tokens
     self.total_tokens ||= completion_tokens.present? && prompt_tokens.present? ? completion_tokens + prompt_tokens : nil

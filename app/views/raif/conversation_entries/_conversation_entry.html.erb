@@ -4,10 +4,10 @@
         content: conversation_entry.user_message,
         message_type: :user %>
 
-  <% if conversation_entry.model_response_message.present? || conversation_entry.generating_response? %>
+  <% if conversation_entry.completed? || conversation_entry.generating_response? %>
     <%= render "raif/conversation_entries/message",
           conversation_entry: conversation_entry,
-          content: conversation_entry.model_response_message.presence || content_tag(:span, "", class: "raif-loader"),
+          content: conversation_entry.generating_response? ? content_tag(:span, "", class: "raif-loader") : conversation_entry.model_response_message,
           message_type: :model_response %>
 
     <% conversation_entry.raif_model_tool_invocations.select(&:renderable?).each do |ti| %>

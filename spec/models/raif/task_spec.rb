@@ -146,7 +146,8 @@ RSpec.describe Raif::Task, type: :model do
     it "returns the json_response_schema when the class defines one" do
       schema = {
         type: "object",
-        required: ["joke"],
+        additionalProperties: false,
+        required: ["joke", "answer"],
         properties: {
           joke: { type: "string" },
           answer: { type: "string" }

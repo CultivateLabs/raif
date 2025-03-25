@@ -4,9 +4,11 @@
       <%= render "raif/conversation_entries/model_response_avatar", conversation_entry: local_assigns[:conversation_entry] %>
     <% end %>
 
-    <div class="mb-1 rounded-2 p-3 <%= message_type == :user ? "bg-primary text-white" : "border" %>">
-      <%= simple_format content %>
-    </div>
+    <% if content.present? %>
+      <div class="mb-1 rounded-2 p-3 <%= message_type == :user ? "bg-primary text-white" : "border" %>">
+        <%= simple_format content %>
+      </div>
+    <% end %>
 
     <% if message_type == :user %>
       <%= render "raif/conversation_entries/user_avatar", conversation_entry: local_assigns[:conversation_entry] %>

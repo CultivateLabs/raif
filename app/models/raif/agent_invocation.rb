@@ -4,6 +4,7 @@ module Raif
   class AgentInvocation < ApplicationRecord
     include Raif::Concerns::HasLlm
     include Raif::Concerns::HasRequestedLanguage
+    include Raif::Concerns::HasAvailableModelTools
     include Raif::Concerns::InvokesModelTools
 
     belongs_to :creator, polymorphic: true
@@ -76,7 +77,12 @@ module Raif
           DEBUG
         end
 
-        model_completion = llm.chat(messages: conversation_history, source: self, system_prompt: system_prompt)
+        model_completion = llm.chat(
+          messages: conversation_history,
+          source: self,
+          system_prompt: system_prompt,
+          available_model_tools: available_model_tools
+        )
         agent_step = Raif::AgentStep.new(model_response_text: model_completion.raw_response)
         logger.debug <<~DEBUG
           --------------------------------

@@ -94,6 +94,7 @@ class CreateRaifTables < ActiveRecord::Migration[8.0]
       t.references :source, polymorphic: true, index: true
       t.string :llm_model_key, null: false
       t.string :model_api_name, null: false
+      t.send json_column_type, :available_model_tools, null: false
       t.send json_column_type, :messages, null: false
       t.text :system_prompt
       t.integer :response_format, default: 0, null: false
@@ -103,6 +104,7 @@ class CreateRaifTables < ActiveRecord::Migration[8.0]
       t.integer :completion_tokens
       t.integer :prompt_tokens
       t.text :raw_response
+      t.send json_column_type, :response_tool_calls
       t.integer :total_tokens
 
       t.timestamps

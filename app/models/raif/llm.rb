@@ -8,6 +8,7 @@ module Raif
       :api_name,
       :default_temperature,
       :default_max_completion_tokens,
+      :supports_native_tool_use,
       :provider_settings
 
     validates :key, presence: true
@@ -15,10 +16,13 @@ module Raif
 
     VALID_RESPONSE_FORMATS = [:text, :json, :html].freeze
 
-    def initialize(key:, api_name:, model_provider_settings: {}, temperature: nil, max_completion_tokens: nil)
+    alias_method :supports_native_tool_use?, :supports_native_tool_use
+
+    def initialize(key:, api_name:, model_provider_settings: {}, supports_native_tool_use: true, temperature: nil, max_completion_tokens: nil)
       @key = key
       @api_name = api_name
       @provider_settings = model_provider_settings
+      @supports_native_tool_use = supports_native_tool_use
       @default_temperature = temperature || 0.7
       @default_max_completion_tokens = max_completion_tokens
     end
@@ -27,7 +31,8 @@ module Raif
       I18n.t("raif.model_names.#{key}")
     end
 
-    def chat(message: nil, messages: nil, response_format: :text, source: nil, system_prompt: nil, temperature: nil, max_completion_tokens: nil)
+    def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
+      max_completion_tokens: nil)
       unless response_format.is_a?(Symbol)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid response format: #{response_format}. Must be a symbol (you passed #{response_format.class}) and be one of: #{VALID_RESPONSE_FORMATS.join(", ")}" # rubocop:disable Layout/LineLength
@@ -63,7 +68,8 @@ module Raif
         llm_model_key: key.to_s,
         model_api_name: api_name,
         temperature: temperature,
-        max_completion_tokens: max_completion_tokens
+        max_completion_tokens: max_completion_tokens,
+        available_model_tools: available_model_tools
       )
 
       perform_model_completion!(model_completion)

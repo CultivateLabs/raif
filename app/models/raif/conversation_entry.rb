@@ -2,6 +2,7 @@
 
 class Raif::ConversationEntry < Raif::ApplicationRecord
   include Raif::Concerns::InvokesModelTools
+  include Raif::Concerns::HasAvailableModelTools
 
   belongs_to :raif_conversation, counter_cache: true, class_name: "Raif::Conversation"
   belongs_to :creator, polymorphic: true
@@ -16,6 +17,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
 
   delegate :available_model_tools, to: :raif_conversation
   delegate :system_prompt, :llm_model_key, to: :raif_model_completion, allow_nil: true
+  delegate :json_response_schema, to: :class
 
   accepts_nested_attributes_for :raif_user_tool_invocation
 
@@ -24,6 +26,9 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   boolean_timestamp :failed_at
 
   before_validation :add_user_tool_invocation_to_user_message, on: :create
+
+  normalizes :model_response_message, with: ->(value) { value&.strip }
+  normalizes :user_message, with: ->(value) { value&.strip }
 
   def add_user_tool_invocation_to_user_message
     return unless raif_user_tool_invocation.present?
@@ -40,10 +45,9 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   end
 
   def process_entry!
-    model_completion = raif_conversation.prompt_model_for_entry_response(entry: self)
-    self.raw_response = model_completion.raw_response
+    self.raif_model_completion = raif_conversation.prompt_model_for_entry_response(entry: self)
 
-    if raw_response.present?
+    if raif_model_completion.parsed_response.present? || raif_model_completion.response_tool_calls.present?
       extract_message_and_invoke_tools!
     else
       logger.error "Error processing conversation entry ##{id}. No model response found."
@@ -55,40 +59,27 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
 
 private
 
-  # We expect the the model to respond with JSON like:
-  # {
-  #   "message": "The message to display to the user",
-  #   "tool": {
-  #     "name": "tool_name",
-  #     "arguments": { "argument_name": "argument_value" }
-  #   }
-  # }
   def extract_message_and_invoke_tools!
     transaction do
-      parsed_response = JSON.parse(raw_response)
-
-      if parsed_response["message"].blank?
-        logger.error "Error extracting message from conversation entry ##{id}. No model response message found."
-        failed!
-        return
-      end
-
-      self.model_response_message = parsed_response["message"].strip
+      self.raw_response = raif_model_completion.raw_response
+      self.model_response_message = raif_model_completion.parsed_response
       save!
 
-      if parsed_response["tool"].present?
-        tool_call = parsed_response["tool"]
-        tool_klass = available_model_tools_map[tool_call["name"]]
-        tool_klass&.invoke_tool(tool_arguments: tool_call["arguments"], source: self)
+      if raif_model_completion.response_tool_calls.present?
+        raif_model_completion.response_tool_calls.each do |tool_call|
+          tool_klass = available_model_tools_map[tool_call["name"]]
+          tool_klass&.invoke_tool(tool_arguments: tool_call["arguments"], source: self)
+        end
       end
 
       completed!
-    rescue JSON::ParserError => e
-      logger.error "Error parsing JSON response for conversation entry ##{id}. Error: #{e.message}"
-      logger.error e.backtrace.join("\n")
-      failed!
-      return
     end
+  rescue StandardError => e
+    logger.error "Error processing conversation entry ##{id}. Error: #{e.message}"
+    logger.error e.backtrace.join("\n")
+    failed!
+
+    raise e
   end
 
 end

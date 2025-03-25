@@ -72,6 +72,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_25_005128) do
     t.bigint "source_id"
     t.string "llm_model_key", null: false
     t.string "model_api_name", null: false
+    t.jsonb "available_model_tools", null: false
     t.jsonb "messages", null: false
     t.text "system_prompt"
     t.integer "response_format", default: 0, null: false
@@ -81,6 +82,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_25_005128) do
     t.integer "completion_tokens"
     t.integer "prompt_tokens"
     t.text "raw_response"
+    t.jsonb "response_tool_calls"
     t.integer "total_tokens"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

@@ -42,15 +42,17 @@ en:
         no_model_completions: No model completions found.
         no_model_tool_invocations: No model tool invocations found.
         no_tasks: No tasks found.
+        no_tool_calls: No tool calls
         pending: Pending
         prettified: Prettified
-        prompt: Prompt
         prompt_tokens: Prompt Tokens
+        prompt: Prompt
         raw: Raw
         rendered: Rendered
         requested_language: Requested Language
-        response: Response
+        response_format_parameter: Response Format Parameter
         response_format: Response Format
+        response: Response
         result: Result
         running: Running
         since: Since
@@ -61,6 +63,7 @@ en:
         task: Task
         tasks: Tasks
         tool_arguments: Tool Arguments
+        tool_calls: Tool Calls
         tool_invocations: Tool Invocations
         tool_name: Tool Name
         tool_type: Tool Type

@@ -25,6 +25,10 @@
       <div class="col-md-9"><%= @model_completion.response_format %></div>
     </div>
     <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.response_format_parameter") %>:</strong></div>
+      <div class="col-md-9"><%= @model_completion.response_format_parameter %></div>
+    </div>
+    <div class="row mb-3">
       <div class="col-md-3"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
       <div class="col-md-9"><%= @model_completion.created_at.rfc822 %></div>
     </div>
@@ -95,6 +99,19 @@
       </div>
     <% else %>
       <pre class="pre-wrap"><%= @model_completion.raw_response %></pre>
+    <% end %>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t("raif.admin.common.tool_calls") %></h5>
+  </div>
+  <div class="card-body">
+    <% if @model_completion.response_tool_calls.present? %>
+      <pre class="pre-wrap"><%= JSON.pretty_generate(@model_completion.response_tool_calls) %></pre>
+    <% else %>  
+      <%= t("raif.admin.common.no_tool_calls") %>
     <% end %>
   </div>
 </div>
