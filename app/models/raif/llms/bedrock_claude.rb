@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Raif::Llms::BedrockClaude < Raif::Llm
+  include Raif::Concerns::Llms::BedrockClaude::MessageFormatting
 
   def perform_model_completion!(model_completion)
     if Raif.config.aws_bedrock_model_name_prefix.present?
@@ -30,25 +31,41 @@ protected
     @bedrock_client ||= Aws::BedrockRuntime::Client.new(region: Raif.config.aws_bedrock_region)
   end
 
-  def format_messages(messages)
-    messages.map(&:symbolize_keys).map do |message|
-      {
-        role: message[:role],
-        content: [{ text: message[:content] }]
-      }
-    end
-  end
-
   def build_request_parameters(model_completion)
+    # The AWS Bedrock SDK requires symbols for keys
+    messages_param = model_completion.messages.map(&:deep_symbolize_keys)
+    replace_tmp_base64_data_with_bytes(messages_param)
+
     params = {
       model_id: model_completion.model_api_name,
       inference_config: { max_tokens: model_completion.max_completion_tokens || 8192 },
-      messages: format_messages(model_completion.messages)
+      messages: messages_param
     }
 
     params[:system] = [{ text: model_completion.system_prompt }] if model_completion.system_prompt.present?
 
-    # Prepare tools configuration if needed
+    tool_config = build_tool_parameters(model_completion)
+    params[:tool_config] = tool_config if tool_config.present?
+
+    params
+  end
+
+  def replace_tmp_base64_data_with_bytes(messages)
+    # The AWS Bedrock SDK requires data sent as bytes (and doesn't support base64 like everyone else)
+    # The ModelCompletion stores the messages as JSON though, so it can't be raw bytes.
+    # We store the image data as base64, so we need to convert that to bytes before sending to AWS.
+    messages.each do |message|
+      message[:content].each do |content|
+        next unless content[:image] || content[:document]
+
+        type_key = content[:image] ? :image : :document
+        base64_data = content[type_key][:source].delete(:tmp_base64_data)
+        content[type_key][:source][:bytes] = Base64.strict_decode64(base64_data)
+      end
+    end
+  end
+
+  def build_tool_parameters(model_completion)
     tools = []
 
     # If we're looking for a JSON response, add a tool to the request that the model can use to provide a JSON response
@@ -71,14 +88,11 @@ protected
       end
     end
 
-    # Add tool configuration if any tools are available
-    if tools.any?
-      params[:tool_config] = {
-        tools: tools.map { |tool| { tool_spec: tool } }
-      }
-    end
+    return if tools.blank?
 
-    params
+    {
+      tools: tools.map{|tool| { tool_spec: tool } }
+    }
   end
 
   def extract_text_response(resp)

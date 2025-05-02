@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::OpenAi, type: :model do
+  it_behaves_like "an LLM that uses OpenAI's message formatting"
+
   let(:llm){ Raif.llm(:open_ai_gpt_4o) }
   let(:mock_connection) { instance_double(Faraday::Connection) }
   let(:mock_response) { instance_double(Faraday::Response) }
@@ -57,7 +59,7 @@ RSpec.describe Raif::Llms::OpenAi, type: :model do
         expect(model_completion.prompt_tokens).to eq(5)
         expect(model_completion.total_tokens).to eq(15)
         expect(model_completion).to be_persisted
-        expect(model_completion.messages).to eq([{ "role" => "user", "content" => "Hello" }])
+        expect(model_completion.messages).to eq([{ "role" => "user", "content" => [{ "text" => "Hello", "type" => "text" }] }])
         expect(model_completion.system_prompt).to eq("You are a helpful assistant")
         expect(model_completion.temperature).to eq(0.7)
         expect(model_completion.max_completion_tokens).to eq(nil)
@@ -121,7 +123,11 @@ RSpec.describe Raif::Llms::OpenAi, type: :model do
         expect(model_completion.prompt_tokens).to eq(15)
         expect(model_completion.total_tokens).to eq(25)
         expect(model_completion).to be_persisted
-        expect(model_completion.messages).to eq(messages.map(&:stringify_keys))
+        expect(model_completion.messages).to eq([
+          { "role" => "user", "content" => [{ "text" => "Hello", "type" => "text" }] },
+          { "role" => "assistant", "content" => [{ "text" => "Hello! How can I assist you today?", "type" => "text" }] },
+          { "role" => "user", "content" => [{ "text" => "Can you you tell me a joke?", "type" => "text" }] }
+        ])
         expect(model_completion.system_prompt).to eq(system_prompt)
         expect(model_completion.temperature).to eq(0.7)
         expect(model_completion.max_completion_tokens).to eq(nil)

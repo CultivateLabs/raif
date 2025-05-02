@@ -3,6 +3,8 @@
 module Raif
   module Llms
     class Test < Raif::Llm
+      include Raif::Concerns::Llms::OpenAi::MessageFormatting
+
       attr_accessor :chat_handler
 
       def perform_model_completion!(model_completion)
@@ -15,7 +17,6 @@ module Raif
 
         model_completion
       end
-
     end
   end
 end

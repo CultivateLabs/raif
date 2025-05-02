@@ -28,7 +28,7 @@ RSpec.describe Raif::Llm, type: :model do
         allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
 
         stub_raif_llm(test_llm) do |messages|
-          "This is a test response for: #{messages.first["content"]}"
+          "This is a test response for: #{messages[0]["content"][0]["text"]}"
         end
       end
 
@@ -41,7 +41,7 @@ RSpec.describe Raif::Llm, type: :model do
         expect(result.response_format).to eq("text")
         expect(result.raw_response).to eq("This is a test response for: Hello")
         expect(result.source).to eq(nil)
-        expect(result.messages).to eq([{ "role" => "user", "content" => "Hello" }])
+        expect(result.messages).to eq([{ "role" => "user", "content" => [{ "text" => "Hello", "type" => "text" }] }])
         expect(result.system_prompt).to eq("You are a helpful assistant.")
         expect(result.completion_tokens).to be_present
         expect(result.prompt_tokens).to be_present
@@ -58,7 +58,7 @@ RSpec.describe Raif::Llm, type: :model do
         expect(result.response_format).to eq("text")
         expect(result.raw_response).to eq("This is a test response for: Hello")
         expect(result.source).to eq(user)
-        expect(result.messages).to eq([{ "role" => "user", "content" => "Hello" }])
+        expect(result.messages).to eq([{ "role" => "user", "content" => [{ "text" => "Hello", "type" => "text" }] }])
         expect(result.system_prompt).to eq("You are a helpful assistant.")
         expect(result.completion_tokens).to be_present
         expect(result.prompt_tokens).to be_present

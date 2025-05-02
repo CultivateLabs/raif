@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Raif::Llms::OpenRouter < Raif::Llm
+  include Raif::Concerns::Llms::OpenAi::MessageFormatting
 
   def perform_model_completion!(model_completion)
     model_completion.temperature ||= default_temperature

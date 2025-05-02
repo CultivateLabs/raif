@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Raif::Llms::Anthropic < Raif::Llm
+  include Raif::Concerns::Llms::Anthropic::MessageFormatting
 
   def perform_model_completion!(model_completion)
     params = build_request_parameters(model_completion)

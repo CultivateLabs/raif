@@ -23,28 +23,28 @@ module Raif
       # attr_accessor :your_attribute
 
       <%- if options[:response_format] == "json" -%>
-      # Define a JSON schema that the response should adhere to
-      # def self.json_response_schema
-      #   {
-      #     type: "object",
-      #     additionalProperties: false,
-      #     required: ["your_key_here"],
-      #     properties: {
-      #       your_key_here: {
-      #         type: "array",
-      #         items: {
-      #           type: "object",
-      #           additionalProperties: false,
-      #           required: ["query", "rationale"],
-      #           properties: {
-      #             query: { type: "string" },
-      #             rationale: { type: "string" }
-      #           }
-      #         }
-      #       }
-      #     }
-      #   }
-      # end
+      # Define a JSON schema that the model's response should adhere to
+      #
+      # All attributes will be required and additionalProperties will be set to false.
+      json_response_schema do
+        # string :title, description: "The title of the operation", minLength: 3
+        #
+        # object :widget, description: "A widget's description" do
+        #   boolean :is_red, description: "Whether the widget is red"
+        #   integer :rating, description: "A rating of the widget from 1 to 10", minimum: 1, maximum: 10
+        #   array :tags, description: "Associated tags" do
+        #     items type: "string"
+        #   end
+        # end
+        #
+        # array :products, description: "List of products" do
+        #   object do
+        #     integer :id, description: "Product identifier"
+        #     string :name, description: "Product name"
+        #     number :price, description: "Product price", minimum: 0
+        #   end
+        # end
+      end
       <%- end -%>
 
       def build_prompt

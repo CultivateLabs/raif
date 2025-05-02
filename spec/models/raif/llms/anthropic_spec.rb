@@ -145,4 +145,128 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       end
     end
   end
+
+  describe "#format_messages" do
+    it "formats the messages correctly with a string as the content" do
+      messages = [{ "role" => "user", "content" => "Hello" }]
+      formatted_messages = llm.format_messages(messages)
+      expect(formatted_messages).to eq([{ "role" => "user", "content" => [{ "text" => "Hello", "type" => "text" }] }])
+    end
+
+    it "formats the messages correctly with an array as the content" do
+      messages = [{ "role" => "user", "content" => ["Hello", "World"] }]
+      formatted_messages = llm.format_messages(messages)
+      expect(formatted_messages).to eq([
+        {
+          "role" => "user",
+          "content" => [
+            { "type" => "text", "text" => "Hello" },
+            { "type" => "text", "text" => "World" }
+          ]
+        }
+      ])
+    end
+
+    it "formats the messages correctly with an image" do
+      image_path = Raif::Engine.root.join("spec/fixtures/files/cultivate.png")
+      image = Raif::ModelImageInput.new(input: image_path)
+      messages = [{
+        "role" => "user",
+        "content" => [
+          { "text" => "Hello" },
+          image
+        ]
+      }]
+
+      formatted_messages = llm.format_messages(messages)
+      expect(formatted_messages).to eq([
+        {
+          "role" => "user",
+          "content" => [
+            { "text" => "Hello" },
+            {
+              "type" => "image",
+              "source" => {
+                "type" => "base64",
+                "media_type" => "image/png",
+                "data" => Base64.strict_encode64(File.read(image_path))
+              }
+            }
+          ]
+        }
+      ])
+    end
+
+    it "formats the messages correctly when using image_url" do
+      image_url = "https://example.com/image.png"
+      image = Raif::ModelImageInput.new(url: image_url)
+      messages = [{ "role" => "user", "content" => [image] }]
+      formatted_messages = llm.format_messages(messages)
+      expect(formatted_messages).to eq([
+        {
+          "role" => "user",
+          "content" => [
+            {
+              "type" => "image",
+              "source" => {
+                "type" => "url",
+                "url" => image_url
+              }
+            }
+          ]
+        }
+      ])
+    end
+
+    it "formats the messages correctly with a file" do
+      file_path = Raif::Engine.root.join("spec/fixtures/files/test.pdf")
+      file = Raif::ModelFileInput.new(input: file_path)
+      messages = [{
+        "role" => "user",
+        "content" => [
+          "What's in this file?",
+          file
+        ]
+      }]
+
+      formatted_messages = llm.format_messages(messages)
+      expect(formatted_messages).to eq([
+        {
+          "role" => "user",
+          "content" => [
+            { "type" => "text", "text" => "What's in this file?" },
+            {
+              "type" => "document",
+              "source" => {
+                "type" => "base64",
+                "media_type" => "application/pdf",
+                "data" => Base64.strict_encode64(File.read(file_path))
+              }
+            }
+          ]
+        }
+      ])
+    end
+
+    it "formats the messages correctly when using file_url" do
+      file_url = "https://example.com/file.pdf"
+      file = Raif::ModelFileInput.new(url: file_url)
+      messages = [{ "role" => "user", "content" => [file] }]
+      formatted_messages = llm.format_messages(messages)
+      expect(formatted_messages).to eq([
+        {
+          "role" => "user",
+          "content" => [
+            {
+              "type" => "document",
+              "source" => {
+                "type" => "url",
+                "url" => file_url
+              }
+            }
+          ]
+        }
+      ])
+    end
+  end
 end

@@ -8,6 +8,7 @@ module Raif
     include Raif::Concerns::InvokesModelTools
     include Raif::Concerns::LlmResponseParsing
     include Raif::Concerns::LlmTemperature
+    include Raif::Concerns::JsonSchemaDefinition
 
     llm_temperature 0.7
 
@@ -23,6 +24,8 @@ module Raif
 
     delegate :json_response_schema, to: :class
 
+    attr_accessor :files, :images
+
     after_initialize -> { self.available_model_tools ||= [] }
 
     # The primary interface for running a task. It will hit the LLM with the task's prompt and system prompt and return a Raif::Task object.
@@ -31,10 +34,13 @@ module Raif
     # @param creator [Object] The creator of the task (polymorphic association)
     # @param available_model_tools [Array<Class>] Optional array of model tool classes that will be provided to the LLM for it to invoke.
     # @param llm_model_key [Symbol, String] Optional key for the LLM model to use. If blank, Raif.config.default_llm_model_key will be used.
+    # @param images [Array] Optional array of Raif::ModelImageInput objects to include with the prompt.
+    # @param files [Array] Optional array of Raif::ModelFileInput objects to include with the prompt.
     # @param args [Hash] Additional arguments to pass to the instance of the task that is created.
     # @return [Raif::Task, nil] The task instance that was created and run.
-    def self.run(creator:, available_model_tools: [], llm_model_key: nil, **args)
-      task = new(creator:, llm_model_key:, available_model_tools:, started_at: Time.current, **args)
+    def self.run(creator:, available_model_tools: [], llm_model_key: nil, images: [], files: [], **args)
+      task = new(creator:, llm_model_key:, available_model_tools:, started_at: Time.current, images: images, files: files, **args)
+
       task.save!
       task.run
       task
@@ -59,7 +65,7 @@ module Raif
       update_columns(started_at: Time.current) if started_at.nil?
 
       populate_prompts
-      messages = [{ "role" => "user", "content" => prompt }]
+      messages = [{ "role" => "user", "content" => message_content }]
 
       mc = llm.chat(
         messages: messages,
@@ -97,11 +103,38 @@ module Raif
       new(creator:, **args).system_prompt
     end
 
-    def self.json_response_schema
-      nil
+    def self.json_response_schema(&block)
+      if block_given?
+        json_schema_definition(:json_response, &block)
+      elsif schema_defined?(:json_response)
+        schema_for(:json_response)
+      end
     end
 
   private
+
+    def message_content
+      # If there are no images or files, just return the message content can just be a string with the prompt
+      return prompt if images.empty? && files.empty?
+
+      content = [{ "type" => "text", "text" => prompt }]
+
+      images.each do |image|
+        raise Raif::Errors::InvalidModelImageInputError,
+          "Images must be a Raif::ModelImageInput: #{image.inspect}" unless image.is_a?(Raif::ModelImageInput)
+
+        content << image
+      end
+
+      files.each do |file|
+        raise Raif::Errors::InvalidFileInputError,
+          "Files must be a Raif::ModelFileInput: #{file.inspect}" unless file.is_a?(Raif::ModelFileInput)
+
+        content << file
+      end
+
+      content
+    end
 
     def build_prompt
       raise NotImplementedError, "Raif::Task subclasses must implement #build_prompt"

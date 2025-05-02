@@ -3,6 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::OpenRouter, type: :model do
+  it_behaves_like "an LLM that uses OpenAI's message formatting"
+
   let(:llm){ Raif.llm(:open_router_claude_3_7_sonnet) }
   let(:mock_connection) { instance_double(Faraday::Connection) }
   let(:mock_response) { instance_double(Faraday::Response) }

@@ -145,6 +145,79 @@ RSpec.describe Raif::Task, type: :model do
         expect(task.raif_model_completion.raw_response).to eq("<p>Why is a pirate's favorite letter 'R'?</p><p>Because, if you think about it, <strong style='color: red;'>'R'</strong> is the only letter that makes sense.</p>") # rubocop:disable Layout/LineLength
       end
     end
+
+    context "when including an image" do
+      it "runs the task" do
+        stub_raif_task(Raif::TestTask) do |_messages|
+          "The image contains the Cultivate Labs logo."
+        end
+
+        image_path = Raif::Engine.root.join("spec/fixtures/files/cultivate.png")
+        image = Raif::ModelImageInput.new(input: image_path)
+        task = Raif::TestTask.run(creator: user, images: [image])
+
+        expect(task).to be_persisted
+        expect(task.prompt).to eq("Tell me a joke")
+        expect(task.system_prompt).to eq("You are a helpful assistant.\nYou are also good at telling jokes.")
+        expect(task.response_format).to eq("text")
+        expect(task.raw_response).to eq("The image contains the Cultivate Labs logo.")
+
+        expect(task.raif_model_completion).to be_persisted
+        expect(task.raif_model_completion.source).to eq(task)
+        expect(task.raif_model_completion.temperature).to eq(0.5) # Raif::TestTask sets the temperature to 0.5
+        expect(task.raif_model_completion.raw_response).to eq("The image contains the Cultivate Labs logo.")
+        expect(task.raif_model_completion.messages).to eq([
+          {
+            "role" => "user",
+            "content" => [
+              { "type" => "text", "text" => "Tell me a joke" },
+              {
+                "type" => "image_url",
+                "image_url" => { "url" => "data:image/png;base64,#{image.base64_data}" }
+              }
+            ]
+          }
+        ])
+      end
+    end
+
+    context "when including a PDF" do
+      it "runs the task" do
+        stub_raif_task(Raif::TestTask) do |_messages|
+          "The PDF contains a test message"
+        end
+
+        pdf_path = Raif::Engine.root.join("spec/fixtures/files/test.pdf")
+        pdf = Raif::ModelFileInput.new(input: pdf_path)
+        task = Raif::TestTask.run(creator: user, files: [pdf])
+
+        expect(task).to be_persisted
+        expect(task.prompt).to eq("Tell me a joke")
+        expect(task.system_prompt).to eq("You are a helpful assistant.\nYou are also good at telling jokes.")
+        expect(task.response_format).to eq("text")
+        expect(task.raw_response).to eq("The PDF contains a test message")
+
+        expect(task.raif_model_completion).to be_persisted
+        expect(task.raif_model_completion.source).to eq(task)
+        expect(task.raif_model_completion.temperature).to eq(0.5) # Raif::TestTask sets the temperature to 0.5
+        expect(task.raif_model_completion.raw_response).to eq("The PDF contains a test message")
+        expect(task.raif_model_completion.messages).to eq([
+          {
+            "role" => "user",
+            "content" => [
+              { "type" => "text", "text" => "Tell me a joke" },
+              {
+                "type" => "file",
+                "file" => {
+                  "filename" => "test.pdf",
+                  "file_data" => "data:application/pdf;base64,#{Base64.strict_encode64(File.read(pdf_path))}"
+                }
+              }
+            ]
+          }
+        ])
+      end
+    end
   end
 
   describe "json_response_schema" do

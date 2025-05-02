@@ -3,6 +3,7 @@
 module Raif
   class Llm
     include ActiveModel::Model
+    include Raif::Concerns::Llms::MessageFormatting
 
     attr_accessor :key,
       :api_name,
@@ -60,13 +61,13 @@ module Raif
         return
       end
 
-      messages = [{ role: "user", content: message }] if message.present?
+      messages = [{ "role" => "user", "content" => message }] if message.present?
 
       temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
 
       model_completion = Raif::ModelCompletion.new(
-        messages: messages,
+        messages: format_messages(messages),
         system_prompt: system_prompt,
         response_format: response_format,
         source: source,
@@ -82,7 +83,7 @@ module Raif
     end
 
     def perform_model_completion!(model_completion)
-      raise NotImplementedError, "Raif::Llm subclasses must implement #perform_model_completion!"
+      raise NotImplementedError, "#{self.class.name} must implement #perform_model_completion!"
     end
 
     def self.valid_response_formats

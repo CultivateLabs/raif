@@ -14,7 +14,7 @@ RSpec.describe "Agent features", type: :feature do
     ]
   end
 
-  let(:wikipedia_page_content){ File.read("#{Raif::Engine.root}/spec/support/wikipedia_page_content.html") }
+  let(:wikipedia_page_content){ File.read("#{Raif::Engine.root}/spec/fixtures/files/wikipedia_page_content.html") }
 
   before do
     allow_any_instance_of(ApplicationController).to receive(:current_user).and_return(creator)

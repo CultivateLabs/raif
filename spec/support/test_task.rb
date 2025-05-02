@@ -16,16 +16,9 @@ class Raif::TestJsonTask < Raif::Task
   llm_response_format :json
   llm_temperature 0.75
 
-  def self.json_response_schema
-    {
-      type: "object",
-      additionalProperties: false,
-      required: ["joke", "answer"],
-      properties: {
-        joke: { type: "string" },
-        answer: { type: "string" }
-      }
-    }
+  json_response_schema do
+    string :joke
+    string :answer
   end
 
   def build_prompt
