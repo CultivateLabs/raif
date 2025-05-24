@@ -2,7 +2,7 @@
 
 module Raif
   module Llms
-    class Test < Raif::Llm
+    class TestLlm < Raif::Llm
       include Raif::Concerns::Llms::OpenAi::MessageFormatting
 
       attr_accessor :chat_handler

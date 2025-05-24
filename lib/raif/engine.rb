@@ -84,7 +84,7 @@ module Raif
       Raif.config.conversation_types += ["Raif::TestConversation"]
 
       require "#{Raif::Engine.root}/spec/support/test_llm"
-      Raif.register_llm(Raif::Llms::Test, key: :raif_test_llm, api_name: "raif-test-llm")
+      Raif.register_llm(Raif::Llms::TestLlm, key: :raif_test_llm, api_name: "raif-test-llm")
 
       require "#{Raif::Engine.root}/spec/support/test_embedding_model"
       Raif.register_embedding_model(

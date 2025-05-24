@@ -8,7 +8,7 @@ RSpec.describe Raif::Llm, type: :model do
     let(:system_prompt) { "You are a helpful assistant." }
 
     let(:test_llm) do
-      Raif::Llms::Test.new(key: :raif_test_llm, api_name: "test_api")
+      Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api")
     end
 
     context "when llm_api_requests_enabled is false" do
