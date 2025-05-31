@@ -14,8 +14,8 @@ Raif.configure do |config|
   config.open_router_api_key = "placeholder"
   config.open_router_models_enabled = true
 
-  config.aws_bedrock_titan_embedding_models_enabled = true
-  config.anthropic_bedrock_models_enabled = true
+  config.bedrock_embedding_models_enabled = true
+  config.bedrock_models_enabled = true
 
   config.authorize_controller_action = ->() { true }
   config.authorize_admin_controller_action = ->() { true }

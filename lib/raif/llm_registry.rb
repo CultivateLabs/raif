@@ -124,7 +124,7 @@ module Raif
           max_completion_tokens: 4096
         },
       ],
-      Raif::Llms::BedrockClaude => [
+      Raif::Llms::Bedrock => [
         {
           key: :bedrock_claude_4_sonnet,
           api_name: "anthropic.claude-sonnet-4-20250514-v1:0",
