@@ -51,12 +51,12 @@ module Raif
     end
 
     config.after_initialize do
-      next unless Raif.config.anthropic_bedrock_models_enabled
+      next unless Raif.config.bedrock_models_enabled
 
       require "aws-sdk-bedrockruntime"
 
-      Raif.default_llms[Raif::Llms::BedrockClaude].each do |llm_config|
-        Raif.register_llm(Raif::Llms::BedrockClaude, **llm_config)
+      Raif.default_llms[Raif::Llms::Bedrock].each do |llm_config|
+        Raif.register_llm(Raif::Llms::Bedrock, **llm_config)
       end
     end
 
@@ -69,12 +69,12 @@ module Raif
     end
 
     config.after_initialize do
-      next unless Raif.config.aws_bedrock_titan_embedding_models_enabled
+      next unless Raif.config.bedrock_embedding_models_enabled
 
       require "aws-sdk-bedrockruntime"
 
-      Raif.default_embedding_models[Raif::EmbeddingModels::BedrockTitan].each do |embedding_model_config|
-        Raif.register_embedding_model(Raif::EmbeddingModels::BedrockTitan, **embedding_model_config)
+      Raif.default_embedding_models[Raif::EmbeddingModels::Bedrock].each do |embedding_model_config|
+        Raif.register_embedding_model(Raif::EmbeddingModels::Bedrock, **embedding_model_config)
       end
     end
 
