@@ -1,0 +1,132 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Raif (Ruby AI Framework) - Cursor Rules
+
+## Project Overview
+This is **Raif** - a Ruby AI Framework built as a Rails engine that helps developers add AI-powered features to Rails applications.
+
+## Technology Stack
+- **Framework**: Rails engine (Ruby gem)
+- **Database**: PostgreSQL/MySQL compatible
+- **Frontend**: Turbo Streams, Stimulus controllers, Bootstrap (optional)
+- **Testing**: RSpec with FactoryBot
+- **AI Providers**: OpenAI, Anthropic Claude, AWS Bedrock, OpenRouter
+
+## Key Architecture Concepts
+
+### Core Components
+1. **Tasks** (`Raif::Task`) - Single-shot AI operations with defined prompts and response formats
+2. **Conversations** (`Raif::Conversation`) - Multi-turn chat interfaces with LLMs
+3. **Agents** (`Raif::Agent`) - ReAct-style agents that can use tools in loops
+4. **Model Tools** (`Raif::ModelTool`) - Custom tools that agents/conversations can invoke
+5. **Model Completions** (`Raif::ModelCompletion`) - Records of all LLM interactions
+
+### LLM Integration
+- Multiple provider support via adapter pattern
+- Unified API through `Raif.llm(model_key)` and `Raif::Llm#chat`
+- Support for different response formats: `:text`, `:html`, `:json`
+- Provider-managed tools (web search, code execution, image generation)
+
+## File Structure & Conventions
+
+### Generated Files
+- **Tasks**: `app/models/raif/tasks/` - Inherit from `Raif::ApplicationTask`
+- **Conversations**: `app/models/raif/conversations/` - Inherit from `Raif::Conversation`  
+- **Agents**: `app/models/raif/agents/` - Inherit from `Raif::Agent`
+- **Model Tools**: `app/models/raif/model_tools/` - Inherit from `Raif::ModelTool`
+
+### Generators Available
+- `rails generate raif:install` - Setup engine
+- `rails generate raif:task TaskName --response-format [html|json|text]`
+- `rails generate raif:conversation ConversationType`
+- `rails generate raif:agent AgentName`
+- `rails generate raif:model_tool ToolName`
+- `rails generate raif:views` - Copy views for customization
+
+### Configuration
+- Main config: `config/initializers/raif.rb`
+- Key settings: API keys, model enablement, authorization callbacks
+- Model registration: `Raif.register_llm()` for custom models
+
+## Code Patterns & Conventions
+
+### Task Implementation
+```ruby
+class Raif::Tasks::TaskName < Raif::ApplicationTask
+  llm_response_format :html/:json/:text
+  llm_temperature 0.7
+  attr_accessor :input_param
+  
+  def build_system_prompt; end
+  def build_prompt; end
+end
+```
+
+### Model Tool Implementation
+```ruby
+class Raif::ModelTools::ToolName < Raif::ModelTool
+  tool_arguments_schema do
+    string :param, description: "Description"
+  end
+  
+  def self.process_invocation(tool_invocation); end
+  def self.observation_for_invocation(tool_invocation); end
+end
+```
+
+### Agent Implementation
+```ruby
+class Raif::Agents::AgentName < Raif::Agent
+  def build_system_prompt; end
+  def process_iteration_model_completion(model_completion); end
+end
+```
+
+## Testing Conventions
+- Factories available: `:raif_conversation`, `:raif_task`, etc.
+- Stub helpers: `stub_raif_task()`, `stub_raif_conversation()`, `stub_raif_agent()`
+- Test files in `spec/` following Rails engine conventions
+
+## Database Models
+All models inherit from `ApplicationRecord` (configurable via `config.model_superclass`)
+
+### Key Models
+- `Raif::ModelCompletion` - Stores all LLM interactions
+- `Raif::Task` - Base class for AI tasks
+- `Raif::Conversation` + `Raif::ConversationEntry` - Chat functionality
+- `Raif::Agent` - Agent implementations
+- `Raif::ModelToolInvocation` - Tool usage tracking
+
+## Important Implementation Details
+
+### Authorization
+- Controllers require `config.authorize_controller_action` and `config.authorize_admin_controller_action`
+- Web admin at `/raif/admin` (when engine mounted at `/raif`)
+
+### Multi-format Support
+- Images: `Raif::ModelImageInput`
+- Files/PDFs: `Raif::ModelFileInput`
+- Embeddings: `Raif.generate_embedding!()`
+
+### Provider-Managed Tools
+Support for tools that run on the LLM-provider's infrastructure:
+- `Raif::ModelTools::ProviderManaged::WebSearch`
+- `Raif::ModelTools::ProviderManaged::CodeExecution`
+- `Raif::ModelTools::ProviderManaged::ImageGeneration`
+
+## Development Guidelines
+- Follow Rails engine patterns
+- Maintain provider abstraction layer
+- Include comprehensive error handling
+- Support multiple response formats
+- Maintain backward compatibility
+- Include proper authorization checks
+- Write thorough tests
+
+## Language & Localization
+- Support for `requested_language_key` parameter
+- Language keys defined in `lib/raif/languages.rb`
+- I18n integration for UI elements
