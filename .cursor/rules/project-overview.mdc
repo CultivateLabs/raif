@@ -89,6 +89,7 @@ end
 - Factories available: `:raif_conversation`, `:raif_task`, etc.
 - Stub helpers: `stub_raif_task()`, `stub_raif_conversation()`, `stub_raif_agent()`
 - Test files in `spec/` following Rails engine conventions
+- Never add tests/checks for logger calls
 
 ## Database Models
 All models inherit from `ApplicationRecord` (configurable via `config.model_superclass`)
