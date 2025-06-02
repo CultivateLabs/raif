@@ -16,7 +16,7 @@ url: "https://YOUR_USERNAME.github.io" # the base hostname & protocol for your s
 
 # Theme
 theme: just-the-docs
-color_scheme: light
+color_scheme: raif # Options: light, dark, or custom
 
 # Just the Docs theme configuration
 search_enabled: true
