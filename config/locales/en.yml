@@ -52,6 +52,9 @@ en:
       anthropic_claude_3_opus: Anthropic Claude 3 Opus
       anthropic_claude_4_opus: Anthropic Claude 4 Opus
       anthropic_claude_4_sonnet: Anthropic Claude 4 Sonnet
+      bedrock_amazon_nova_lite: Amazon Nova Lite (via AWS Bedrock)
+      bedrock_amazon_nova_micro: Amazon Nova Micro (via AWS Bedrock)
+      bedrock_amazon_nova_pro: Amazon Nova Pro (via AWS Bedrock)
       bedrock_claude_3_5_haiku: Anthropic Claude 3.5 Haiku (via AWS Bedrock)
       bedrock_claude_3_5_sonnet: Anthropic Claude 3.5 Sonnet (via AWS Bedrock)
       bedrock_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via AWS Bedrock)

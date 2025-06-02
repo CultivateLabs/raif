@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Raif::Llms::BedrockClaude, type: :model do
+RSpec.describe Raif::Llms::Bedrock, type: :model do
   let(:llm){ Raif.llm(:bedrock_claude_3_5_sonnet) }
   let(:client) { Aws::BedrockRuntime::Client.new(stub_responses: true) }
 

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-class Raif::Llms::BedrockClaude < Raif::Llm
-  include Raif::Concerns::Llms::BedrockClaude::MessageFormatting
-  include Raif::Concerns::Llms::BedrockClaude::ToolFormatting
+class Raif::Llms::Bedrock < Raif::Llm
+  include Raif::Concerns::Llms::Bedrock::MessageFormatting
+  include Raif::Concerns::Llms::Bedrock::ToolFormatting
 
   def perform_model_completion!(model_completion)
     if Raif.config.aws_bedrock_model_name_prefix.present?

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Raif::Concerns::Llms::BedrockClaude::ToolFormatting
+module Raif::Concerns::Llms::Bedrock::ToolFormatting
   extend ActiveSupport::Concern
 
   def build_tools_parameter(model_completion)

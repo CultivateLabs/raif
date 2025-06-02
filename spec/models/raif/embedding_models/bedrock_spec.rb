@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Raif::EmbeddingModels::BedrockTitan, type: :model do
+RSpec.describe Raif::EmbeddingModels::Bedrock, type: :model do
   let(:model) { Raif.embedding_model(:bedrock_titan_embed_text_v2) }
   let(:client) { Aws::BedrockRuntime::Client.new(stub_responses: true) }
   let(:mock_response) { double("MockResponse") }
@@ -69,21 +69,21 @@ RSpec.describe Raif::EmbeddingModels::BedrockTitan, type: :model do
       it "raises an ArgumentError for numeric input" do
         expect { model.generate_embedding!(123) }.to raise_error(
           ArgumentError,
-          "Raif::EmbeddingModels::BedrockTitan#generate_embedding! input must be a string"
+          "Raif::EmbeddingModels::Bedrock#generate_embedding! input must be a string"
         )
       end
 
       it "raises an ArgumentError for array input" do
         expect { model.generate_embedding!(["test1", "test2"]) }.to raise_error(
           ArgumentError,
-          "Raif::EmbeddingModels::BedrockTitan#generate_embedding! input must be a string"
+          "Raif::EmbeddingModels::Bedrock#generate_embedding! input must be a string"
         )
       end
 
       it "raises an ArgumentError for hash input" do
         expect { model.generate_embedding!({ text: "test" }) }.to raise_error(
           ArgumentError,
-          "Raif::EmbeddingModels::BedrockTitan#generate_embedding! input must be a string"
+          "Raif::EmbeddingModels::Bedrock#generate_embedding! input must be a string"
         )
       end
     end

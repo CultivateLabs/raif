@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Raif::Concerns::Llms::BedrockClaude::MessageFormatting
+module Raif::Concerns::Llms::Bedrock::MessageFormatting
   extend ActiveSupport::Concern
 
   def format_string_message(content, role: nil)
@@ -13,7 +13,7 @@ module Raif::Concerns::Llms::BedrockClaude::MessageFormatting
     elsif image_input.source_type == :file_content
       # The AWS Bedrock SDK requires data sent as bytes (and doesn't support base64 like everyone else)
       # The ModelCompletion stores the messages as JSON though, so it can't be raw bytes (it will throw an encoding error).
-      # We store the image data as base64 and then it will get converted to bytes in Raif::Llms::BedrockClaude#perform_model_completion!
+      # We store the image data as base64 and then it will get converted to bytes in Raif::Llms::Bedrock#perform_model_completion!
       # before sending to AWS.
       {
         "image" => {
@@ -34,7 +34,7 @@ module Raif::Concerns::Llms::BedrockClaude::MessageFormatting
     elsif file_input.source_type == :file_content
       # The AWS Bedrock SDK requires data sent as bytes (and doesn't support base64 like everyone else)
       # The ModelCompletion stores the messages as JSON though, so it can't be raw bytes (it will throw an encoding error).
-      # We store the image data as base64 and then it will get converted to bytes in Raif::Llms::BedrockClaude#perform_model_completion!
+      # We store the image data as base64 and then it will get converted to bytes in Raif::Llms::Bedrock#perform_model_completion!
       # before sending to AWS.
       {
         "document" => {

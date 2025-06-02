@@ -158,7 +158,7 @@ module Raif
           max_completion_tokens: 4096
         },
       ],
-      Raif::Llms::BedrockClaude => [
+      Raif::Llms::Bedrock => [
         {
           key: :bedrock_claude_4_sonnet,
           api_name: "anthropic.claude-sonnet-4-20250514-v1:0",
@@ -201,6 +201,27 @@ module Raif
           output_token_cost: 0.075 / 1000,
           max_completion_tokens: 4096
         },
+        {
+          key: :bedrock_amazon_nova_micro,
+          api_name: "amazon.nova-micro-v1:0",
+          input_token_cost: 0.0000115 / 1000,
+          output_token_cost: 0.000184 / 1000,
+          max_completion_tokens: 4096
+        },
+        {
+          key: :bedrock_amazon_nova_lite,
+          api_name: "amazon.nova-lite-v1:0",
+          input_token_cost: 0.0000195 / 1000,
+          output_token_cost: 0.000312 / 1000,
+          max_completion_tokens: 4096
+        },
+        {
+          key: :bedrock_amazon_nova_pro,
+          api_name: "amazon.nova-pro-v1:0",
+          input_token_cost: 0.0002625 / 1000,
+          output_token_cost: 0.0042 / 1000,
+          max_completion_tokens: 4096
+        }
       ],
       Raif::Llms::OpenRouter => [
         {

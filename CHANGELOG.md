@@ -8,6 +8,7 @@
   [#127](https://github.com/CultivateLabs/raif/pull/127)
 - Added `response_id` and `response_array` columns to `raif_model_completions` table for enhanced response tracking and provider-managed tools support. [#127](https://github.com/CultivateLabs/raif/pull/127)
 - Added a migration checker to warn if the host app is missing any of Raif's migrations. [#129](https://github.com/CultivateLabs/raif/pull/129)
+- The AWS Bedrock adapter has been renamed to be more generalized. Added support for Amazon Nova models. [#137](https://github.com/CultivateLabs/raif/pull/137)
 
 
 ## v1.1.0
