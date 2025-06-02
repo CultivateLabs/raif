@@ -236,7 +236,8 @@ $code-font-stack: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Cod
 // CODE BLOCKS & SYNTAX HIGHLIGHTING
 // =============================================================================
 
-.highlighter-rouge {
+// Only apply code block styling to div.highlighter-rouge (block elements)
+div.highlighter-rouge {
   @include code-block-base;
   
   .highlight {
@@ -266,18 +267,35 @@ code {
   font-family: $code-font-stack;
   font-size: 0.85em;
   font-weight: 500;
+  white-space: nowrap; // Prevent inline code from breaking across lines
+  
+  // Reset code block styling for inline code with highlighter-rouge class
+  &.highlighter-rouge {
+    background-color: rgba($raif-primary, 0.1) !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0.2em 0.4em !important;
+    display: inline !important;
+    position: static !important;
+    
+    &::before {
+      display: none !important;
+    }
+  }
   
   // Reset within code blocks
   .highlight &,
-  .highlighter-rouge & {
+  div.highlighter-rouge & {
     background: none !important;
     padding: 0 !important;
     border-radius: 0 !important;
+    white-space: pre; // Allow normal wrapping in code blocks
   }
 }
 
-// Language labels
-.highlighter-rouge::after {
+// Language labels - only for block code
+div.highlighter-rouge::after {
   position: absolute;
   top: 0.5rem;
   right: 0.75rem;
@@ -292,14 +310,14 @@ code {
   content: "";
 }
 
-// Language-specific labels
-.language-ruby::after { content: "Ruby"; }
-.language-bash::after { content: "Bash"; }
-.language-javascript::after { content: "JavaScript"; }
-.language-css::after { content: "CSS"; }
-.language-html::after { content: "HTML"; }
-.language-json::after { content: "JSON"; }
-.language-yaml::after, .language-yml::after { content: "YAML"; }
+// Language-specific labels - only for block code
+div.language-ruby::after { content: "Ruby"; }
+div.language-bash::after { content: "Bash"; }
+div.language-javascript::after { content: "JavaScript"; }
+div.language-css::after { content: "CSS"; }
+div.language-html::after { content: "HTML"; }
+div.language-json::after { content: "JSON"; }
+div.language-yaml::after, div.language-yml::after { content: "YAML"; }
 
 // Syntax highlighting
 .highlight {
