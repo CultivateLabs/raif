@@ -103,6 +103,11 @@ $code-font-stack: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Cod
 // LAYOUT & STRUCTURE
 // =============================================================================
 
+.main-header{
+  border-bottom: none !important;
+  margin-top: 10px;
+}
+
 // Sidebar alignment
 .side-bar {
   padding-left: 0 !important;
@@ -149,11 +154,6 @@ $code-font-stack: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Cod
       color: rgba(255, 255, 255, 0.8) !important;
     }
   }
-}
-
-.site-title {
-  font-weight: 700;
-  letter-spacing: 0.5px;
 }
 
 .navigation-list-item {
@@ -217,7 +217,7 @@ $code-font-stack: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Cod
   border-radius: $radius;
   padding: 0.75rem 1rem 0.75rem 2.5rem !important;
   transition: $transition;
-  box-shadow: $shadow-light;
+  // box-shadow: $shadow-light;
   width: 100%;
   background-color: white;
   
@@ -470,7 +470,7 @@ div.language-yaml::after, div.language-yml::after { content: "YAML"; }
 .site-footer {
   background: $sidebar-color;
   border-top: 1px solid $border-color;
-  padding: 2rem 0;
+  padding: 2rem 1rem;
   margin-top: 3rem;
   
   .footer-link {
