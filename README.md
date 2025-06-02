@@ -38,6 +38,7 @@ Raif is built by [Cultivate Labs](https://www.cultivatelabs.com) and is used to 
   - [Adding LLM Models](#adding-llm-models)
 - [Testing](#testing)
 - [Demo App](#demo-app)
+- [Contributing](#contributing)
 - [License](#license)
 
 # Setup
@@ -918,6 +919,12 @@ OPENAI_API_KEY=your-openai-api-key-here bin/rails s
 You can then access the app at [http://localhost:3000](http://localhost:3000).
 
 ![Demo App Screenshot](./screenshots/demo-app.png)
+
+# Contributing
+
+We welcome contributions to Raif! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+**Important**: All PR's should be made against the `dev` branch.
 
 # License
 
