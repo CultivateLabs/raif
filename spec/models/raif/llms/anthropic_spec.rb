@@ -411,6 +411,30 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
           "text",
           "text"
         ])
+
+        # Test that citations are extracted from web search results
+        expect(model_completion.citations).to eq([
+          {
+            "url" => "https://www.learnenough.com/blog/ruby-on-rails-development",
+            "title" => "Ruby On Rails Development Trends: 2024 & Beyond"
+          },
+          {
+            "url" => "https://rubygems.org/gems/rails/versions",
+            "title" => "All versions of rails | RubyGems.org | your community gem host"
+          },
+          {
+            "url" => "https://endoflife.date/rails",
+            "title" => "Ruby on Rails | endoflife.date"
+          },
+          {
+            "url" => "https://devops.com/the-ruby-on-rails-resurgence-2/",
+            "title" => "Best of 2024: The Ruby on Rails Resurgence - DevOps.com"
+          },
+          {
+            "url" => "https://en.wikipedia.org/wiki/Ruby_on_Rails",
+            "title" => "Ruby on Rails - Wikipedia"
+          }
+        ])
       end
     end
 
@@ -784,6 +808,122 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
           ]
         }
       ])
+    end
+  end
+
+  describe "#extract_citations" do
+    context "with citations in response" do
+      it "extracts citations from text blocks with citations" do
+        response_json = {
+          "content" => [
+            {
+              "type" => "text",
+              "text" => "Based on the search results, here are the latest AI developments.",
+              "citations" => [
+                {
+                  "type" => "web_search_result_location",
+                  "url" => "https://example.com/ai-news",
+                  "title" => "Latest AI Developments",
+                  "encrypted_index" => "abc123",
+                  "cited_text" => "AI technology has advanced..."
+                },
+                {
+                  "type" => "web_search_result_location",
+                  "url" => "https://example.com/tech-news",
+                  "title" => "Tech Industry News",
+                  "encrypted_index" => "def456",
+                  "cited_text" => "The tech industry is..."
+                }
+              ]
+            }
+          ]
+        }
+
+        citations = llm.send(:extract_citations, response_json)
+
+        expect(citations).to contain_exactly(
+          { "url" => "https://example.com/ai-news", "title" => "Latest AI Developments" },
+          { "url" => "https://example.com/tech-news", "title" => "Tech Industry News" }
+        )
+      end
+
+      it "removes duplicate citations by URL" do
+        response_json = {
+          "content" => [
+            {
+              "type" => "text",
+              "text" => "First mention of the source.",
+              "citations" => [
+                {
+                  "type" => "web_search_result_location",
+                  "url" => "https://example.com/same-url",
+                  "title" => "First Title"
+                }
+              ]
+            },
+            {
+              "type" => "text",
+              "text" => "Second mention of the same source.",
+              "citations" => [
+                {
+                  "type" => "web_search_result_location",
+                  "url" => "https://example.com/same-url",
+                  "title" => "Second Title"
+                }
+              ]
+            }
+          ]
+        }
+
+        citations = llm.send(:extract_citations, response_json)
+
+        expect(citations).to eq([
+          { "url" => "https://example.com/same-url", "title" => "First Title" }
+        ])
+      end
+    end
+
+    context "without citations in response" do
+      it "returns empty array when no content" do
+        response_json = { "content" => nil }
+        citations = llm.send(:extract_citations, response_json)
+        expect(citations).to eq([])
+      end
+
+      it "returns empty array when no citations in text blocks" do
+        response_json = {
+          "content" => [
+            {
+              "type" => "text",
+              "text" => "Some response without citations"
+            }
+          ]
+        }
+
+        citations = llm.send(:extract_citations, response_json)
+        expect(citations).to eq([])
+      end
+
+      it "ignores non-web_search_result_location citation types" do
+        response_json = {
+          "content" => [
+            {
+              "type" => "text",
+              "text" => "Response with other citation types",
+              "citations" => [
+                {
+                  "type" => "other_citation_type",
+                  "url" => "https://example.com/ignored",
+                  "title" => "Should be ignored"
+                }
+              ]
+            }
+          ]
+        }
+
+        citations = llm.send(:extract_citations, response_json)
+        expect(citations).to eq([])
+      end
     end
   end
 end
