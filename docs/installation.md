@@ -7,7 +7,7 @@ nav_order: 2
 # Installation
 {: .no_toc }
 
-This guide will walk you through installing and setting up Raif in your Rails application.
+Install and configure Raif in your Rails application.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
@@ -24,121 +24,89 @@ This guide will walk you through installing and setting up Raif in your Rails ap
 - Rails 7.0+
 - PostgreSQL or MySQL database
 
-## Installation Steps
+---
+
+## Quick Start
 
 ### 1. Add to Gemfile
-
-Add the Raif gem to your Rails application's Gemfile:
 
 ```ruby
 gem 'raif'
 ```
 
-### 2. Bundle Install
-
-Run bundle install to install the gem and its dependencies:
+### 2. Install and Setup
 
 ```bash
 bundle install
-```
-
-### 3. Run the Generator
-
-Generate the Raif configuration and migration files:
-
-```bash
 rails generate raif:install
-```
-
-This generator will:
-- Create a configuration file at `config/initializers/raif.rb`
-- Add database migrations for Raif's tables
-- Mount the Raif engine in your routes
-
-### 4. Run Migrations
-
-Apply the database migrations:
-
-```bash
 rails db:migrate
 ```
 
-### 5. Configure API Keys
+### 3. Configure API Keys
 
-Edit `config/initializers/raif.rb` to add your AI provider API keys:
+Edit `config/initializers/raif.rb`:
 
 ```ruby
 Raif.configure do |config|
-  # OpenAI Configuration
-  config.openai_api_key = ENV['OPENAI_API_KEY']
+  # OpenAI (recommended)
+  config.open_ai_api_key = ENV['OPENAI_API_KEY']
+  config.open_ai_models_enabled = true
+  config.default_llm_model_key = "open_ai_gpt_4o"
   
-  # Anthropic Configuration  
+  # Optional: Additional providers
   config.anthropic_api_key = ENV['ANTHROPIC_API_KEY']
+  config.anthropic_models_enabled = true
   
-  # Other provider configurations...
+  config.open_router_api_key = ENV['OPENROUTER_API_KEY']
+  config.open_router_models_enabled = true
 end
 ```
 
-### 6. Set Environment Variables
-
-Add your API keys to your environment variables or Rails credentials:
+### 4. Set Environment Variables
 
 ```bash
 # .env file
 OPENAI_API_KEY=your_openai_key_here
-ANTHROPIC_API_KEY=your_anthropic_key_here
+ANTHROPIC_API_KEY=your_anthropic_key_here  # optional
+OPENROUTER_API_KEY=your_openrouter_key_here  # optional
 ```
 
-Or use Rails credentials:
-
-```bash
-rails credentials:edit
-```
-
-```yaml
-openai:
-  api_key: your_openai_key_here
-anthropic:
-  api_key: your_anthropic_key_here
-```
+---
 
 ## Verification
 
-To verify your installation is working correctly, you can start the Rails console and test basic functionality:
+Test your setup in the Rails console:
 
 ```ruby
 rails console
 
-# Test that Raif is loaded
-Raif.version
+# Test configuration
+Raif.config.default_llm_model_key
 
-# Test a simple LLM call (requires API key)
-Raif.llm(:gpt_4o_mini).chat(
-  messages: [{ role: "user", content: "Hello, world!" }]
-)
+# Test LLM call (requires API key)
+llm = Raif.llm(:open_ai_gpt_4o_mini)
+completion = llm.chat(message: "Hello, world!")
+puts completion.raw_response
 ```
+
+---
 
 ## Next Steps
 
-After installation, you can:
-
-1. [Create your first Task]({{ site.baseurl }}{% link tasks.md %})
-2. Set up a Conversation (documentation coming soon)
-3. Build an Agent (documentation coming soon)
-4. Explore the configuration options (documentation coming soon)
+- [Create your first Task]({{ site.baseurl }}{% link tasks.md %})
+- [Set up a Conversation]({{ site.baseurl }}{% link conversations.md %})
+- [Build an Agent]({{ site.baseurl }}{% link agents.md %})
 
 ## Troubleshooting
 
-### Common Issues
-
 **Missing API Keys**
-- Ensure your API keys are properly set in environment variables or Rails credentials
-- Check that the keys have the correct permissions from your AI provider
+- Ensure your API keys are set in environment variables
+- Verify keys have correct permissions from your AI provider
 
-**Database Migration Errors**
-- Make sure your database is running and accessible
-- Check that you have the necessary permissions to create tables
+**Database Issues**
+- Check database is running and accessible
+- Ensure proper table creation permissions
 
-**Route Mounting Issues**
-- Verify that the Raif engine is properly mounted in your `config/routes.rb`
-- Check for conflicts with existing routes 
+**Route Conflicts**
+- Verify Raif engine is mounted in `config/routes.rb`
+- Check for existing route conflicts 

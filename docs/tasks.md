@@ -7,7 +7,7 @@ nav_order: 3
 # Tasks
 {: .no_toc }
 
-Tasks are single-shot AI operations with defined prompts and response formats. They're perfect for one-time AI operations like content generation, data analysis, or text processing.
+Single-shot AI operations with defined prompts and response formats.
 {: .fs-6 .fw-300 }
 
 ## Table of contents
@@ -20,23 +20,19 @@ Tasks are single-shot AI operations with defined prompts and response formats. T
 
 ## Overview
 
-A Task in Raif represents a single AI operation that takes input, processes it through an LLM, and returns a structured response. Tasks are ideal for:
+Tasks represent single AI operations that take input, process it through an LLM, and return structured responses. Perfect for:
 
-- Content generation
-- Text summarization
-- Data extraction
-- Classification tasks
-- Translation
+- Content generation and summarization
+- Data extraction and classification
+- Translation and text processing
+
+---
 
 ## Creating a Task
-
-Use the generator to create a new task:
 
 ```bash
 rails generate raif:task ContentSummarizer --response-format html
 ```
-
-This creates a task class at `app/models/raif/tasks/content_summarizer.rb`:
 
 ```ruby
 class Raif::Tasks::ContentSummarizer < Raif::ApplicationTask
@@ -55,145 +51,202 @@ class Raif::Tasks::ContentSummarizer < Raif::ApplicationTask
 end
 ```
 
-## Response Formats
+---
 
-Tasks support three response formats:
+## Response Formats
 
 ### Text Format
 ```ruby
-llm_response_format :text
+llm_response_format :text  # Plain text responses
 ```
-Returns plain text responses.
 
 ### HTML Format  
 ```ruby
-llm_response_format :html
+llm_response_format :html  # HTML-formatted responses
 ```
-Returns HTML-formatted responses, useful for rich content.
 
 ### JSON Format
 ```ruby
 llm_response_format :json
-```
-Returns structured JSON data. You can define a schema:
 
-```ruby
-class Raif::Tasks::DataExtractor < Raif::ApplicationTask
-  llm_response_format :json
-  
-  def build_json_schema
-    {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        email: { type: "string" },
-        phone: { type: "string" }
-      },
-      required: ["name"]
-    }
-  end
+json_response_schema do
+  string :name, description: "The person's name"
+  string :email, description: "The person's email address"
+  string :phone, description: "The person's phone number", required: false
 end
 ```
 
-## Using Tasks
+---
+
+## Usage
+
+### Basic Usage
+
+```ruby
+task = Raif::Tasks::ContentSummarizer.run(
+  content: "Long content here...",
+  max_length: 200,
+  creator: current_user
+)
+
+# Access results
+puts task.raw_response      # Raw LLM response
+puts task.parsed_response   # Parsed response (JSON parsed if format is :json)
+puts task.status           # :completed, :failed, :in_progress, or :pending
+```
 
 ### In Controllers
 
 ```ruby
 class DocumentsController < ApplicationController
   def summarize
-    task = Raif::Tasks::ContentSummarizer.new
-    task.content = params[:content]
-    task.max_length = params[:max_length]
+    task = Raif::Tasks::ContentSummarizer.run(
+      content: params[:content],
+      max_length: params[:max_length],
+      creator: current_user
+    )
     
-    result = task.run!
-    
-    render json: { summary: result.response_text }
+    if task.completed?
+      render json: { summary: task.parsed_response }
+    else
+      render json: { error: "Summarization failed" }, status: :unprocessable_entity
+    end
   end
 end
 ```
 
-### In Background Jobs
+### With Model Tools
 
 ```ruby
-class SummarizeDocumentJob < ApplicationJob
-  def perform(document_id)
-    document = Document.find(document_id)
-    
-    task = Raif::Tasks::ContentSummarizer.new
-    task.content = document.content
-    task.max_length = 200
-    
-    result = task.run!
-    
-    document.update!(summary: result.response_text)
-  end
-end
+task = Raif::Tasks::ResearchTask.run(
+  topic: "renewable energy",
+  creator: current_user,
+  available_model_tools: [
+    "Raif::ModelTools::ProviderManaged::WebSearch",
+    "Raif::ModelTools::WikipediaSearch"
+  ]
+)
 ```
 
-## Configuration Options
+---
 
-### Temperature
-Control randomness in responses:
+## Configuration
 
+### Temperature Control
 ```ruby
 llm_temperature 0.1  # More focused
 llm_temperature 0.9  # More creative
 ```
 
-### Model Selection
-Specify which LLM to use:
-
+### Language Preference
 ```ruby
-llm_model :gpt_4o_mini
-# or
-llm_model :claude_3_5_sonnet
+task = Raif::Tasks::ContentSummarizer.run(
+  content: "Content to summarize",
+  creator: current_user,
+  requested_language_key: "es"  # Spanish
+)
 ```
 
-### Custom Validation
-
-Add validation to your task inputs:
-
+### File Processing
 ```ruby
-class Raif::Tasks::ContentSummarizer < Raif::ApplicationTask
-  validates :content, presence: true, length: { minimum: 10 }
-  validates :max_length, numericality: { greater_than: 0 }
-end
+# Include files/images
+pdf_file = Raif::ModelFileInput.new(input: "path/to/document.pdf")
+image = Raif::ModelImageInput.new(input: "path/to/chart.png")
+
+task = Raif::Tasks::DocumentAnalysis.run(
+  creator: current_user,
+  files: [pdf_file],
+  images: [image]
+)
 ```
+
+---
 
 ## Error Handling
 
-Tasks include built-in error handling:
-
 ```ruby
-task = Raif::Tasks::ContentSummarizer.new
-task.content = "Some content"
+task = Raif::Tasks::ContentSummarizer.run(
+  content: "Some content",
+  creator: current_user
+)
 
-begin
-  result = task.run!
-  puts result.response_text
-rescue Raif::TaskValidationError => e
-  puts "Validation failed: #{e.message}"
-rescue Raif::LlmError => e
-  puts "LLM error: #{e.message}"
+case task.status
+when :completed
+  result = task.parsed_response
+when :failed
+  Rails.logger.error "Task failed for user #{current_user.id}"
+end
+
+# Or simple check
+if task.completed?
+  # Process the result
+  result = task.parsed_response
 end
 ```
 
-## Testing Tasks
+---
 
-Raif provides test helpers for tasks:
+## Testing
 
 ```ruby
 RSpec.describe Raif::Tasks::ContentSummarizer do
+  let(:user) { create(:user) }
+  
   it "summarizes content" do
-    task = described_class.new
-    task.content = "Long content here..."
-    task.max_length = 50
+    stub_raif_task(described_class) do |messages, model_completion|
+      "This is a concise summary of the provided content."
+    end
     
-    stub_raif_task(task, response: "Short summary")
+    task = described_class.run(
+      content: "Long content here...",
+      max_length: 50,
+      creator: user
+    )
     
-    result = task.run!
-    expect(result.response_text).to eq("Short summary")
+    expect(task).to be_completed
+    expect(task.parsed_response).to eq("This is a concise summary of the provided content.")
   end
+  
+  it "includes content in the prompt" do
+    stub_raif_task(described_class) do |messages, model_completion|
+      prompt = messages.first["content"]
+      expect(prompt).to include("Long content here...")
+      "Summary"
+    end
+    
+    described_class.run(content: "Long content here...", creator: user)
+  end
+end
+```
+
+---
+
+## Advanced Patterns
+
+### Task Inheritance
+
+```ruby
+class Raif::Tasks::BaseAnalysisTask < Raif::ApplicationTask
+  llm_temperature 0.3
+  
+  def build_system_prompt
+    "You are an expert analyst. Be thorough and accurate."
+  end
+end
+
+class Raif::Tasks::FinancialAnalysis < Raif::Tasks::BaseAnalysisTask
+  attr_accessor :financial_data
+  
+  def build_prompt
+    "Analyze the following financial data: #{financial_data}"
+  end
+end
+```
+
+### Re-running Failed Tasks
+
+```ruby
+if task.failed?
+  task.re_run
 end
 ``` 
