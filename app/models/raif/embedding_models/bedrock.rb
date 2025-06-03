@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-class Raif::EmbeddingModels::BedrockTitan < Raif::EmbeddingModel
+class Raif::EmbeddingModels::Bedrock < Raif::EmbeddingModel
 
   def generate_embedding!(input, dimensions: nil)
     unless input.is_a?(String)
-      raise ArgumentError, "Raif::EmbeddingModels::BedrockTitan#generate_embedding! input must be a string"
+      raise ArgumentError, "Raif::EmbeddingModels::Bedrock#generate_embedding! input must be a string"
     end
 
     params = build_request_parameters(input, dimensions:)

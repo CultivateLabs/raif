@@ -70,7 +70,7 @@ module Raif
           default_output_vector_size: 1536,
         },
       ],
-      Raif::EmbeddingModels::BedrockTitan => [
+      Raif::EmbeddingModels::Bedrock => [
         {
           key: :bedrock_titan_embed_text_v2,
           api_name: "amazon.titan-embed-text-v2:0",

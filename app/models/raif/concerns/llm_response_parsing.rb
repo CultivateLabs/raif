@@ -43,24 +43,15 @@ module Raif::Concerns::LlmResponseParsing
       JSON.parse(json)
     elsif response_format_html?
       html = raw_response.strip.gsub("```html", "").chomp("```")
-      clean_html_fragment(html)
+      html_with_converted_links = Raif::Utils::HtmlFragmentProcessor.convert_markdown_links_to_html(html)
+      Raif::Utils::HtmlFragmentProcessor.clean_html_fragment(
+        html_with_converted_links,
+        allowed_tags: allowed_tags,
+        allowed_attributes: allowed_attributes
+      )
     else
       raw_response.strip
     end
   end
 
-  def clean_html_fragment(html)
-    fragment = Nokogiri::HTML.fragment(html)
-
-    fragment.traverse do |node|
-      if node.text? && node.text.strip.empty?
-        node.remove
-      end
-    end
-
-    allowed_tags = self.class.allowed_tags || Rails::HTML5::SafeListSanitizer.allowed_tags
-    allowed_attributes = self.class.allowed_attributes || Rails::HTML5::SafeListSanitizer.allowed_attributes
-
-    ActionController::Base.helpers.sanitize(fragment.to_html, tags: allowed_tags, attributes: allowed_attributes).strip
-  end
 end

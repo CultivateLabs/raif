@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Raif::Concerns::Llms::OpenAi::MessageFormatting
+module Raif::Concerns::Llms::OpenAiCompletions::MessageFormatting
   extend ActiveSupport::Concern
 
   def format_model_image_input_message(image_input)

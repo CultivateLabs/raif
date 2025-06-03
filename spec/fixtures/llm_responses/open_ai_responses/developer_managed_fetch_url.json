@@ -1,0 +1,73 @@
+{
+  "id": "resp_68373cdfdgsd08198a25245742ad2cda2043abf0eb2e6b9c6",
+  "object": "response",
+  "created_at": 1748450521,
+  "status": "completed",
+  "background": false,
+  "error": null,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "model": "gpt-4.1-mini-2025-04-14",
+  "output": [
+    {
+      "id": "fc_68373cdaffc08198a0asdg39e96ef6d11043abf0eb2e6b9c6",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"url\":\"https://www.wsj.com\"}",
+      "call_id": "call_MTzWbTQdadsg1i1oxb0v0kZgUF8",
+      "name": "fetch_url"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "previous_response_id": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "service_tier": "default",
+  "store": true,
+  "temperature": 0.7,
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "tool_choice": "auto",
+  "tools": [
+    {
+      "type": "function",
+      "description": "Fetch a URL and return the page content as markdown",
+      "name": "fetch_url",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The URL to fetch content from"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "strict": true
+    }
+  ],
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 63,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    },
+    "output_tokens": 20,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 83
+  },
+  "user": null,
+  "metadata": {}
+}

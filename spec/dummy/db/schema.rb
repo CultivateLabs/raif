@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_05_07_155314) do
+ActiveRecord::Schema[8.0].define(version: 2025_05_27_213016) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -122,6 +122,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_07_155314) do
     t.decimal "output_token_cost", precision: 10, scale: 6
     t.decimal "total_cost", precision: 10, scale: 6
     t.integer "retry_count", default: 0, null: false
+    t.string "response_id"
+    t.jsonb "response_array"
     t.index ["created_at"], name: "index_raif_model_completions_on_created_at"
     t.index ["source_type", "source_id"], name: "index_raif_model_completions_on_source"
   end
