@@ -55,5 +55,31 @@ RSpec.describe Raif::ConversationEntry, type: :model do
         expect(entry.raif_model_tool_invocations.count).to eq(0)
       end
     end
+
+    context "when the response includes a markdown link" do
+      before do
+        stub_raif_conversation(conversation) do |_messages, _model_completion|
+          "Here's a [link](https://example.com). It's a good link."
+        end
+      end
+
+      context "when the response format is text" do
+        it "leaves the link as markdown" do
+          conversation.update!(response_format: "text")
+          entry.process_entry!
+          expect(entry.reload).to be_completed
+          expect(entry.model_response_message).to eq("Here's a [link](https://example.com). It's a good link.")
+        end
+      end
+
+      context "when the response format is html" do
+        it "converts the link to an HTML link" do
+          conversation.update!(response_format: "html")
+          entry.process_entry!
+          expect(entry.reload).to be_completed
+          expect(entry.model_response_message).to eq("Here's a <a href=\"https://example.com\">link</a>. It's a good link.")
+        end
+      end
+    end
   end
 end

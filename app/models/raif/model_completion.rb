@@ -16,6 +16,7 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   after_initialize -> { self.messages ||= [] }
   after_initialize -> { self.available_model_tools ||= [] }
+  after_initialize -> { self.response_array ||= [] }
 
   def json_response_schema
     source.json_response_schema if source&.respond_to?(:json_response_schema)

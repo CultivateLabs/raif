@@ -64,6 +64,10 @@ class Raif::ModelTool
       end
     end
 
+    def provider_managed?
+      false
+    end
+
     def renderable?
       true
     end

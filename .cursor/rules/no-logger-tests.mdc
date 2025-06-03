@@ -1,6 +1,0 @@
----
-description: 
-globs: 
-alwaysApply: false
----
-When generating tests/specs, never add tests/checks for logger calls

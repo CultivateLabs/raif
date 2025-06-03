@@ -13,6 +13,8 @@ Raif is built by [Cultivate Labs](https://www.cultivatelabs.com) and is used to 
 ## Table of Contents
 - [Setup](#setup)
   - [OpenAI](#openai)
+    - [OpenAI Completions API](#openai-completions-api)
+    - [OpenAI Responses API](#openai-responses-api)
   - [Anthropic Claude](#anthropic-claude)
   - [AWS Bedrock (Claude)](#aws-bedrock-claude)
   - [OpenRouter](#openrouter)
@@ -23,6 +25,7 @@ Raif is built by [Cultivate Labs](https://www.cultivatelabs.com) and is used to 
     - [Conversation Types](#conversation-types)
   - [Agents](#agents)
   - [Model Tools](#model-tools)
+    - [Provider-Managed Tools](#provider-managed-tools)
 - [Images/Files/PDF's](#imagesfilespdfs)
   - [Images/Files/PDF's in Tasks](#imagesfilespdfs-in-tasks)
 - [Embedding Models](#embedding-models)
@@ -35,6 +38,7 @@ Raif is built by [Cultivate Labs](https://www.cultivatelabs.com) and is used to 
   - [Adding LLM Models](#adding-llm-models)
 - [Testing](#testing)
 - [Demo App](#demo-app)
+- [Contributing](#contributing)
 - [License](#license)
 
 # Setup
@@ -84,6 +88,10 @@ end
 Configure your LLM providers. You'll need at least one of:
 
 ## OpenAI
+
+Raif supports both OpenAI's [Completions API](https://platform.openai.com/docs/api-reference/chat) and the newer [Responses API](https://platform.openai.com/docs/api-reference/responses), which provides access to provider-managed tools like web search, code execution, and image generation.
+
+### OpenAI Completions API
 ```ruby
 Raif.configure do |config|
   config.open_ai_models_enabled = true
@@ -92,10 +100,32 @@ Raif.configure do |config|
 end
 ```
 
-Currently supported OpenAI models:
+Currently supported OpenAI Completions API models:
 - `open_ai_gpt_4o_mini`
 - `open_ai_gpt_4o`
 - `open_ai_gpt_3_5_turbo`
+- `open_ai_gpt_4_1`
+- `open_ai_gpt_4_1_mini`
+- `open_ai_gpt_4_1_nano`
+
+### OpenAI Responses API
+```ruby
+Raif.configure do |config|
+  config.open_ai_models_enabled = true
+  config.open_ai_api_key = ENV["OPENAI_API_KEY"]
+  config.default_llm_model_key = "open_ai_responses_gpt_4o"
+end
+```
+
+Currently supported OpenAI Responses API models:
+- `open_ai_responses_gpt_4o_mini`
+- `open_ai_responses_gpt_4o`
+- `open_ai_responses_gpt_3_5_turbo`
+- `open_ai_responses_gpt_4_1`
+- `open_ai_responses_gpt_4_1_mini`
+- `open_ai_responses_gpt_4_1_nano`
+
+The Responses API provides access to [provider-managed tools](#provider-managed-tools), including web search, code execution, and image generation.
 
 ## Anthropic Claude
 ```ruby
@@ -112,10 +142,12 @@ Currently supported Anthropic models:
 - `anthropic_claude_3_5_haiku`
 - `anthropic_claude_3_opus`
 
+The Anthropic adapter provides access to [provider-managed tools](#provider-managed-tools) for web search and code execution.
+
 ## AWS Bedrock (Claude)
 ```ruby
 Raif.configure do |config|
-  config.anthropic_bedrock_models_enabled = true
+  config.bedrock_models_enabled = true
   config.aws_bedrock_region = "us-east-1"
   config.default_llm_model_key = "bedrock_claude_3_5_sonnet"
 end
@@ -126,6 +158,9 @@ Currently supported Bedrock models:
 - `bedrock_claude_3_7_sonnet`
 - `bedrock_claude_3_5_haiku`
 - `bedrock_claude_3_opus`
+- `bedrock_amazon_nova_micro`
+- `bedrock_amazon_nova_lite`
+- `bedrock_amazon_nova_pro`
 
 Note: Raif utilizes the [AWS Bedrock gem](https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/BedrockRuntime/Client.html) and AWS credentials should be configured via the AWS SDK (environment variables, IAM role, etc.)
 
@@ -522,7 +557,54 @@ class Raif::ModelTools::GoogleSearch < Raif::ModelTool
 end
 ```
 
-## Images/Files/PDF's
+### Provider-Managed Tools
+
+In addition to the ability to create your own model tools, Raif supports provider-managed tools. These are tools that are built into certain LLM providers and run on the provider's infrastructure:
+
+- **`Raif::ModelTools::ProviderManaged::WebSearch`**: Performs real-time web searches and returns relevant results
+- **`Raif::ModelTools::ProviderManaged::CodeExecution`**: Executes code in a secure sandboxed environment (e.g. Python)
+- **`Raif::ModelTools::ProviderManaged::ImageGeneration`**: Generates images based on text descriptions
+
+Current provider-managed tool support:
+| Provider | WebSearch | CodeExecution | ImageGeneration |
+|----------|-----------|---------------|-----------------|
+| OpenAI Responses API | ✅ | ✅ | ✅ |
+| OpenAI Completions API | ❌ | ❌ | ❌ |
+| Anthropic Claude | ✅ | ✅ | ❌ |
+| AWS Bedrock (Claude) | ❌ | ❌ | ❌ |
+| OpenRouter | ❌ | ❌ | ❌ |
+
+To use provider-managed tools, include them in the `available_model_tools` array:
+
+```ruby
+# In a conversation
+conversation = Raif::Conversation.create!(
+  creator: current_user,
+  available_model_tools: [
+    "Raif::ModelTools::ProviderManaged::WebSearch",
+    "Raif::ModelTools::ProviderManaged::CodeExecution"
+  ]
+)
+
+# In an agent
+agent = Raif::Agents::ReActAgent.new(
+  task: "Search for recent news about AI and create a summary chart",
+  available_model_tools: [
+    "Raif::ModelTools::ProviderManaged::WebSearch",
+    "Raif::ModelTools::ProviderManaged::CodeExecution"
+  ],
+  creator: current_user
+)
+
+# Directly in a chat
+llm = Raif.llm(:open_ai_responses_gpt_4_1)
+model_completion = llm.chat(
+  messages: [{ role: "user", content: "What are the latest developments in Ruby on Rails?" }], 
+  available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
+)
+```
+
+## Sending Images/Files/PDF's to the LLM
 
 Raif supports images, files, and PDF's in the messages sent to the LLM.
 
@@ -598,7 +680,7 @@ Raif supports generation of vector embeddings. You can enable and configure embe
 ```ruby
 Raif.configure do |config|
   config.open_ai_embedding_models_enabled = true
-  config.aws_bedrock_titan_embedding_models_enabled = true
+  config.bedrock_embedding_models_enabled = true
   
   config.default_embedding_model_key = "open_ai_text_embedding_3_small"
 end
@@ -837,6 +919,12 @@ OPENAI_API_KEY=your-openai-api-key-here bin/rails s
 You can then access the app at [http://localhost:3000](http://localhost:3000).
 
 ![Demo App Screenshot](./screenshots/demo-app.png)
+
+# Contributing
+
+We welcome contributions to Raif! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+**Important**: All PR's should be made against the `dev` branch.
 
 # License
 

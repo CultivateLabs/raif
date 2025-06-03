@@ -3,7 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::OpenRouter, type: :model do
-  it_behaves_like "an LLM that uses OpenAI's message formatting"
+  it_behaves_like "an LLM that uses OpenAI's Completions API message formatting"
+  it_behaves_like "an LLM that uses OpenAI's Completions API tool formatting"
 
   let(:llm){ Raif.llm(:open_router_claude_3_7_sonnet) }
   let(:stubs) { Faraday::Adapter::Test::Stubs.new }
@@ -47,6 +48,137 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         expect(model_completion.response_format).to eq("text")
         expect(model_completion.temperature).to eq(0.7)
         expect(model_completion.system_prompt).to eq("You are a helpful assistant.")
+        expect(model_completion.response_array).to eq([{ "message" => { "content" => "Response content" } }])
+      end
+    end
+
+    context "when the response format is json" do
+      let(:response_body) do
+        {
+          "id" => "gen-1748455370-i2bE4HRhXR02lltZZKFD",
+          "provider" => "Google",
+          "model" => "anthropic/claude-3.7-sonnet",
+          "object" => "chat.completion",
+          "created" => 1748455370,
+          "choices" => [{
+            "logprobs" => nil,
+            "finish_reason" => "stop",
+            "native_finish_reason" => "stop",
+            "index" => 0,
+            "message" => {
+              "role" => "assistant",
+              "content" => "```json\n{\n  \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}\n```",
+              "refusal" => nil,
+              "reasoning" => nil
+            }
+          }],
+          "usage" => { "prompt_tokens" => 74, "completion_tokens" => 31, "total_tokens" => 105 }
+        }
+      end
+
+      before do
+        stubs.post("chat/completions") do |_env|
+          [200, { "Content-Type" => "application/json" }, response_body]
+        end
+      end
+
+      it "makes a request to the OpenRouter API and processes the json response" do
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Can you you tell me a joke? Respond in JSON format." }],
+          response_format: :json
+        )
+
+        expect(model_completion.raw_response).to eq("```json\n{\n  \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}\n```") # rubocop:disable Layout/LineLength
+        expect(model_completion.response_format).to eq("json")
+        expect(model_completion.parsed_response).to eq({ "joke" => "Why don't scientists trust atoms? Because they make up everything!" })
+        expect(model_completion.completion_tokens).to eq(31)
+        expect(model_completion.prompt_tokens).to eq(74)
+        expect(model_completion.response_array).to eq([{
+          "logprobs" => nil,
+          "finish_reason" => "stop",
+          "native_finish_reason" => "stop",
+          "index" => 0,
+          "message" => {
+            "role" => "assistant",
+            "content" => "```json\n{\n  \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}\n```",
+            "refusal" => nil,
+            "reasoning" => nil
+          }
+        }])
+      end
+    end
+
+    context "when using developer-managed tools" do
+      let(:response_body) do
+        json_file = File.read(Raif::Engine.root.join("spec/fixtures/llm_responses/open_router/developer_managed_fetch_url.json"))
+        JSON.parse(json_file)
+      end
+
+      before do
+        stubs.post("chat/completions") do |env|
+          body = JSON.parse(env.body)
+
+          expect(body["tools"]).to eq([{
+            "type" => "function",
+            "function" => {
+              "name" => "fetch_url",
+              "description" => "Fetch a URL and return the page content as markdown",
+              "parameters" => {
+                "type" => "object",
+                "additionalProperties" => false,
+                "properties" => { "url" => { "type" => "string", "description" => "The URL to fetch content from" } },
+                "required" => ["url"]
+              }
+            }
+          }])
+
+          [200, { "Content-Type" => "application/json" }, response_body]
+        end
+      end
+
+      it "extracts tool calls correctly" do
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
+          available_model_tools: [Raif::ModelTools::FetchUrl]
+        )
+
+        expect(model_completion.raw_response).to eq("I can help you check what's on the homepage of The Wall Street Journal (WSJ) website today. Let me fetch that for you.") # rubocop:disable Layout/LineLength
+        expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
+        expect(model_completion.response_array).to eq([{
+          "logprobs" => nil,
+          "finish_reason" => "tool_calls",
+          "native_finish_reason" => "tool_calls",
+          "index" => 0,
+          "message" => {
+            "role" => "assistant",
+            "content" =>
+           "I can help you check what's on the homepage of The Wall Street Journal (WSJ) website today. Let me fetch that for you.",
+            "refusal" => nil,
+            "reasoning" => nil,
+            "tool_calls" => [{
+              "id" => "toolu_vrtx_014TAQp4ndsg8yZS2my3wXvWK",
+              "index" => 0,
+              "type" => "function",
+              "function" => { "name" => "fetch_url", "arguments" => "{\"url\": \"https://www.wsj.com\"}" }
+            }]
+          }
+        }])
+
+        expect(model_completion.response_tool_calls).to eq([{
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://www.wsj.com" }
+        }])
+      end
+    end
+
+    context "when using provider-managed tools" do
+      it "raises Raif::Errors::UnsupportedFeatureError" do
+        expect do
+          llm.chat(
+            messages: [{ role: "user", content: "What are the latest developments in Ruby on Rails?" }],
+            available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
+          )
+        end.to raise_error(Raif::Errors::UnsupportedFeatureError)
       end
     end
 
@@ -193,10 +325,8 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         expect(tool_calls.length).to eq(1)
 
         tool_call = tool_calls.first
-        expect(tool_call["id"]).to eq("call_123")
-        expect(tool_call["type"]).to eq("function")
-        expect(tool_call["function"]["name"]).to eq("test_tool")
-        expect(tool_call["function"]["arguments"]).to eq("{\"query\":\"test query\"}")
+        expect(tool_call["name"]).to eq("test_tool")
+        expect(tool_call["arguments"]).to eq({ "query" => "test query" })
       end
     end
 
@@ -213,11 +343,9 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         }
       end
 
-      it "returns an empty array" do
+      it "returns nil" do
         tool_calls = llm.send(:extract_response_tool_calls, response_json)
-
-        expect(tool_calls).to be_an(Array)
-        expect(tool_calls).to be_empty
+        expect(tool_calls).to eq(nil)
       end
     end
   end

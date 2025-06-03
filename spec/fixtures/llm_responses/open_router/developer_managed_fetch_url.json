@@ -1,0 +1,37 @@
+{
+  "id": "gen-17484315626-E2MYnXjNdsghjkLCnps576I",
+  "provider": "Google",
+  "model": "anthropic/claude-3.7-sonnet",
+  "object": "chat.completion",
+  "created": 1748455626,
+  "choices": [
+    {
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "I can help you check what's on the homepage of The Wall Street Journal (WSJ) website today. Let me fetch that for you.",
+        "refusal": null,
+        "reasoning": null,
+        "tool_calls": [
+          {
+            "id": "toolu_vrtx_014TAQp4ndsg8yZS2my3wXvWK",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "fetch_url",
+              "arguments": "{\"url\": \"https://www.wsj.com\"}"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 413,
+    "completion_tokens": 91,
+    "total_tokens": 504
+  }
+}

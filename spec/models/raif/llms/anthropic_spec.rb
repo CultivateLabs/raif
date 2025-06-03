@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::Anthropic, type: :model do
-  let(:llm){ Raif.llm(:anthropic_claude_3_opus) }
+  let(:llm){ Raif.llm(:anthropic_claude_3_5_haiku) }
   let(:stubs) { Faraday::Adapter::Test::Stubs.new }
   let(:test_connection) do
     Faraday.new do |builder|
@@ -22,8 +22,23 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     context "when the response format is text" do
       let(:response_body) do
         {
-          "content" => [{ "type" => "text", "text" => "Response content" }],
-          "usage" => { "input_tokens" => 5, "output_tokens" => 10 }
+          "id" => "msg_abc123",
+          "type" => "message",
+          "role" => "assistant",
+          "model" => "claude-3-5-haiku-20241022",
+          "content" => [{
+            "type" => "text",
+            "text" => "Hi there! How are you doing today? Is there anything I can help you with?"
+          }],
+          "stop_reason" => "end_turn",
+          "stop_sequence" => nil,
+          "usage" => {
+            "input_tokens" => 8,
+            "cache_creation_input_tokens" => 0,
+            "cache_read_input_tokens" => 0,
+            "output_tokens" => 21,
+            "service_tier" => "standard"
+          }
         }
       end
 
@@ -36,23 +51,45 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       it "makes a request to the Anthropic API and processes the text response" do
         model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], system_prompt: "You are a helpful assistant.")
 
-        expect(model_completion.raw_response).to eq("Response content")
-        expect(model_completion.completion_tokens).to eq(10)
-        expect(model_completion.prompt_tokens).to eq(5)
-        expect(model_completion.total_tokens).to eq(15)
-        expect(model_completion.llm_model_key).to eq("anthropic_claude_3_opus")
-        expect(model_completion.model_api_name).to eq("claude-3-opus-latest")
+        expect(model_completion.raw_response).to eq("Hi there! How are you doing today? Is there anything I can help you with?")
+        expect(model_completion.completion_tokens).to eq(21)
+        expect(model_completion.prompt_tokens).to eq(8)
+        expect(model_completion.total_tokens).to eq(29)
+        expect(model_completion.llm_model_key).to eq("anthropic_claude_3_5_haiku")
+        expect(model_completion.model_api_name).to eq("claude-3-5-haiku-latest")
         expect(model_completion.response_format).to eq("text")
         expect(model_completion.temperature).to eq(0.7)
         expect(model_completion.system_prompt).to eq("You are a helpful assistant.")
+        expect(model_completion.response_id).to eq("msg_abc123")
+        expect(model_completion.response_array).to eq([{
+          "type" => "text",
+          "text" => "Hi there! How are you doing today? Is there anything I can help you with?"
+        }])
       end
     end
 
     context "when the response format is JSON and model does not use json_response tool" do
       let(:response_body) do
         {
-          "content" => [{ "type" => "text", "text" => "{\"name\": \"John\", \"age\": 30}" }],
-          "usage" => { "input_tokens" => 5, "output_tokens" => 10 }
+          "id" => "msg_abc123",
+          "type" => "message",
+          "role" => "assistant",
+          "model" => "claude-3-5-haiku-20241022",
+          "content" => [
+            {
+              "type" => "text",
+              "text" => "{\n    \"name\": \"Emily Johnson\",\n    \"age\": 28\n}"
+            }
+          ],
+          "stop_reason" => "end_turn",
+          "stop_sequence" => nil,
+          "usage" => {
+            "input_tokens" => 35,
+            "cache_creation_input_tokens" => 0,
+            "cache_read_input_tokens" => 0,
+            "output_tokens" => 22,
+            "service_tier" => "standard"
+          }
         }
       end
 
@@ -64,18 +101,20 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
 
       it "makes a request to the Anthropic API and processes the JSON response" do
         model_completion = llm.chat(
-          messages: [{ role: "user", content: "Hello" }],
+          messages: [{ role: "user", content: "Please give me a JSON object with a name and age. Don't include any other text in your response." }],
           system_prompt: "You are a helpful assistant.",
           response_format: :json
         )
 
-        expect(model_completion.raw_response).to eq("{\"name\": \"John\", \"age\": 30}")
-        expect(model_completion.completion_tokens).to eq(10)
-        expect(model_completion.prompt_tokens).to eq(5)
-        expect(model_completion.total_tokens).to eq(15)
-        expect(model_completion.llm_model_key).to eq("anthropic_claude_3_opus")
-        expect(model_completion.model_api_name).to eq("claude-3-opus-latest")
+        expect(model_completion.raw_response).to eq("{\n    \"name\": \"Emily Johnson\",\n    \"age\": 28\n}")
+        expect(model_completion.completion_tokens).to eq(22)
+        expect(model_completion.prompt_tokens).to eq(35)
+        expect(model_completion.total_tokens).to eq(57)
+        expect(model_completion.llm_model_key).to eq("anthropic_claude_3_5_haiku")
+        expect(model_completion.model_api_name).to eq("claude-3-5-haiku-latest")
         expect(model_completion.response_format).to eq("json")
+        expect(model_completion.response_id).to eq("msg_abc123")
+        expect(model_completion.response_array).to eq([{ "type" => "text", "text" => "{\n    \"name\": \"Emily Johnson\",\n    \"age\": 28\n}" }])
       end
     end
 
@@ -84,17 +123,28 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
 
       let(:response_body) do
         {
-          "content" => [
-            {
-              "type" => "tool_use",
-              "name" => "json_response",
-              "input" => {
-                "joke" => "Why do programmers prefer dark mode?",
-                "answer" => "Because light attracts bugs!"
-              }
+          "id" => "msg_abc123",
+          "type" => "message",
+          "role" => "assistant",
+          "model" => "claude-3-5-haiku-20241022",
+          "content" => [{
+            "type" => "tool_use",
+            "id" => "toolu_abc123",
+            "name" => "json_response",
+            "input" => {
+              "joke" => "Why don't scientists trust atoms?",
+              "answer" => "Because they make up everything!"
             }
-          ],
-          "usage" => { "input_tokens" => 8, "output_tokens" => 15 }
+          }],
+          "stop_reason" => "tool_use",
+          "stop_sequence" => nil,
+          "usage" => {
+            "input_tokens" => 371,
+            "cache_creation_input_tokens" => 0,
+            "cache_read_input_tokens" => 0,
+            "output_tokens" => 80,
+            "service_tier" => "standard"
+          }
         }
       end
 
@@ -114,14 +164,17 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
 
       it "extracts JSON response from json_response tool call" do
         model_completion = llm.chat(
-          messages: [{ role: "user", content: "Tell me a joke" }],
+          messages: [{
+            role: "user",
+            content: "Please give me a JSON object with a joke and answer. Don't include any other text in your response."
+          }],
           response_format: :json,
           source: test_task
         )
 
         expected_json = JSON.generate({
-          "joke" => "Why do programmers prefer dark mode?",
-          "answer" => "Because light attracts bugs!"
+          "joke" => "Why don't scientists trust atoms?",
+          "answer" => "Because they make up everything!"
         })
 
         expect(model_completion.raw_response).to eq(expected_json)
@@ -129,14 +182,25 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
           {
             "name" => "json_response",
             "arguments" => {
-              "joke" => "Why do programmers prefer dark mode?",
-              "answer" => "Because light attracts bugs!"
+              "joke" => "Why don't scientists trust atoms?",
+              "answer" => "Because they make up everything!"
             }
           }
         ])
-        expect(model_completion.completion_tokens).to eq(15)
-        expect(model_completion.prompt_tokens).to eq(8)
+        expect(model_completion.completion_tokens).to eq(80)
+        expect(model_completion.prompt_tokens).to eq(371)
+        expect(model_completion.total_tokens).to eq(451)
         expect(model_completion.response_format).to eq("json")
+        expect(model_completion.response_id).to eq("msg_abc123")
+        expect(model_completion.response_array).to eq([{
+          "id" => "toolu_abc123",
+          "input" => {
+            "answer" => "Because they make up everything!",
+            "joke" => "Why don't scientists trust atoms?"
+          },
+          "name" => "json_response",
+          "type" => "tool_use"
+        }])
       end
     end
 
@@ -242,40 +306,110 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       end
     end
 
-    context "when the response includes tool use" do
+    context "when using developer-managed tools" do
       let(:response_body) do
-        {
-          "content" => [
-            {
-              "type" => "tool_use",
-              "name" => "calculator",
-              "input" => {
-                "operation" => "add",
-                "operands" => [5, 7]
-              }
-            }
-          ],
-          "usage" => { "input_tokens" => 8, "output_tokens" => 12 }
-        }
+        json_file = File.read(Raif::Engine.root.join("spec/fixtures/llm_responses/anthropic/developer_managed_fetch_url.json"))
+        JSON.parse(json_file)
       end
 
       before do
-        stubs.post("messages") do |_env|
+        stubs.post("messages") do |env|
+          body = JSON.parse(env.body)
+          expect(body["tools"]).to eq([{
+            "name" => "fetch_url",
+            "description" => "Fetch a URL and return the page content as markdown",
+            "input_schema" => {
+              "type" => "object",
+              "additionalProperties" => false,
+              "properties" => { "url" => { "type" => "string", "description" => "The URL to fetch content from" } },
+              "required" => ["url"]
+            }
+          }])
+
           [200, { "Content-Type" => "application/json" }, response_body]
         end
       end
 
       it "extracts tool calls correctly" do
         model_completion = llm.chat(
-          messages: [{ role: "user", content: "Add 5 + 7" }],
-          system_prompt: "You can use tools."
+          messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
+          available_model_tools: [Raif::ModelTools::FetchUrl]
         )
+
+        expect(model_completion.raw_response).to eq("I'll fetch the content of the Wall Street Journal homepage for you.")
+        expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
+        expect(model_completion.response_array).to eq([
+          {
+            "type" => "text",
+            "text" => "I'll fetch the content of the Wall Street Journal homepage for you."
+          },
+          {
+            "id" => "toolu_abc123",
+            "input" => { "url" => "https://www.wsj.com" },
+            "name" => "fetch_url",
+            "type" => "tool_use"
+          }
+        ])
 
         expect(model_completion.response_tool_calls).to eq([
           {
-            "name" => "calculator",
-            "arguments" => { "operation" => "add", "operands" => [5, 7] }
+            "name" => "fetch_url",
+            "arguments" => { "url" => "https://www.wsj.com" }
           }
+        ])
+      end
+    end
+
+    context "when using provider-managed tools" do
+      let(:response_body) do
+        json_file = File.read(Raif::Engine.root.join("spec/fixtures/llm_responses/anthropic/provider_managed_web_search.json"))
+        JSON.parse(json_file)
+      end
+
+      before do
+        stubs.post("messages") do |env|
+          body = JSON.parse(env.body)
+          expect(body["tools"]).to eq([{
+            "type" => "web_search_20250305",
+            "name" => "web_search",
+            "max_uses" => 5
+          }])
+
+          [200, { "Content-Type" => "application/json" }, response_body]
+        end
+      end
+
+      it "extracts tool calls correctly" do
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "What are the latest developments in Ruby on Rails?" }],
+          available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
+        )
+
+        expect(model_completion.raw_response).to eq("Based on the search results, here are the latest developments in Ruby on Rails:\n\n1. Recent Versions and Support\n\nThe latest update was Rails 7.0.5 in May 2023\n. However, \nmore recent versions include:\n- 7.2.0 (August 2024)\n- 8.0.0 (November 2024)\n\n\n2. Support Policy\n\nStarting with version 7.2, each minor release will be:\n- Supported for 1 year with bug fixes\n- Supported for 2 years with security fixes\n\n\n3. Notable Developments\n\nRuby on Rails has experienced a resurgence, with the Hired 2023 State of Software Engineers report finding it the most in-demand skill for software engineering roles. Proficiency in Ruby on Rails resulted in 1.64 times more interview opportunities.\n\n\n4. Key Innovations\n\nThe resurgence has been significantly bolstered by innovations like Hotwire and improvements in JavaScript integration\n. \nPrevious major updates (Rails 6.0) brought significant improvements, including:\n- Action Mailbox for handling incoming emails\n- Action Text for rich-text content and editing\n- Multiple database support\n- Parallel testing\n- Webpacker as the default JavaScript builder\n- Zeitwerk code loader\n\n\n5. Future Outlook\n\nRuby on Rails continues to provide a framework that enables faster development and speed to market. Development teams are increasingly looking for tools that help them produce more with the same or fewer resources, which is where Rails excels.\n\n\n6. Community and Adoption\n\nWell-known sites using Ruby on Rails include Airbnb, GitHub, Twitch, and Shopify\n. \nWhile it took a backseat to JavaScript in the late 2010s, many developers continued to use it to rapidly build API layers for JavaScript front-ends, largely because Rails makes development so simple.\n\n\nInteresting Perspective\n\nThe framework is gaining recognition not just for its technical capabilities, but also for improving developer happiness. As a free, open-source project, it enables teams to rapidly develop innovative web apps for clients who need quick deployment, potentially helping developers maintain a better work-life balance.") # rubocop:disable Layout/LineLength
+        expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::ProviderManaged::WebSearch"])
+        expect(model_completion.response_array.map{|v| v["type"] }).to eq([
+          "server_tool_use",
+          "web_search_tool_result",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text"
         ])
       end
     end
@@ -338,6 +472,193 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect do
           llm.chat(message: "Hello")
         end.to raise_error(Faraday::ServerError)
+      end
+    end
+  end
+
+  describe "#build_tools_parameter" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        messages: [{ role: "user", content: "Hello" }],
+        llm_model_key: "anthropic_claude_3_5_haiku",
+        model_api_name: "claude-3-5-haiku-latest",
+        available_model_tools: available_model_tools,
+        response_format: response_format,
+        source: source
+      )
+    end
+
+    let(:response_format) { "text" }
+    let(:source) { nil }
+
+    context "with no tools and text response format" do
+      let(:available_model_tools) { [] }
+
+      it "returns an empty array" do
+        result = llm.send(:build_tools_parameter, model_completion)
+        expect(result).to eq([])
+      end
+    end
+
+    context "with JSON response format and schema" do
+      let(:available_model_tools) { [] }
+      let(:response_format) { "json" }
+      let(:source) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+
+      it "includes json_response tool when JSON format is requested with schema" do
+        result = llm.send(:build_tools_parameter, model_completion)
+
+        expect(result).to eq([{
+          name: "json_response",
+          description: "Generate a structured JSON response based on the provided schema.",
+          input_schema: {
+            type: "object",
+            additionalProperties: false,
+            required: ["joke", "answer"],
+            properties: {
+              joke: { type: "string" },
+              answer: { type: "string" }
+            }
+          }
+        }])
+      end
+    end
+
+    context "with developer-managed tools" do
+      let(:available_model_tools) { [Raif::TestModelTool] }
+
+      it "formats developer-managed tools correctly" do
+        result = llm.send(:build_tools_parameter, model_completion)
+
+        expect(result).to eq([{
+          name: "test_model_tool",
+          description: "Mock Tool Description",
+          input_schema: {
+            type: "object",
+            additionalProperties: false,
+            required: ["items"],
+            properties: {
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    title: { type: "string", description: "The title of the item" },
+                    description: { type: "string" }
+                  },
+                  required: ["title", "description"]
+                }
+              }
+            }
+          }
+        }])
+      end
+    end
+
+    context "with provider-managed tools" do
+      context "with WebSearch tool" do
+        let(:available_model_tools) { [Raif::ModelTools::ProviderManaged::WebSearch] }
+
+        it "formats WebSearch tool correctly" do
+          result = llm.send(:build_tools_parameter, model_completion)
+
+          expect(result).to eq([{
+            type: "web_search_20250305",
+            name: "web_search",
+            max_uses: 5
+          }])
+        end
+      end
+
+      context "with CodeExecution tool" do
+        let(:available_model_tools) { [Raif::ModelTools::ProviderManaged::CodeExecution] }
+
+        it "formats CodeExecution tool correctly" do
+          result = llm.send(:build_tools_parameter, model_completion)
+
+          expect(result).to eq([{
+            type: "code_execution_20250522",
+            name: "code_execution"
+          }])
+        end
+      end
+
+      context "with ImageGeneration tool" do
+        let(:available_model_tools) { [Raif::ModelTools::ProviderManaged::ImageGeneration] }
+
+        it "raises Raif::Errors::UnsupportedFeatureError" do
+          expect do
+            llm.send(:build_tools_parameter, model_completion)
+          end.to raise_error(Raif::Errors::UnsupportedFeatureError)
+        end
+      end
+    end
+
+    context "with mixed tool types and JSON response" do
+      let(:available_model_tools) { [Raif::TestModelTool, Raif::ModelTools::ProviderManaged::WebSearch] }
+      let(:response_format) { "json" }
+      let(:source) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+
+      it "includes json_response tool and formats all tools correctly" do
+        result = llm.send(:build_tools_parameter, model_completion)
+
+        expect(result).to contain_exactly(
+          {
+            name: "json_response",
+            description: "Generate a structured JSON response based on the provided schema.",
+            input_schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["joke", "answer"],
+              properties: {
+                joke: { type: "string" },
+                answer: { type: "string" }
+              }
+            }
+          },
+          {
+            name: "test_model_tool",
+            description: "Mock Tool Description",
+            input_schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["items"],
+              properties: {
+                items: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      title: { type: "string", description: "The title of the item" },
+                      description: { type: "string" }
+                    },
+                    required: ["title", "description"]
+                  }
+                }
+              }
+            }
+          },
+          {
+            type: "web_search_20250305",
+            name: "web_search",
+            max_uses: 5
+          }
+        )
+      end
+    end
+
+    context "when native tool use is not supported" do
+      let(:available_model_tools) { [Raif::TestModelTool] }
+
+      before do
+        allow(llm).to receive(:supports_native_tool_use?).and_return(false)
+      end
+
+      it "does not include developer-managed tools" do
+        result = llm.send(:build_tools_parameter, model_completion)
+        expect(result).to eq([])
       end
     end
   end

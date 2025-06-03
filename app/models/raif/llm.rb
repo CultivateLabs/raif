@@ -12,7 +12,8 @@ module Raif
       :supports_native_tool_use,
       :provider_settings,
       :input_token_cost,
-      :output_token_cost
+      :output_token_cost,
+      :supported_provider_managed_tools
 
     validates :key, presence: true
     validates :api_name, presence: true
@@ -21,8 +22,17 @@ module Raif
 
     alias_method :supports_native_tool_use?, :supports_native_tool_use
 
-    def initialize(key:, api_name:, model_provider_settings: {}, supports_native_tool_use: true, temperature: nil, max_completion_tokens: nil,
-      input_token_cost: nil, output_token_cost: nil)
+    def initialize(
+      key:,
+      api_name:,
+      model_provider_settings: {},
+      supported_provider_managed_tools: [],
+      supports_native_tool_use: true,
+      temperature: nil,
+      max_completion_tokens: nil,
+      input_token_cost: nil,
+      output_token_cost: nil
+    )
       @key = key
       @api_name = api_name
       @provider_settings = model_provider_settings
@@ -31,6 +41,7 @@ module Raif
       @default_max_completion_tokens = max_completion_tokens
       @input_token_cost = input_token_cost
       @output_token_cost = output_token_cost
+      @supported_provider_managed_tools = supported_provider_managed_tools.map(&:to_s)
     end
 
     def name
@@ -83,6 +94,11 @@ module Raif
       end
 
       model_completion
+    rescue Faraday::Error => e
+      Raif.logger.error("LLM API request failed (status: #{e.response_status}): #{e.message}")
+      Raif.logger.error(e.response_body)
+
+      raise e
     end
 
     def perform_model_completion!(model_completion)
@@ -91,6 +107,17 @@ module Raif
 
     def self.valid_response_formats
       VALID_RESPONSE_FORMATS
+    end
+
+    def supports_provider_managed_tool?(tool_klass)
+      supported_provider_managed_tools&.include?(tool_klass.to_s)
+    end
+
+    def validate_provider_managed_tool_support!(tool)
+      unless supports_provider_managed_tool?(tool)
+        raise Raif::Errors::UnsupportedFeatureError,
+          "Invalid provider-managed tool: #{tool.name} for #{key}"
+      end
     end
 
   private

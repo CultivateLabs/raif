@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.shared_examples "an LLM that uses OpenAI's message formatting" do
+RSpec.shared_examples "an LLM that uses OpenAI's Completions API message formatting" do
   describe "#format_messages" do
     it "formats the messages correctly with a string as the content" do
       messages = [{ "role" => "user", "content" => "Hello" }]
