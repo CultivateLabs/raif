@@ -124,6 +124,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_27_213016) do
     t.integer "retry_count", default: 0, null: false
     t.string "response_id"
     t.jsonb "response_array"
+    t.jsonb "citations"
     t.index ["created_at"], name: "index_raif_model_completions_on_created_at"
     t.index ["source_type", "source_id"], name: "index_raif_model_completions_on_source"
   end

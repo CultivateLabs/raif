@@ -21,6 +21,7 @@ class Raif::Llms::Anthropic < Raif::Llm
     model_completion.response_id = response_json&.dig("id")
     model_completion.response_array = response_json&.dig("content")
     model_completion.response_tool_calls = extract_response_tool_calls(response_json)
+    model_completion.citations = extract_citations(response_json)
     model_completion.completion_tokens = response_json&.dig("usage", "output_tokens")
     model_completion.prompt_tokens = response_json&.dig("usage", "input_tokens")
     model_completion.save!
@@ -95,6 +96,28 @@ protected
         "arguments" => tool_use["input"]
       }
     end
+  end
+
+  def extract_citations(resp)
+    return [] if resp&.dig("content").nil?
+
+    citations = []
+
+    # Look through content blocks for citations
+    resp.dig("content").each do |content|
+      next unless content["type"] == "text" && content["citations"].present?
+
+      content["citations"].each do |citation|
+        next unless citation["type"] == "web_search_result_location"
+
+        citations << {
+          "url" => Raif::Utils::HtmlFragmentProcessor.strip_tracking_parameters(citation["url"]),
+          "title" => citation["title"]
+        }
+      end
+    end
+
+    citations.uniq{|citation| citation["url"] }
   end
 
 end

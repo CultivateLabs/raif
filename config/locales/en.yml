@@ -12,6 +12,7 @@ en:
             too_short: must have at least 1 tool
     common:
       send: Send
+      sources: Sources
       there_was_an_error_generating_this_response: There was an error generating this response
       tools: Tools
       type_your_message: Type your message...

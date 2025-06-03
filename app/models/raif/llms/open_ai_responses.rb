@@ -19,6 +19,7 @@ class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
       response_tool_calls: extract_response_tool_calls(response_json),
       raw_response: extract_raw_response(response_json),
       response_array: response_json["output"],
+      citations: extract_citations(response_json),
       completion_tokens: response_json.dig("usage", "output_tokens"),
       prompt_tokens: response_json.dig("usage", "input_tokens"),
       total_tokens: response_json.dig("usage", "total_tokens"),
@@ -57,6 +58,33 @@ private
     end
 
     text_outputs.join("\n").presence
+  end
+
+  def extract_citations(resp)
+    return [] if resp["output"].blank?
+
+    citations = []
+
+    # Look through output messages for citations in annotations
+    output_messages = resp["output"].select{|output_item| output_item["type"] == "message" }
+    output_messages.each do |output_message|
+      next unless output_message["content"].present?
+
+      output_message["content"].each do |content_item|
+        next unless content_item["type"] == "output_text" && content_item["annotations"].present?
+
+        content_item["annotations"].each do |annotation|
+          next unless annotation["type"] == "url_citation"
+
+          citations << {
+            "url" => Raif::Utils::HtmlFragmentProcessor.strip_tracking_parameters(annotation["url"]),
+            "title" => annotation["title"]
+          }
+        end
+      end
+    end
+
+    citations.uniq{|citation| citation["url"] }
   end
 
   def build_request_parameters(model_completion)

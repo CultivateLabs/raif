@@ -284,6 +284,26 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
         expect(model_completion.raw_response).to eq("Ruby on Rails has seen significant advancements in recent years, with the release of version 8.0 in November 2024 marking a pivotal moment in its evolution. ([zircon.tech](https://zircon.tech/blog/ruby-on-rails-8-0-a-new-era-of-independent-development/?utm_source=openai))\n\n**Key Developments in Ruby on Rails 8.0:**\n\n1. **Independent Deployment Capabilities:**\n   Rails 8.0 empowers individual developers to manage the entire application lifecycle, including deployment and management, without relying on Platform-as-a-Service (PaaS) providers. This shift provides greater control and flexibility over application infrastructure. ([zircon.tech](https://zircon.tech/blog/ruby-on-rails-8-0-a-new-era-of-independent-development/?utm_source=openai))\n\n2. **Reduced External Dependencies:**\n   The framework has minimized reliance on external libraries, integrating essential features directly into Rails. This approach enhances performance, stability, and security by reducing potential vulnerabilities associated with third-party updates. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n3. **Enhanced Background Processing and Caching:**\n   Rails 8.0 introduces improvements to background job processing and caching systems, optimizing concurrency and resource management. These enhancements lead to more efficient handling of tasks like email processing and data imports, resulting in faster and more scalable applications. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n4. **Integrated Push Notifications Framework:**\n   A built-in push notifications system allows developers to send real-time updates to users without the need for third-party services. This feature simplifies the implementation of live updates and interactive features, enhancing user engagement. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n5. **Improved Front-End Integration:**\n   Rails 8.0 continues to support modern front-end technologies, including Hotwire, which comprises Turbo and Stimulus. These tools enable the development of interactive, real-time web applications with minimal JavaScript, streamlining the development process and improving user experience. ([thefinanceinsiders.com](https://thefinanceinsiders.com/ruby-on-rails-in-2025-a-look-at-the-future-of-full-stack-development/?utm_source=openai))\n\n6. **Asynchronous Query Loading:**\n   The introduction of asynchronous querying through Active Record allows multiple database queries to run in parallel. This feature significantly reduces response times, making Rails applications more efficient, especially for data-intensive tasks. ([hyscaler.com](https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai))\n\n7. **Enhanced Security Measures:**\n   Rails 8.0 includes improved protection against common web vulnerabilities, such as enhanced CSRF protection and better handling of sensitive data. The framework now provides more secure defaults and clearer guidance on security best practices. ([zircon.tech](https://zircon.tech/blog/ruby-on-rails-8-0-a-new-era-of-independent-development/?utm_source=openai))\n\nThese developments reflect Rails' commitment to evolving with the demands of modern web development, offering developers powerful tools to build efficient, secure, and scalable applications.") # rubocop:disable Layout/LineLength
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::ProviderManaged::WebSearch"])
         expect(model_completion.response_array.map{|v| v["type"] }).to eq(["web_search_call", "message"])
+
+        # Test that citations are extracted from web search results
+        expect(model_completion.citations).to eq([
+          {
+            "url" => "https://zircon.tech/blog/ruby-on-rails-8-0-a-new-era-of-independent-development/",
+            "title" => "Ruby on Rails 8.0: A New Era of Independent Development"
+          },
+          {
+            "url" => "https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/",
+            "title" => "Exploring Rails 8.0: Latest Features and Updates"
+          },
+          {
+            "url" => "https://thefinanceinsiders.com/ruby-on-rails-in-2025-a-look-at-the-future-of-full-stack-development/",
+            "title" => "Ruby on Rails in 2025: A Look at the Future of Full-Stack Development"
+          },
+          {
+            "url" => "https://hyscaler.com/insights/updates-in-ruby-on-rails-7/",
+            "title" => "Exciting Updates in Ruby on Rails 7"
+          }
+        ])
       end
     end
 
@@ -832,6 +852,158 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
       it "only extracts text content" do
         result = llm.send(:extract_raw_response, response)
         expect(result).to eq("Text content")
+      end
+    end
+  end
+
+  describe "#extract_citations" do
+    context "with citations in response" do
+      it "extracts citations from message output annotations" do
+        response_json = {
+          "output" => [
+            {
+              "type" => "message",
+              "content" => [
+                {
+                  "type" => "output_text",
+                  "text" => "Based on recent news, here are the latest AI developments.",
+                  "annotations" => [
+                    {
+                      "type" => "url_citation",
+                      "url" => "https://example.com/ai-news",
+                      "title" => "Latest AI Developments"
+                    },
+                    {
+                      "type" => "url_citation",
+                      "url" => "https://example.com/tech-news",
+                      "title" => "Tech Industry News"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+
+        citations = llm.send(:extract_citations, response_json)
+
+        expect(citations).to contain_exactly(
+          { "url" => "https://example.com/ai-news", "title" => "Latest AI Developments" },
+          { "url" => "https://example.com/tech-news", "title" => "Tech Industry News" }
+        )
+      end
+
+      it "removes duplicate citations by URL" do
+        response_json = {
+          "output" => [
+            {
+              "type" => "message",
+              "content" => [
+                {
+                  "type" => "output_text",
+                  "text" => "First mention.",
+                  "annotations" => [
+                    {
+                      "type" => "url_citation",
+                      "url" => "https://example.com/same-url",
+                      "title" => "First Title"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type" => "message",
+              "content" => [
+                {
+                  "type" => "output_text",
+                  "text" => "Second mention.",
+                  "annotations" => [
+                    {
+                      "type" => "url_citation",
+                      "url" => "https://example.com/same-url",
+                      "title" => "Second Title"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+
+        citations = llm.send(:extract_citations, response_json)
+
+        expect(citations).to eq([
+          { "url" => "https://example.com/same-url", "title" => "First Title" }
+        ])
+      end
+    end
+
+    context "without citations in response" do
+      it "returns empty array when no output" do
+        response_json = { "output" => nil }
+        citations = llm.send(:extract_citations, response_json)
+        expect(citations).to eq([])
+      end
+
+      it "returns empty array when no annotations in messages" do
+        response_json = {
+          "output" => [
+            {
+              "type" => "message",
+              "content" => [
+                {
+                  "type" => "output_text",
+                  "text" => "Some response without citations"
+                }
+              ]
+            }
+          ]
+        }
+
+        citations = llm.send(:extract_citations, response_json)
+        expect(citations).to eq([])
+      end
+
+      it "ignores non-url_citation annotation types" do
+        response_json = {
+          "output" => [
+            {
+              "type" => "message",
+              "content" => [
+                {
+                  "type" => "output_text",
+                  "text" => "Response with other annotation types",
+                  "annotations" => [
+                    {
+                      "type" => "other_annotation_type",
+                      "url" => "https://example.com/ignored",
+                      "title" => "Should be ignored"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+
+        citations = llm.send(:extract_citations, response_json)
+        expect(citations).to eq([])
+      end
+
+      it "ignores non-message output types" do
+        response_json = {
+          "output" => [
+            {
+              "type" => "function_call",
+              "name" => "some_function",
+              "arguments" => "{}"
+            }
+          ]
+        }
+
+        citations = llm.send(:extract_citations, response_json)
+        expect(citations).to eq([])
       end
     end
   end

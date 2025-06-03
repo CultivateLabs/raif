@@ -16,7 +16,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   has_one :raif_model_completion, as: :source, dependent: :destroy, class_name: "Raif::ModelCompletion"
 
   delegate :available_model_tools, to: :raif_conversation
-  delegate :system_prompt, :llm_model_key, to: :raif_model_completion, allow_nil: true
+  delegate :system_prompt, :llm_model_key, :citations, to: :raif_model_completion, allow_nil: true
   delegate :json_response_schema, to: :class
 
   accepts_nested_attributes_for :raif_user_tool_invocation
