@@ -407,6 +407,8 @@ GEM
     unicode-emoji (4.0.4)
     uri (1.0.3)
     useragent (0.16.11)
+    vcr (6.3.1)
+      base64
     webmock (3.25.1)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
@@ -448,6 +450,7 @@ DEPENDENCIES
   rspec-rails
   rubocop-shopify
   stimulus-rails
+  vcr
   webmock
   yard
 

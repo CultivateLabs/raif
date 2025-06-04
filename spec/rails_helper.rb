@@ -15,26 +15,8 @@ puts "Rails version: #{Rails.version}" if ENV["GITHUB_ACTIONS"] == "true"
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 
 require "rspec/rails"
-
-require "capybara/cuprite"
-Capybara.javascript_driver = :cuprite
-Capybara.register_driver(:cuprite) do |app|
-  headless = ENV["HEADLESS"] != "false"
-  browser_options = { "no-sandbox": nil }
-
-  opts = {
-    browser_options: browser_options,
-    flatten: false,
-    process_timeout: 25,
-    window_size: [1440, 900],
-    headless: headless,
-  }
-
-  opts[:slowmo] = 0.01 unless headless
-  Capybara::Cuprite::Driver.new(app, opts)
-end
-
-Capybara.disable_animation = true
+require "setup/vcr"
+require "setup/capybara"
 
 ActiveRecord::Migrator.migrations_paths = [File.expand_path("../spec/dummy/db/migrate", __dir__)]
 
@@ -47,6 +29,7 @@ begin
 rescue ActiveRecord::PendingMigrationError => e
   abort e.to_s.strip
 end
+
 RSpec.configure do |config|
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures
   config.fixture_paths = [

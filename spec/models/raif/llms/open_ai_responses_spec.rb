@@ -4,85 +4,16 @@ require "rails_helper"
 
 RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
   let(:llm){ Raif.llm(:open_ai_responses_gpt_4o) }
-  let(:stubs) { Faraday::Adapter::Test::Stubs.new }
-  let(:test_connection) do
-    Faraday.new do |builder|
-      builder.adapter :test, stubs
-      builder.request :json
-      builder.response :json
-      builder.response :raise_error
-    end
-  end
-
-  before do
-    allow(llm).to receive(:connection).and_return(test_connection)
-  end
 
   describe "#chat" do
     context "when the response format is text" do
-      let(:response_body) do
-        {
-          "id" => "resp_abc123",
-          "object" => "response",
-          "created_at" => 1748365161,
-          "status" => "completed",
-          "background" => false,
-          "error" => nil,
-          "incomplete_details" => nil,
-          "instructions" => nil,
-          "max_output_tokens" => nil,
-          "model" => "gpt-4o",
-          "output" => [
-            {
-              "id" => "msg_abc123",
-              "type" => "message",
-              "status" => "completed",
-              "content" => [
-                {
-                  "type" => "output_text",
-                  "annotations" => [],
-                  "text" => "Response content"
-                }
-              ],
-              "role" => "assistant"
-            }
-          ],
-          "parallel_tool_calls" => true,
-          "previous_response_id" => nil,
-          "reasoning" => { "effort" => nil, "summary" => nil },
-          "service_tier" => "default",
-          "store" => true,
-          "temperature" => 0.7,
-          "text" => { "format" => { "type" => "text" } },
-          "tool_choice" => "auto",
-          "tools" => [],
-          "top_p" => 1.0,
-          "truncation" => "disabled",
-          "usage" => {
-            "input_tokens" => 5,
-            "input_tokens_details" => { "cached_tokens" => 0 },
-            "output_tokens" => 10,
-            "output_tokens_details" => { "reasoning_tokens" => 0 },
-            "total_tokens" => 15
-          },
-          "user" => nil,
-          "metadata" => {}
-        }
-      end
-
-      before do
-        stubs.post("responses") do |_env|
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "makes a request to the OpenAI Responses API and processes the response" do
+      it "makes a request to the OpenAI Responses API and processes the response", vcr: { cassette_name: "open_ai_responses/format_text" } do
         model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], system_prompt: "You are a helpful assistant")
 
-        expect(model_completion.raw_response).to eq("Response content")
-        expect(model_completion.completion_tokens).to eq(10)
-        expect(model_completion.prompt_tokens).to eq(5)
-        expect(model_completion.total_tokens).to eq(15)
+        expect(model_completion.raw_response).to eq("Hi there! How can I assist you today?")
+        expect(model_completion.completion_tokens).to eq(11)
+        expect(model_completion.prompt_tokens).to eq(17)
+        expect(model_completion.total_tokens).to eq(28)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([{ "role" => "user", "content" => [{ "text" => "Hello", "type" => "input_text" }] }])
         expect(model_completion.system_prompt).to eq("You are a helpful assistant")
@@ -103,7 +34,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
               {
                 "type" => "output_text",
                 "annotations" => [],
-                "text" => "Response content"
+                "text" => "Hi there! How can I assist you today?"
               }
             ],
             "role" => "assistant"
@@ -113,59 +44,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
     end
 
     context "when the response format is json" do
-      let(:response_body) do
-        {
-          "id" => "resp_abc123",
-          "object" => "response",
-          "created_at" => 1748368556,
-          "status" => "completed",
-          "background" => false,
-          "error" => nil,
-          "incomplete_details" => nil,
-          "instructions" => "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key. Do not include any other text in your response outside the JSON object. Return your response as json.", # rubocop:disable Layout/LineLength
-          "max_output_tokens" => nil,
-          "model" => "gpt-4.1-mini-2025-04-14",
-          "output" => [{
-            "id" => "msg_abc123",
-            "type" => "message",
-            "status" => "completed",
-            "content" => [{
-              "type" => "output_text",
-              "annotations" => [],
-              "text" => "{\n  \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}"
-            }],
-            "role" => "assistant"
-          }],
-          "parallel_tool_calls" => true,
-          "previous_response_id" => nil,
-          "reasoning" => { "effort" => nil, "summary" => nil },
-          "service_tier" => "default",
-          "store" => true,
-          "temperature" => 0.7,
-          "text" => { "format" => { "type" => "json_object" } },
-          "tool_choice" => "auto",
-          "tools" => [],
-          "top_p" => 1.0,
-          "truncation" => "disabled",
-          "usage" => {
-            "input_tokens" => 90,
-            "input_tokens_details" => { "cached_tokens" => 0 },
-            "output_tokens" => 21,
-            "output_tokens_details" => { "reasoning_tokens" => 0 },
-            "total_tokens" => 111
-          },
-          "user" => nil,
-          "metadata" => {}
-        }
-      end
-
-      before do
-        stubs.post("responses") do |_env|
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "makes a request to the OpenAI Responses API and processes the response" do
+      it "makes a request to the OpenAI Responses API and processes the response", vcr: { cassette_name: "open_ai_responses/format_json" } do
         messages = [
           { role: "user", content: "Hello" },
           { role: "assistant", content: "Hello! How can I assist you today?" },
@@ -176,7 +55,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
 
         model_completion = llm.chat(messages: messages, response_format: :json, system_prompt: system_prompt)
 
-        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}")
+        expect(model_completion.raw_response).to eq("{\n    \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}")
         expect(model_completion.parsed_response).to eq({ "joke" => "Why don't scientists trust atoms? Because they make up everything!" })
         expect(model_completion.completion_tokens).to eq(21)
         expect(model_completion.prompt_tokens).to eq(90)
@@ -203,7 +82,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
           "content" => [{
             "type" => "output_text",
             "annotations" => [],
-            "text" => "{\n  \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}"
+            "text" => "{\n    \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}"
           }],
           "role" => "assistant"
         }])
@@ -211,32 +90,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
     end
 
     context "when using developer-managed tools" do
-      let(:response_body) do
-        json_file = File.read(Raif::Engine.root.join("spec/fixtures/llm_responses/open_ai_responses/developer_managed_fetch_url.json"))
-        JSON.parse(json_file)
-      end
-
-      before do
-        stubs.post("responses") do |env|
-          body = JSON.parse(env.body)
-
-          expect(body["tools"]).to eq([{
-            "type" => "function",
-            "name" => "fetch_url",
-            "description" => "Fetch a URL and return the page content as markdown",
-            "parameters" => {
-              "type" => "object",
-              "additionalProperties" => false,
-              "properties" => { "url" => { "type" => "string", "description" => "The URL to fetch content from" } },
-              "required" => ["url"]
-            }
-          }])
-
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "extracts tool calls correctly" do
+      it "extracts tool calls correctly", vcr: { cassette_name: "open_ai_responses/developer_managed_fetch_url" } do
         model_completion = llm.chat(
           messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
           available_model_tools: [Raif::ModelTools::FetchUrl]
@@ -245,11 +99,11 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
         expect(model_completion.raw_response).to eq(nil)
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
         expect(model_completion.response_array).to eq([{
-          "id" => "fc_68373cdaffc08198a0asdg39e96ef6d11043abf0eb2e6b9c6",
+          "id" => "fc_abc123",
           "type" => "function_call",
           "status" => "completed",
           "arguments" => "{\"url\":\"https://www.wsj.com\"}",
-          "call_id" => "call_MTzWbTQdadsg1i1oxb0v0kZgUF8",
+          "call_id" => "call_abc123",
           "name" => "fetch_url"
         }])
 
@@ -261,27 +115,13 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
     end
 
     context "when using provider-managed tools" do
-      let(:response_body) do
-        json_file = File.read(Raif::Engine.root.join("spec/fixtures/llm_responses/open_ai_responses/provider_managed_web_search.json"))
-        JSON.parse(json_file)
-      end
-
-      before do
-        stubs.post("responses") do |env|
-          body = JSON.parse(env.body)
-          expect(body["tools"]).to eq([{ "type" => "web_search_preview" }])
-
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "extracts tool calls correctly" do
+      it "extracts tool calls correctly", vcr: { cassette_name: "open_ai_responses/provider_managed_web_search" } do
         model_completion = llm.chat(
           messages: [{ role: "user", content: "What are the latest developments in Ruby on Rails?" }],
           available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
         )
 
-        expect(model_completion.raw_response).to eq("Ruby on Rails has seen significant advancements in recent years, with the release of version 8.0 in November 2024 marking a pivotal moment in its evolution. ([zircon.tech](https://zircon.tech/blog/ruby-on-rails-8-0-a-new-era-of-independent-development/?utm_source=openai))\n\n**Key Developments in Ruby on Rails 8.0:**\n\n1. **Independent Deployment Capabilities:**\n   Rails 8.0 empowers individual developers to manage the entire application lifecycle, including deployment and management, without relying on Platform-as-a-Service (PaaS) providers. This shift provides greater control and flexibility over application infrastructure. ([zircon.tech](https://zircon.tech/blog/ruby-on-rails-8-0-a-new-era-of-independent-development/?utm_source=openai))\n\n2. **Reduced External Dependencies:**\n   The framework has minimized reliance on external libraries, integrating essential features directly into Rails. This approach enhances performance, stability, and security by reducing potential vulnerabilities associated with third-party updates. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n3. **Enhanced Background Processing and Caching:**\n   Rails 8.0 introduces improvements to background job processing and caching systems, optimizing concurrency and resource management. These enhancements lead to more efficient handling of tasks like email processing and data imports, resulting in faster and more scalable applications. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n4. **Integrated Push Notifications Framework:**\n   A built-in push notifications system allows developers to send real-time updates to users without the need for third-party services. This feature simplifies the implementation of live updates and interactive features, enhancing user engagement. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n5. **Improved Front-End Integration:**\n   Rails 8.0 continues to support modern front-end technologies, including Hotwire, which comprises Turbo and Stimulus. These tools enable the development of interactive, real-time web applications with minimal JavaScript, streamlining the development process and improving user experience. ([thefinanceinsiders.com](https://thefinanceinsiders.com/ruby-on-rails-in-2025-a-look-at-the-future-of-full-stack-development/?utm_source=openai))\n\n6. **Asynchronous Query Loading:**\n   The introduction of asynchronous querying through Active Record allows multiple database queries to run in parallel. This feature significantly reduces response times, making Rails applications more efficient, especially for data-intensive tasks. ([hyscaler.com](https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai))\n\n7. **Enhanced Security Measures:**\n   Rails 8.0 includes improved protection against common web vulnerabilities, such as enhanced CSRF protection and better handling of sensitive data. The framework now provides more secure defaults and clearer guidance on security best practices. ([zircon.tech](https://zircon.tech/blog/ruby-on-rails-8-0-a-new-era-of-independent-development/?utm_source=openai))\n\nThese developments reflect Rails' commitment to evolving with the demands of modern web development, offering developers powerful tools to build efficient, secure, and scalable applications.") # rubocop:disable Layout/LineLength
+        expect(model_completion.raw_response).to eq("As of June 2025, Ruby on Rails (Rails) has introduced several significant updates and features aimed at enhancing developer productivity, application performance, and deployment flexibility.\n\n**Rails 8.0 Release**\n\nReleased on November 7, 2024, Rails 8.0 marks a pivotal shift in the framework's evolution. This version emphasizes empowering individual developers to manage application deployment and maintenance independently, reducing reliance on Platform-as-a-Service (PaaS) providers. Key enhancements include:\n\n- **Integrated Deployment Tools**: Rails 8.0 introduces built-in deployment solutions that seamlessly integrate with popular cloud providers. This allows developers to deploy applications with minimal configuration, streamlining the transition from development to production environments. ([zircon.tech](https://zircon.tech/blog/ruby-on-rails-8-0-a-new-era-of-independent-development/?utm_source=openai))\n\n- **Reduced External Dependencies**: By minimizing reliance on third-party libraries, Rails 8.0 offers faster, more stable applications with fewer security vulnerabilities. Essential features are now integrated directly into the framework, enhancing performance and simplifying maintenance. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n- **Enhanced Background Processing and Caching**: The new background worker system is optimized for concurrency, enabling applications to handle multiple tasks simultaneously. Additionally, the improved caching system reduces database query frequency, leading to better load times and user experiences. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n- **Push Notifications Framework**: Rails 8.0 introduces a built-in push notifications framework, simplifying the process of sending real-time updates to users without the need for third-party services. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n**Rails 7.x Enhancements**\n\nPrior to the 8.0 release, Rails 7.x versions brought notable improvements:\n\n- **Hotwire Integration**: Rails 7 introduced Hotwire, comprising Turbo and Stimulus, to facilitate building reactive and real-time features with minimal JavaScript. Turbo Streams and Turbo Frames allow for dynamic content updates without full page reloads. ([hyscaler.com](https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai))\n\n- **JavaScript Modernization**: The framework moved away from Webpacker, adopting lightweight options like Importmaps, esbuild, and rollup for managing JavaScript assets, thereby simplifying frontend development. ([hyscaler.com](https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai))\n\n- **Asynchronous Query Loading**: Active Record now supports asynchronous querying, allowing multiple database queries to run in parallel, which is beneficial for data-intensive applications. ([hyscaler.com](https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai))\n\n- **Encrypted Attributes**: Rails 7 introduced built-in support for encrypted attributes, enabling developers to store sensitive data securely and comply with data protection regulations. ([hyscaler.com](https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai))\n\n**Community and Ecosystem Developments**\n\nThe Rails community continues to thrive, with ongoing contributions and events:\n\n- **Rails World 2025**: The Call for Papers for Rails World 2025 is open, inviting talks that highlight the framework's power and competitive advantage. ([rubyonrails.org](https://rubyonrails.org/blog/?utm_source=openai))\n\n- **Continuous Integration Enhancements**: Recent updates include the introduction of `bin/ci` to standardize continuous integration workflows, improving testing and deployment processes. ([rubyonrails.org](https://rubyonrails.org/blog/?utm_source=openai))\n\nThese developments reflect Rails' commitment to evolving with modern web development needs, focusing on developer empowerment, performance optimization, and streamlined deployment processes.") # rubocop:disable Layout/LineLength
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::ProviderManaged::WebSearch"])
         expect(model_completion.response_array.map{|v| v["type"] }).to eq(["web_search_call", "message"])
 
@@ -296,78 +136,94 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
             "title" => "Exploring Rails 8.0: Latest Features and Updates"
           },
           {
-            "url" => "https://thefinanceinsiders.com/ruby-on-rails-in-2025-a-look-at-the-future-of-full-stack-development/",
-            "title" => "Ruby on Rails in 2025: A Look at the Future of Full-Stack Development"
-          },
-          {
             "url" => "https://hyscaler.com/insights/updates-in-ruby-on-rails-7/",
             "title" => "Exciting Updates in Ruby on Rails 7"
+          },
+          {
+            "url" => "https://rubyonrails.org/blog/",
+            "title" => "Ruby on Rails — News"
           }
         ])
       end
     end
 
-    context "when the API returns a 400-level error" do
-      let(:error_response_body) do
-        <<~JSON
-          {
-            "error": {
-              "message": "API rate limit exceeded",
-              "type": "rate_limit_error",
-              "param": null,
-              "code": null
-            }
-          }
-        JSON
+    context "error handling" do
+      let(:stubs) { Faraday::Adapter::Test::Stubs.new }
+      let(:test_connection) do
+        Faraday.new do |builder|
+          builder.adapter :test, stubs
+          builder.request :json
+          builder.response :json
+          builder.response :raise_error
+        end
       end
 
       before do
-        stubs.post("responses") do |_env|
-          raise Faraday::ClientError.new(
-            "Rate limited",
-            { status: 429, body: error_response_body }
-          )
-        end
-
-        allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        allow(llm).to receive(:connection).and_return(test_connection)
       end
 
-      it "raises a Faraday::ClientError with the error message" do
-        expect do
-          llm.chat(messages: [{ role: "user", content: "Hello" }])
-        end.to raise_error(Faraday::ClientError)
-      end
-    end
-
-    context "when the API returns a 500-level error" do
-      let(:error_response_body) do
-        <<~JSON
-          {
-            "error": {
-              "message": "Internal server error",
-              "type": "server_error",
-              "param": null,
-              "code": null
+      context "when the API returns a 400-level error" do
+        let(:error_response_body) do
+          <<~JSON
+            {
+              "error": {
+                "message": "API rate limit exceeded",
+                "type": "rate_limit_error",
+                "param": null,
+                "code": null
+              }
             }
-          }
-        JSON
-      end
-
-      before do
-        stubs.post("responses") do |_env|
-          raise Faraday::ServerError.new(
-            "Internal server error",
-            { status: 500, body: error_response_body }
-          )
+          JSON
         end
 
-        allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        before do
+          stubs.post("responses") do |_env|
+            raise Faraday::ClientError.new(
+              "Rate limited",
+              { status: 429, body: error_response_body }
+            )
+          end
+
+          allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        end
+
+        it "raises a Faraday::ClientError with the error message" do
+          expect do
+            llm.chat(messages: [{ role: "user", content: "Hello" }])
+          end.to raise_error(Faraday::ClientError)
+        end
       end
 
-      it "raises a Faraday::ServerError with the error message" do
-        expect do
-          llm.chat(messages: [{ role: "user", content: "Hello" }])
-        end.to raise_error(Faraday::ServerError, "Internal server error")
+      context "when the API returns a 500-level error" do
+        let(:error_response_body) do
+          <<~JSON
+            {
+              "error": {
+                "message": "Internal server error",
+                "type": "server_error",
+                "param": null,
+                "code": null
+              }
+            }
+          JSON
+        end
+
+        before do
+          stubs.post("responses") do |_env|
+            raise Faraday::ServerError.new(
+              "Internal server error",
+              { status: 500, body: error_response_body }
+            )
+          end
+
+          allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        end
+
+        it "raises a Faraday::ServerError with the error message" do
+          expect do
+            llm.chat(messages: [{ role: "user", content: "Hello" }])
+          end.to raise_error(Faraday::ServerError, "Internal server error")
+        end
       end
     end
   end
