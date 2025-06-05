@@ -11,7 +11,8 @@ VCR.configure do |config|
   config.default_cassette_options = {
     match_requests_on: [
       :method,
-      VCR.request_matchers.uri_without_params(*Rails.application.config.filter_parameters)
+      VCR.request_matchers.uri_without_params(*Rails.application.config.filter_parameters),
+      :body
     ]
   }
 
@@ -44,7 +45,7 @@ VCR.configure do |config|
 
   config.before_record do |interaction|
     if interaction.response.body
-      ["resp", "msg", "fc", "call", "ws"].each do |prefix|
+      ["resp", "msg", "fc", "call", "ws", "toolu"].each do |prefix|
         interaction.response.body.gsub!(/#{prefix}_[\w\d]+/) do |match|
           match.end_with?("_id") ? match : "#{prefix}_abc123"
         end
@@ -52,12 +53,13 @@ VCR.configure do |config|
     end
   end
 
-  # Filter cookie-related headers entirely (if you want to be thorough)
   config.before_record do |interaction|
+    interaction.request.headers.delete("X-Api-Key")
     interaction.response.headers.delete("Set-Cookie")
+    interaction.response.headers.delete("Request-Id")
+    interaction.response.headers.delete("Anthropic-Organization-Id")
   end
 
-  # Filter parameters in request URIs (already present)
   Rails.application.config.filter_parameters.each do |param|
     config.filter_sensitive_data("FILTERED_#{param.to_s.upcase}") do |interaction|
       uri = URI(interaction.request.uri)

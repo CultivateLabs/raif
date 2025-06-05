@@ -1,0 +1,75 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      encoding: UTF-8
+      string: '{"model":"claude-3-5-haiku-latest","messages":[{"role":"user","content":[{"type":"text","text":"Hello"}]}],"temperature":0.7,"max_tokens":8192,"system":"You
+        are a helpful assistant."}'
+    headers:
+      Anthropic-Version:
+      - '2023-06-01'
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Thu, 05 Jun 2025 13:16:47 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Anthropic-Ratelimit-Input-Tokens-Limit:
+      - '25000'
+      Anthropic-Ratelimit-Input-Tokens-Remaining:
+      - '25000'
+      Anthropic-Ratelimit-Input-Tokens-Reset:
+      - '2025-06-05T13:16:47Z'
+      Anthropic-Ratelimit-Output-Tokens-Limit:
+      - '5000'
+      Anthropic-Ratelimit-Output-Tokens-Remaining:
+      - '5000'
+      Anthropic-Ratelimit-Output-Tokens-Reset:
+      - '2025-06-05T13:16:47Z'
+      Anthropic-Ratelimit-Requests-Limit:
+      - '5'
+      Anthropic-Ratelimit-Requests-Remaining:
+      - '4'
+      Anthropic-Ratelimit-Requests-Reset:
+      - '2025-06-05T13:16:58Z'
+      Anthropic-Ratelimit-Tokens-Limit:
+      - '30000'
+      Anthropic-Ratelimit-Tokens-Remaining:
+      - '30000'
+      Anthropic-Ratelimit-Tokens-Reset:
+      - '2025-06-05T13:16:47Z'
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Via:
+      - 1.1 google
+      Cf-Cache-Status:
+      - DYNAMIC
+      X-Robots-Tag:
+      - none
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 94aff2452fd2d739-IAD
+    body:
+      encoding: ASCII-8BIT
+      string: '{"id":"msg_abc123","type":"message","role":"assistant","model":"claude-3-5-haiku-20241022","content":[{"type":"text","text":"Hello!
+        How are you doing today? Is there anything I can help you with?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":14,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":20,"service_tier":"standard"}}'
+  recorded_at: Thu, 05 Jun 2025 13:16:47 GMT
+recorded_with: VCR 6.3.1
