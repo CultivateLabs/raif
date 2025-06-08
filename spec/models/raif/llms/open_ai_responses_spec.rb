@@ -147,6 +147,32 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
       end
     end
 
+    context "streaming" do
+      it "streams the response correctly", vcr: { cassette_name: "open_ai_responses/streaming_text" } do
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Hello" }]
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("Hi there! How can I assist you today?")
+        expect(model_completion.completion_tokens).to eq(11)
+        expect(model_completion.prompt_tokens).to eq(8)
+        expect(model_completion.total_tokens).to eq(19)
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{
+          "content" => [{
+            "text" => "Hello",
+            "type" => "input_text"
+          }],
+          "role" => "user"
+        }])
+
+        expect(deltas.compact).to eq(["Hi", " there", "!", " How", " can", " I", " assist", " you", " today", "?"])
+      end
+    end
+
     context "error handling" do
       let(:stubs) { Faraday::Adapter::Test::Stubs.new }
       let(:test_connection) do

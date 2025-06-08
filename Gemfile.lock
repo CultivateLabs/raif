@@ -3,6 +3,7 @@ PATH
   specs:
     raif (1.2.0)
       aws-sdk-bedrockruntime
+      event_stream_parser (>= 1.0)
       faraday (>= 2.0)
       json-schema (>= 5.0)
       loofah (>= 2.21)
@@ -147,6 +148,7 @@ GEM
       rubocop (>= 1)
       smart_properties
     erubi (1.13.1)
+    event_stream_parser (1.0.0)
     factory_bot (6.5.1)
       activesupport (>= 6.1.0)
     factory_bot_rails (6.4.4)

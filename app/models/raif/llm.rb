@@ -49,7 +49,7 @@ module Raif
     end
 
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
-      max_completion_tokens: nil)
+      max_completion_tokens: nil, &block)
       unless response_format.is_a?(Symbol)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid response format: #{response_format}. Must be a symbol (you passed #{response_format.class}) and be one of: #{VALID_RESPONSE_FORMATS.join(", ")}" # rubocop:disable Layout/LineLength
@@ -86,11 +86,12 @@ module Raif
         model_api_name: api_name,
         temperature: temperature,
         max_completion_tokens: max_completion_tokens,
-        available_model_tools: available_model_tools
+        available_model_tools: available_model_tools,
+        stream_response: block_given?
       )
 
       retry_with_backoff(model_completion) do
-        perform_model_completion!(model_completion)
+        perform_model_completion!(model_completion, &block)
       end
 
       model_completion
@@ -101,7 +102,7 @@ module Raif
       raise e
     end
 
-    def perform_model_completion!(model_completion)
+    def perform_model_completion!(model_completion, &block)
       raise NotImplementedError, "#{self.class.name} must implement #perform_model_completion!"
     end
 

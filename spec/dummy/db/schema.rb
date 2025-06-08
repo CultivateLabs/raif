@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_03_140622) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_03_202013) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -125,6 +125,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_03_140622) do
     t.string "response_id"
     t.jsonb "response_array"
     t.jsonb "citations"
+    t.boolean "stream_response", default: false, null: false
     t.index ["created_at"], name: "index_raif_model_completions_on_created_at"
     t.index ["source_type", "source_id"], name: "index_raif_model_completions_on_source"
   end

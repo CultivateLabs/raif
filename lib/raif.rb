@@ -12,6 +12,7 @@ require "raif/json_schema_builder"
 require "raif/migration_checker"
 
 require "faraday"
+require "event_stream_parser"
 require "json-schema"
 require "loofah"
 require "pagy"
