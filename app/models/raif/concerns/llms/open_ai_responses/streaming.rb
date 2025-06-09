@@ -10,13 +10,24 @@ private
 
     streaming_response = StreamingResponse.new
     event_parser = EventStreamParser::Parser.new
+    accumulated_delta = ""
 
     proc do |chunk, _size, _env|
       event_parser.feed(chunk) do |_type, data, _id, _reconnect_time|
         parsed_event = JSON.parse(data)
         delta = streaming_response.process_sse(parsed_event)
-        update_model_completion(model_completion, streaming_response.current_response_json)
-        block.call(model_completion, delta, parsed_event)
+
+        # Add delta to buffer if present
+        accumulated_delta += delta if delta.is_a?(String)
+
+        # Check if we should trigger updates
+        if accumulated_delta.length >= Raif.config.streaming_update_chunk_size_threshold || parsed_event["type"] == "response.completed"
+          update_model_completion(model_completion, streaming_response.current_response_json)
+          if accumulated_delta.present?
+            block.call(model_completion, accumulated_delta, parsed_event)
+            accumulated_delta = ""
+          end
+        end
       end
     end
   end

@@ -149,6 +149,8 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
 
     context "streaming" do
       it "streams the response correctly", vcr: { cassette_name: "open_ai_responses/streaming_text" } do
+        allow(Raif.config).to receive(:streaming_update_chunk_size_threshold).and_return(10)
+
         deltas = []
         model_completion = llm.chat(
           messages: [{ role: "user", content: "Hello" }]
@@ -169,7 +171,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
           "role" => "user"
         }])
 
-        expect(deltas.compact).to eq(["Hi", " there", "!", " How", " can", " I", " assist", " you", " today", "?"])
+        expect(deltas.compact).to eq(["Hi there! How", " can I assist", " you today", "?"])
       end
     end
 

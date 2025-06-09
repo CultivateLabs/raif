@@ -29,6 +29,7 @@ module Raif
       :open_router_models_enabled,
       :open_router_app_name,
       :open_router_site_url,
+      :streaming_update_chunk_size_threshold,
       :task_system_prompt_intro,
       :user_tool_types
 
@@ -72,6 +73,7 @@ module Raif
       @open_router_models_enabled = ENV["OPENROUTER_API_KEY"].present?
       @open_router_app_name = nil
       @open_router_site_url = nil
+      @streaming_update_chunk_size_threshold = 25
       @user_tool_types = []
     end
 
