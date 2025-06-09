@@ -54,10 +54,6 @@ private
       when "response.output_text.delta"
         delta = event["delta"]
         @output_items[output_index]["content"][content_index]["text"] += event["delta"]
-      when "response.output_function_call.added"
-        @output_items[output_index] = event["item"]
-      when "response.output_function_call.delta"
-        @output_items[output_index]["arguments"] += event["delta"]
       when "response.output_text.done"
         @output_items[output_index]["content"][content_index]["text"] = event["text"]
       when "response.completed"

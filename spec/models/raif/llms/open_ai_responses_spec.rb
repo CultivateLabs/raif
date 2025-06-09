@@ -148,9 +148,10 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
     end
 
     context "streaming" do
-      it "streams the response correctly", vcr: { cassette_name: "open_ai_responses/streaming_text" } do
+      before do
         allow(Raif.config).to receive(:streaming_update_chunk_size_threshold).and_return(10)
-
+      end
+      it "streams a text response correctly", vcr: { cassette_name: "open_ai_responses/streaming_text" } do
         deltas = []
         model_completion = llm.chat(
           messages: [{ role: "user", content: "Hello" }]
@@ -172,6 +173,67 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
         }])
 
         expect(deltas.compact).to eq(["Hi there! How", " can I assist", " you today", "?"])
+      end
+
+      it "streams a json response correctly", vcr: { cassette_name: "open_ai_responses/streaming_json" } do
+        system_prompt = "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key. Do not include any other text in your response outside the JSON object." # rubocop:disable Layout/LineLength
+
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Can you you tell me a joke? Respond in json." }],
+          system_prompt: system_prompt,
+          response_format: :json
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("{\n    \"joke\": \"Why don't skeletons fight each other? They don't have the guts.\"\n}")
+        expect(model_completion.parsed_response).to eq({ "joke" => "Why don't skeletons fight each other? They don't have the guts." })
+        expect(model_completion.completion_tokens).to eq(23)
+        expect(model_completion.prompt_tokens).to eq(72)
+        expect(model_completion.total_tokens).to eq(95)
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{
+          "content" => [{ "text" => "Can you you tell me a joke? Respond in json.", "type" => "input_text" }],
+          "role" => "user"
+        }])
+
+        expect(deltas.compact).to eq(["{\n    \"joke", "\": \"Why don't", " skeletons", " fight each", " other? They", " don't have", " the guts.\"\n", "}"]) # rubocop:disable Layout/LineLength
+      end
+
+      it "streams a response with tool calls correctly", vcr: { cassette_name: "open_ai_responses/streaming_tool_calls" } do
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
+          available_model_tools: [Raif::ModelTools::FetchUrl]
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        # we're not accumulating deltas for tool calls since it seems like a bad idea to execute the tool call before arguments are complete
+        expect(deltas).to eq([])
+
+        expect(model_completion.raw_response).to eq(nil)
+        expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
+        expect(model_completion.response_array).to eq([{
+          "id" => "fc_abc123",
+          "type" => "function_call",
+          "status" => "completed",
+          "arguments" => "{\"url\":\"https://www.wsj.com\"}",
+          "call_id" => "call_abc123",
+          "name" => "fetch_url"
+        }])
+
+        expect(model_completion.response_tool_calls).to eq([{
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://www.wsj.com" }
+        }])
+
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{
+          "content" => [{ "text" => "What's on the homepage of https://www.wsj.com today?", "type" => "input_text" }],
+          "role" => "user"
+        }])
       end
     end
 
