@@ -28,6 +28,33 @@
   animation-delay: .4s;
 }
 
+// Streaming cursor - a simple blinking cursor
+.raif-streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background-color: currentColor;
+  margin-left: 2px;
+  animation: blink 1s infinite;
+  transform: none;
+  border-radius: 0;
+  position: relative;
+}
+
+.raif-streaming-cursor:before,
+.raif-streaming-cursor:after {
+  display: none;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
 @keyframes rotate {
   0% {
     transform: translate(-50%, -50%) rotateZ(0deg);
@@ -49,7 +76,6 @@
 }
 
 @keyframes spin {
-
   0%,
   100% {
     box-shadow: .3em 0px 0 0px currentcolor;

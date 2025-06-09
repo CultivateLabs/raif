@@ -35,13 +35,14 @@ class Raif::Conversation < Raif::ApplicationRecord
     I18n.t("#{self.class.name.underscore.gsub("/", ".")}.initial_chat_message")
   end
 
-  def prompt_model_for_entry_response(entry:)
+  def prompt_model_for_entry_response(entry:, &block)
     llm.chat(
       messages: llm_messages,
       source: entry,
       response_format: response_format.to_sym,
       system_prompt: system_prompt,
-      available_model_tools: available_model_tools
+      available_model_tools: available_model_tools,
+      &block
     )
   end
 
