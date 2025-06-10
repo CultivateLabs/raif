@@ -58,6 +58,13 @@ private
         @output_items[output_index]["content"][content_index]["text"] = event["text"]
       when "response.completed"
         @usage = event["response"]["usage"]
+      when "error"
+        raise Raif::Errors::StreamingError.new(
+          message: event["message"],
+          type: event["type"],
+          code: event["code"],
+          event: event
+        )
       end
 
       delta

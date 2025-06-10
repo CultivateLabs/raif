@@ -44,6 +44,17 @@ class Raif::Conversation < Raif::ApplicationRecord
       available_model_tools: available_model_tools,
       &block
     )
+  rescue StandardError => e
+    Rails.logger.error("Error processing conversation entry ##{entry.id}. #{e.message}")
+    entry.failed!
+
+    if defined?(Airbrake)
+      notice = Airbrake.build_notice(e)
+      notice[:context][:component] = "raif_conversation"
+      notice[:context][:action] = "prompt_model_for_entry_response"
+
+      Airbrake.notify(notice)
+    end
   end
 
   def process_model_response_message(message:, entry:)

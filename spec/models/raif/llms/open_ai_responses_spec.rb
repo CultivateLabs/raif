@@ -235,6 +235,28 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
           "role" => "user"
         }])
       end
+
+      it "handles streaming errors", vcr: { cassette_name: "open_ai_responses/streaming_error" } do
+        allow(Raif.config).to receive(:open_ai_api_key).and_return(ENV["OPENAI_API_KEY"])
+
+        expect do
+          llm.chat(
+            messages: [{ role: "user", content: "Hello" }]
+          ) do |_model_completion, delta, _sse_event|
+            # empty block to trigger streaming
+          end
+        end.to raise_error(Raif::Errors::StreamingError) do |error|
+          expect(error.message).to eq("The response stream was interrupted unexpectedly.")
+          expect(error.type).to eq("error")
+          expect(error.code).to eq("ERR_STREAM_INTERRUPTED")
+          expect(error.event).to eq({
+            "type" => "error",
+            "code" => "ERR_STREAM_INTERRUPTED",
+            "message" => "The response stream was interrupted unexpectedly.",
+            "sequence_number" => 1
+          })
+        end
+      end
     end
 
     context "error handling" do
