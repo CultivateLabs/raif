@@ -53,7 +53,7 @@ VCR.configure do |config|
       end
 
       # For anything with a dash (e.g. chatcmpl-abc123), replace the value with a placeholder
-      ["chatcmpl"].each do |prefix|
+      ["chatcmpl", "gen"].each do |prefix|
         interaction.response.body.gsub!(/#{prefix}-[\w\d]+/) do
           "#{prefix}-abc123"
         end

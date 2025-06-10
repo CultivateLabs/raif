@@ -3,25 +3,20 @@
 class Raif::Llms::OpenRouter < Raif::Llm
   include Raif::Concerns::Llms::OpenAiCompletions::MessageFormatting
   include Raif::Concerns::Llms::OpenAiCompletions::ToolFormatting
+  include Raif::Concerns::Llms::OpenAiCompletions::Streaming
   include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
 
-  def perform_model_completion!(model_completion)
+  def perform_model_completion!(model_completion, &block)
     model_completion.temperature ||= default_temperature
     parameters = build_request_parameters(model_completion)
     response = connection.post("chat/completions") do |req|
       req.body = parameters
+      req.options.on_data = streaming_chunk_handler(model_completion, &block) if model_completion.stream_response?
     end
 
-    response_json = response.body
-
-    model_completion.update!(
-      response_tool_calls: extract_response_tool_calls(response_json),
-      raw_response: response_json.dig("choices", 0, "message", "content"),
-      response_array: response_json["choices"],
-      completion_tokens: response_json.dig("usage", "completion_tokens"),
-      prompt_tokens: response_json.dig("usage", "prompt_tokens"),
-      total_tokens: response_json.dig("usage", "total_tokens")
-    )
+    unless model_completion.stream_response?
+      update_model_completion(model_completion, response.body)
+    end
 
     model_completion
   end
@@ -37,7 +32,18 @@ class Raif::Llms::OpenRouter < Raif::Llm
     end
   end
 
-protected
+private
+
+  def update_model_completion(model_completion, response_json)
+    model_completion.update!(
+      response_tool_calls: extract_response_tool_calls(response_json),
+      raw_response: response_json.dig("choices", 0, "message", "content"),
+      response_array: response_json["choices"],
+      completion_tokens: response_json.dig("usage", "completion_tokens"),
+      prompt_tokens: response_json.dig("usage", "prompt_tokens"),
+      total_tokens: response_json.dig("usage", "total_tokens")
+    )
+  end
 
   def build_request_parameters(model_completion)
     params = {
@@ -45,7 +51,6 @@ protected
       messages: model_completion.messages,
       temperature: model_completion.temperature.to_f,
       max_tokens: model_completion.max_completion_tokens || default_max_completion_tokens,
-      stream: false
     }
 
     # Add system message to the messages array if present
@@ -56,6 +61,12 @@ protected
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
       params[:tools] = tools unless tools.blank?
+    end
+
+    if model_completion.stream_response?
+      # Ask for usage stats in the last chunk
+      params[:stream] = true
+      params[:stream_options] = { include_usage: true }
     end
 
     params
