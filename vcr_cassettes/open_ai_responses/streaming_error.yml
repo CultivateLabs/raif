@@ -57,7 +57,7 @@ http_interactions:
         data: {"type": "text", "text": "Hello! How can I help you today?", "index": 0, "sequence_number": 0}
 
         event: error
-        data: {"type": "error", "code": "ERR_STREAM_INTERRUPTED", "message": "The response stream was interrupted unexpectedly.", "sequence_number": 1}
+        data: {"type":"error","code":"ERR_SOMETHING","message":"Something went wrong","param":null,"sequence_number":1}
 
   recorded_at: Tue, 10 Jun 2025 14:28:11 GMT
 recorded_with: VCR 6.3.1

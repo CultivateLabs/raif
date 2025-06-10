@@ -45,9 +45,17 @@ VCR.configure do |config|
 
   config.before_record do |interaction|
     if interaction.response.body
-      ["resp", "msg", "fc", "call", "ws", "toolu"].each do |prefix|
+      # For anything with an underscore (e.g. resp_abc123), replace the value with a placeholder
+      ["resp", "msg", "fc", "call", "ws", "toolu", "fp"].each do |prefix|
         interaction.response.body.gsub!(/#{prefix}_[\w\d]+/) do |match|
           match.end_with?("_id") ? match : "#{prefix}_abc123"
+        end
+      end
+
+      # For anything with a dash (e.g. chatcmpl-abc123), replace the value with a placeholder
+      ["chatcmpl"].each do |prefix|
+        interaction.response.body.gsub!(/#{prefix}-[\w\d]+/) do
+          "#{prefix}-abc123"
         end
       end
     end
