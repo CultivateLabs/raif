@@ -20,6 +20,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       it "makes a request to the Anthropic API and processes the text response", vcr: { cassette_name: "anthropic/format_text" } do
         model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], system_prompt: "You are a helpful assistant.")
 
+        expect(model_completion.messages).to eq([{ "role" => "user", "content" => [{ "type" => "text", "text" => "Hello" }] }])
         expect(model_completion.raw_response).to eq("Hello! How are you doing today? Is there anything I can help you with?")
         expect(model_completion.completion_tokens).to eq(20)
         expect(model_completion.prompt_tokens).to eq(14)
@@ -258,6 +259,118 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
             "title" => "Best of 2024: The Ruby on Rails Resurgence - DevOps.com"
           }
         ])
+      end
+    end
+
+    context "streaming" do
+      before do
+        allow(Raif.config).to receive(:streaming_update_chunk_size_threshold).and_return(10)
+      end
+
+      it "streams a text response correctly", vcr: { cassette_name: "anthropic/streaming_text" } do
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Hello" }]
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("Hi there! How are you doing today? Is there anything I can help you with?")
+        expect(model_completion.completion_tokens).to eq(21)
+        expect(model_completion.prompt_tokens).to eq(8)
+        expect(model_completion.total_tokens).to eq(29)
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{ "role" => "user", "content" => [{ "type" => "text", "text" => "Hello" }] }])
+
+        expect(deltas).to eq([
+          "Hi there! How are you doing",
+          " today? Is there anything I can help",
+          " you with?"
+        ])
+      end
+
+      it "streams a json response correctly", vcr: { cassette_name: "anthropic/streaming_json" } do
+        system_prompt = "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key and a single `answer` key. Do not include any other text in your response outside the JSON object."
+
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Can you you tell me a joke? Respond in json." }],
+          system_prompt: system_prompt,
+          response_format: :json
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("{\n    \"joke\": \"Why don't scientists trust atoms?\",\n    \"answer\": \"Because they make up everything!\"\n}")
+        expect(model_completion.parsed_response).to eq({
+          "joke" => "Why don't scientists trust atoms?",
+          "answer" => "Because they make up everything!"
+        })
+        expect(model_completion.completion_tokens).to eq(32)
+        expect(model_completion.prompt_tokens).to eq(70)
+        expect(model_completion.total_tokens).to eq(102)
+        expect(model_completion).to be_persisted
+        expect(model_completion.response_array).to eq([{
+          "type" => "text",
+          "text" => "{\n    \"joke\": \"Why don't scientists trust atoms?\",\n    \"answer\": \"Because they make up everything!\"\n}"
+        }])
+
+        expect(deltas).to eq([
+          "{\n    \"joke\":",
+          " \"Why don't scientists",
+          " trust atoms?",
+          "\",\n    \"answer",
+          "\": \"Because they make",
+          " up everything!\"\n}"
+        ])
+      end
+
+      it "streams a response with tool calls correctly", vcr: { cassette_name: "anthropic/streaming_tool_calls" } do
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
+          available_model_tools: [Raif::ModelTools::FetchUrl]
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(deltas.compact.join).to include("I'll fetch the content of the Wall Street Journal homepage for you.")
+
+        expect(model_completion.raw_response).to include("I'll fetch the content of the Wall Street Journal homepage for you.")
+        expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
+
+        expect(model_completion.response_tool_calls).to eq([{
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://www.wsj.com" }
+        }])
+
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{
+          "role" => "user",
+          "content" => [{
+            "type" => "text",
+            "text" => "What's on the homepage of https://www.wsj.com today?"
+          }]
+        }])
+      end
+
+      it "handles streaming errors", vcr: { cassette_name: "anthropic/streaming_error" } do
+        expect do
+          llm.chat(
+            messages: [{ role: "user", content: "trigger error" }]
+          ) do # empty block to trigger streaming
+          end
+        end.to raise_error(Raif::Errors::StreamingError) do |error|
+          expect(error.message).to eq("Anthropic's API is temporarily overloaded. Please try again in a few minutes.")
+          expect(error.type).to eq("overloaded_error")
+          expect(error.event).to eq({
+            "type" => "error",
+            "error" => {
+              "type" => "overloaded_error",
+              "message" => "Anthropic's API is temporarily overloaded. Please try again in a few minutes."
+            }
+          })
+        end
       end
     end
 
