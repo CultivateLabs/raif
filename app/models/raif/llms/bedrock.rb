@@ -3,15 +3,42 @@
 class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::MessageFormatting
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
+  include Raif::Concerns::Llms::Bedrock::Streaming
 
-  def perform_model_completion!(model_completion)
+  def perform_model_completion!(model_completion, &block)
     if Raif.config.aws_bedrock_model_name_prefix.present?
       model_completion.model_api_name = "#{Raif.config.aws_bedrock_model_name_prefix}.#{model_completion.model_api_name}"
     end
 
     params = build_request_parameters(model_completion)
-    resp = bedrock_client.converse(params)
 
+    if model_completion.stream_response?
+      bedrock_client.converse_stream(params) do |stream|
+        stream.on_error_event do |event|
+          raise Raif::Errors::StreamingError.new(
+            message: event.error_message,
+            type: event.event_type,
+            code: event.error_code,
+            event: event
+          )
+        end
+
+        handler = streaming_chunk_handler(model_completion, &block)
+        stream.on_event do |event|
+          handler.call(event)
+        end
+      end
+    else
+      response = bedrock_client.converse(params)
+      update_model_completion(model_completion, response)
+    end
+
+    model_completion
+  end
+
+private
+
+  def update_model_completion(model_completion, resp)
     model_completion.raw_response = if model_completion.response_format_json?
       extract_json_response(resp)
     else
@@ -24,8 +51,6 @@ class Raif::Llms::Bedrock < Raif::Llm
     model_completion.prompt_tokens = resp.usage.input_tokens
     model_completion.total_tokens = resp.usage.total_tokens
     model_completion.save!
-
-    model_completion
   end
 
 protected
@@ -71,7 +96,6 @@ protected
   end
 
   def extract_text_response(resp)
-    # Get the message from the response object
     message = resp.output.message
 
     # Find the first text content block

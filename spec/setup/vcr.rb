@@ -7,6 +7,7 @@ VCR.configure do |config|
   config.hook_into :webmock
   config.configure_rspec_metadata!
   config.ignore_localhost = true
+  # config.debug_logger = $stdout
 
   config.default_cassette_options = {
     match_requests_on: [
@@ -21,6 +22,25 @@ VCR.configure do |config|
     interaction.response.body[/proj_[\w\d]+/]
   end
 
+  # Filter AWS credentials in JSON response bodies
+  config.filter_sensitive_data("<AWS_ACCESS_KEY_ID>") do |interaction|
+    if interaction.response.body&.include?("accessKeyId")
+      interaction.response.body[/"accessKeyId":"([^"]+)"/, 1]
+    end
+  end
+
+  config.filter_sensitive_data("<AWS_SECRET_ACCESS_KEY>") do |interaction|
+    if interaction.response.body&.include?("secretAccessKey")
+      interaction.response.body[/"secretAccessKey":"([^"]+)"/, 1]
+    end
+  end
+
+  config.filter_sensitive_data("<AWS_SESSION_TOKEN>") do |interaction|
+    if interaction.response.body&.include?("sessionToken")
+      interaction.response.body[/"sessionToken":"([^"]+)"/, 1]
+    end
+  end
+
   # Filter Authorization headers
   config.filter_sensitive_data("<PLACEHOLDER_AUTHORIZATION>") do |interaction|
     next unless interaction.request.headers["Authorization"]
@@ -33,20 +53,32 @@ VCR.configure do |config|
     interaction.response.headers["Set-Cookie"]&.join("; ")
   end
 
-  # Filter OpenAI Organization header
-  config.filter_sensitive_data("<OPENAI_ORGANIZATION>") do |interaction|
-    interaction.response.headers["Openai-Organization"]&.first
+  {
+    "Amz-Sdk-Invocation-Id" => "<AMZ_SDK_INVOCATION_ID>",
+    "X-Amz-Sso-Bearer-Token" => "<AMZ_SSO_BEARER_TOKEN>",
+    "X-Amz-Security-Token" => "<AMZ_SECURITY_TOKEN>",
+    "X-Amz-Content-Sha256" => "<AMZ_CONTENT_SHA256>"
+  }.each do |key, value|
+    config.filter_sensitive_data(value) do |interaction|
+      interaction.request.headers[key]&.first
+    end
   end
 
-  # Filter Request and Response IDs
-  config.filter_sensitive_data("<REQUEST_ID>") do |interaction|
-    interaction.response.headers["X-Request-Id"]&.first
+  {
+    "Openai-Organization" => "<OPENAI_ORGANIZATION>",
+    "X-Request-Id" => "<REQUEST_ID>",
+    "Requestid" => "<REQUESTID>",
+    "X-Amzn-Requestid" => "<AMZN_REQUESTID>"
+  }.each do |key, value|
+    config.filter_sensitive_data(value) do |interaction|
+      interaction.response.headers[key]&.first
+    end
   end
 
   config.before_record do |interaction|
     if interaction.response.body
       # For anything with an underscore (e.g. resp_abc123), replace the value with a placeholder
-      ["resp", "msg", "fc", "call", "ws", "toolu", "fp"].each do |prefix|
+      ["resp", "msg", "fc", "call", "ws", "toolu", "fp", "tooluse"].each do |prefix|
         interaction.response.body.gsub!(/#{prefix}_[\w\d]+/) do |match|
           match.end_with?("_id") ? match : "#{prefix}_abc123"
         end

@@ -1,0 +1,53 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2:0/converse
+    body:
+      encoding: UTF-8
+      string: '{"messages":[{"role":"user","content":[{"text":"Please give me a JSON
+        object with a name and age. Don''t include any other text in your response."}]}],"system":[{"text":"You
+        are a helpful assistant."}],"inferenceConfig":{"maxTokens":8192}}'
+    headers:
+      Accept-Encoding:
+      - ''
+      Amz-Sdk-Invocation-Id:
+      - "<AMZ_SDK_INVOCATION_ID>"
+      Content-Type:
+      - application/json
+      Host:
+      - bedrock-runtime.us-east-1.amazonaws.com
+      X-Amz-Date:
+      - 20250611T135331Z
+      X-Amz-Content-Sha256:
+      - "<AMZ_CONTENT_SHA256>"
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - aws-sdk-ruby3/3.225.0 ua/2.1 api/bedrock_runtime#1.49.0 os/macos#24 md/arm64
+        lang/ruby#3.4.4 md/3.4.4 m/Z,b,D,e
+      Content-Length:
+      - '238'
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 11 Jun 2025 13:53:33 GMT
+      Content-Type:
+      - application/json
+      Content-Length:
+      - '215'
+      Connection:
+      - keep-alive
+      X-Amzn-Requestid:
+      - "<AMZN_REQUESTID>"
+    body:
+      encoding: UTF-8
+      string: '{"metrics":{"latencyMs":1043},"output":{"message":{"content":[{"text":"{\"name\":
+        \"John\", \"age\": 25}"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":35,"outputTokens":15,"totalTokens":50}}'
+  recorded_at: Wed, 11 Jun 2025 13:53:33 GMT
+recorded_with: VCR 6.3.1
