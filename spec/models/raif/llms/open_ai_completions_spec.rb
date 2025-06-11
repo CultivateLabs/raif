@@ -160,7 +160,7 @@ RSpec.describe Raif::Llms::OpenAiCompletions, type: :model do
           "role" => "user"
         }])
 
-        expect(deltas.compact).to eq(["Hello! How", " can I assist", " you today", "?"])
+        expect(deltas).to eq(["Hello! How", " can I assist", " you today", "?"])
       end
 
       it "streams a json response correctly", vcr: { cassette_name: "open_ai_completions/streaming_json" } do
@@ -186,7 +186,7 @@ RSpec.describe Raif::Llms::OpenAiCompletions, type: :model do
           "role" => "user"
         }])
 
-        expect(deltas.compact).to eq(["{\n \"joke\":", " \"Why don't", " scientists", " trust atoms", "? Because they", " make up everything", "!\"\n}"]) # rubocop:disable Layout/LineLength
+        expect(deltas).to eq(["{\n \"joke\":", " \"Why don't", " scientists", " trust atoms", "? Because they", " make up everything", "!\"\n}"])
       end
 
       it "streams a response with tool calls correctly", vcr: { cassette_name: "open_ai_completions/streaming_tool_calls" } do

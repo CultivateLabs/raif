@@ -334,9 +334,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
           deltas << delta
         end
 
-        expect(deltas.compact.join).to include("I'll fetch the content of the Wall Street Journal homepage for you.")
-
-        expect(model_completion.raw_response).to include("I'll fetch the content of the Wall Street Journal homepage for you.")
+        expect(model_completion.raw_response).to eq("I'll fetch the content of the Wall Street Journal homepage for you.")
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
 
         expect(model_completion.response_tool_calls).to eq([{
@@ -352,6 +350,8 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
             "text" => "What's on the homepage of https://www.wsj.com today?"
           }]
         }])
+
+        expect(deltas).to eq(["I'll fetch", " the content", " of the Wall", " Street Journal homepage for", " you."])
       end
 
       it "handles streaming errors", vcr: { cassette_name: "anthropic/streaming_error" } do
