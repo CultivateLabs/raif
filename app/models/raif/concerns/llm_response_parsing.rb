@@ -35,23 +35,38 @@ module Raif::Concerns::LlmResponseParsing
   # If the response format is HTML, it will be sanitized via ActionController::Base.helpers.sanitize.
   #
   # @return [Object] The parsed response.
-  def parsed_response
+  def parsed_response(force_reparse: false)
     return if raw_response.blank?
+    return @parsed_response if @parsed_response.present? && !force_reparse
 
-    @parsed_response ||= if response_format_json?
-      json = raw_response.gsub("```json", "").gsub("```", "")
-      JSON.parse(json)
+    @parsed_response = if response_format_json?
+      parse_json_response
     elsif response_format_html?
-      html = raw_response.strip.gsub("```html", "").chomp("```")
-      html_with_converted_links = Raif::Utils::HtmlFragmentProcessor.convert_markdown_links_to_html(html)
-      Raif::Utils::HtmlFragmentProcessor.clean_html_fragment(
-        html_with_converted_links,
-        allowed_tags: allowed_tags,
-        allowed_attributes: allowed_attributes
-      )
+      parse_html_response
     else
       raw_response.strip
     end
+  end
+
+  def parse_json_response
+    json = raw_response.gsub("```json", "").gsub("```", "")
+
+    JSON.parse(json)
+  rescue JSON::ParserError
+    json
+  end
+
+  def parse_html_response
+    html = raw_response.strip.gsub("```html", "").chomp("```")
+
+    html_with_converted_links = Raif::Utils::HtmlFragmentProcessor.convert_markdown_links_to_html(html)
+    Raif::Utils::HtmlFragmentProcessor.clean_html_fragment(
+      html_with_converted_links,
+      allowed_tags: allowed_tags,
+      allowed_attributes: allowed_attributes
+    )
+  rescue Nokogiri::XML::SyntaxError, ActionView::Template::Error
+    html
   end
 
 end
