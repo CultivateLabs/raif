@@ -290,7 +290,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       end
 
       it "streams a json response correctly", vcr: { cassette_name: "anthropic/streaming_json" } do
-        system_prompt = "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key and a single `answer` key. Do not include any other text in your response outside the JSON object."
+        system_prompt = "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key and a single `answer` key. Do not include any other text in your response outside the JSON object." # rubocop:disable Layout/LineLength
 
         deltas = []
         model_completion = llm.chat(
@@ -301,7 +301,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
           deltas << delta
         end
 
-        expect(model_completion.raw_response).to eq("{\n    \"joke\": \"Why don't scientists trust atoms?\",\n    \"answer\": \"Because they make up everything!\"\n}")
+        expect(model_completion.raw_response).to eq("{\n    \"joke\": \"Why don't scientists trust atoms?\",\n    \"answer\": \"Because they make up everything!\"\n}") # rubocop:disable Layout/LineLength
         expect(model_completion.parsed_response).to eq({
           "joke" => "Why don't scientists trust atoms?",
           "answer" => "Because they make up everything!"

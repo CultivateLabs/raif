@@ -13,13 +13,13 @@
     </div>
   <% elsif conversation_entry.generating_response? %>
     <%= render "raif/conversation_entries/message",
-            conversation_entry: conversation_entry,
-            content: if conversation_entry.model_response_message.present?
-              conversation_entry.model_response_message + content_tag(:span, "", class: "raif-loader raif-streaming-cursor")
-            else
-              content_tag(:span, "", class: "raif-loader")
-            end,
-            message_type: :model_response %>
+          conversation_entry: conversation_entry,
+          content: if conversation_entry.model_response_message.present?
+                     conversation_entry.model_response_message + content_tag(:span, "", class: "raif-loader raif-streaming-cursor")
+                   else
+                     content_tag(:span, "", class: "raif-loader")
+                   end,
+          message_type: :model_response %>
 
   <% elsif conversation_entry.completed? %>
     <%= render "raif/conversation_entries/message",
