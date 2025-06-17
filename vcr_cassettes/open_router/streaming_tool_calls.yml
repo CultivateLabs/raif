@@ -1,0 +1,74 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://openrouter.ai/api/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"meta-llama/llama-3.3-70b-instruct","messages":[{"role":"user","content":[{"type":"text","text":"What''s
+        on the homepage of https://www.wsj.com today?"}]}],"temperature":0.7,"max_tokens":null,"tools":[{"type":"function","function":{"name":"fetch_url","description":"Fetch
+        a URL and return the page content as markdown","parameters":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
+        URL to fetch content from"}},"required":["url"]}}}],"stream":true,"stream_options":{"include_usage":true}}'
+    headers:
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 10 Jun 2025 21:18:01 GMT
+      Content-Type:
+      - text/event-stream
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cf-Ray:
+      - 94dbe61718f206e6-ATL
+      Access-Control-Allow-Origin:
+      - "*"
+      Cache-Control:
+      - no-cache
+      X-Clerk-Auth-Message:
+      - Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid,
+        token-carrier=header)
+      X-Clerk-Auth-Reason:
+      - token-invalid
+      X-Clerk-Auth-Status:
+      - signed-out
+      Vary:
+      - Accept-Encoding
+      Server:
+      - cloudflare
+    body:
+      encoding: UTF-8
+      string: |+
+        : OPENROUTER PROCESSING
+
+        data: {"id":"gen-abc123-XpSNVGyLabtP19pLhfDC","provider":"DeepInfra","model":"meta-llama/llama-3.3-70b-instruct","object":"chat.completion.chunk","created":1749590280,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        : OPENROUTER PROCESSING
+
+        data: {"id":"gen-abc123-XpSNVGyLabtP19pLhfDC","provider":"DeepInfra","model":"meta-llama/llama-3.3-70b-instruct","object":"chat.completion.chunk","created":1749590280,"choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_abc123","function":{"arguments":"{\"url\": \"https://www.wsj.com/\"}","name":"fetch_url"},"type":"function"}]},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-XpSNVGyLabtP19pLhfDC","provider":"DeepInfra","model":"meta-llama/llama-3.3-70b-instruct","object":"chat.completion.chunk","created":1749590280,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-XpSNVGyLabtP19pLhfDC","provider":"DeepInfra","model":"meta-llama/llama-3.3-70b-instruct","object":"chat.completion.chunk","created":1749590280,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"stop","native_finish_reason":"stop","logprobs":null}]}
+
+        data: {"id":"gen-abc123-XpSNVGyLabtP19pLhfDC","provider":"DeepInfra","model":"meta-llama/llama-3.3-70b-instruct","object":"chat.completion.chunk","created":1749590280,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null,"native_finish_reason":null,"logprobs":null}],"usage":{"prompt_tokens":248,"completion_tokens":19,"total_tokens":267,"cost":0.00006464,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0},"cost_details":{"upstream_inference_cost":null},"completion_tokens_details":{"reasoning_tokens":0}}}
+
+        data: [DONE]
+
+  recorded_at: Tue, 10 Jun 2025 21:18:02 GMT
+recorded_with: VCR 6.3.1
+...

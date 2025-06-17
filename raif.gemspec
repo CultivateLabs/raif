@@ -22,6 +22,7 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency "aws-sdk-bedrockruntime"
+  spec.add_dependency "event_stream_parser", ">= 1.0"
   spec.add_dependency "faraday", ">= 2.0"
   spec.add_dependency "json-schema", ">= 5.0"
   spec.add_dependency "loofah", ">= 2.21"

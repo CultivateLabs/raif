@@ -4,16 +4,30 @@ class Raif::Llms::OpenAiCompletions < Raif::Llms::OpenAiBase
   include Raif::Concerns::Llms::OpenAiCompletions::MessageFormatting
   include Raif::Concerns::Llms::OpenAiCompletions::ToolFormatting
 
-  def perform_model_completion!(model_completion)
+  def perform_model_completion!(model_completion, &block)
     model_completion.temperature ||= default_temperature
     parameters = build_request_parameters(model_completion)
+    model_completion.response_format_parameter = parameters.dig(:response_format, :type)
 
     response = connection.post("chat/completions") do |req|
       req.body = parameters
+      req.options.on_data = streaming_chunk_handler(model_completion, &block) if model_completion.stream_response?
     end
 
-    response_json = response.body
+    unless model_completion.stream_response?
+      update_model_completion(model_completion, response.body)
+    end
 
+    model_completion
+  end
+
+private
+
+  def streaming_response_type
+    Raif::StreamingResponses::OpenAiCompletions
+  end
+
+  def update_model_completion(model_completion, response_json)
     model_completion.update!(
       response_id: response_json["id"],
       response_tool_calls: extract_response_tool_calls(response_json),
@@ -21,14 +35,9 @@ class Raif::Llms::OpenAiCompletions < Raif::Llms::OpenAiBase
       response_array: response_json["choices"],
       completion_tokens: response_json.dig("usage", "completion_tokens"),
       prompt_tokens: response_json.dig("usage", "prompt_tokens"),
-      total_tokens: response_json.dig("usage", "total_tokens"),
-      response_format_parameter: parameters.dig(:response_format, :type)
+      total_tokens: response_json.dig("usage", "total_tokens")
     )
-
-    model_completion
   end
-
-private
 
   def extract_response_tool_calls(resp)
     return if resp.dig("choices", 0, "message", "tool_calls").blank?
@@ -61,6 +70,12 @@ private
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
       parameters[:tools] = tools unless tools.blank?
+    end
+
+    if model_completion.stream_response?
+      parameters[:stream] = true
+      # Ask for usage stats in the last chunk
+      parameters[:stream_options] = { include_usage: true }
     end
 
     # Add response format if needed

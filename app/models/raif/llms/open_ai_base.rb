@@ -3,6 +3,8 @@
 class Raif::Llms::OpenAiBase < Raif::Llm
   include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
 
+private
+
   def connection
     @connection ||= Faraday.new(url: "https://api.openai.com/v1") do |f|
       f.headers["Authorization"] = "Bearer #{Raif.config.open_ai_api_key}"
@@ -11,8 +13,6 @@ class Raif::Llms::OpenAiBase < Raif::Llm
       f.response :raise_error
     end
   end
-
-private
 
   def format_system_prompt(model_completion)
     formatted_system_prompt = model_completion.system_prompt.to_s.strip

@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe Raif::Llms::Anthropic, type: :model do
   let(:llm){ Raif.llm(:anthropic_claude_3_5_haiku) }
+
   let(:stubs) { Faraday::Adapter::Test::Stubs.new }
   let(:test_connection) do
     Faraday.new do |builder|
@@ -14,47 +15,16 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     end
   end
 
-  before do
-    allow(llm).to receive(:connection).and_return(test_connection)
-  end
-
   describe "#chat" do
     context "when the response format is text" do
-      let(:response_body) do
-        {
-          "id" => "msg_abc123",
-          "type" => "message",
-          "role" => "assistant",
-          "model" => "claude-3-5-haiku-20241022",
-          "content" => [{
-            "type" => "text",
-            "text" => "Hi there! How are you doing today? Is there anything I can help you with?"
-          }],
-          "stop_reason" => "end_turn",
-          "stop_sequence" => nil,
-          "usage" => {
-            "input_tokens" => 8,
-            "cache_creation_input_tokens" => 0,
-            "cache_read_input_tokens" => 0,
-            "output_tokens" => 21,
-            "service_tier" => "standard"
-          }
-        }
-      end
-
-      before do
-        stubs.post("messages") do |_env|
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "makes a request to the Anthropic API and processes the text response" do
+      it "makes a request to the Anthropic API and processes the text response", vcr: { cassette_name: "anthropic/format_text" } do
         model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], system_prompt: "You are a helpful assistant.")
 
-        expect(model_completion.raw_response).to eq("Hi there! How are you doing today? Is there anything I can help you with?")
-        expect(model_completion.completion_tokens).to eq(21)
-        expect(model_completion.prompt_tokens).to eq(8)
-        expect(model_completion.total_tokens).to eq(29)
+        expect(model_completion.messages).to eq([{ "role" => "user", "content" => [{ "type" => "text", "text" => "Hello" }] }])
+        expect(model_completion.raw_response).to eq("Hello! How are you doing today? Is there anything I can help you with?")
+        expect(model_completion.completion_tokens).to eq(20)
+        expect(model_completion.prompt_tokens).to eq(14)
+        expect(model_completion.total_tokens).to eq(34)
         expect(model_completion.llm_model_key).to eq("anthropic_claude_3_5_haiku")
         expect(model_completion.model_api_name).to eq("claude-3-5-haiku-latest")
         expect(model_completion.response_format).to eq("text")
@@ -63,106 +33,35 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect(model_completion.response_id).to eq("msg_abc123")
         expect(model_completion.response_array).to eq([{
           "type" => "text",
-          "text" => "Hi there! How are you doing today? Is there anything I can help you with?"
+          "text" => "Hello! How are you doing today? Is there anything I can help you with?"
         }])
       end
     end
 
     context "when the response format is JSON and model does not use json_response tool" do
-      let(:response_body) do
-        {
-          "id" => "msg_abc123",
-          "type" => "message",
-          "role" => "assistant",
-          "model" => "claude-3-5-haiku-20241022",
-          "content" => [
-            {
-              "type" => "text",
-              "text" => "{\n    \"name\": \"Emily Johnson\",\n    \"age\": 28\n}"
-            }
-          ],
-          "stop_reason" => "end_turn",
-          "stop_sequence" => nil,
-          "usage" => {
-            "input_tokens" => 35,
-            "cache_creation_input_tokens" => 0,
-            "cache_read_input_tokens" => 0,
-            "output_tokens" => 22,
-            "service_tier" => "standard"
-          }
-        }
-      end
-
-      before do
-        stubs.post("messages") do |_env|
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "makes a request to the Anthropic API and processes the JSON response" do
+      it "makes a request to the Anthropic API and processes the JSON response", vcr: { cassette_name: "anthropic/format_json" } do
         model_completion = llm.chat(
           messages: [{ role: "user", content: "Please give me a JSON object with a name and age. Don't include any other text in your response." }],
           system_prompt: "You are a helpful assistant.",
           response_format: :json
         )
 
-        expect(model_completion.raw_response).to eq("{\n    \"name\": \"Emily Johnson\",\n    \"age\": 28\n}")
-        expect(model_completion.completion_tokens).to eq(22)
+        expect(model_completion.raw_response).to eq("{\n    \"name\": \"John Doe\",\n    \"age\": 35\n}")
+        expect(model_completion.completion_tokens).to eq(23)
         expect(model_completion.prompt_tokens).to eq(35)
-        expect(model_completion.total_tokens).to eq(57)
+        expect(model_completion.total_tokens).to eq(58)
         expect(model_completion.llm_model_key).to eq("anthropic_claude_3_5_haiku")
         expect(model_completion.model_api_name).to eq("claude-3-5-haiku-latest")
         expect(model_completion.response_format).to eq("json")
         expect(model_completion.response_id).to eq("msg_abc123")
-        expect(model_completion.response_array).to eq([{ "type" => "text", "text" => "{\n    \"name\": \"Emily Johnson\",\n    \"age\": 28\n}" }])
+        expect(model_completion.response_array).to eq([{ "type" => "text", "text" => "{\n    \"name\": \"John Doe\",\n    \"age\": 35\n}" }])
       end
     end
 
     context "when the response format is JSON and model uses json_response tool" do
       let(:test_task) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
 
-      let(:response_body) do
-        {
-          "id" => "msg_abc123",
-          "type" => "message",
-          "role" => "assistant",
-          "model" => "claude-3-5-haiku-20241022",
-          "content" => [{
-            "type" => "tool_use",
-            "id" => "toolu_abc123",
-            "name" => "json_response",
-            "input" => {
-              "joke" => "Why don't scientists trust atoms?",
-              "answer" => "Because they make up everything!"
-            }
-          }],
-          "stop_reason" => "tool_use",
-          "stop_sequence" => nil,
-          "usage" => {
-            "input_tokens" => 371,
-            "cache_creation_input_tokens" => 0,
-            "cache_read_input_tokens" => 0,
-            "output_tokens" => 80,
-            "service_tier" => "standard"
-          }
-        }
-      end
-
-      before do
-        stubs.post("messages") do |env|
-          # Verify the json_response tool is included in the request
-          body = JSON.parse(env.body)
-          expect(body["tools"]).to include(
-            hash_including(
-              "name" => "json_response",
-              "description" => "Generate a structured JSON response based on the provided schema."
-            )
-          )
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "extracts JSON response from json_response tool call" do
+      it "extracts JSON response from json_response tool call", vcr: { cassette_name: "anthropic/format_json_with_tool" } do
         model_completion = llm.chat(
           messages: [{
             role: "user",
@@ -207,30 +106,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     context "when JSON response format is requested but model returns mixed content" do
       let(:test_task) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
 
-      let(:response_body) do
-        {
-          "content" => [
-            { "type" => "text", "text" => "Here's the joke you requested:" },
-            {
-              "type" => "tool_use",
-              "name" => "json_response",
-              "input" => {
-                "joke" => "What do you call a fish wearing a crown?",
-                "answer" => "King Neptune!"
-              }
-            }
-          ],
-          "usage" => { "input_tokens" => 10, "output_tokens" => 20 }
-        }
-      end
-
-      before do
-        stubs.post("messages") do |_env|
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "extracts JSON from the json_response tool ignoring text content" do
+      it "extracts JSON from the json_response tool ignoring text content", vcr: { cassette_name: "anthropic/format_json_with_mixed_content" } do
         model_completion = llm.chat(
           messages: [{ role: "user", content: "Tell me a joke" }],
           response_format: :json,
@@ -255,29 +131,15 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     context "when JSON response format is requested but no json_response tool is used" do
       let(:test_task) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
 
-      let(:response_body) do
-        {
-          "content" => [
-            { "type" => "text", "text" => "{\"joke\": \"Why did the chicken cross the road?\", \"answer\": \"To get to the other side!\"}" }
-          ],
-          "usage" => { "input_tokens" => 5, "output_tokens" => 8 }
-        }
-      end
-
-      before do
-        stubs.post("messages") do |_env|
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "falls back to extracting text response when no json_response tool is found" do
+      it "falls back to extracting text response when no json_response tool is found",
+        vcr: { cassette_name: "anthropic/format_json_with_no_tool_use" } do
         model_completion = llm.chat(
           messages: [{ role: "user", content: "Tell me a joke" }],
           response_format: :json,
           source: test_task
         )
 
-        expect(model_completion.raw_response).to eq("{\"joke\": \"Why did the chicken cross the road?\", \"answer\": \"To get to the other side!\"}")
+        expect(model_completion.raw_response).to eq("{\"joke\":\"Why did the chicken cross the road?\",\"answer\":\"To get to the other side!\"}")
         expect(model_completion.response_tool_calls).to be_nil
       end
     end
@@ -290,6 +152,8 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       end
 
       before do
+        allow(llm).to receive(:connection).and_return(test_connection)
+
         stubs.post("messages") do |_env|
           [200, { "Content-Type" => "application/json" }, response_body]
         end
@@ -307,30 +171,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     end
 
     context "when using developer-managed tools" do
-      let(:response_body) do
-        json_file = File.read(Raif::Engine.root.join("spec/fixtures/llm_responses/anthropic/developer_managed_fetch_url.json"))
-        JSON.parse(json_file)
-      end
-
-      before do
-        stubs.post("messages") do |env|
-          body = JSON.parse(env.body)
-          expect(body["tools"]).to eq([{
-            "name" => "fetch_url",
-            "description" => "Fetch a URL and return the page content as markdown",
-            "input_schema" => {
-              "type" => "object",
-              "additionalProperties" => false,
-              "properties" => { "url" => { "type" => "string", "description" => "The URL to fetch content from" } },
-              "required" => ["url"]
-            }
-          }])
-
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "extracts tool calls correctly" do
+      it "extracts tool calls correctly", vcr: { cassette_name: "anthropic/format_json_with_developer_managed_tool" } do
         model_completion = llm.chat(
           messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
           available_model_tools: [Raif::ModelTools::FetchUrl]
@@ -361,35 +202,22 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     end
 
     context "when using provider-managed tools" do
-      let(:response_body) do
-        json_file = File.read(Raif::Engine.root.join("spec/fixtures/llm_responses/anthropic/provider_managed_web_search.json"))
-        JSON.parse(json_file)
-      end
-
-      before do
-        stubs.post("messages") do |env|
-          body = JSON.parse(env.body)
-          expect(body["tools"]).to eq([{
-            "type" => "web_search_20250305",
-            "name" => "web_search",
-            "max_uses" => 5
-          }])
-
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "extracts tool calls correctly" do
+      it "extracts tool calls correctly", vcr: { cassette_name: "anthropic/format_json_with_provider_managed_tool" } do
         model_completion = llm.chat(
           messages: [{ role: "user", content: "What are the latest developments in Ruby on Rails?" }],
           available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
         )
 
-        expect(model_completion.raw_response).to eq("Based on the search results, here are the latest developments in Ruby on Rails:\n\n1. Recent Versions and Support\n\nThe latest update was Rails 7.0.5 in May 2023\n. However, \nmore recent versions include:\n- 7.2.0 (August 2024)\n- 8.0.0 (November 2024)\n\n\n2. Support Policy\n\nStarting with version 7.2, each minor release will be:\n- Supported for 1 year with bug fixes\n- Supported for 2 years with security fixes\n\n\n3. Notable Developments\n\nRuby on Rails has experienced a resurgence, with the Hired 2023 State of Software Engineers report finding it the most in-demand skill for software engineering roles. Proficiency in Ruby on Rails resulted in 1.64 times more interview opportunities.\n\n\n4. Key Innovations\n\nThe resurgence has been significantly bolstered by innovations like Hotwire and improvements in JavaScript integration\n. \nPrevious major updates (Rails 6.0) brought significant improvements, including:\n- Action Mailbox for handling incoming emails\n- Action Text for rich-text content and editing\n- Multiple database support\n- Parallel testing\n- Webpacker as the default JavaScript builder\n- Zeitwerk code loader\n\n\n5. Future Outlook\n\nRuby on Rails continues to provide a framework that enables faster development and speed to market. Development teams are increasingly looking for tools that help them produce more with the same or fewer resources, which is where Rails excels.\n\n\n6. Community and Adoption\n\nWell-known sites using Ruby on Rails include Airbnb, GitHub, Twitch, and Shopify\n. \nWhile it took a backseat to JavaScript in the late 2010s, many developers continued to use it to rapidly build API layers for JavaScript front-ends, largely because Rails makes development so simple.\n\n\nInteresting Perspective\n\nThe framework is gaining recognition not just for its technical capabilities, but also for improving developer happiness. As a free, open-source project, it enables teams to rapidly develop innovative web apps for clients who need quick deployment, potentially helping developers maintain a better work-life balance.") # rubocop:disable Layout/LineLength
+        expect(model_completion.raw_response).to eq("Based on the search results, here are the latest developments in Ruby on Rails:\n\n1. Recent Versions and Release Strategy\n\nRuby on Rails 8.0.0 was released on November 8, 2024, introducing fundamental shifts in Rails development that enable individual developers to host and manage their applications independently\n. \nStarting with version 7.2, each minor release now follows a fixed support schedule: 1 year for bug fixes and 2 years for security fixes\n.\n\n2. Technological Improvements\n\nWith the 7th version, Rails introduced Hotwire, which solved frontend development challenges and made Ruby on Rails a true full-stack framework. Developers can now build fast, interactive UIs while relying less on JavaScript\n.\n\n3. Community and Popularity\n\nRuby on Rails has experienced a resurgence in recent years. The Hired 2023 State of Software Engineers report found it was the most in-demand skill for software engineering roles, with Ruby on Rails proficiency resulting in 1.64 times more interviews\n.\n\n4. Key Trends in 2025\n- \nPerformance remains a key focus, with an exciting change being a major emphasis on SQLite databases. Previously seen as a lightweight database for prototyping, it's now receiving more attention\n\n\n- \nWhile no longer setting trends as it did in the 2000s, Rails continues to update and improve its best practices. It remains a solid choice for building scalable, high-quality applications without reinventing the wheel\n\n\n5. Ongoing Development\n\nThe resurgence has been significantly bolstered by innovations like Hotwire and improvements in JavaScript integration\n. \nThe framework continues to get stronger with regular updates, becoming faster, more secure, and better at working with modern frameworks\n.\n\nUnique Selling Points:\n- \nRails enables teams to rapidly develop innovative web apps, with a focus on speed of development. Development teams can produce more with the same or fewer resources\n\n- \nIt provides ready-to-use tools that help developers build websites and apps faster, allowing them to focus on creating great features\n\n\nThe framework remains popular among major companies, \nincluding Airbnb, Basecamp, GitHub, Hulu, and Shopify\n. \nIt continues to be a reliable and versatile choice for all kinds of projects, from startups to business expansions, providing tools and efficiency to help developers succeed\n.") # rubocop:disable Layout/LineLength
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::ProviderManaged::WebSearch"])
         expect(model_completion.response_array.map{|v| v["type"] }).to eq([
           "server_tool_use",
           "web_search_tool_result",
+          "text",
+          "text",
+          "text",
+          "text",
+          "text",
           "text",
           "text",
           "text",
@@ -415,87 +243,201 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         # Test that citations are extracted from web search results
         expect(model_completion.citations).to eq([
           {
-            "url" => "https://www.learnenough.com/blog/ruby-on-rails-development",
-            "title" => "Ruby On Rails Development Trends: 2024 & Beyond"
-          },
-          {
-            "url" => "https://rubygems.org/gems/rails/versions",
-            "title" => "All versions of rails | RubyGems.org | your community gem host"
+            "url" => "https://en.wikipedia.org/wiki/Ruby_on_Rails",
+            "title" => "Ruby on Rails - Wikipedia"
           },
           {
             "url" => "https://endoflife.date/rails",
             "title" => "Ruby on Rails | endoflife.date"
           },
           {
-            "url" => "https://devops.com/the-ruby-on-rails-resurgence-2/",
-            "title" => "Best of 2024: The Ruby on Rails Resurgence - DevOps.com"
+            "url" => "https://rubyroidlabs.com/blog/2025/03/ror-trends/",
+            "title" => "Ruby on Rails Trends 2025: Key Updates and Insights"
           },
           {
-            "url" => "https://en.wikipedia.org/wiki/Ruby_on_Rails",
-            "title" => "Ruby on Rails - Wikipedia"
+            "url" => "https://devops.com/the-ruby-on-rails-resurgence-2/",
+            "title" => "Best of 2024: The Ruby on Rails Resurgence - DevOps.com"
           }
         ])
       end
     end
 
-    context "when the API returns a 400-level error" do
-      let(:error_response_body) do
-        <<~JSON
-          {
-            "error": {
-              "message": "API rate limit exceeded",
-              "type": "rate_limit_error"
-            }
-          }
-        JSON
+    context "streaming" do
+      before do
+        allow(Raif.config).to receive(:streaming_update_chunk_size_threshold).and_return(10)
       end
 
-      before do
-        stubs.post("messages") do |_env|
-          raise Faraday::ClientError.new(
-            "Rate limited",
-            { status: 429, body: error_response_body }
-          )
+      it "streams a text response correctly", vcr: { cassette_name: "anthropic/streaming_text" } do
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Hello" }]
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
         end
 
-        allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        expect(model_completion.raw_response).to eq("Hi there! How are you doing today? Is there anything I can help you with?")
+        expect(model_completion.completion_tokens).to eq(21)
+        expect(model_completion.prompt_tokens).to eq(8)
+        expect(model_completion.total_tokens).to eq(29)
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{ "role" => "user", "content" => [{ "type" => "text", "text" => "Hello" }] }])
+
+        expect(deltas).to eq([
+          "Hi there! How are you doing",
+          " today? Is there anything I can help",
+          " you with?"
+        ])
       end
 
-      it "raises a Faraday::ClientError with the error message" do
+      it "streams a json response correctly", vcr: { cassette_name: "anthropic/streaming_json" } do
+        system_prompt = "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key and a single `answer` key. Do not include any other text in your response outside the JSON object." # rubocop:disable Layout/LineLength
+
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Can you you tell me a joke? Respond in json." }],
+          system_prompt: system_prompt,
+          response_format: :json
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("{\n    \"joke\": \"Why don't scientists trust atoms?\",\n    \"answer\": \"Because they make up everything!\"\n}") # rubocop:disable Layout/LineLength
+        expect(model_completion.parsed_response).to eq({
+          "joke" => "Why don't scientists trust atoms?",
+          "answer" => "Because they make up everything!"
+        })
+        expect(model_completion.completion_tokens).to eq(32)
+        expect(model_completion.prompt_tokens).to eq(70)
+        expect(model_completion.total_tokens).to eq(102)
+        expect(model_completion).to be_persisted
+        expect(model_completion.response_array).to eq([{
+          "type" => "text",
+          "text" => "{\n    \"joke\": \"Why don't scientists trust atoms?\",\n    \"answer\": \"Because they make up everything!\"\n}"
+        }])
+
+        expect(deltas).to eq([
+          "{\n    \"joke\":",
+          " \"Why don't scientists",
+          " trust atoms?",
+          "\",\n    \"answer",
+          "\": \"Because they make",
+          " up everything!\"\n}"
+        ])
+      end
+
+      it "streams a response with tool calls correctly", vcr: { cassette_name: "anthropic/streaming_tool_calls" } do
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
+          available_model_tools: [Raif::ModelTools::FetchUrl]
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("I'll fetch the content of the Wall Street Journal homepage for you.")
+        expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
+
+        expect(model_completion.response_tool_calls).to eq([{
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://www.wsj.com" }
+        }])
+
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{
+          "role" => "user",
+          "content" => [{
+            "type" => "text",
+            "text" => "What's on the homepage of https://www.wsj.com today?"
+          }]
+        }])
+
+        expect(deltas).to eq(["I'll fetch", " the content", " of the Wall", " Street Journal homepage for", " you."])
+      end
+
+      it "handles streaming errors", vcr: { cassette_name: "anthropic/streaming_error" } do
         expect do
-          llm.chat(message: "Hello")
-        end.to raise_error(Faraday::ClientError)
+          llm.chat(
+            messages: [{ role: "user", content: "trigger error" }]
+          ) do # empty block to trigger streaming
+          end
+        end.to raise_error(Raif::Errors::StreamingError) do |error|
+          expect(error.message).to eq("Anthropic's API is temporarily overloaded. Please try again in a few minutes.")
+          expect(error.type).to eq("overloaded_error")
+          expect(error.event).to eq({
+            "type" => "error",
+            "error" => {
+              "type" => "overloaded_error",
+              "message" => "Anthropic's API is temporarily overloaded. Please try again in a few minutes."
+            }
+          })
+        end
       end
     end
 
-    context "when the API returns a 500-level error" do
-      let(:error_response_body) do
-        <<~JSON
-          {
-            "type": "error",
-            "error": {
-              "type": "server_error",
-              "message": "Internal server error"
-            }
-          }
-        JSON
+    context "error handling" do
+      before do
+        allow(llm).to receive(:connection).and_return(test_connection)
       end
 
-      before do
-        stubs.post("messages") do |_env|
-          raise Faraday::ServerError.new(
-            "Internal server error",
-            { status: 500, body: error_response_body }
-          )
+      context "when the API returns a 400-level error" do
+        let(:error_response_body) do
+          <<~JSON
+            {
+              "error": {
+                "message": "API rate limit exceeded",
+                "type": "rate_limit_error"
+              }
+            }
+          JSON
         end
 
-        allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        before do
+          stubs.post("messages") do |_env|
+            raise Faraday::ClientError.new(
+              "Rate limited",
+              { status: 429, body: error_response_body }
+            )
+          end
+
+          allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        end
+
+        it "raises a Faraday::ClientError with the error message" do
+          expect do
+            llm.chat(message: "Hello")
+          end.to raise_error(Faraday::ClientError)
+        end
       end
 
-      it "raises a Faraday::ServerError with the error message" do
-        expect do
-          llm.chat(message: "Hello")
-        end.to raise_error(Faraday::ServerError)
+      context "when the API returns a 500-level error" do
+        let(:error_response_body) do
+          <<~JSON
+            {
+              "type": "error",
+              "error": {
+                "type": "server_error",
+                "message": "Internal server error"
+              }
+            }
+          JSON
+        end
+
+        before do
+          stubs.post("messages") do |_env|
+            raise Faraday::ServerError.new(
+              "Internal server error",
+              { status: 500, body: error_response_body }
+            )
+          end
+
+          allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        end
+
+        it "raises a Faraday::ServerError with the error message" do
+          expect do
+            llm.chat(message: "Hello")
+          end.to raise_error(Faraday::ServerError)
+        end
       end
     end
   end

@@ -1,0 +1,49 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://openrouter.ai/api/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"meta-llama/llama-3.1-8b-instruct","messages":[{"role":"user","content":[{"type":"text","text":"What''s
+        on the homepage of https://www.wsj.com today?"}]}],"temperature":0.7,"max_tokens":null,"tools":[{"type":"function","function":{"name":"fetch_url","description":"Fetch
+        a URL and return the page content as markdown","parameters":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
+        URL to fetch content from"}},"required":["url"]}}}]}'
+    headers:
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 10 Jun 2025 19:50:45 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Access-Control-Allow-Origin:
+      - "*"
+      Vary:
+      - Accept-Encoding
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 94db6643eaa5ed7d-MIA
+    body:
+      encoding: ASCII-8BIT
+      string: "\n         \n\n         \n{\"id\":\"gen-abc123\",\"provider\":\"DeepInfra\",\"model\":\"meta-llama/llama-3.1-8b-instruct\",\"object\":\"chat.completion\",\"created\":1749585045,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"stop\",\"native_finish_reason\":\"stop\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"\",\"refusal\":null,\"reasoning\":null,\"tool_calls\":[{\"index\":0,\"id\":\"call_abc123\",\"function\":{\"arguments\":\"{\\\"url\\\":
+        \\\"https://www.wsj.com\\\"}\",\"name\":\"fetch_url\"},\"type\":\"function\"}]}}],\"usage\":{\"prompt_tokens\":248,\"completion_tokens\":19,\"total_tokens\":267}}"
+  recorded_at: Tue, 10 Jun 2025 19:50:46 GMT
+recorded_with: VCR 6.3.1

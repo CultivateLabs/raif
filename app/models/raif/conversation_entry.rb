@@ -46,7 +46,23 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   end
 
   def process_entry!
-    self.raif_model_completion = raif_conversation.prompt_model_for_entry_response(entry: self)
+    self.model_response_message = ""
+
+    self.raif_model_completion = raif_conversation.prompt_model_for_entry_response(entry: self) do |model_completion, _delta, _sse_event|
+      self.raw_response = model_completion.raw_response
+      self.model_response_message = raif_conversation.process_model_response_message(
+        message: model_completion.parsed_response(force_reparse: true),
+        entry: self
+      )
+
+      update_columns(
+        model_response_message: model_response_message,
+        raw_response: raw_response,
+        updated_at: Time.current
+      )
+
+      broadcast_replace_to raif_conversation
+    end
 
     if raif_model_completion.parsed_response.present? || raif_model_completion.response_tool_calls.present?
       extract_message_and_invoke_tools!

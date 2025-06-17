@@ -145,4 +145,28 @@ RSpec.describe Raif::Concerns::LlmResponseParsing do
       end
     end
   end
+
+  describe "html response parsing" do
+    it "sanitizes html response" do
+      task = Raif::TestHtmlTask.new(raw_response: "<p>Hello, world!<script>alert('hello');</script></p>")
+      expect(task.parsed_response).to eq("<p>Hello, world!alert('hello');</p>")
+    end
+
+    it "completes html fragments" do
+      task = Raif::TestHtmlTask.new(raw_response: "<p>Hello, world!")
+      expect(task.parsed_response).to eq("<p>Hello, world!</p>")
+    end
+  end
+
+  fdescribe "json response parsing" do
+    it "parses json response" do
+      task = Raif::TestJsonTask.new(raw_response: "{\"name\": \"John\", \"age\": 30}")
+      expect(task.parsed_response).to eq({ "name" => "John", "age" => 30 })
+    end
+
+    it "passes through incomplete json as a string" do
+      task = Raif::TestJsonTask.new(raw_response: "```json\n{\"name\": \"John\", \"age\": 30")
+      expect(task.parsed_response).to eq("\n{\"name\": \"John\", \"age\": 30")
+    end
+  end
 end

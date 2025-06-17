@@ -1,0 +1,54 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2:0/converse
+    body:
+      encoding: UTF-8
+      string: '{"messages":[{"role":"user","content":[{"text":"What is on the homepage
+        of https://www.wsj.com today?"}]}],"inferenceConfig":{"maxTokens":8192},"toolConfig":{"tools":[{"toolSpec":{"name":"fetch_url","description":"Fetch
+        a URL and return the page content as markdown","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
+        URL to fetch content from"}},"required":["url"]}}}}]}}'
+    headers:
+      Accept-Encoding:
+      - ''
+      Amz-Sdk-Invocation-Id:
+      - "<AMZ_SDK_INVOCATION_ID>"
+      Content-Type:
+      - application/json
+      Host:
+      - bedrock-runtime.us-east-1.amazonaws.com
+      X-Amz-Date:
+      - 20250611T141552Z
+      X-Amz-Content-Sha256:
+      - "<AMZ_CONTENT_SHA256>"
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - aws-sdk-ruby3/3.225.0 ua/2.1 api/bedrock_runtime#1.49.0 os/macos#24 md/arm64
+        lang/ruby#3.4.4 md/3.4.4 m/Z,b,D,e
+      Content-Length:
+      - '445'
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 11 Jun 2025 14:15:55 GMT
+      Content-Type:
+      - application/json
+      Content-Length:
+      - '345'
+      Connection:
+      - keep-alive
+      X-Amzn-Requestid:
+      - "<AMZN_REQUESTID>"
+    body:
+      encoding: UTF-8
+      string: '{"metrics":{"latencyMs":2780},"output":{"message":{"content":[{"text":"I''ll
+        fetch the content from the Wall Street Journal homepage."},{"toolUse":{"input":{"url":"https://www.wsj.com"},"name":"fetch_url","toolUseId":"tooluse_abc123"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":413,"outputTokens":73,"totalTokens":486}}'
+  recorded_at: Wed, 11 Jun 2025 14:15:55 GMT
+recorded_with: VCR 6.3.1

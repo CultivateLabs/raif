@@ -4,16 +4,30 @@ class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
   include Raif::Concerns::Llms::OpenAiResponses::MessageFormatting
   include Raif::Concerns::Llms::OpenAiResponses::ToolFormatting
 
-  def perform_model_completion!(model_completion)
+  def perform_model_completion!(model_completion, &block)
     model_completion.temperature ||= default_temperature
     parameters = build_request_parameters(model_completion)
+    model_completion.response_format_parameter = parameters.dig(:text, :format, :type)
 
     response = connection.post("responses") do |req|
       req.body = parameters
+      req.options.on_data = streaming_chunk_handler(model_completion, &block) if model_completion.stream_response?
     end
 
-    response_json = response.body
+    unless model_completion.stream_response?
+      update_model_completion(model_completion, response.body)
+    end
 
+    model_completion
+  end
+
+private
+
+  def streaming_response_type
+    Raif::StreamingResponses::OpenAiResponses
+  end
+
+  def update_model_completion(model_completion, response_json)
     model_completion.update!(
       response_id: response_json["id"],
       response_tool_calls: extract_response_tool_calls(response_json),
@@ -22,14 +36,9 @@ class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
       citations: extract_citations(response_json),
       completion_tokens: response_json.dig("usage", "output_tokens"),
       prompt_tokens: response_json.dig("usage", "input_tokens"),
-      total_tokens: response_json.dig("usage", "total_tokens"),
-      response_format_parameter: parameters.dig(:text, :format, :type)
+      total_tokens: response_json.dig("usage", "total_tokens")
     )
-
-    model_completion
   end
-
-private
 
   def extract_response_tool_calls(resp)
     return if resp["output"].blank?
@@ -93,6 +102,8 @@ private
       input: model_completion.messages,
       temperature: model_completion.temperature.to_f
     }
+
+    parameters[:stream] = true if model_completion.stream_response?
 
     # Add instructions (system prompt) if present
     formatted_system_prompt = format_system_prompt(model_completion)

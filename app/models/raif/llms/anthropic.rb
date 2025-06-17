@@ -4,14 +4,37 @@ class Raif::Llms::Anthropic < Raif::Llm
   include Raif::Concerns::Llms::Anthropic::MessageFormatting
   include Raif::Concerns::Llms::Anthropic::ToolFormatting
 
-  def perform_model_completion!(model_completion)
+  def perform_model_completion!(model_completion, &block)
     params = build_request_parameters(model_completion)
     response = connection.post("messages") do |req|
       req.body = params
+      req.options.on_data = streaming_chunk_handler(model_completion, &block) if model_completion.stream_response?
     end
 
-    response_json = response.body
+    unless model_completion.stream_response?
+      update_model_completion(model_completion, response.body)
+    end
 
+    model_completion
+  end
+
+private
+
+  def connection
+    @connection ||= Faraday.new(url: "https://api.anthropic.com/v1") do |f|
+      f.headers["x-api-key"] = Raif.config.anthropic_api_key
+      f.headers["anthropic-version"] = "2023-06-01"
+      f.request :json
+      f.response :json
+      f.response :raise_error
+    end
+  end
+
+  def streaming_response_type
+    Raif::StreamingResponses::Anthropic
+  end
+
+  def update_model_completion(model_completion, response_json)
     model_completion.raw_response = if model_completion.response_format_json?
       extract_json_response(response_json)
     else
@@ -24,22 +47,9 @@ class Raif::Llms::Anthropic < Raif::Llm
     model_completion.citations = extract_citations(response_json)
     model_completion.completion_tokens = response_json&.dig("usage", "output_tokens")
     model_completion.prompt_tokens = response_json&.dig("usage", "input_tokens")
+    model_completion.total_tokens = model_completion.completion_tokens.to_i + model_completion.prompt_tokens.to_i
     model_completion.save!
-
-    model_completion
   end
-
-  def connection
-    @connection ||= Faraday.new(url: "https://api.anthropic.com/v1") do |f|
-      f.headers["x-api-key"] = Raif.config.anthropic_api_key
-      f.headers["anthropic-version"] = "2023-06-01"
-      f.request :json
-      f.response :json
-      f.response :raise_error
-    end
-  end
-
-protected
 
   def build_request_parameters(model_completion)
     params = {
@@ -55,6 +65,8 @@ protected
       tools = build_tools_parameter(model_completion)
       params[:tools] = tools unless tools.blank?
     end
+
+    params[:stream] = true if model_completion.stream_response?
 
     params
   end

@@ -3,6 +3,7 @@ PATH
   specs:
     raif (1.2.0)
       aws-sdk-bedrockruntime
+      event_stream_parser (>= 1.0)
       faraday (>= 2.0)
       json-schema (>= 5.0)
       loofah (>= 2.21)
@@ -147,6 +148,7 @@ GEM
       rubocop (>= 1)
       smart_properties
     erubi (1.13.1)
+    event_stream_parser (1.0.0)
     factory_bot (6.5.1)
       activesupport (>= 6.1.0)
     factory_bot_rails (6.4.4)
@@ -344,6 +346,7 @@ GEM
     rdoc (6.14.0)
       erb
       psych (>= 4.0.0)
+    redcarpet (3.6.1)
     regexp_parser (2.10.0)
     reline (0.6.1)
       io-console (~> 0.5)
@@ -407,6 +410,8 @@ GEM
     unicode-emoji (4.0.4)
     uri (1.0.3)
     useragent (0.16.11)
+    vcr (6.3.1)
+      base64
     webmock (3.25.1)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
@@ -445,9 +450,11 @@ DEPENDENCIES
   propshaft
   puma
   raif!
+  redcarpet
   rspec-rails
   rubocop-shopify
   stimulus-rails
+  vcr
   webmock
   yard
 
