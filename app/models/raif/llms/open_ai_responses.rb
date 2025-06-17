@@ -3,7 +3,6 @@
 class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
   include Raif::Concerns::Llms::OpenAiResponses::MessageFormatting
   include Raif::Concerns::Llms::OpenAiResponses::ToolFormatting
-  include Raif::Concerns::Llms::OpenAiResponses::Streaming
 
   def perform_model_completion!(model_completion, &block)
     model_completion.temperature ||= default_temperature
@@ -23,6 +22,10 @@ class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
   end
 
 private
+
+  def streaming_response_type
+    Raif::StreamingResponses::OpenAiResponses
+  end
 
   def update_model_completion(model_completion, response_json)
     model_completion.update!(

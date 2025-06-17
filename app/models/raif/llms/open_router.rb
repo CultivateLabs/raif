@@ -3,7 +3,6 @@
 class Raif::Llms::OpenRouter < Raif::Llm
   include Raif::Concerns::Llms::OpenAiCompletions::MessageFormatting
   include Raif::Concerns::Llms::OpenAiCompletions::ToolFormatting
-  include Raif::Concerns::Llms::OpenAiCompletions::Streaming
   include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
 
   def perform_model_completion!(model_completion, &block)
@@ -21,6 +20,8 @@ class Raif::Llms::OpenRouter < Raif::Llm
     model_completion
   end
 
+private
+
   def connection
     @connection ||= Faraday.new(url: "https://openrouter.ai/api/v1") do |f|
       f.headers["Authorization"] = "Bearer #{Raif.config.open_router_api_key}"
@@ -32,7 +33,9 @@ class Raif::Llms::OpenRouter < Raif::Llm
     end
   end
 
-private
+  def streaming_response_type
+    Raif::StreamingResponses::OpenAiCompletions
+  end
 
   def update_model_completion(model_completion, response_json)
     model_completion.update!(

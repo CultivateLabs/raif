@@ -147,5 +147,41 @@ module Raif
         end
       end
     end
+
+    def streaming_response_type
+      raise NotImplementedError, "#{self.class.name} must implement #streaming_response_type"
+    end
+
+    def streaming_chunk_handler(model_completion, &block)
+      return unless model_completion.stream_response?
+
+      streaming_response = streaming_response_type.new
+      event_parser = EventStreamParser::Parser.new
+      accumulated_delta = ""
+
+      proc do |chunk, _size, _env|
+        event_parser.feed(chunk) do |event_type, data, _id, _reconnect_time|
+          if data.blank? || data == "[DONE]"
+            update_model_completion(model_completion, streaming_response.current_response_json)
+            next
+          end
+
+          event_data = JSON.parse(data)
+          delta, finish_reason = streaming_response.process_streaming_event(event_type, event_data)
+
+          accumulated_delta += delta if delta.present?
+
+          if accumulated_delta.length >= Raif.config.streaming_update_chunk_size_threshold || finish_reason.present?
+            update_model_completion(model_completion, streaming_response.current_response_json)
+
+            if accumulated_delta.present?
+              block.call(model_completion, accumulated_delta, event_data)
+              accumulated_delta = ""
+            end
+          end
+        end
+      end
+    end
+
   end
 end

@@ -151,6 +151,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
       before do
         allow(Raif.config).to receive(:streaming_update_chunk_size_threshold).and_return(10)
       end
+
       it "streams a text response correctly", vcr: { cassette_name: "open_ai_responses/streaming_text" } do
         deltas = []
         model_completion = llm.chat(
@@ -198,7 +199,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
           "role" => "user"
         }])
 
-        expect(deltas).to eq(["{\n    \"joke", "\": \"Why don't", " skeletons", " fight each", " other? They", " don't have", " the guts.\"\n", "}"])
+        expect(deltas).to eq(["{\n \"joke\":", " \"Why don't", " skeletons", " fight each", " other? They", " don't have", " the guts.\"\n", "}"])
       end
 
       it "streams a response with tool calls correctly", vcr: { cassette_name: "open_ai_responses/streaming_tool_calls" } do

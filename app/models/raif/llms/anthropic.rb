@@ -3,7 +3,6 @@
 class Raif::Llms::Anthropic < Raif::Llm
   include Raif::Concerns::Llms::Anthropic::MessageFormatting
   include Raif::Concerns::Llms::Anthropic::ToolFormatting
-  include Raif::Concerns::Llms::Anthropic::Streaming
 
   def perform_model_completion!(model_completion, &block)
     params = build_request_parameters(model_completion)
@@ -19,6 +18,8 @@ class Raif::Llms::Anthropic < Raif::Llm
     model_completion
   end
 
+private
+
   def connection
     @connection ||= Faraday.new(url: "https://api.anthropic.com/v1") do |f|
       f.headers["x-api-key"] = Raif.config.anthropic_api_key
@@ -29,7 +30,9 @@ class Raif::Llms::Anthropic < Raif::Llm
     end
   end
 
-protected
+  def streaming_response_type
+    Raif::StreamingResponses::Anthropic
+  end
 
   def update_model_completion(model_completion, response_json)
     model_completion.raw_response = if model_completion.response_format_json?
