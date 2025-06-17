@@ -65,8 +65,6 @@ module Raif::Concerns::LlmResponseParsing
       allowed_tags: allowed_tags,
       allowed_attributes: allowed_attributes
     )
-  rescue Nokogiri::XML::SyntaxError, ActionView::Template::Error
-    html
   end
 
 end
