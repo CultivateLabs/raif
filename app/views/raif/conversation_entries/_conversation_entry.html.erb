@@ -15,7 +15,7 @@
     <%= render "raif/conversation_entries/message",
           conversation_entry: conversation_entry,
           content: if conversation_entry.model_response_message.present?
-                     conversation_entry.model_response_message + content_tag(:span, "", class: "raif-loader raif-streaming-cursor")
+                     safe_join([conversation_entry.model_response_message + content_tag(:span, "", class: "raif-streaming-cursor")])
                    else
                      content_tag(:span, "", class: "raif-loader")
                    end,

@@ -32,9 +32,9 @@
 .raif-streaming-cursor {
   display: inline-block;
   width: 2px;
-  height: 1.2em;
+  height: 1.1em;
+  margin-bottom: -2px;
   background-color: currentColor;
-  margin-left: 2px;
   animation: blink 1s infinite;
   transform: none;
   border-radius: 0;
