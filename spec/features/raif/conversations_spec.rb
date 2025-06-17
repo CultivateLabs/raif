@@ -92,7 +92,6 @@ RSpec.describe "Conversation interface", type: :feature do
   end
 
   it "supports conversations with html response format", js: true, vcr: { cassette_name: "open_ai_responses/html_response_format_conversation" } do
-    allow(Raif.config).to receive(:open_ai_api_key).and_return(ENV["OPENAI_API_KEY"])
     allow(Raif.config).to receive(:conversation_types).and_return(["Raif::Conversations::HtmlConversationWithTools"])
     allow_any_instance_of(Raif::Conversation).to receive(:default_llm_model_key).and_return(:open_ai_responses_gpt_4_1_mini)
 

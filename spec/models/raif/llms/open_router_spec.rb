@@ -186,7 +186,6 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       end
 
       it "streams a response with tool calls correctly", vcr: { cassette_name: "open_router/streaming_tool_calls" } do
-        allow(Raif.config).to receive(:open_router_api_key).and_return(ENV["OPENROUTER_API_KEY"])
         llm = Raif.llm(:open_router_llama_3_3_70b_instruct)
         deltas = []
         model_completion = llm.chat(
