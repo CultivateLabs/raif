@@ -23,6 +23,7 @@ class Raif::StreamingResponses::OpenAiResponses
       @output_items[output_index]["content"][content_index] = event["part"]
     when "response.output_text.delta"
       delta = event["delta"]
+      @output_items[output_index]["content"][content_index]["text"] ||= ""
       @output_items[output_index]["content"][content_index]["text"] += event["delta"]
     when "response.output_text.done"
       @output_items[output_index]["content"][content_index]["text"] = event["text"]
