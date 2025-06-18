@@ -1,0 +1,29 @@
+{
+  "id": "msg_abc123",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-3-5-haiku-20241022",
+  "content": [
+    {
+      "type": "text",
+      "text": "I'll fetch the content of the Wall Street Journal homepage for you."
+    },
+    {
+      "type": "tool_use",
+      "id": "toolu_abc123",
+      "name": "fetch_url",
+      "input": {
+        "url": "https://www.wsj.com"
+      }
+    }
+  ],
+  "stop_reason": "tool_use",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 364,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 75,
+    "service_tier": "standard"
+  }
+}

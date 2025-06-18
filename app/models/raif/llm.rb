@@ -12,7 +12,8 @@ module Raif
       :supports_native_tool_use,
       :provider_settings,
       :input_token_cost,
-      :output_token_cost
+      :output_token_cost,
+      :supported_provider_managed_tools
 
     validates :key, presence: true
     validates :api_name, presence: true
@@ -21,8 +22,17 @@ module Raif
 
     alias_method :supports_native_tool_use?, :supports_native_tool_use
 
-    def initialize(key:, api_name:, model_provider_settings: {}, supports_native_tool_use: true, temperature: nil, max_completion_tokens: nil,
-      input_token_cost: nil, output_token_cost: nil)
+    def initialize(
+      key:,
+      api_name:,
+      model_provider_settings: {},
+      supported_provider_managed_tools: [],
+      supports_native_tool_use: true,
+      temperature: nil,
+      max_completion_tokens: nil,
+      input_token_cost: nil,
+      output_token_cost: nil
+    )
       @key = key
       @api_name = api_name
       @provider_settings = model_provider_settings
@@ -31,6 +41,7 @@ module Raif
       @default_max_completion_tokens = max_completion_tokens
       @input_token_cost = input_token_cost
       @output_token_cost = output_token_cost
+      @supported_provider_managed_tools = supported_provider_managed_tools.map(&:to_s)
     end
 
     def name
@@ -38,7 +49,7 @@ module Raif
     end
 
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
-      max_completion_tokens: nil)
+      max_completion_tokens: nil, &block)
       unless response_format.is_a?(Symbol)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid response format: #{response_format}. Must be a symbol (you passed #{response_format.class}) and be one of: #{VALID_RESPONSE_FORMATS.join(", ")}" # rubocop:disable Layout/LineLength
@@ -75,22 +86,41 @@ module Raif
         model_api_name: api_name,
         temperature: temperature,
         max_completion_tokens: max_completion_tokens,
-        available_model_tools: available_model_tools
+        available_model_tools: available_model_tools,
+        stream_response: block_given?
       )
 
       retry_with_backoff(model_completion) do
-        perform_model_completion!(model_completion)
+        perform_model_completion!(model_completion, &block)
       end
 
       model_completion
+    rescue Raif::Errors::StreamingError => e
+      Rails.logger.error("Raif streaming error -- code: #{e.code} -- type: #{e.type} -- message: #{e.message} -- event: #{e.event}")
+      raise e
+    rescue Faraday::Error => e
+      Raif.logger.error("LLM API request failed (status: #{e.response_status}): #{e.message}")
+      Raif.logger.error(e.response_body)
+      raise e
     end
 
-    def perform_model_completion!(model_completion)
+    def perform_model_completion!(model_completion, &block)
       raise NotImplementedError, "#{self.class.name} must implement #perform_model_completion!"
     end
 
     def self.valid_response_formats
       VALID_RESPONSE_FORMATS
+    end
+
+    def supports_provider_managed_tool?(tool_klass)
+      supported_provider_managed_tools&.include?(tool_klass.to_s)
+    end
+
+    def validate_provider_managed_tool_support!(tool)
+      unless supports_provider_managed_tool?(tool)
+        raise Raif::Errors::UnsupportedFeatureError,
+          "Invalid provider-managed tool: #{tool.name} for #{key}"
+      end
     end
 
   private
@@ -117,5 +147,41 @@ module Raif
         end
       end
     end
+
+    def streaming_response_type
+      raise NotImplementedError, "#{self.class.name} must implement #streaming_response_type"
+    end
+
+    def streaming_chunk_handler(model_completion, &block)
+      return unless model_completion.stream_response?
+
+      streaming_response = streaming_response_type.new
+      event_parser = EventStreamParser::Parser.new
+      accumulated_delta = ""
+
+      proc do |chunk, _size, _env|
+        event_parser.feed(chunk) do |event_type, data, _id, _reconnect_time|
+          if data.blank? || data == "[DONE]"
+            update_model_completion(model_completion, streaming_response.current_response_json)
+            next
+          end
+
+          event_data = JSON.parse(data)
+          delta, finish_reason = streaming_response.process_streaming_event(event_type, event_data)
+
+          accumulated_delta += delta if delta.present?
+
+          if accumulated_delta.length >= Raif.config.streaming_update_chunk_size_threshold || finish_reason.present?
+            update_model_completion(model_completion, streaming_response.current_response_json)
+
+            if accumulated_delta.present?
+              block.call(model_completion, accumulated_delta, event_data)
+              accumulated_delta = ""
+            end
+          end
+        end
+      end
+    end
+
   end
 end

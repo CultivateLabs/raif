@@ -1,0 +1,136 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      encoding: UTF-8
+      string: '{"model":"claude-3-5-haiku-latest","messages":[{"role":"user","content":[{"type":"text","text":"What''s
+        on the homepage of https://www.wsj.com today?"}]}],"temperature":0.7,"max_tokens":8192,"tools":[{"name":"fetch_url","description":"Fetch
+        a URL and return the page content as markdown","input_schema":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
+        URL to fetch content from"}},"required":["url"]}}],"stream":true}'
+    headers:
+      Anthropic-Version:
+      - '2023-06-01'
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 10 Jun 2025 18:50:09 GMT
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cache-Control:
+      - no-cache
+      Anthropic-Ratelimit-Input-Tokens-Limit:
+      - '25000'
+      Anthropic-Ratelimit-Input-Tokens-Remaining:
+      - '25000'
+      Anthropic-Ratelimit-Input-Tokens-Reset:
+      - '2025-06-10T18:50:10Z'
+      Anthropic-Ratelimit-Output-Tokens-Limit:
+      - '5000'
+      Anthropic-Ratelimit-Output-Tokens-Remaining:
+      - '5000'
+      Anthropic-Ratelimit-Output-Tokens-Reset:
+      - '2025-06-10T18:50:09Z'
+      Anthropic-Ratelimit-Requests-Limit:
+      - '5'
+      Anthropic-Ratelimit-Requests-Remaining:
+      - '1'
+      Anthropic-Ratelimit-Requests-Reset:
+      - '2025-06-10T18:50:50Z'
+      Anthropic-Ratelimit-Tokens-Limit:
+      - '30000'
+      Anthropic-Ratelimit-Tokens-Remaining:
+      - '30000'
+      Anthropic-Ratelimit-Tokens-Reset:
+      - '2025-06-10T18:50:09Z'
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Via:
+      - 1.1 google
+      Cf-Cache-Status:
+      - DYNAMIC
+      X-Robots-Tag:
+      - none
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 94db0d80aa8b7fe2-IAD
+    body:
+      encoding: UTF-8
+      string: |+
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_abc123","type":"message","role":"assistant","model":"claude-3-5-haiku-20241022","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":364,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":1,"service_tier":"standard"}}    }
+
+        event: content_block_start
+        data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""} }
+
+        event: ping
+        data: {"type": "ping"}
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"I"}               }
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"'ll"}   }
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" fetch"}      }
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" the content"}   }
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" of the Wall"}       }
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" Street Journal homepage for"}             }
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" you."}               }
+
+        event: content_block_stop
+        data: {"type":"content_block_stop","index":0    }
+
+        event: content_block_start
+        data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_abc123","name":"fetch_url","input":{}}   }
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":""}     }
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"url\": \""}    }
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"https://www"}     }
+
+        event: content_block_delta
+        data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":".wsj.com\"}"} }
+
+        event: content_block_stop
+        data: {"type":"content_block_stop","index":1          }
+
+        event: message_delta
+        data: {"type":"message_delta","delta":{"stop_reason":"tool_use","stop_sequence":null},"usage":{"output_tokens":75}         }
+
+        event: message_stop
+        data: {"type":"message_stop"               }
+
+  recorded_at: Tue, 10 Jun 2025 18:50:11 GMT
+recorded_with: VCR 6.3.1
+...

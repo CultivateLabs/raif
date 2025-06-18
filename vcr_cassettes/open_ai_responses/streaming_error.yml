@@ -1,0 +1,64 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.openai.com/v1/responses
+    body:
+      encoding: UTF-8
+      string: '{"model":"gpt-4o","input":[{"role":"user","content":[{"type":"input_text","text":"Hello"}]}],"temperature":0.7,"stream":true}'
+    headers:
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 10 Jun 2025 14:28:10 GMT
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Openai-Version:
+      - '2020-10-01'
+      Openai-Organization:
+      - "<OPENAI_ORGANIZATION>"
+      X-Request-Id:
+      - "<REQUEST_ID>"
+      Openai-Processing-Ms:
+      - '679'
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Cf-Cache-Status:
+      - DYNAMIC
+      X-Content-Type-Options:
+      - nosniff
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 94d98db97d88451d-ATL
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: UTF-8
+      string: |+
+        event: message
+        data: {"type": "text", "text": "Hello! How can I help you today?", "index": 0, "sequence_number": 0}
+
+        event: error
+        data: {"type":"error","code":"ERR_SOMETHING","message":"Something went wrong","param":null,"sequence_number":1}
+
+  recorded_at: Tue, 10 Jun 2025 14:28:11 GMT
+recorded_with: VCR 6.3.1
+...

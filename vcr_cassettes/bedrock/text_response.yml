@@ -1,0 +1,52 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2:0/converse
+    body:
+      encoding: UTF-8
+      string: '{"messages":[{"role":"user","content":[{"text":"Hello"}]}],"system":[{"text":"You
+        are a helpful assistant."}],"inferenceConfig":{"maxTokens":8192}}'
+    headers:
+      Accept-Encoding:
+      - ''
+      Amz-Sdk-Invocation-Id:
+      - "<AMZ_SDK_INVOCATION_ID>"
+      Content-Type:
+      - application/json
+      Host:
+      - bedrock-runtime.us-east-1.amazonaws.com
+      X-Amz-Date:
+      - 20250611T135335Z
+      X-Amz-Content-Sha256:
+      - "<AMZ_CONTENT_SHA256>"
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - aws-sdk-ruby3/3.225.0 ua/2.1 api/bedrock_runtime#1.49.0 os/macos#24 md/arm64
+        lang/ruby#3.4.4 md/3.4.4 m/Z,b,D,e
+      Content-Length:
+      - '147'
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 11 Jun 2025 13:53:36 GMT
+      Content-Type:
+      - application/json
+      Content-Length:
+      - '321'
+      Connection:
+      - keep-alive
+      X-Amzn-Requestid:
+      - "<AMZN_REQUESTID>"
+    body:
+      encoding: UTF-8
+      string: '{"metrics":{"latencyMs":1224},"output":{"message":{"content":[{"text":"Hi!
+        How can I help you today?"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"cacheReadInputTokenCount":0,"cacheReadInputTokens":0,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":14,"outputTokens":12,"totalTokens":26}}'
+  recorded_at: Wed, 11 Jun 2025 13:53:36 GMT
+recorded_with: VCR 6.3.1

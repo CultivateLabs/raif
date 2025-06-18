@@ -1,0 +1,55 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2:0/converse-stream
+    body:
+      encoding: UTF-8
+      string: '{"messages":[{"role":"user","content":[{"text":"Can you you tell me
+        a joke? Respond in json."}]}],"system":[{"text":"You are a helpful assistant
+        who specializes in telling jokes. Your response should be a properly formatted
+        JSON object containing a single `joke` key and a single `answer` key. Do not
+        include any other text in your response outside the JSON object."}],"inferenceConfig":{"maxTokens":8192}}'
+    headers:
+      Accept-Encoding:
+      - ''
+      Amz-Sdk-Invocation-Id:
+      - "<AMZ_SDK_INVOCATION_ID>"
+      Content-Type:
+      - application/json
+      Host:
+      - bedrock-runtime.us-east-1.amazonaws.com
+      X-Amz-Date:
+      - 20250611T154630Z
+      X-Amz-Content-Sha256:
+      - "<AMZ_CONTENT_SHA256>"
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - aws-sdk-ruby3/3.225.0 ua/2.1 api/bedrock_runtime#1.49.0 os/macos#24 md/arm64
+        lang/ruby#3.4.4 md/3.4.4 m/Z,b,D,e
+      Content-Length:
+      - '406'
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 11 Jun 2025 15:46:31 GMT
+      Content-Type:
+      - application/vnd.amazon.eventstream
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      X-Amzn-Requestid:
+      - "<AMZN_REQUESTID>"
+    body:
+      encoding: ASCII-8BIT
+      string: !binary |-
+        AAAAkwAAAFJ24bJxCzpldmVudC10eXBlBwAMbWVzc2FnZVN0YXJ0DTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXYiLCJyb2xlIjoiYXNzaXN0YW50In2AaQZuAAAA1QAAAFfROOsXCzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsidGV4dCI6IntcbiAgICAifSwicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowIn2VxdaMAAAAwgAAAFcD+KCFCzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsidGV4dCI6Ilwiam9rZVwiOiBcIiJ9LCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBQkMifU4cqTcAAACxAAAAV72KOpoLOmV2ZW50LXR5cGUHABFjb250ZW50QmxvY2tEZWx0YQ06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7ImNvbnRlbnRCbG9ja0luZGV4IjowLCJkZWx0YSI6eyJ0ZXh0IjoiV2hhdCBkbyB5b3UgY2FsbCJ9LCJwIjoiYWJjZGVmZ2gifUSisCEAAADOAAAAV8YITYQLOmV2ZW50LXR5cGUHABFjb250ZW50QmxvY2tEZWx0YQ06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7ImNvbnRlbnRCbG9ja0luZGV4IjowLCJkZWx0YSI6eyJ0ZXh0IjoiIGEgYmVhciJ9LCJwIjoiYWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXpBQkNERUZHSElKS0xNTk9QUVJTVCJ9x+XhGgAAAK8AAABXYloTeQs6ZXZlbnQtdHlwZQcAEWNvbnRlbnRCbG9ja0RlbHRhDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsiY29udGVudEJsb2NrSW5kZXgiOjAsImRlbHRhIjp7InRleHQiOiIgd2l0aCBubyB0ZWV0aD8ifSwicCI6ImFiY2RlZmcifV7M7YkAAADKAAAAVzOI60QLOmV2ZW50LXR5cGUHABFjb250ZW50QmxvY2tEZWx0YQ06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7ImNvbnRlbnRCbG9ja0luZGV4IjowLCJkZWx0YSI6eyJ0ZXh0IjoiXCIsXG4gICAgXCIifSwicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMIn1y4PGZAAAAzgAAAFfGCE2ECzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsidGV4dCI6ImFuc3dlclwiOiBcIkEifSwicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU4ifQzZYSwAAACyAAAAV/oqQEoLOmV2ZW50LXR5cGUHABFjb250ZW50QmxvY2tEZWx0YQ06Y29udGVudC10eXBlBwAQYXBwbGljYXRpb24vanNvbg06bWVzc2FnZS10eXBlBwAFZXZlbnR7ImNvbnRlbnRCbG9ja0luZGV4IjowLCJkZWx0YSI6eyJ0ZXh0IjoiIGd1bW15IGJlYXIhXCIifSwicCI6ImFiY2RlZmdoaWprIn0PZcUSAAAApAAAAFcViiJoCzpldmVudC10eXBlBwARY29udGVudEJsb2NrRGVsdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJjb250ZW50QmxvY2tJbmRleCI6MCwiZGVsdGEiOnsidGV4dCI6IlxufSJ9LCJwIjoiYWJjZGVmZ2gifVr15b0AAAC5AAAAVvr9Qc0LOmV2ZW50LXR5cGUHABBjb250ZW50QmxvY2tTdG9wDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsiY29udGVudEJsb2NrSW5kZXgiOjAsInAiOiJhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaMCJ9iABE1AAAAJUAAABRYKgWaws6ZXZlbnQtdHlwZQcAC21lc3NhZ2VTdG9wDTpjb250ZW50LXR5cGUHABBhcHBsaWNhdGlvbi9qc29uDTptZXNzYWdlLXR5cGUHAAVldmVudHsicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0Iiwic3RvcFJlYXNvbiI6ImVuZF90dXJuIn2HCXz0AAAA7QAAAE4kArCQCzpldmVudC10eXBlBwAIbWV0YWRhdGENOmNvbnRlbnQtdHlwZQcAEGFwcGxpY2F0aW9uL2pzb24NOm1lc3NhZ2UtdHlwZQcABWV2ZW50eyJtZXRyaWNzIjp7ImxhdGVuY3lNcyI6OTQyfSwicCI6ImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6QUJDREVGR0hJSktMTU5PUFFSIiwidXNhZ2UiOnsiaW5wdXRUb2tlbnMiOjcwLCJvdXRwdXRUb2tlbnMiOjM0LCJ0b3RhbFRva2VucyI6MTA0fX1RwBlO
+  recorded_at: Wed, 11 Jun 2025 15:46:31 GMT
+recorded_with: VCR 6.3.1

@@ -1,0 +1,113 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://openrouter.ai/api/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"meta-llama/llama-3.1-8b-instruct","messages":[{"role":"system","content":"You
+        are a helpful assistant who specializes in telling jokes. Your response should
+        be a properly formatted JSON object containing a single `joke` key. Do not
+        include any other text in your response outside the JSON object."},{"role":"user","content":[{"type":"text","text":"Can
+        you you tell me a joke? Respond in json."}]}],"temperature":0.7,"max_tokens":null,"stream":true,"stream_options":{"include_usage":true}}'
+    headers:
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 10 Jun 2025 20:15:22 GMT
+      Content-Type:
+      - text/event-stream
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cf-Ray:
+      - 94db8a537da3c990-IAD
+      Access-Control-Allow-Origin:
+      - "*"
+      Cache-Control:
+      - no-cache
+      X-Clerk-Auth-Message:
+      - Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid,
+        token-carrier=header)
+      X-Clerk-Auth-Reason:
+      - token-invalid
+      X-Clerk-Auth-Status:
+      - signed-out
+      Vary:
+      - Accept-Encoding
+      Server:
+      - cloudflare
+    body:
+      encoding: UTF-8
+      string: |+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":"{\n"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" "},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" \""},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":"j"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":"oke"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":"\":"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" \""},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":"Why"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" don"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":"'t"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" skeletons"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" fight"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" each"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" other"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":"?"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" They"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" don"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":"'t"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" have"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" the"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":" guts"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":".\"\n"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":"}"},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"stop","native_finish_reason":"stop","logprobs":null}]}
+
+        data: {"id":"gen-abc123-TULHnHilIq7puwSXdK63","provider":"DeepInfra","model":"meta-llama/llama-3.1-8b-instruct","object":"chat.completion.chunk","created":1749586522,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null,"native_finish_reason":null,"logprobs":null}],"usage":{"prompt_tokens":70,"completion_tokens":23,"total_tokens":93,"cost":0.00000202,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0},"cost_details":{"upstream_inference_cost":null},"completion_tokens_details":{"reasoning_tokens":0}}}
+
+        data: [DONE]
+
+  recorded_at: Tue, 10 Jun 2025 20:15:22 GMT
+recorded_with: VCR 6.3.1
+...

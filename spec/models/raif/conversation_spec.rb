@@ -87,6 +87,19 @@ RSpec.describe Raif::Conversation, type: :model do
       expect(completion.raw_response).to eq("Hello user")
       expect(completion.response_format).to eq("text")
     end
+
+    it "handles errors" do
+      conversation = FB.create(:raif_conversation, :with_entries, entries_count: 1, creator: creator)
+      stub_raif_conversation(conversation) do |_messages|
+        raise StandardError, "Test error"
+      end
+
+      entry = conversation.entries.first
+      conversation.prompt_model_for_entry_response(entry: entry)
+
+      entry.reload
+      expect(entry.failed_at).to be_present
+    end
   end
 
   describe "#process_model_response_message" do
