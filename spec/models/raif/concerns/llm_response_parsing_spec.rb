@@ -168,5 +168,41 @@ RSpec.describe Raif::Concerns::LlmResponseParsing do
       task = Raif::TestJsonTask.new(raw_response: "```json\n{\"name\": \"John\", \"age\": 30")
       expect { task.parsed_response }.to raise_error(JSON::ParserError)
     end
+
+    it "strips ASCII control characters before parsing" do
+      # JSON with embedded control characters (null, bell, backspace, etc.)
+      json_with_control_chars = "\x00\x07\x08{\"name\": \"John\", \"age\": 30}\x1f\x7f"
+      task = Raif::TestJsonTask.new(raw_response: json_with_control_chars)
+      expect(task.parsed_response).to eq({ "name" => "John", "age" => 30 })
+    end
+
+    it "preserves properly escaped control characters in JSON strings" do
+      # Properly escaped control characters should remain intact
+      task = Raif::TestJsonTask.new(raw_response: "{\"message\": \"Line 1\\nLine 2\\tTabbed\"}")
+      expect(task.parsed_response).to eq({ "message" => "Line 1\nLine 2\tTabbed" })
+    end
+
+    it "handles JSON with control characters at the beginning" do
+      # Control character at the very start (line 1 column 0 scenario)
+      json_with_leading_control = "\x01{\"name\": \"John\"}"
+      task = Raif::TestJsonTask.new(raw_response: json_with_leading_control)
+      expect(task.parsed_response).to eq({ "name" => "John" })
+    end
+
+    it "handles JSON with mixed control characters and markdown" do
+      json_with_mixed_issues = "```json\x00\x1f\n{\"result\": \"success\"}\x7f\n```"
+      task = Raif::TestJsonTask.new(raw_response: json_with_mixed_issues)
+      expect(task.parsed_response).to eq({ "result" => "success" })
+    end
+
+    it "raises error when only control characters remain after stripping" do
+      task = Raif::TestJsonTask.new(raw_response: "\x00\x01\x02\x1f\x7f")
+      expect { task.parsed_response }.to raise_error(JSON::ParserError)
+    end
+
+    it "handles empty string after stripping control characters and whitespace" do
+      task = Raif::TestJsonTask.new(raw_response: "   \x00\x01   \x1f   ")
+      expect { task.parsed_response }.to raise_error(JSON::ParserError)
+    end
   end
 end
