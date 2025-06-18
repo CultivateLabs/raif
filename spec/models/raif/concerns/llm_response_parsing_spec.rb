@@ -164,6 +164,30 @@ RSpec.describe Raif::Concerns::LlmResponseParsing do
       expect(task.parsed_response).to eq({ "name" => "John", "age" => 30 })
     end
 
+    it "strips markdown fence" do
+      mc = Raif::ModelCompletion.new(response_format: "json", raw_response: "```json\n{\"name\": \"John\", \"age\": 30}\n``` \n")
+      expect(mc.parsed_response).to eq({ "name" => "John", "age" => 30 })
+    end
+
+    it "it leaves markdown fence that's inside valid json" do
+      mc = Raif::ModelCompletion.new(response_format: "json", raw_response: <<~JSON
+        ```json
+          {
+            "name": "John",#{" "}
+            "age": 30,#{" "}
+            "markdown_description": "For some reason, my description has a markdown fence in it. ```json\\n{\\"name\\": \\"John\\", \\"age\\": 30}\\n```"
+          }
+        ```
+      JSON
+      )
+
+      expect(mc.parsed_response).to eq({
+        "name" => "John",
+        "age" => 30,
+        "markdown_description" => "For some reason, my description has a markdown fence in it. ```json\n{\"name\": \"John\", \"age\": 30}\n```"
+      })
+    end
+
     it "raises an error on incomplete json" do
       task = Raif::TestJsonTask.new(raw_response: "```json\n{\"name\": \"John\", \"age\": 30")
       expect { task.parsed_response }.to raise_error(JSON::ParserError)
