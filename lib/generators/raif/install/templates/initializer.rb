@@ -128,6 +128,9 @@ Raif.configure do |config|
   # The user tool types that are available. Defaults to []
   # config.user_tool_types = []
 
+  # The chunk size threshold for streaming updates. Defaults to 25.
+  # config.streaming_update_chunk_size_threshold = 25
+
   # Whether LLM API requests are enabled. Defaults to true.
   # Use this to globally disable requests to LLM APIs.
   # config.llm_api_requests_enabled = true
