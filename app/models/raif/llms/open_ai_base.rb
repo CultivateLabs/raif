@@ -3,6 +3,29 @@
 class Raif::Llms::OpenAiBase < Raif::Llm
   include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
 
+  def perform_model_completion!(model_completion, &block)
+    if supports_temperature?
+      model_completion.temperature ||= default_temperature
+    else
+      Raif.logger.warn "Temperature is not supported for #{api_name}. Ignoring temperature parameter."
+      model_completion.temperature = nil
+    end
+
+    parameters = build_request_parameters(model_completion)
+    model_completion.response_format_parameter = parameters.dig(:text, :format, :type)
+
+    response = connection.post(api_path) do |req|
+      req.body = parameters
+      req.options.on_data = streaming_chunk_handler(model_completion, &block) if model_completion.stream_response?
+    end
+
+    unless model_completion.stream_response?
+      update_model_completion(model_completion, response.body)
+    end
+
+    model_completion
+  end
+
 private
 
   def connection
@@ -35,6 +58,10 @@ private
     # Not all OpenAI models support structured outputs:
     # https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat#supported-models
     provider_settings.key?(:supports_structured_outputs) ? provider_settings[:supports_structured_outputs] : true
+  end
+
+  def supports_temperature?
+    provider_settings.key?(:supports_temperature) ? provider_settings[:supports_temperature] : true
   end
 
 end
