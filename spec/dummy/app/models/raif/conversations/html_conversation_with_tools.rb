@@ -21,8 +21,6 @@ module Raif
 
       def process_model_response_message(message:, entry:)
         if response_format_html? && message.present?
-          markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML)
-          message = markdown.render(message)
           message = Raif::Utils::HtmlFragmentProcessor.process_links(message, add_target_blank: true, strip_tracking_parameters: true)
         end
 
