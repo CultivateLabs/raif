@@ -41,6 +41,21 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
           }
         ])
       end
+
+      context "when using o-series models" do
+        let(:llm) { Raif.llm(:open_ai_responses_o4_mini) }
+
+        it "makes a request to the OpenAI API and processes the response", vcr: { cassette_name: "open_ai_responses/format_text_o4_mini" } do
+          model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], system_prompt: "You are a helpful assistant")
+
+          expect(model_completion.raw_response).to eq("Hello! How can I assist you today?")
+          expect(model_completion.completion_tokens).to eq(15)
+          expect(model_completion.prompt_tokens).to eq(16)
+          expect(model_completion.total_tokens).to eq(31)
+          expect(model_completion).to be_persisted
+          expect(model_completion.temperature).to eq(nil) # o-series models do not support temperature
+        end
+      end
     end
 
     context "when the response format is json" do
