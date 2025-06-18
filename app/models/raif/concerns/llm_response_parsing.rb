@@ -50,10 +50,7 @@ module Raif::Concerns::LlmResponseParsing
 
   def parse_json_response
     json = raw_response.gsub("```json", "").gsub("```", "")
-
     JSON.parse(json)
-  rescue JSON::ParserError
-    json
   end
 
   def parse_html_response

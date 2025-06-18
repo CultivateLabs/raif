@@ -158,15 +158,15 @@ RSpec.describe Raif::Concerns::LlmResponseParsing do
     end
   end
 
-  fdescribe "json response parsing" do
+  describe "json response parsing" do
     it "parses json response" do
       task = Raif::TestJsonTask.new(raw_response: "{\"name\": \"John\", \"age\": 30}")
       expect(task.parsed_response).to eq({ "name" => "John", "age" => 30 })
     end
 
-    it "passes through incomplete json as a string" do
+    it "raises an error on incomplete json" do
       task = Raif::TestJsonTask.new(raw_response: "```json\n{\"name\": \"John\", \"age\": 30")
-      expect(task.parsed_response).to eq("\n{\"name\": \"John\", \"age\": 30")
+      expect { task.parsed_response }.to raise_error(JSON::ParserError)
     end
   end
 end
