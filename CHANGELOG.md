@@ -12,6 +12,7 @@
 - Added a migration checker to warn if the host app is missing any of Raif's migrations. [#129](https://github.com/CultivateLabs/raif/pull/129)
 - The AWS Bedrock adapter has been renamed to be more generalized. Added support for Amazon Nova models. [#137](https://github.com/CultivateLabs/raif/pull/137)
 - Added support for OpenAI's o-series models. [#155](https://github.com/CultivateLabs/raif/pull/155)
+- The `Raif::Conversation` system prompt is now re-built on each conversation entry to ensure it is not stale. [#156](https://github.com/CultivateLabs/raif/pull/156)
 
 
 ## v1.1.0
