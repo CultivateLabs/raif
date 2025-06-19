@@ -1,5 +1,7 @@
 ## v1.2.0 (Unreleased)
 
+- Added streaming support to improve real-time response handling. [#149](https://github.com/CultivateLabs/raif/pull/149)
+- Improved JSON parsing by stripping ASCII control characters before parsing. [#153](https://github.com/CultivateLabs/raif/pull/153)
 - Added support for OpenAI's Responses API. [#127](https://github.com/CultivateLabs/raif/pull/127)
 - Added provider-managed tools system for utilizing tools built into LLM providers:
   - `Raif::ModelTools::ProviderManaged::WebSearch`: Real-time web search
