@@ -21,6 +21,7 @@
       <%= link_to t("raif.admin.common.model_completion"), raif.admin_model_completion_path(entry.raif_model_completion) %>
     <% end %>
   </div>
+
   <div class="mb-3">
     <strong><%= t("raif.admin.common.user_message") %>:</strong>
     <pre class="mt-2"><%= entry.user_message %></pre>
@@ -29,6 +30,53 @@
     <div class="mb-3">
       <strong><%= t("raif.admin.common.model_response") %>:</strong>
       <pre class="mt-2"><%= entry.model_response_message %></pre>
+    </div>
+  <% end %>
+
+  <% if entry.raif_model_tool_invocations.any? %>
+    <div class="mb-3">
+      <strong><%= t("raif.admin.common.model_tool_invocations") %>:</strong>
+      <div class="ms-3 mt-2">
+        <% entry.raif_model_tool_invocations.each do |invocation| %>
+          <div class="card mb-2">
+            <div class="card-body p-3">
+              <div class="d-flex w-100 justify-content-between align-items-start">
+                <div>
+                  <h6 class="mb-1">
+                    <%= link_to invocation.tool_name, raif.admin_model_tool_invocation_path(invocation) %>
+                  </h6>
+                  <% if invocation.completed_at? %>
+                    <span class="badge bg-success"><%= t("raif.admin.common.completed") %></span>
+                  <% elsif invocation.failed_at? %>
+                    <span class="badge bg-danger"><%= t("raif.admin.common.failed") %></span>
+                  <% else %>
+                    <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
+                  <% end %>
+                </div>
+                <small class="text-muted"><%= invocation.created_at.rfc822 %></small>
+              </div>
+              <div class="mt-2">
+                <strong><%= t("raif.admin.common.arguments") %>:</strong>
+                <pre class="pre-wrap mt-1"><%= begin
+                                                  JSON.pretty_generate(invocation.tool_arguments)
+                                                rescue StandardError
+                                                  invocation.tool_arguments
+                                                end %></pre>
+              </div>
+              <% if invocation.result.present? %>
+                <div class="mt-2">
+                  <strong><%= t("raif.admin.common.result") %>:</strong>
+                  <pre class="pre-wrap mt-1"><%= begin
+                                                    JSON.pretty_generate(invocation.result)
+                                                  rescue StandardError
+                                                    invocation.result
+                                                  end %></pre>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
     </div>
   <% end %>
 </div>
