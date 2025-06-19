@@ -56,7 +56,7 @@ RSpec.describe Raif::Conversation, type: :model do
     expect(conversation).to be_valid
   end
 
-  describe "#system_prompt" do
+  describe "#build_system_prompt" do
     let(:conversation) { FB.build(:raif_conversation, creator: creator) }
     let(:test_conversation) { FB.build(:raif_test_conversation, creator: creator) }
 
@@ -86,6 +86,32 @@ RSpec.describe Raif::Conversation, type: :model do
       expect(completion).to be_a(Raif::ModelCompletion)
       expect(completion.raw_response).to eq("Hello user")
       expect(completion.response_format).to eq("text")
+    end
+
+    it "updates the system prompt to ensure it is not stale" do
+      conversation = FB.create(:raif_conversation, creator: creator)
+
+      i = 0
+      allow(Raif.config).to receive(:conversation_system_prompt_intro) do
+        i += 1
+        "You are a helpful assistant who is responding to message number #{i} in the conversation."
+      end
+
+      stub_raif_conversation(conversation) do |_messages|
+        "Response to message number #{i}"
+      end
+
+      entry = FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator)
+      model_completion = conversation.prompt_model_for_entry_response(entry: entry)
+
+      expect(conversation.system_prompt).to eq("You are a helpful assistant who is responding to message number 1 in the conversation.")
+      expect(model_completion.system_prompt).to eq("You are a helpful assistant who is responding to message number 1 in the conversation.")
+
+      entry = FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator)
+      model_completion = conversation.prompt_model_for_entry_response(entry: entry)
+
+      expect(conversation.system_prompt).to eq("You are a helpful assistant who is responding to message number 2 in the conversation.")
+      expect(model_completion.system_prompt).to eq("You are a helpful assistant who is responding to message number 2 in the conversation.")
     end
 
     it "handles errors" do
