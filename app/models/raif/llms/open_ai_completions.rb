@@ -4,24 +4,11 @@ class Raif::Llms::OpenAiCompletions < Raif::Llms::OpenAiBase
   include Raif::Concerns::Llms::OpenAiCompletions::MessageFormatting
   include Raif::Concerns::Llms::OpenAiCompletions::ToolFormatting
 
-  def perform_model_completion!(model_completion, &block)
-    model_completion.temperature ||= default_temperature
-    parameters = build_request_parameters(model_completion)
-    model_completion.response_format_parameter = parameters.dig(:response_format, :type)
-
-    response = connection.post("chat/completions") do |req|
-      req.body = parameters
-      req.options.on_data = streaming_chunk_handler(model_completion, &block) if model_completion.stream_response?
-    end
-
-    unless model_completion.stream_response?
-      update_model_completion(model_completion, response.body)
-    end
-
-    model_completion
-  end
-
 private
+
+  def api_path
+    "chat/completions"
+  end
 
   def streaming_response_type
     Raif::StreamingResponses::OpenAiCompletions
@@ -62,9 +49,12 @@ private
 
     parameters = {
       model: api_name,
-      messages: messages_with_system,
-      temperature: model_completion.temperature.to_f
+      messages: messages_with_system
     }
+
+    if supports_temperature?
+      parameters[:temperature] = model_completion.temperature.to_f
+    end
 
     # If the LLM supports native tool use and there are available tools, add them to the parameters
     if supports_native_tool_use?
@@ -81,6 +71,7 @@ private
     # Add response format if needed
     response_format = determine_response_format(model_completion)
     parameters[:response_format] = response_format if response_format
+    model_completion.response_format_parameter = response_format[:type] if response_format
 
     parameters
   end

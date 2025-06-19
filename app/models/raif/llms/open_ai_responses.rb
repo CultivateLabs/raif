@@ -4,24 +4,11 @@ class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
   include Raif::Concerns::Llms::OpenAiResponses::MessageFormatting
   include Raif::Concerns::Llms::OpenAiResponses::ToolFormatting
 
-  def perform_model_completion!(model_completion, &block)
-    model_completion.temperature ||= default_temperature
-    parameters = build_request_parameters(model_completion)
-    model_completion.response_format_parameter = parameters.dig(:text, :format, :type)
-
-    response = connection.post("responses") do |req|
-      req.body = parameters
-      req.options.on_data = streaming_chunk_handler(model_completion, &block) if model_completion.stream_response?
-    end
-
-    unless model_completion.stream_response?
-      update_model_completion(model_completion, response.body)
-    end
-
-    model_completion
-  end
-
 private
+
+  def api_path
+    "responses"
+  end
 
   def streaming_response_type
     Raif::StreamingResponses::OpenAiResponses
@@ -100,8 +87,11 @@ private
     parameters = {
       model: api_name,
       input: model_completion.messages,
-      temperature: model_completion.temperature.to_f
     }
+
+    if supports_temperature?
+      parameters[:temperature] = model_completion.temperature.to_f
+    end
 
     parameters[:stream] = true if model_completion.stream_response?
 
@@ -126,6 +116,7 @@ private
     response_format = determine_response_format(model_completion)
     if response_format.present?
       parameters[:text] = { format: response_format }
+      model_completion.response_format_parameter = response_format[:type]
     end
 
     parameters

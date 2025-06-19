@@ -78,6 +78,41 @@ module Raif
         input_token_cost: 0.1 / 1_000_000,
         output_token_cost: 0.4 / 1_000_000,
       },
+      {
+        key: :open_ai_o1,
+        api_name: "o1",
+        input_token_cost: 15.0 / 1_000_000,
+        output_token_cost: 60.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_o1_mini,
+        api_name: "o1-mini",
+        input_token_cost: 1.5 / 1_000_000,
+        output_token_cost: 6.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_o3,
+        api_name: "o3",
+        input_token_cost: 2.0 / 1_000_000,
+        output_token_cost: 8.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_o3_mini,
+        api_name: "o3-mini",
+        input_token_cost: 1.1 / 1_000_000,
+        output_token_cost: 4.4 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_o4_mini,
+        api_name: "o4-mini",
+        input_token_cost: 1.1 / 1_000_000,
+        output_token_cost: 4.4 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
     ]
 
     open_ai_responses_models = open_ai_models.dup.map.with_index do |model, _index|
@@ -90,6 +125,26 @@ module Raif
         ]
       )
     end
+
+    # o1-mini is not supported by the OpenAI Responses API.
+    open_ai_responses_models.delete_if{|model| model[:key] == :open_ai_o1_mini }
+
+    # o1-pro and o3-pro are not supported by the OpenAI Completions API, but it is supported by the OpenAI Responses API.
+    open_ai_responses_models << {
+      key: :open_ai_responses_o1_pro,
+      api_name: "o1-pro",
+      input_token_cost: 150.0 / 1_000_000,
+      output_token_cost: 600.0 / 1_000_000,
+      model_provider_settings: { supports_temperature: false },
+    }
+
+    open_ai_responses_models << {
+      key: :open_ai_responses_o3_pro,
+      api_name: "o3-pro",
+      input_token_cost: 20.0 / 1_000_000,
+      output_token_cost: 80.0 / 1_000_000,
+      model_provider_settings: { supports_temperature: false },
+    }
 
     {
       Raif::Llms::OpenAiCompletions => open_ai_models,

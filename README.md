@@ -109,6 +109,11 @@ Currently supported OpenAI Completions API models:
 - `open_ai_gpt_4_1`
 - `open_ai_gpt_4_1_mini`
 - `open_ai_gpt_4_1_nano`
+- `open_ai_o1`
+- `open_ai_o1_mini`
+- `open_ai_o3`
+- `open_ai_o3_mini`
+- `open_ai_o4_mini`
 
 ### OpenAI Responses API
 ```ruby
@@ -126,6 +131,13 @@ Currently supported OpenAI Responses API models:
 - `open_ai_responses_gpt_4_1`
 - `open_ai_responses_gpt_4_1_mini`
 - `open_ai_responses_gpt_4_1_nano`
+- `open_ai_responses_o1`
+- `open_ai_responses_o1_mini`
+- `open_ai_responses_o1_pro`
+- `open_ai_responses_o3`
+- `open_ai_responses_o3_mini`
+- `open_ai_responses_o3_pro`
+- `open_ai_responses_o4_mini`
 
 The Responses API provides access to [provider-managed tools](#provider-managed-tools), including web search, code execution, and image generation.
 
