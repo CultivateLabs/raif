@@ -71,6 +71,7 @@ private
     # Add response format if needed
     response_format = determine_response_format(model_completion)
     parameters[:response_format] = response_format if response_format
+    model_completion.response_format_parameter = response_format[:type] if response_format
 
     parameters
   end

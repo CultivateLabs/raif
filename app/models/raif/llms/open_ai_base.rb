@@ -12,7 +12,6 @@ class Raif::Llms::OpenAiBase < Raif::Llm
     end
 
     parameters = build_request_parameters(model_completion)
-    model_completion.response_format_parameter = parameters.dig(:text, :format, :type)
 
     response = connection.post(api_path) do |req|
       req.body = parameters

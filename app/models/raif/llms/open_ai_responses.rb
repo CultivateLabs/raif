@@ -116,6 +116,7 @@ private
     response_format = determine_response_format(model_completion)
     if response_format.present?
       parameters[:text] = { format: response_format }
+      model_completion.response_format_parameter = response_format[:type]
     end
 
     parameters
