@@ -58,19 +58,19 @@
               <div class="mt-2">
                 <strong><%= t("raif.admin.common.arguments") %>:</strong>
                 <pre class="pre-wrap mt-1"><%= begin
-                                                  JSON.pretty_generate(invocation.tool_arguments)
-                                                rescue StandardError
-                                                  invocation.tool_arguments
-                                                end %></pre>
+                                                 JSON.pretty_generate(invocation.tool_arguments)
+                                               rescue StandardError
+                                                 invocation.tool_arguments
+                                               end %></pre>
               </div>
               <% if invocation.result.present? %>
                 <div class="mt-2">
                   <strong><%= t("raif.admin.common.result") %>:</strong>
                   <pre class="pre-wrap mt-1"><%= begin
-                                                    JSON.pretty_generate(invocation.result)
-                                                  rescue StandardError
-                                                    invocation.result
-                                                  end %></pre>
+                                                   JSON.pretty_generate(invocation.result)
+                                                 rescue StandardError
+                                                   invocation.result
+                                                 end %></pre>
                 </div>
               <% end %>
             </div>
