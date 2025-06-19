@@ -3,6 +3,8 @@
 module Raif::Concerns::LlmResponseParsing
   extend ActiveSupport::Concern
 
+  ASCII_CONTROL_CHARS = /[\x00-\x1f\x7f]/
+
   included do
     normalizes :raw_response, with: ->(text){ text&.strip }
 
@@ -49,7 +51,10 @@ module Raif::Concerns::LlmResponseParsing
   end
 
   def parse_json_response
-    json = raw_response.gsub("```json", "").gsub("```", "")
+    json = raw_response.gsub(/#{ASCII_CONTROL_CHARS}|^```json|```$/, "").strip
+
+    raise JSON::ParserError, "Invalid JSON" if json.blank?
+
     JSON.parse(json)
   end
 
