@@ -16,10 +16,9 @@ class Raif::Conversation < Raif::ApplicationRecord
   after_initialize -> { self.available_user_tools ||= [] }
 
   before_validation ->{ self.type ||= "Raif::Conversation" }, on: :create
-  before_validation -> { self.system_prompt ||= build_system_prompt }, on: :create
 
   def build_system_prompt
-    <<~PROMPT
+    <<~PROMPT.strip
       #{system_prompt_intro}
       #{system_prompt_language_preference}
     PROMPT
@@ -36,6 +35,8 @@ class Raif::Conversation < Raif::ApplicationRecord
   end
 
   def prompt_model_for_entry_response(entry:, &block)
+    update(system_prompt: build_system_prompt)
+
     llm.chat(
       messages: llm_messages,
       source: entry,
