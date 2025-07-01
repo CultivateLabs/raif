@@ -17,7 +17,7 @@ Raif.configure do |config|
   # config.anthropic_models_enabled = ENV["ANTHROPIC_API_KEY"].present?
 
   # Whether Anthropic models via AWS Bedrock are enabled. Defaults to false
-  # config.anthropic_bedrock_models_enabled = false
+  # config.bedrock_models_enabled = false
 
   # The AWS Bedrock region to use. Defaults to "us-east-1"
   # config.aws_bedrock_region = "us-east-1"
@@ -26,7 +26,7 @@ Raif.configure do |config|
   # config.aws_bedrock_model_name_prefix = "us"
 
   # Whether Titan embedding models are enabled. Defaults to false
-  # config.aws_bedrock_titan_embedding_models_enabled = false
+  # config.bedrock_embedding_models_enabled = false
 
   # Your OpenRouter API key. Defaults to ENV["OPENROUTER_API_KEY"]
   # config.open_router_api_key = ENV["OPENROUTER_API_KEY"]
@@ -48,6 +48,12 @@ Raif.configure do |config|
   #   open_ai_gpt_4o_mini
   #   open_ai_gpt_4o
   #   open_ai_gpt_3_5_turbo
+  #   open_ai_responses_gpt_4_1
+  #   open_ai_responses_gpt_4_1_mini
+  #   open_ai_responses_gpt_4_1_nano
+  #   open_ai_responses_gpt_4o_mini
+  #   open_ai_responses_gpt_4o
+  #   open_ai_gpt_3_5_turbo
   #   anthropic_claude_3_7_sonnet
   #   anthropic_claude_3_5_sonnet
   #   anthropic_claude_3_5_haiku
@@ -56,6 +62,9 @@ Raif.configure do |config|
   #   bedrock_claude_3_7_sonnet
   #   bedrock_claude_3_5_haiku
   #   bedrock_claude_3_opus
+  #   bedrock_amazon_nova_micro
+  #   bedrock_amazon_nova_lite
+  #   bedrock_amazon_nova_pro
   #   open_router_claude_3_7_sonnet
   #   open_router_llama_3_3_70b_instruct
   #   open_router_llama_3_1_8b_instruct
@@ -118,6 +127,9 @@ Raif.configure do |config|
 
   # The user tool types that are available. Defaults to []
   # config.user_tool_types = []
+
+  # The chunk size threshold for streaming updates. Defaults to 25.
+  # config.streaming_update_chunk_size_threshold = 25
 
   # Whether LLM API requests are enabled. Defaults to true.
   # Use this to globally disable requests to LLM APIs.

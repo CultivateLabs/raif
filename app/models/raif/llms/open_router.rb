@@ -1,27 +1,26 @@
 # frozen_string_literal: true
 
 class Raif::Llms::OpenRouter < Raif::Llm
-  include Raif::Concerns::Llms::OpenAi::MessageFormatting
+  include Raif::Concerns::Llms::OpenAiCompletions::MessageFormatting
+  include Raif::Concerns::Llms::OpenAiCompletions::ToolFormatting
+  include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
 
-  def perform_model_completion!(model_completion)
+  def perform_model_completion!(model_completion, &block)
     model_completion.temperature ||= default_temperature
     parameters = build_request_parameters(model_completion)
     response = connection.post("chat/completions") do |req|
       req.body = parameters
+      req.options.on_data = streaming_chunk_handler(model_completion, &block) if model_completion.stream_response?
     end
 
-    response_json = response.body
-
-    model_completion.update!(
-      response_tool_calls: extract_response_tool_calls(response_json),
-      raw_response: response_json.dig("choices", 0, "message", "content"),
-      completion_tokens: response_json.dig("usage", "completion_tokens"),
-      prompt_tokens: response_json.dig("usage", "prompt_tokens"),
-      total_tokens: response_json.dig("usage", "total_tokens")
-    )
+    unless model_completion.stream_response?
+      update_model_completion(model_completion, response.body)
+    end
 
     model_completion
   end
+
+private
 
   def connection
     @connection ||= Faraday.new(url: "https://openrouter.ai/api/v1") do |f|
@@ -34,7 +33,20 @@ class Raif::Llms::OpenRouter < Raif::Llm
     end
   end
 
-protected
+  def streaming_response_type
+    Raif::StreamingResponses::OpenAiCompletions
+  end
+
+  def update_model_completion(model_completion, response_json)
+    model_completion.update!(
+      response_tool_calls: extract_response_tool_calls(response_json),
+      raw_response: response_json.dig("choices", 0, "message", "content"),
+      response_array: response_json["choices"],
+      completion_tokens: response_json.dig("usage", "completion_tokens"),
+      prompt_tokens: response_json.dig("usage", "prompt_tokens"),
+      total_tokens: response_json.dig("usage", "total_tokens")
+    )
+  end
 
   def build_request_parameters(model_completion)
     params = {
@@ -42,7 +54,6 @@ protected
       messages: model_completion.messages,
       temperature: model_completion.temperature.to_f,
       max_tokens: model_completion.max_completion_tokens || default_max_completion_tokens,
-      stream: false
     }
 
     # Add system message to the messages array if present
@@ -50,44 +61,28 @@ protected
       params[:messages].unshift({ "role" => "system", "content" => model_completion.system_prompt })
     end
 
-    if model_completion.available_model_tools.any?
-      tools = []
+    if supports_native_tool_use?
+      tools = build_tools_parameter(model_completion)
+      params[:tools] = tools unless tools.blank?
+    end
 
-      model_completion.available_model_tools_map.each do |_tool_name, tool|
-        tools << {
-          type: "function",
-          function: {
-            name: tool.tool_name,
-            description: tool.tool_description,
-            parameters: tool.tool_arguments_schema
-          }
-        }
-      end
-
-      params[:tools] = tools
+    if model_completion.stream_response?
+      # Ask for usage stats in the last chunk
+      params[:stream] = true
+      params[:stream_options] = { include_usage: true }
     end
 
     params
   end
 
-  def extract_response_tool_calls(response_json)
-    tool_calls = response_json.dig("choices", 0, "message", "tool_calls")
-    return [] unless tool_calls.is_a?(Array)
+  def extract_response_tool_calls(resp)
+    return if resp.dig("choices", 0, "message", "tool_calls").blank?
 
-    tool_calls.map do |tool_call|
-      next unless tool_call["type"] == "function"
-
-      function = tool_call["function"]
-      next unless function.is_a?(Hash)
-
+    resp.dig("choices", 0, "message", "tool_calls").map do |tool_call|
       {
-        "id" => tool_call["id"],
-        "type" => "function",
-        "function" => {
-          "name" => function["name"],
-          "arguments" => function["arguments"]
-        }
+        "name" => tool_call["function"]["name"],
+        "arguments" => JSON.parse(tool_call["function"]["arguments"])
       }
-    end.compact
+    end
   end
 end

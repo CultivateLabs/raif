@@ -3,4 +3,5 @@
 module Raif::Utils
   require "raif/utils/readable_content_extractor"
   require "raif/utils/html_to_markdown_converter"
+  require "raif/utils/html_fragment_processor"
 end

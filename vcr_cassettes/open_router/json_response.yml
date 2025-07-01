@@ -1,0 +1,49 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://openrouter.ai/api/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"meta-llama/llama-3.1-8b-instruct","messages":[{"role":"user","content":[{"type":"text","text":"Can
+        you you tell me a joke? Respond in JSON format. Include nothing outside of
+        the JSON."}]}],"temperature":0.7,"max_tokens":null}'
+    headers:
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 10 Jun 2025 19:55:14 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Access-Control-Allow-Origin:
+      - "*"
+      Vary:
+      - Accept-Encoding
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 94db6cd5acefc9a1-IAD
+    body:
+      encoding: ASCII-8BIT
+      string: "\n         \n\n         \n{\"id\":\"gen-abc123\",\"provider\":\"DeepInfra\",\"model\":\"meta-llama/llama-3.1-8b-instruct\",\"object\":\"chat.completion\",\"created\":1749585314,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"stop\",\"native_finish_reason\":\"stop\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\n
+        \ \\\"joke\\\": \\\"What do you call a fake noodle?\\\",\\n  \\\"answer\\\":
+        \\\"An impasta\\\"\\n}\",\"refusal\":null,\"reasoning\":null}}],\"usage\":{\"prompt_tokens\":30,\"completion_tokens\":26,\"total_tokens\":56}}"
+  recorded_at: Tue, 10 Jun 2025 19:55:15 GMT
+recorded_with: VCR 6.3.1

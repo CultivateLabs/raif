@@ -1,0 +1,22 @@
+name: Only allow merging from dev to main
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  enforce-dev-only-merges:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if PR is from dev branch
+        run: |
+          echo "Target branch: ${{ github.base_ref }}"
+          echo "Source branch: ${{ github.head_ref }}"
+
+          if [ "${{ github.head_ref }}" != "dev" ]; then
+            echo "❌ Only pull requests from 'dev' to 'main' are allowed."
+            exit 1
+          fi
+
+          echo "✅ PR is from 'dev' to 'main'. Proceeding..."

@@ -16,7 +16,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   has_one :raif_model_completion, as: :source, dependent: :destroy, class_name: "Raif::ModelCompletion"
 
   delegate :available_model_tools, to: :raif_conversation
-  delegate :system_prompt, :llm_model_key, to: :raif_model_completion, allow_nil: true
+  delegate :system_prompt, :llm_model_key, :citations, to: :raif_model_completion, allow_nil: true
   delegate :json_response_schema, to: :class
 
   accepts_nested_attributes_for :raif_user_tool_invocation
@@ -46,7 +46,23 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   end
 
   def process_entry!
-    self.raif_model_completion = raif_conversation.prompt_model_for_entry_response(entry: self)
+    self.model_response_message = ""
+
+    self.raif_model_completion = raif_conversation.prompt_model_for_entry_response(entry: self) do |model_completion, _delta, _sse_event|
+      self.raw_response = model_completion.raw_response
+      self.model_response_message = raif_conversation.process_model_response_message(
+        message: model_completion.parsed_response(force_reparse: true),
+        entry: self
+      )
+
+      update_columns(
+        model_response_message: model_response_message,
+        raw_response: raw_response,
+        updated_at: Time.current
+      )
+
+      broadcast_replace_to raif_conversation
+    end
 
     if raif_model_completion.parsed_response.present? || raif_model_completion.response_tool_calls.present?
       extract_message_and_invoke_tools!

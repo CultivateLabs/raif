@@ -13,16 +13,21 @@ Raif is built by [Cultivate Labs](https://www.cultivatelabs.com) and is used to 
 ## Table of Contents
 - [Setup](#setup)
   - [OpenAI](#openai)
+    - [OpenAI Completions API](#openai-completions-api)
+    - [OpenAI Responses API](#openai-responses-api)
   - [Anthropic Claude](#anthropic-claude)
   - [AWS Bedrock (Claude)](#aws-bedrock-claude)
   - [OpenRouter](#openrouter)
 - [Chatting with the LLM](#chatting-with-the-llm)
+  - [Streaming Responses](#streaming-responses)
 - [Key Raif Concepts](#key-raif-concepts)
   - [Tasks](#tasks)
   - [Conversations](#conversations)
+    - [Real-time Streaming Responses](#real-time-streaming-responses)
     - [Conversation Types](#conversation-types)
   - [Agents](#agents)
   - [Model Tools](#model-tools)
+    - [Provider-Managed Tools](#provider-managed-tools)
 - [Images/Files/PDF's](#imagesfilespdfs)
   - [Images/Files/PDF's in Tasks](#imagesfilespdfs-in-tasks)
 - [Embedding Models](#embedding-models)
@@ -35,6 +40,7 @@ Raif is built by [Cultivate Labs](https://www.cultivatelabs.com) and is used to 
   - [Adding LLM Models](#adding-llm-models)
 - [Testing](#testing)
 - [Demo App](#demo-app)
+- [Contributing](#contributing)
 - [License](#license)
 
 # Setup
@@ -84,6 +90,10 @@ end
 Configure your LLM providers. You'll need at least one of:
 
 ## OpenAI
+
+Raif supports both OpenAI's [Completions API](https://platform.openai.com/docs/api-reference/chat) and the newer [Responses API](https://platform.openai.com/docs/api-reference/responses), which provides access to provider-managed tools like web search, code execution, and image generation.
+
+### OpenAI Completions API
 ```ruby
 Raif.configure do |config|
   config.open_ai_models_enabled = true
@@ -92,10 +102,44 @@ Raif.configure do |config|
 end
 ```
 
-Currently supported OpenAI models:
+Currently supported OpenAI Completions API models:
 - `open_ai_gpt_4o_mini`
 - `open_ai_gpt_4o`
 - `open_ai_gpt_3_5_turbo`
+- `open_ai_gpt_4_1`
+- `open_ai_gpt_4_1_mini`
+- `open_ai_gpt_4_1_nano`
+- `open_ai_o1`
+- `open_ai_o1_mini`
+- `open_ai_o3`
+- `open_ai_o3_mini`
+- `open_ai_o4_mini`
+
+### OpenAI Responses API
+```ruby
+Raif.configure do |config|
+  config.open_ai_models_enabled = true
+  config.open_ai_api_key = ENV["OPENAI_API_KEY"]
+  config.default_llm_model_key = "open_ai_responses_gpt_4o"
+end
+```
+
+Currently supported OpenAI Responses API models:
+- `open_ai_responses_gpt_4o_mini`
+- `open_ai_responses_gpt_4o`
+- `open_ai_responses_gpt_3_5_turbo`
+- `open_ai_responses_gpt_4_1`
+- `open_ai_responses_gpt_4_1_mini`
+- `open_ai_responses_gpt_4_1_nano`
+- `open_ai_responses_o1`
+- `open_ai_responses_o1_mini`
+- `open_ai_responses_o1_pro`
+- `open_ai_responses_o3`
+- `open_ai_responses_o3_mini`
+- `open_ai_responses_o3_pro`
+- `open_ai_responses_o4_mini`
+
+The Responses API provides access to [provider-managed tools](#provider-managed-tools), including web search, code execution, and image generation.
 
 ## Anthropic Claude
 ```ruby
@@ -112,10 +156,12 @@ Currently supported Anthropic models:
 - `anthropic_claude_3_5_haiku`
 - `anthropic_claude_3_opus`
 
+The Anthropic adapter provides access to [provider-managed tools](#provider-managed-tools) for web search and code execution.
+
 ## AWS Bedrock (Claude)
 ```ruby
 Raif.configure do |config|
-  config.anthropic_bedrock_models_enabled = true
+  config.bedrock_models_enabled = true
   config.aws_bedrock_region = "us-east-1"
   config.default_llm_model_key = "bedrock_claude_3_5_sonnet"
 end
@@ -126,6 +172,9 @@ Currently supported Bedrock models:
 - `bedrock_claude_3_7_sonnet`
 - `bedrock_claude_3_5_haiku`
 - `bedrock_claude_3_opus`
+- `bedrock_amazon_nova_micro`
+- `bedrock_amazon_nova_lite`
+- `bedrock_amazon_nova_pro`
 
 Note: Raif utilizes the [AWS Bedrock gem](https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/BedrockRuntime/Client.html) and AWS credentials should be configured via the AWS SDK (environment variables, IAM role, etc.)
 
@@ -184,6 +233,38 @@ puts model_completion.raw_response
 
 puts model_completion.parsed_response # will strip backticks, parse the JSON, and give you a Ruby hash
 # => {"joke" => "Why don't skeletons fight each other? They don't have the guts."}
+```
+
+## Streaming Responses
+
+You can enable streaming for any chat call by passing a block to the `chat` method. When streaming is enabled, the block will be called with partial responses as they're received from the LLM:
+
+```ruby
+llm = Raif.llm(:open_ai_gpt_4o)
+model_completion = llm.chat(message: "Tell me a story") do |model_completion, delta, sse_event|
+  # This block is called multiple times as the response streams in.
+  # You could broadcast these updates via Turbo Streams, WebSockets, etc.
+  Turbo::StreamsChannel.broadcast_replace_to(
+    :my_channel,
+    target: "chat-response",
+    partial: "my_partial_displaying_chat_response",
+    locals: { model_completion: model_completion, delta: delta, sse_event: sse_event }
+  )
+end
+
+# The final complete response is available in the model_completion
+puts model_completion.raw_response
+```
+
+You can configure the streaming update frequency by adjusting the chunk size threshold in your Raif configuration:
+
+```ruby
+Raif.configure do |config|
+  # Control how often the model completion is updated & the block is called when streaming.
+  # Lower values = more frequent updates but more database writes.
+  # Higher values = less frequent updates but fewer database writes.
+  config.streaming_update_chunk_size_threshold = 50 # default is 25
+end
 ```
 
 # Key Raif Concepts
@@ -335,6 +416,10 @@ If your app already includes Bootstrap styles, this will render a conversation i
 ![Conversation Interface](./screenshots/conversation-interface.png)
 
 If your app does not include Bootstrap, you can [override the views](#views) to update styles.
+
+### Real-time Streaming Responses
+
+Raif conversations have built-in support for streaming responses, where the LLM's response is displayed progressively as it's being generated. Each time a conversation entry is updated during the streaming response, Raif will call `broadcast_replace_to(conversation)` (where `conversation` is the `Raif::Conversation` associated with the conversation entry). When using the `raif_conversation` view helper, it will automatically set up the subscription for you.
 
 ### Conversation Types
 
@@ -522,7 +607,54 @@ class Raif::ModelTools::GoogleSearch < Raif::ModelTool
 end
 ```
 
-## Images/Files/PDF's
+### Provider-Managed Tools
+
+In addition to the ability to create your own model tools, Raif supports provider-managed tools. These are tools that are built into certain LLM providers and run on the provider's infrastructure:
+
+- **`Raif::ModelTools::ProviderManaged::WebSearch`**: Performs real-time web searches and returns relevant results
+- **`Raif::ModelTools::ProviderManaged::CodeExecution`**: Executes code in a secure sandboxed environment (e.g. Python)
+- **`Raif::ModelTools::ProviderManaged::ImageGeneration`**: Generates images based on text descriptions
+
+Current provider-managed tool support:
+| Provider | WebSearch | CodeExecution | ImageGeneration |
+|----------|-----------|---------------|-----------------|
+| OpenAI Responses API | ✅ | ✅ | ✅ |
+| OpenAI Completions API | ❌ | ❌ | ❌ |
+| Anthropic Claude | ✅ | ✅ | ❌ |
+| AWS Bedrock (Claude) | ❌ | ❌ | ❌ |
+| OpenRouter | ❌ | ❌ | ❌ |
+
+To use provider-managed tools, include them in the `available_model_tools` array:
+
+```ruby
+# In a conversation
+conversation = Raif::Conversation.create!(
+  creator: current_user,
+  available_model_tools: [
+    "Raif::ModelTools::ProviderManaged::WebSearch",
+    "Raif::ModelTools::ProviderManaged::CodeExecution"
+  ]
+)
+
+# In an agent
+agent = Raif::Agents::ReActAgent.new(
+  task: "Search for recent news about AI and create a summary chart",
+  available_model_tools: [
+    "Raif::ModelTools::ProviderManaged::WebSearch",
+    "Raif::ModelTools::ProviderManaged::CodeExecution"
+  ],
+  creator: current_user
+)
+
+# Directly in a chat
+llm = Raif.llm(:open_ai_responses_gpt_4_1)
+model_completion = llm.chat(
+  messages: [{ role: "user", content: "What are the latest developments in Ruby on Rails?" }], 
+  available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
+)
+```
+
+## Sending Images/Files/PDF's to the LLM
 
 Raif supports images, files, and PDF's in the messages sent to the LLM.
 
@@ -598,7 +730,7 @@ Raif supports generation of vector embeddings. You can enable and configure embe
 ```ruby
 Raif.configure do |config|
   config.open_ai_embedding_models_enabled = true
-  config.aws_bedrock_titan_embedding_models_enabled = true
+  config.bedrock_embedding_models_enabled = true
   
   config.default_embedding_model_key = "open_ai_text_embedding_3_small"
 end
@@ -837,6 +969,12 @@ OPENAI_API_KEY=your-openai-api-key-here bin/rails s
 You can then access the app at [http://localhost:3000](http://localhost:3000).
 
 ![Demo App Screenshot](./screenshots/demo-app.png)
+
+# Contributing
+
+We welcome contributions to Raif! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+**Important**: All PR's should be made against the `dev` branch.
 
 # License
 

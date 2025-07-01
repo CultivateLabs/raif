@@ -3,112 +3,308 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::OpenRouter, type: :model do
-  it_behaves_like "an LLM that uses OpenAI's message formatting"
+  it_behaves_like "an LLM that uses OpenAI's Completions API message formatting"
+  it_behaves_like "an LLM that uses OpenAI's Completions API tool formatting"
 
-  let(:llm){ Raif.llm(:open_router_claude_3_7_sonnet) }
-  let(:stubs) { Faraday::Adapter::Test::Stubs.new }
-  let(:test_connection) do
-    Faraday.new do |builder|
-      builder.adapter :test, stubs
-      builder.request :json
-      builder.response :json
-      builder.response :raise_error
-    end
-  end
-
-  before do
-    allow(llm).to receive(:connection).and_return(test_connection)
-  end
+  let(:llm){ Raif.llm(:open_router_llama_3_1_8b_instruct) }
 
   describe "#chat" do
     context "when the response format is text" do
-      let(:response_body) do
-        {
-          "choices" => [{ "message" => { "content" => "Response content" } }],
-          "usage" => { "completion_tokens" => 10, "prompt_tokens" => 5, "total_tokens" => 15 }
-        }
-      end
-
-      before do
-        stubs.post("chat/completions") do |_env|
-          [200, { "Content-Type" => "application/json" }, response_body]
-        end
-      end
-
-      it "makes a request to the OpenRouter API and processes the text response" do
+      it "makes a request to the OpenRouter API and processes the text response", vcr: { cassette_name: "open_router/text_response" } do
         model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], system_prompt: "You are a helpful assistant.")
 
-        expect(model_completion.raw_response).to eq("Response content")
-        expect(model_completion.completion_tokens).to eq(10)
-        expect(model_completion.prompt_tokens).to eq(5)
-        expect(model_completion.total_tokens).to eq(15)
-        expect(model_completion.llm_model_key).to eq("open_router_claude_3_7_sonnet")
-        expect(model_completion.model_api_name).to eq("anthropic/claude-3.7-sonnet")
+        expect(model_completion.raw_response).to eq("Hello! How can I assist you today?")
+        expect(model_completion.completion_tokens).to eq(9)
+        expect(model_completion.prompt_tokens).to eq(22)
+        expect(model_completion.total_tokens).to eq(31)
+        expect(model_completion.llm_model_key).to eq("open_router_llama_3_1_8b_instruct")
+        expect(model_completion.model_api_name).to eq("meta-llama/llama-3.1-8b-instruct")
         expect(model_completion.response_format).to eq("text")
         expect(model_completion.temperature).to eq(0.7)
         expect(model_completion.system_prompt).to eq("You are a helpful assistant.")
+        expect(model_completion.response_array).to eq([{
+          "finish_reason" => "stop",
+          "index" => 0,
+          "logprobs" => nil,
+          "message" => {
+            "content" => "Hello! How can I assist you today?",
+            "reasoning" => nil,
+            "refusal" => nil,
+            "role" => "assistant"
+          },
+          "native_finish_reason" => "stop"
+        }])
       end
     end
 
-    context "when the API returns a 400-level error" do
-      let(:error_response_body) do
-        <<~JSON
-          {
-            "error": {
-              "code": 429,
-              "message": "Rate limited",
-              "metadata": ""
-            }
-          }
-        JSON
-      end
+    context "when the response format is json" do
+      it "makes a request to the OpenRouter API and processes the json response", vcr: { cassette_name: "open_router/json_response" } do
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Can you you tell me a joke? Respond in JSON format. Include nothing outside of the JSON." }],
+          response_format: :json
+        )
 
-      before do
-        stubs.post("chat/completions") do |_env|
-          raise Faraday::ClientError.new(
-            "Rate limited",
-            { status: 429, body: error_response_body }
-          )
-        end
-
-        allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
-      end
-
-      it "raises a Faraday::ClientError with the error message" do
-        expect do
-          llm.chat(message: "Hello")
-        end.to raise_error(Faraday::ClientError)
+        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"What do you call a fake noodle?\",\n  \"answer\": \"An impasta\"\n}")
+        expect(model_completion.response_format).to eq("json")
+        expect(model_completion.parsed_response).to eq({ "joke" => "What do you call a fake noodle?", "answer" => "An impasta" })
+        expect(model_completion.completion_tokens).to eq(26)
+        expect(model_completion.prompt_tokens).to eq(30)
+        expect(model_completion.response_array).to eq([{
+          "logprobs" => nil,
+          "finish_reason" => "stop",
+          "native_finish_reason" => "stop",
+          "index" => 0,
+          "message" =>
+         {
+           "role" => "assistant",
+           "content" => "{\n  \"joke\": \"What do you call a fake noodle?\",\n  \"answer\": \"An impasta\"\n}",
+           "refusal" => nil,
+           "reasoning" => nil
+         }
+        }])
       end
     end
 
-    context "when the API returns a 500-level error" do
-      let(:error_response_body) do
-        <<~JSON
-          {
-            "error": {
-              "code": 500,
-              "message": "Internal server error",
-              "metadata": ""
-            }
+    context "when using developer-managed tools" do
+      it "extracts tool calls correctly", vcr: { cassette_name: "open_router/developer_managed_fetch_url" } do
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
+          available_model_tools: [Raif::ModelTools::FetchUrl]
+        )
+
+        expect(model_completion.raw_response).to eq("")
+        expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
+        expect(model_completion.response_array).to eq([{
+          "logprobs" => nil,
+          "finish_reason" => "stop",
+          "native_finish_reason" => "stop",
+          "index" => 0,
+          "message" => {
+            "role" => "assistant",
+            "content" => "",
+            "refusal" => nil,
+            "reasoning" => nil,
+            "tool_calls" => [{
+              "index" => 0,
+              "id" => "call_abc123",
+              "function" => { "arguments" => "{\"url\": \"https://www.wsj.com\"}", "name" => "fetch_url" },
+              "type" => "function"
+            }]
           }
-        JSON
+        }])
+
+        expect(model_completion.response_tool_calls).to eq([{
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://www.wsj.com" }
+        }])
+      end
+    end
+
+    context "when using provider-managed tools" do
+      it "raises Raif::Errors::UnsupportedFeatureError" do
+        expect do
+          llm.chat(
+            messages: [{ role: "user", content: "What are the latest developments in Ruby on Rails?" }],
+            available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
+          )
+        end.to raise_error(Raif::Errors::UnsupportedFeatureError)
+      end
+    end
+
+    context "streaming" do
+      before do
+        allow(Raif.config).to receive(:streaming_update_chunk_size_threshold).and_return(10)
+      end
+
+      it "streams a text response correctly", vcr: { cassette_name: "open_router/streaming_text" } do
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Hello" }]
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("Hello! How can I help you today?")
+        expect(model_completion.completion_tokens).to eq(9)
+        expect(model_completion.prompt_tokens).to eq(11)
+        expect(model_completion.total_tokens).to eq(20)
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{
+          "content" => [{
+            "text" => "Hello",
+            "type" => "text"
+          }],
+          "role" => "user"
+        }])
+        expect(model_completion.llm_model_key).to eq("open_router_llama_3_1_8b_instruct")
+        expect(model_completion.model_api_name).to eq("meta-llama/llama-3.1-8b-instruct")
+
+        expect(deltas).to eq(["Hello! How", " can I help", " you today", "?"])
+      end
+
+      it "streams a json response correctly", vcr: { cassette_name: "open_router/streaming_json" } do
+        system_prompt = "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key. Do not include any other text in your response outside the JSON object." # rubocop:disable Layout/LineLength
+
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Can you you tell me a joke? Respond in json." }],
+          system_prompt: system_prompt,
+          response_format: :json
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"Why don't skeletons fight each other? They don't have the guts.\"\n}")
+        expect(model_completion.parsed_response).to eq({ "joke" => "Why don't skeletons fight each other? They don't have the guts." })
+        expect(model_completion.completion_tokens).to eq(23)
+        expect(model_completion.prompt_tokens).to eq(70)
+        expect(model_completion.total_tokens).to eq(93)
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([
+          {
+            "role" => "system",
+            "content" => "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key. Do not include any other text in your response outside the JSON object." # rubocop:disable Layout/LineLength
+          },
+          {
+            "role" => "user",
+            "content" => [{ "type" => "text", "text" => "Can you you tell me a joke? Respond in json." }]
+          }
+        ])
+        expect(model_completion.llm_model_key).to eq("open_router_llama_3_1_8b_instruct")
+        expect(model_completion.model_api_name).to eq("meta-llama/llama-3.1-8b-instruct")
+
+        expect(deltas).to eq([
+          "{\n \"joke\":",
+          " \"Why don't",
+          " skeletons",
+          " fight each",
+          " other? They",
+          " don't have",
+          " the guts.\"\n",
+          "}"
+        ])
+      end
+
+      it "streams a response with tool calls correctly", vcr: { cassette_name: "open_router/streaming_tool_calls" } do
+        llm = Raif.llm(:open_router_llama_3_3_70b_instruct)
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
+          available_model_tools: [Raif::ModelTools::FetchUrl]
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        # we're not accumulating deltas for tool calls since it seems like a bad idea to execute the tool call before arguments are complete
+        expect(deltas).to eq([])
+
+        expect(model_completion.raw_response).to eq(nil)
+        expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
+
+        expect(model_completion.response_array).to eq([{
+          "index" => 0,
+          "message" => {
+            "role" => "assistant",
+            "content" => nil,
+            "tool_calls" => [{
+              "id" => "call_abc123",
+              "type" => "function",
+              "function" => { "name" => "fetch_url", "arguments" => "{\"url\": \"https://www.wsj.com/\"}" }
+            }],
+          },
+          "finish_reason" => "stop"
+        }])
+
+        expect(model_completion.response_tool_calls).to eq([{
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://www.wsj.com/" }
+        }])
+
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{
+          "content" => [{ "text" => "What's on the homepage of https://www.wsj.com today?", "type" => "text" }],
+          "role" => "user"
+        }])
+        expect(model_completion.llm_model_key).to eq("open_router_llama_3_3_70b_instruct")
+        expect(model_completion.model_api_name).to eq("meta-llama/llama-3.3-70b-instruct")
+      end
+    end
+
+    context "errors" do
+      let(:stubs) { Faraday::Adapter::Test::Stubs.new }
+      let(:test_connection) do
+        Faraday.new do |builder|
+          builder.adapter :test, stubs
+          builder.request :json
+          builder.response :json
+          builder.response :raise_error
+        end
       end
 
       before do
-        stubs.post("chat/completions") do |_env|
-          raise Faraday::ServerError.new(
-            "Internal server error",
-            { status: 500, body: error_response_body }
-          )
-        end
-
-        allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        allow(llm).to receive(:connection).and_return(test_connection)
       end
 
-      it "raises a ServerError with the error message" do
-        expect do
-          llm.chat(message: "Hello")
-        end.to raise_error(Faraday::ServerError)
+      context "when the API returns a 400-level error" do
+        let(:error_response_body) do
+          <<~JSON
+            {
+              "error": {
+                "code": 429,
+                "message": "Rate limited",
+                "metadata": ""
+              }
+            }
+          JSON
+        end
+
+        before do
+          stubs.post("chat/completions") do |_env|
+            raise Faraday::ClientError.new(
+              "Rate limited",
+              { status: 429, body: error_response_body }
+            )
+          end
+
+          allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        end
+
+        it "raises a Faraday::ClientError with the error message" do
+          expect do
+            llm.chat(message: "Hello")
+          end.to raise_error(Faraday::ClientError)
+        end
+      end
+
+      context "when the API returns a 500-level error" do
+        let(:error_response_body) do
+          <<~JSON
+            {
+              "error": {
+                "code": 500,
+                "message": "Internal server error",
+                "metadata": ""
+              }
+            }
+          JSON
+        end
+
+        before do
+          stubs.post("chat/completions") do |_env|
+            raise Faraday::ServerError.new(
+              "Internal server error",
+              { status: 500, body: error_response_body }
+            )
+          end
+
+          allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+        end
+
+        it "raises a ServerError with the error message" do
+          expect do
+            llm.chat(message: "Hello")
+          end.to raise_error(Faraday::ServerError)
+        end
       end
     end
   end
@@ -134,7 +330,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         expect(params[:messages].first["content"]).to eq("You are a helpful assistant.")
         expect(params[:messages].last["role"]).to eq("user")
         expect(params[:messages].last["content"]).to eq("Hello")
-        expect(params[:stream]).to eq(false)
+        expect(params[:stream]).to eq(nil)
       end
     end
 
@@ -193,10 +389,8 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         expect(tool_calls.length).to eq(1)
 
         tool_call = tool_calls.first
-        expect(tool_call["id"]).to eq("call_123")
-        expect(tool_call["type"]).to eq("function")
-        expect(tool_call["function"]["name"]).to eq("test_tool")
-        expect(tool_call["function"]["arguments"]).to eq("{\"query\":\"test query\"}")
+        expect(tool_call["name"]).to eq("test_tool")
+        expect(tool_call["arguments"]).to eq({ "query" => "test query" })
       end
     end
 
@@ -213,11 +407,9 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         }
       end
 
-      it "returns an empty array" do
+      it "returns nil" do
         tool_calls = llm.send(:extract_response_tool_calls, response_json)
-
-        expect(tool_calls).to be_an(Array)
-        expect(tool_calls).to be_empty
+        expect(tool_calls).to eq(nil)
       end
     end
   end

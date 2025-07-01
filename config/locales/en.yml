@@ -12,6 +12,7 @@ en:
             too_short: must have at least 1 tool
     common:
       send: Send
+      sources: Sources
       there_was_an_error_generating_this_response: There was an error generating this response
       tools: Tools
       type_your_message: Type your message...
@@ -52,6 +53,9 @@ en:
       anthropic_claude_3_opus: Anthropic Claude 3 Opus
       anthropic_claude_4_opus: Anthropic Claude 4 Opus
       anthropic_claude_4_sonnet: Anthropic Claude 4 Sonnet
+      bedrock_amazon_nova_lite: Amazon Nova Lite (via AWS Bedrock)
+      bedrock_amazon_nova_micro: Amazon Nova Micro (via AWS Bedrock)
+      bedrock_amazon_nova_pro: Amazon Nova Pro (via AWS Bedrock)
       bedrock_claude_3_5_haiku: Anthropic Claude 3.5 Haiku (via AWS Bedrock)
       bedrock_claude_3_5_sonnet: Anthropic Claude 3.5 Sonnet (via AWS Bedrock)
       bedrock_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via AWS Bedrock)
@@ -64,6 +68,24 @@ en:
       open_ai_gpt_4_1_nano: OpenAI GPT-4.1 Nano
       open_ai_gpt_4o: OpenAI GPT-4o
       open_ai_gpt_4o_mini: OpenAI GPT-4o Mini
+      open_ai_o1: OpenAI o1
+      open_ai_o1_mini: OpenAI o1 Mini
+      open_ai_o3: OpenAI o3
+      open_ai_o3_mini: OpenAI o3 Mini
+      open_ai_o4_mini: OpenAI o4 Mini
+      open_ai_responses_gpt_3_5_turbo: OpenAI GPT-3.5 Turbo (Responses API)
+      open_ai_responses_gpt_4_1: OpenAI GPT-4.1 (Responses API)
+      open_ai_responses_gpt_4_1_mini: OpenAI GPT-4.1 Mini (Responses API)
+      open_ai_responses_gpt_4_1_nano: OpenAI GPT-4.1 Nano (Responses API)
+      open_ai_responses_gpt_4o: OpenAI GPT-4o (Responses API)
+      open_ai_responses_gpt_4o_mini: OpenAI GPT-4o Mini (Responses API)
+      open_ai_responses_o1: OpenAI o1 (Responses API)
+      open_ai_responses_o1_mini: OpenAI o1 Mini (Responses API)
+      open_ai_responses_o1_pro: OpenAI o1 Pro (Responses API)
+      open_ai_responses_o3: OpenAI o3 (Responses API)
+      open_ai_responses_o3_mini: OpenAI o3 Mini (Responses API)
+      open_ai_responses_o3_pro: OpenAI o3 Pro (Responses API)
+      open_ai_responses_o4_mini: OpenAI o4 Mini (Responses API)
       open_router_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via OpenRouter)
       open_router_deepseek_chat_v3: DeepSeek Chat v3 (via OpenRouter)
       open_router_gemini_2_0_flash: Google Gemini 2.0 Flash (via OpenRouter)
