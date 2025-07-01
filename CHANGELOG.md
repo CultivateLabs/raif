@@ -1,4 +1,4 @@
-## v1.2.0 (Unreleased)
+## v1.2.0
 
 - Added streaming support to improve real-time response handling. [#149](https://github.com/CultivateLabs/raif/pull/149)
 - Improved JSON parsing by stripping ASCII control characters before parsing. [#153](https://github.com/CultivateLabs/raif/pull/153)
