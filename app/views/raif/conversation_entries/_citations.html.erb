@@ -1,0 +1,9 @@
+<div class="conversation-entry-citations">
+  <h6><%= t("raif.common.sources") %></h6>
+  <% conversation_entry.citations.each do |citation| %>
+    <%= link_to citation["url"], target: "_blank", rel: "noopener noreferrer", class: "d-flex align-items-center" do %>
+      <%= image_tag "https://www.google.com/s2/favicons?sz=16&domain=#{citation["url"]}", class: "me-1" %>
+      <%= citation["title"] %>
+    <% end %>
+  <% end %>
+</div>

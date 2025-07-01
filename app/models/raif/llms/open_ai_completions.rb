@@ -4,16 +4,17 @@ class Raif::Llms::OpenAiCompletions < Raif::Llms::OpenAiBase
   include Raif::Concerns::Llms::OpenAiCompletions::MessageFormatting
   include Raif::Concerns::Llms::OpenAiCompletions::ToolFormatting
 
-  def perform_model_completion!(model_completion)
-    model_completion.temperature ||= default_temperature
-    parameters = build_request_parameters(model_completion)
+private
 
-    response = connection.post("chat/completions") do |req|
-      req.body = parameters
-    end
+  def api_path
+    "chat/completions"
+  end
 
-    response_json = response.body
+  def streaming_response_type
+    Raif::StreamingResponses::OpenAiCompletions
+  end
 
+  def update_model_completion(model_completion, response_json)
     model_completion.update!(
       response_id: response_json["id"],
       response_tool_calls: extract_response_tool_calls(response_json),
@@ -21,14 +22,9 @@ class Raif::Llms::OpenAiCompletions < Raif::Llms::OpenAiBase
       response_array: response_json["choices"],
       completion_tokens: response_json.dig("usage", "completion_tokens"),
       prompt_tokens: response_json.dig("usage", "prompt_tokens"),
-      total_tokens: response_json.dig("usage", "total_tokens"),
-      response_format_parameter: parameters.dig(:response_format, :type)
+      total_tokens: response_json.dig("usage", "total_tokens")
     )
-
-    model_completion
   end
-
-private
 
   def extract_response_tool_calls(resp)
     return if resp.dig("choices", 0, "message", "tool_calls").blank?
@@ -53,9 +49,12 @@ private
 
     parameters = {
       model: api_name,
-      messages: messages_with_system,
-      temperature: model_completion.temperature.to_f
+      messages: messages_with_system
     }
+
+    if supports_temperature?
+      parameters[:temperature] = model_completion.temperature.to_f
+    end
 
     # If the LLM supports native tool use and there are available tools, add them to the parameters
     if supports_native_tool_use?
@@ -63,9 +62,16 @@ private
       parameters[:tools] = tools unless tools.blank?
     end
 
+    if model_completion.stream_response?
+      parameters[:stream] = true
+      # Ask for usage stats in the last chunk
+      parameters[:stream_options] = { include_usage: true }
+    end
+
     # Add response format if needed
     response_format = determine_response_format(model_completion)
     parameters[:response_format] = response_format if response_format
+    model_completion.response_format_parameter = response_format[:type] if response_format
 
     parameters
   end

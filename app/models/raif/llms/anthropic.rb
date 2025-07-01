@@ -4,29 +4,21 @@ class Raif::Llms::Anthropic < Raif::Llm
   include Raif::Concerns::Llms::Anthropic::MessageFormatting
   include Raif::Concerns::Llms::Anthropic::ToolFormatting
 
-  def perform_model_completion!(model_completion)
+  def perform_model_completion!(model_completion, &block)
     params = build_request_parameters(model_completion)
     response = connection.post("messages") do |req|
       req.body = params
+      req.options.on_data = streaming_chunk_handler(model_completion, &block) if model_completion.stream_response?
     end
 
-    response_json = response.body
-
-    model_completion.raw_response = if model_completion.response_format_json?
-      extract_json_response(response_json)
-    else
-      extract_text_response(response_json)
+    unless model_completion.stream_response?
+      update_model_completion(model_completion, response.body)
     end
-
-    model_completion.response_id = response_json&.dig("id")
-    model_completion.response_array = response_json&.dig("content")
-    model_completion.response_tool_calls = extract_response_tool_calls(response_json)
-    model_completion.completion_tokens = response_json&.dig("usage", "output_tokens")
-    model_completion.prompt_tokens = response_json&.dig("usage", "input_tokens")
-    model_completion.save!
 
     model_completion
   end
+
+private
 
   def connection
     @connection ||= Faraday.new(url: "https://api.anthropic.com/v1") do |f|
@@ -38,7 +30,26 @@ class Raif::Llms::Anthropic < Raif::Llm
     end
   end
 
-protected
+  def streaming_response_type
+    Raif::StreamingResponses::Anthropic
+  end
+
+  def update_model_completion(model_completion, response_json)
+    model_completion.raw_response = if model_completion.response_format_json?
+      extract_json_response(response_json)
+    else
+      extract_text_response(response_json)
+    end
+
+    model_completion.response_id = response_json&.dig("id")
+    model_completion.response_array = response_json&.dig("content")
+    model_completion.response_tool_calls = extract_response_tool_calls(response_json)
+    model_completion.citations = extract_citations(response_json)
+    model_completion.completion_tokens = response_json&.dig("usage", "output_tokens")
+    model_completion.prompt_tokens = response_json&.dig("usage", "input_tokens")
+    model_completion.total_tokens = model_completion.completion_tokens.to_i + model_completion.prompt_tokens.to_i
+    model_completion.save!
+  end
 
   def build_request_parameters(model_completion)
     params = {
@@ -54,6 +65,8 @@ protected
       tools = build_tools_parameter(model_completion)
       params[:tools] = tools unless tools.blank?
     end
+
+    params[:stream] = true if model_completion.stream_response?
 
     params
   end
@@ -95,6 +108,28 @@ protected
         "arguments" => tool_use["input"]
       }
     end
+  end
+
+  def extract_citations(resp)
+    return [] if resp&.dig("content").nil?
+
+    citations = []
+
+    # Look through content blocks for citations
+    resp.dig("content").each do |content|
+      next unless content["type"] == "text" && content["citations"].present?
+
+      content["citations"].each do |citation|
+        next unless citation["type"] == "web_search_result_location"
+
+        citations << {
+          "url" => Raif::Utils::HtmlFragmentProcessor.strip_tracking_parameters(citation["url"]),
+          "title" => citation["title"]
+        }
+      end
+    end
+
+    citations.uniq{|citation| citation["url"] }
   end
 
 end

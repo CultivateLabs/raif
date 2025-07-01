@@ -1,0 +1,83 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.anthropic.com/v1/messages
+    body:
+      encoding: UTF-8
+      string: '{"model":"claude-3-5-haiku-latest","messages":[{"role":"user","content":[{"type":"text","text":"trigger
+        error"}]}],"temperature":0.7,"max_tokens":8192,"stream":true}'
+    headers:
+      Anthropic-Version:
+      - '2023-06-01'
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 10 Jun 2025 18:50:05 GMT
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cache-Control:
+      - no-cache
+      Anthropic-Ratelimit-Input-Tokens-Limit:
+      - '25000'
+      Anthropic-Ratelimit-Input-Tokens-Remaining:
+      - '25000'
+      Anthropic-Ratelimit-Input-Tokens-Reset:
+      - '2025-06-10T18:50:03Z'
+      Anthropic-Ratelimit-Output-Tokens-Limit:
+      - '5000'
+      Anthropic-Ratelimit-Output-Tokens-Remaining:
+      - '5000'
+      Anthropic-Ratelimit-Output-Tokens-Reset:
+      - '2025-06-10T18:50:03Z'
+      Anthropic-Ratelimit-Requests-Limit:
+      - '5'
+      Anthropic-Ratelimit-Requests-Remaining:
+      - '3'
+      Anthropic-Ratelimit-Requests-Reset:
+      - '2025-06-10T18:50:26Z'
+      Anthropic-Ratelimit-Tokens-Limit:
+      - '30000'
+      Anthropic-Ratelimit-Tokens-Remaining:
+      - '30000'
+      Anthropic-Ratelimit-Tokens-Reset:
+      - '2025-06-10T18:50:03Z'
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Via:
+      - 1.1 google
+      Cf-Cache-Status:
+      - DYNAMIC
+      X-Robots-Tag:
+      - none
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 94db0d5b4f33e8c5-IAD
+    body:
+      encoding: UTF-8
+      string: |+
+        event: message_start
+        data: {"type":"message_start","message":{"id":"msg_abc123","type":"message","role":"assistant","content":[],"model":"claude-3-5-haiku-20240620","usage":{"input_tokens":9,"output_tokens":1}}}
+
+        event: error
+        data: {"type": "error", "error": {"type": "overloaded_error", "message": "Anthropic's API is temporarily overloaded. Please try again in a few minutes."}}
+
+  recorded_at: Tue, 10 Jun 2025 18:50:07 GMT
+recorded_with: VCR 6.3.1
+...

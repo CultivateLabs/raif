@@ -131,3 +131,6 @@ Support for tools that run on the LLM-provider's infrastructure:
 - Support for `requested_language_key` parameter
 - Language keys defined in `lib/raif/languages.rb`
 - I18n integration for UI elements
+
+## Important Rules
+- When creating database migrations, **always** use the rails command line migration generator

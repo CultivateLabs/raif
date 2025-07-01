@@ -49,7 +49,7 @@
     </div>
     <div class="card-body">
       <div class="list-group">
-        <%= render collection: @conversation.entries.order(created_at: :asc).includes(:raif_model_completion),
+        <%= render collection: @conversation.entries.order(created_at: :asc).includes(:raif_model_completion, :raif_model_tool_invocations),
               partial: "raif/admin/conversations/conversation_entry",
               as: :entry %>
       </div>

@@ -1,0 +1,145 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.openai.com/v1/responses
+    body:
+      encoding: UTF-8
+      string: '{"model":"gpt-4o","input":[{"role":"user","content":[{"type":"input_text","text":"What''s
+        on the homepage of https://www.wsj.com today?"}]}],"temperature":0.7,"tools":[{"type":"function","name":"fetch_url","description":"Fetch
+        a URL and return the page content as markdown","parameters":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
+        URL to fetch content from"}},"required":["url"]}}]}'
+    headers:
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 04 Jun 2025 17:03:03 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      X-Ratelimit-Limit-Requests:
+      - '10000'
+      X-Ratelimit-Limit-Tokens:
+      - '2000000'
+      X-Ratelimit-Remaining-Requests:
+      - '9999'
+      X-Ratelimit-Remaining-Tokens:
+      - '1999720'
+      X-Ratelimit-Reset-Requests:
+      - 6ms
+      X-Ratelimit-Reset-Tokens:
+      - 8ms
+      Openai-Version:
+      - '2020-10-01'
+      Openai-Organization:
+      - "<OPENAI_ORGANIZATION>"
+      X-Request-Id:
+      - "<REQUEST_ID>"
+      Openai-Processing-Ms:
+      - '1622'
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Cf-Cache-Status:
+      - DYNAMIC
+      X-Content-Type-Options:
+      - nosniff
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 94a90054782f678d-ATL
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: ASCII-8BIT
+      string: |-
+        {
+          "id": "resp_abc123",
+          "object": "response",
+          "created_at": 1749056581,
+          "status": "completed",
+          "background": false,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "model": "gpt-4o-2024-08-06",
+          "output": [
+            {
+              "id": "fc_abc123",
+              "type": "function_call",
+              "status": "completed",
+              "arguments": "{\"url\":\"https://www.wsj.com\"}",
+              "call_id": "call_abc123",
+              "name": "fetch_url"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "service_tier": "default",
+          "store": true,
+          "temperature": 0.7,
+          "text": {
+            "format": {
+              "type": "text"
+            }
+          },
+          "tool_choice": "auto",
+          "tools": [
+            {
+              "type": "function",
+              "description": "Fetch a URL and return the page content as markdown",
+              "name": "fetch_url",
+              "parameters": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "The URL to fetch content from"
+                  }
+                },
+                "required": [
+                  "url"
+                ]
+              },
+              "strict": true
+            }
+          ],
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 63,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 20,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 83
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: Wed, 04 Jun 2025 17:03:03 GMT
+recorded_with: VCR 6.3.1

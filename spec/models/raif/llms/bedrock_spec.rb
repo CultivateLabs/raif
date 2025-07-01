@@ -4,85 +4,75 @@ require "rails_helper"
 
 RSpec.describe Raif::Llms::Bedrock, type: :model do
   let(:llm){ Raif.llm(:bedrock_claude_3_5_sonnet) }
-  let(:client) { Aws::BedrockRuntime::Client.new(stub_responses: true) }
 
   before do
+    allow(Raif.config).to receive(:bedrock_models_enabled).and_return(true)
+
+    # To record new VCR cassettes, set real credentials here.
+    stubbed_creds = Aws::Credentials.new("PLACEHOLDER_KEY", "PLACEHOLDER_SECRET")
+    client = Aws::BedrockRuntime::Client.new(
+      region: Raif.config.aws_bedrock_region,
+      credentials: stubbed_creds
+    )
+
     allow(llm).to receive(:bedrock_client).and_return(client)
   end
 
   describe "#chat" do
     context "when the response format is text" do
-      before do
-        client.stub_responses(:converse, {
-          output: {
-            message: {
-              role: "assistant",
-              content: [{ text: "Response content" }]
-            }
-          },
-          stop_reason: "end_turn",
-          usage: { input_tokens: 8, output_tokens: 13, total_tokens: 21 },
-          metrics: { latency_ms: 540 }
-        })
-      end
-
-      it "makes a request to the Bedrock API and processes the text response" do
+      it "makes a request to the Bedrock API and processes the text response", vcr: { cassette_name: "bedrock/text_response" } do
         model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], system_prompt: "You are a helpful assistant.")
-        expect(model_completion.raw_response).to eq("Response content")
-        expect(model_completion.completion_tokens).to eq(13)
-        expect(model_completion.prompt_tokens).to eq(8)
-        expect(model_completion.total_tokens).to eq(21)
+        expect(model_completion.raw_response).to eq("Hi! How can I help you today?")
+        expect(model_completion.completion_tokens).to eq(12)
+        expect(model_completion.prompt_tokens).to eq(14)
+        expect(model_completion.total_tokens).to eq(26)
         expect(model_completion.llm_model_key).to eq("bedrock_claude_3_5_sonnet")
         expect(model_completion.model_api_name).to eq("us.anthropic.claude-3-5-sonnet-20241022-v2:0")
         expect(model_completion.response_format).to eq("text")
         expect(model_completion.temperature).to eq(0.7)
         expect(model_completion.system_prompt).to eq("You are a helpful assistant.")
-        expect(model_completion.messages).to eq([{ "role" => "user", "content" => [{ "text" => "Hello" }] }])
-        expect(model_completion.response_array).to eq([{ "text" => "Response content" }])
+        expect(model_completion.messages).to eq([{ "content" => [{ "text" => "Hello" }], "role" => "user" }])
+        expect(model_completion.response_array).to eq([{ "text" => "Hi! How can I help you today?" }])
+      end
+    end
+
+    context "when the response format is json" do
+      it "makes a request to the Bedrock API and processes the json response", vcr: { cassette_name: "bedrock/json_response" } do
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Please give me a JSON object with a name and age. Don't include any other text in your response." }],
+          system_prompt: "You are a helpful assistant.",
+          response_format: :json
+        )
+
+        expect(model_completion.raw_response).to eq("{\"name\": \"John\", \"age\": 25}")
+        expect(model_completion.completion_tokens).to eq(15)
+        expect(model_completion.prompt_tokens).to eq(35)
+        expect(model_completion.total_tokens).to eq(50)
+        expect(model_completion.llm_model_key).to eq("bedrock_claude_3_5_sonnet")
+        expect(model_completion.model_api_name).to eq("us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+        expect(model_completion.response_format).to eq("json")
+        expect(model_completion.response_id).to eq(nil)
+        expect(model_completion.response_array).to eq([{ "text" => "{\"name\": \"John\", \"age\": 25}" }])
       end
     end
 
     context "when using developer-managed tools" do
-      before do
-        client.stub_responses(:converse, {
-          output: {
-            message: {
-              role: "assistant",
-              content: [
-                { text: "I'll fetch the content of the Wall Street Journal homepage for you." },
-                {
-                  tool_use: {
-                    tool_use_id: "call_RNzLf3E3dsfjh98mRsQYabd1mSB",
-                    name: "fetch_url",
-                    input: { "url" => "https://www.wsj.com" }
-                  }
-                }
-              ]
-            }
-          },
-          stop_reason: "tool_use",
-          usage: { input_tokens: 364, output_tokens: 75, total_tokens: 439 },
-          metrics: { latency_ms: 540 }
-        })
-      end
-
-      it "extracts tool calls correctly" do
+      it "extracts tool calls correctly", vcr: { cassette_name: "bedrock/developer_managed_fetch_url", allow_playback_repeats: true } do
         model_completion = llm.chat(
-          messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
+          messages: [{ role: "user", content: "What is on the homepage of https://www.wsj.com today?" }],
           available_model_tools: [Raif::ModelTools::FetchUrl]
         )
 
-        expect(model_completion.raw_response).to eq("I'll fetch the content of the Wall Street Journal homepage for you.")
+        expect(model_completion.raw_response).to eq("I'll fetch the content from the Wall Street Journal homepage.")
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
         expect(model_completion.response_array).to eq([
-          { "text" => "I'll fetch the content of the Wall Street Journal homepage for you." },
+          { "text" => "I'll fetch the content from the Wall Street Journal homepage." },
           {
-            "tool_use" =>
-              {
-                "tool_use_id" => "call_RNzLf3E3dsfjh98mRsQYabd1mSB",
-                "name" => "fetch_url",
-                "input" => { "url" => "https://www.wsj.com" }
-              }
+            "tool_use" => {
+              "input" => { "url" => "https://www.wsj.com" },
+              "name" => "fetch_url",
+              "tool_use_id" => "tooluse_abc123"
+            }
           }
         ])
 
@@ -101,6 +91,94 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
             available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
           )
         end.to raise_error(Raif::Errors::UnsupportedFeatureError)
+      end
+    end
+
+    context "streaming" do
+      before do
+        allow(Raif.config).to receive(:streaming_update_chunk_size_threshold).and_return(10)
+      end
+
+      it "streams a text response correctly", vcr: { cassette_name: "bedrock/streaming_text" } do
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Hello" }]
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("Hi! How can I help you today?")
+        expect(model_completion.completion_tokens).to eq(12)
+        expect(model_completion.prompt_tokens).to eq(8)
+        expect(model_completion.total_tokens).to eq(20)
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{ "content" => [{ "text" => "Hello" }], "role" => "user" }])
+        expect(model_completion.response_array).to eq([{ "text" => "Hi! How can I help you today?" }])
+
+        expect(deltas).to eq(["Hi! How can", " I help you today", "?"])
+      end
+
+      it "streams a json response correctly", vcr: { cassette_name: "bedrock/streaming_json" } do
+        system_prompt = "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key and a single `answer` key. Do not include any other text in your response outside the JSON object." # rubocop:disable Layout/LineLength
+
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Can you you tell me a joke? Respond in json." }],
+          system_prompt: system_prompt,
+          response_format: :json
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("{\n    \"joke\": \"What do you call a bear with no teeth?\",\n    \"answer\": \"A gummy bear!\"\n}") # rubocop:disable Layout/LineLength
+        expect(model_completion.parsed_response).to eq({
+          "joke" => "What do you call a bear with no teeth?",
+          "answer" => "A gummy bear!"
+        })
+        expect(model_completion.completion_tokens).to eq(34)
+        expect(model_completion.prompt_tokens).to eq(70)
+        expect(model_completion.total_tokens).to eq(104)
+        expect(model_completion).to be_persisted
+        expect(model_completion.response_array).to eq([{
+          "text" => "{\n    \"joke\": \"What do you call a bear with no teeth?\",\n    \"answer\": \"A gummy bear!\"\n}"
+        }])
+
+        expect(deltas).to eq([
+          "{\n    \"joke\": \"",
+          "What do you call",
+          " a bear with no teeth?",
+          "\",\n    \"answer\": \"A",
+          " gummy bear!\"",
+          "\n}"
+        ])
+      end
+
+      it "streams a response with tool calls correctly", vcr: { cassette_name: "bedrock/streaming_tool_calls" } do
+        deltas = []
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "What's on the homepage of https://www.wsj.com today?" }],
+          available_model_tools: [Raif::ModelTools::FetchUrl]
+        ) do |_model_completion, delta, _sse_event|
+          deltas << delta
+        end
+
+        expect(model_completion.raw_response).to eq("I'll help you fetch the content from the Wall Street Journal's homepage.")
+        expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
+
+        expect(model_completion.response_tool_calls).to eq([{
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://www.wsj.com" }
+        }])
+
+        expect(model_completion).to be_persisted
+        expect(model_completion.messages).to eq([{
+          "role" => "user",
+          "content" => [{
+            "text" => "What's on the homepage of https://www.wsj.com today?"
+          }]
+        }])
+
+        expect(deltas).to eq(["I'll help you fetch the content", " from the Wall Street Journal's", " homepage."])
       end
     end
   end

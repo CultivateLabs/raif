@@ -4,31 +4,28 @@ class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
   include Raif::Concerns::Llms::OpenAiResponses::MessageFormatting
   include Raif::Concerns::Llms::OpenAiResponses::ToolFormatting
 
-  def perform_model_completion!(model_completion)
-    model_completion.temperature ||= default_temperature
-    parameters = build_request_parameters(model_completion)
+private
 
-    response = connection.post("responses") do |req|
-      req.body = parameters
-    end
+  def api_path
+    "responses"
+  end
 
-    response_json = response.body
+  def streaming_response_type
+    Raif::StreamingResponses::OpenAiResponses
+  end
 
+  def update_model_completion(model_completion, response_json)
     model_completion.update!(
       response_id: response_json["id"],
       response_tool_calls: extract_response_tool_calls(response_json),
       raw_response: extract_raw_response(response_json),
       response_array: response_json["output"],
+      citations: extract_citations(response_json),
       completion_tokens: response_json.dig("usage", "output_tokens"),
       prompt_tokens: response_json.dig("usage", "input_tokens"),
-      total_tokens: response_json.dig("usage", "total_tokens"),
-      response_format_parameter: parameters.dig(:text, :format, :type)
+      total_tokens: response_json.dig("usage", "total_tokens")
     )
-
-    model_completion
   end
-
-private
 
   def extract_response_tool_calls(resp)
     return if resp["output"].blank?
@@ -59,12 +56,44 @@ private
     text_outputs.join("\n").presence
   end
 
+  def extract_citations(resp)
+    return [] if resp["output"].blank?
+
+    citations = []
+
+    # Look through output messages for citations in annotations
+    output_messages = resp["output"].select{|output_item| output_item["type"] == "message" }
+    output_messages.each do |output_message|
+      next unless output_message["content"].present?
+
+      output_message["content"].each do |content_item|
+        next unless content_item["type"] == "output_text" && content_item["annotations"].present?
+
+        content_item["annotations"].each do |annotation|
+          next unless annotation["type"] == "url_citation"
+
+          citations << {
+            "url" => Raif::Utils::HtmlFragmentProcessor.strip_tracking_parameters(annotation["url"]),
+            "title" => annotation["title"]
+          }
+        end
+      end
+    end
+
+    citations.uniq{|citation| citation["url"] }
+  end
+
   def build_request_parameters(model_completion)
     parameters = {
       model: api_name,
       input: model_completion.messages,
-      temperature: model_completion.temperature.to_f
     }
+
+    if supports_temperature?
+      parameters[:temperature] = model_completion.temperature.to_f
+    end
+
+    parameters[:stream] = true if model_completion.stream_response?
 
     # Add instructions (system prompt) if present
     formatted_system_prompt = format_system_prompt(model_completion)
@@ -87,6 +116,7 @@ private
     response_format = determine_response_format(model_completion)
     if response_format.present?
       parameters[:text] = { format: response_format }
+      model_completion.response_format_parameter = response_format[:type]
     end
 
     parameters

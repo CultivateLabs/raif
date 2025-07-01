@@ -1,0 +1,216 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.openai.com/v1/responses
+    body:
+      encoding: UTF-8
+      string: '{"model":"gpt-4o","input":[{"role":"user","content":[{"type":"input_text","text":"What
+        are the latest developments in Ruby on Rails?"}]}],"temperature":0.7,"tools":[{"type":"web_search_preview"}]}'
+    headers:
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 04 Jun 2025 17:04:04 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      X-Ratelimit-Limit-Requests:
+      - '10000'
+      X-Ratelimit-Limit-Tokens:
+      - '2000000'
+      X-Ratelimit-Remaining-Requests:
+      - '9999'
+      X-Ratelimit-Remaining-Tokens:
+      - '1999669'
+      X-Ratelimit-Reset-Requests:
+      - 6ms
+      X-Ratelimit-Reset-Tokens:
+      - 9ms
+      Openai-Version:
+      - '2020-10-01'
+      Openai-Organization:
+      - "<OPENAI_ORGANIZATION>"
+      X-Request-Id:
+      - "<REQUEST_ID>"
+      Openai-Processing-Ms:
+      - '10717'
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Cf-Cache-Status:
+      - DYNAMIC
+      X-Content-Type-Options:
+      - nosniff
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 94a9019a3a7d44db-ATL
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: ASCII-8BIT
+      string: |-
+        {
+          "id": "resp_abc123",
+          "object": "response",
+          "created_at": 1749056634,
+          "status": "completed",
+          "background": false,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "model": "gpt-4o-2024-08-06",
+          "output": [
+            {
+              "id": "ws_abc123",
+              "type": "web_search_call",
+              "status": "completed"
+            },
+            {
+              "id": "msg_abc123",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [
+                    {
+                      "type": "url_citation",
+                      "end_index": 920,
+                      "start_index": 805,
+                      "title": "Ruby on Rails 8.0: A New Era of Independent Development",
+                      "url": "https://zircon.tech/blog/ruby-on-rails-8-0-a-new-era-of-independent-development/?utm_source=openai"
+                    },
+                    {
+                      "type": "url_citation",
+                      "end_index": 1339,
+                      "start_index": 1213,
+                      "title": "Exploring Rails 8.0: Latest Features and Updates",
+                      "url": "https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai"
+                    },
+                    {
+                      "type": "url_citation",
+                      "end_index": 1770,
+                      "start_index": 1644,
+                      "title": "Exploring Rails 8.0: Latest Features and Updates",
+                      "url": "https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai"
+                    },
+                    {
+                      "type": "url_citation",
+                      "end_index": 2101,
+                      "start_index": 1975,
+                      "title": "Exploring Rails 8.0: Latest Features and Updates",
+                      "url": "https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai"
+                    },
+                    {
+                      "type": "url_citation",
+                      "end_index": 2558,
+                      "start_index": 2465,
+                      "title": "Exciting Updates in Ruby on Rails 7",
+                      "url": "https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai"
+                    },
+                    {
+                      "type": "url_citation",
+                      "end_index": 2866,
+                      "start_index": 2773,
+                      "title": "Exciting Updates in Ruby on Rails 7",
+                      "url": "https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai"
+                    },
+                    {
+                      "type": "url_citation",
+                      "end_index": 3153,
+                      "start_index": 3060,
+                      "title": "Exciting Updates in Ruby on Rails 7",
+                      "url": "https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai"
+                    },
+                    {
+                      "type": "url_citation",
+                      "end_index": 3436,
+                      "start_index": 3343,
+                      "title": "Exciting Updates in Ruby on Rails 7",
+                      "url": "https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai"
+                    },
+                    {
+                      "type": "url_citation",
+                      "end_index": 3782,
+                      "start_index": 3714,
+                      "title": "Ruby on Rails \u2014 News",
+                      "url": "https://rubyonrails.org/blog/?utm_source=openai"
+                    },
+                    {
+                      "type": "url_citation",
+                      "end_index": 4040,
+                      "start_index": 3972,
+                      "title": "Ruby on Rails \u2014 News",
+                      "url": "https://rubyonrails.org/blog/?utm_source=openai"
+                    }
+                  ],
+                  "text": "As of June 2025, Ruby on Rails (Rails) has introduced several significant updates and features aimed at enhancing developer productivity, application performance, and deployment flexibility.\n\n**Rails 8.0 Release**\n\nReleased on November 7, 2024, Rails 8.0 marks a pivotal shift in the framework's evolution. This version emphasizes empowering individual developers to manage application deployment and maintenance independently, reducing reliance on Platform-as-a-Service (PaaS) providers. Key enhancements include:\n\n- **Integrated Deployment Tools**: Rails 8.0 introduces built-in deployment solutions that seamlessly integrate with popular cloud providers. This allows developers to deploy applications with minimal configuration, streamlining the transition from development to production environments. ([zircon.tech](https://zircon.tech/blog/ruby-on-rails-8-0-a-new-era-of-independent-development/?utm_source=openai))\n\n- **Reduced External Dependencies**: By minimizing reliance on third-party libraries, Rails 8.0 offers faster, more stable applications with fewer security vulnerabilities. Essential features are now integrated directly into the framework, enhancing performance and simplifying maintenance. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n- **Enhanced Background Processing and Caching**: The new background worker system is optimized for concurrency, enabling applications to handle multiple tasks simultaneously. Additionally, the improved caching system reduces database query frequency, leading to better load times and user experiences. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n- **Push Notifications Framework**: Rails 8.0 introduces a built-in push notifications framework, simplifying the process of sending real-time updates to users without the need for third-party services. ([21twelveinteractive.com](https://www.21twelveinteractive.com/latest-features-and-updates-with-rails-8-0/?utm_source=openai))\n\n**Rails 7.x Enhancements**\n\nPrior to the 8.0 release, Rails 7.x versions brought notable improvements:\n\n- **Hotwire Integration**: Rails 7 introduced Hotwire, comprising Turbo and Stimulus, to facilitate building reactive and real-time features with minimal JavaScript. Turbo Streams and Turbo Frames allow for dynamic content updates without full page reloads. ([hyscaler.com](https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai))\n\n- **JavaScript Modernization**: The framework moved away from Webpacker, adopting lightweight options like Importmaps, esbuild, and rollup for managing JavaScript assets, thereby simplifying frontend development. ([hyscaler.com](https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai))\n\n- **Asynchronous Query Loading**: Active Record now supports asynchronous querying, allowing multiple database queries to run in parallel, which is beneficial for data-intensive applications. ([hyscaler.com](https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai))\n\n- **Encrypted Attributes**: Rails 7 introduced built-in support for encrypted attributes, enabling developers to store sensitive data securely and comply with data protection regulations. ([hyscaler.com](https://hyscaler.com/insights/updates-in-ruby-on-rails-7/?utm_source=openai))\n\n**Community and Ecosystem Developments**\n\nThe Rails community continues to thrive, with ongoing contributions and events:\n\n- **Rails World 2025**: The Call for Papers for Rails World 2025 is open, inviting talks that highlight the framework's power and competitive advantage. ([rubyonrails.org](https://rubyonrails.org/blog/?utm_source=openai))\n\n- **Continuous Integration Enhancements**: Recent updates include the introduction of `bin/ci` to standardize continuous integration workflows, improving testing and deployment processes. ([rubyonrails.org](https://rubyonrails.org/blog/?utm_source=openai))\n\nThese developments reflect Rails' commitment to evolving with modern web development needs, focusing on developer empowerment, performance optimization, and streamlined deployment processes. "
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "service_tier": "default",
+          "store": true,
+          "temperature": 0.7,
+          "text": {
+            "format": {
+              "type": "text"
+            }
+          },
+          "tool_choice": "auto",
+          "tools": [
+            {
+              "type": "web_search_preview",
+              "search_context_size": "medium",
+              "user_location": {
+                "type": "approximate",
+                "city": null,
+                "country": "US",
+                "region": null,
+                "timezone": null
+              }
+            }
+          ],
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 311,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 889,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 1200
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: Wed, 04 Jun 2025 17:04:04 GMT
+recorded_with: VCR 6.3.1

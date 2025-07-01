@@ -16,10 +16,9 @@ class Raif::Conversation < Raif::ApplicationRecord
   after_initialize -> { self.available_user_tools ||= [] }
 
   before_validation ->{ self.type ||= "Raif::Conversation" }, on: :create
-  before_validation -> { self.system_prompt ||= build_system_prompt }, on: :create
 
   def build_system_prompt
-    <<~PROMPT
+    <<~PROMPT.strip
       #{system_prompt_intro}
       #{system_prompt_language_preference}
     PROMPT
@@ -35,14 +34,28 @@ class Raif::Conversation < Raif::ApplicationRecord
     I18n.t("#{self.class.name.underscore.gsub("/", ".")}.initial_chat_message")
   end
 
-  def prompt_model_for_entry_response(entry:)
+  def prompt_model_for_entry_response(entry:, &block)
+    update(system_prompt: build_system_prompt)
+
     llm.chat(
       messages: llm_messages,
       source: entry,
       response_format: response_format.to_sym,
       system_prompt: system_prompt,
-      available_model_tools: available_model_tools
+      available_model_tools: available_model_tools,
+      &block
     )
+  rescue StandardError => e
+    Rails.logger.error("Error processing conversation entry ##{entry.id}. #{e.message}")
+    entry.failed!
+
+    if defined?(Airbrake)
+      notice = Airbrake.build_notice(e)
+      notice[:context][:component] = "raif_conversation"
+      notice[:context][:action] = "prompt_model_for_entry_response"
+
+      Airbrake.notify(notice)
+    end
   end
 
   def process_model_response_message(message:, entry:)

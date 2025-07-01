@@ -11,6 +11,7 @@ en:
         all: All
         arguments: Arguments
         at: at
+        citations: Citations
         completed: Completed
         completed_at: Completed At
         completion_tokens: Completion Tokens
@@ -41,6 +42,7 @@ en:
         model_response: Model Response
         model_tool_invocations: Model Tool Invocations
         no_agents: No agents found.
+        no_citations: No citations found in this response.
         no_conversations: No conversations found.
         no_model_completions: No model completions found.
         no_model_tool_invocations: No model tool invocations found.

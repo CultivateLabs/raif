@@ -142,3 +142,31 @@
     <% end %>
   </div>
 </div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t("raif.admin.common.citations") %></h5>
+  </div>
+  <div class="card-body">
+    <% if @model_completion.citations.present? %>
+      <% @model_completion.citations.each_with_index do |citation, index| %>
+        <div class="mb-3 p-3 border rounded">
+          <div class="d-flex align-items-start">
+            <span class="badge bg-primary me-3"><%= index + 1 %></span>
+            <div class="flex-grow-1">
+              <h6 class="mb-1">
+                <a href="<%= citation["url"] %>" target="_blank" rel="noopener" class="text-decoration-none">
+                  <%= citation["title"] %>
+                  <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.8em;"></i>
+                </a>
+              </h6>
+              <small class="text-muted"><%= citation["url"] %></small>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="text-muted mb-0"><%= t("raif.admin.common.no_citations") %></p>
+    <% end %>
+  </div>
+</div>

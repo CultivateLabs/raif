@@ -6,5 +6,12 @@
   <td><%= model_completion.response_format %></td>
   <td><%= model_completion.total_tokens ? number_with_delimiter(model_completion.total_tokens) : "-" %></td>
   <td><%= model_completion.total_cost ? number_to_currency(model_completion.total_cost, precision: 6) : "-" %></td>
+  <td>
+    <% if model_completion.citations.present? %>
+      <span class="badge bg-info"><%= model_completion.citations.length %></span>
+    <% else %>
+      <span class="text-muted">-</span>
+    <% end %>
+  </td>
   <td><small class="text-muted"><%= truncate(model_completion.raw_response, length: 100) %></small></td>
 </tr>

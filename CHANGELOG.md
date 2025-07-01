@@ -1,5 +1,7 @@
-## v1.2.0 (Unreleased)
+## v1.2.0
 
+- Added streaming support to improve real-time response handling. [#149](https://github.com/CultivateLabs/raif/pull/149)
+- Improved JSON parsing by stripping ASCII control characters before parsing. [#153](https://github.com/CultivateLabs/raif/pull/153)
 - Added support for OpenAI's Responses API. [#127](https://github.com/CultivateLabs/raif/pull/127)
 - Added provider-managed tools system for utilizing tools built into LLM providers:
   - `Raif::ModelTools::ProviderManaged::WebSearch`: Real-time web search
@@ -9,6 +11,8 @@
 - Added `response_id` and `response_array` columns to `raif_model_completions` table for enhanced response tracking and provider-managed tools support. [#127](https://github.com/CultivateLabs/raif/pull/127)
 - Added a migration checker to warn if the host app is missing any of Raif's migrations. [#129](https://github.com/CultivateLabs/raif/pull/129)
 - The AWS Bedrock adapter has been renamed to be more generalized. Added support for Amazon Nova models. [#137](https://github.com/CultivateLabs/raif/pull/137)
+- Added support for OpenAI's o-series models. [#155](https://github.com/CultivateLabs/raif/pull/155)
+- The `Raif::Conversation` system prompt is now re-built on each conversation entry to ensure it is not stale. [#156](https://github.com/CultivateLabs/raif/pull/156)
 
 
 ## v1.1.0
