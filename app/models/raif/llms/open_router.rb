@@ -72,6 +72,11 @@ private
       params[:stream_options] = { include_usage: true }
     end
 
+    if model_completion.response_format_json?
+      params[:response_format] = { type: "json_object" }
+      model_completion.response_format_parameter = "json_object"
+    end
+
     params
   end
 

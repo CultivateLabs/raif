@@ -1,3 +1,9 @@
+## v1.2.1
+
+- Added support for Meta's Llama 4 models. [#170](https://github.com/CultivateLabs/raif/pull/170)
+- Add response format to OpenRouter API requests for JSON responses. [#171](https://github.com/CultivateLabs/raif/pull/171)
+- Fix inclusion of test support files in published gem. [#172](https://github.com/CultivateLabs/raif/pull/172)
+
 ## v1.2.0
 
 - Added streaming support to improve real-time response handling. [#149](https://github.com/CultivateLabs/raif/pull/149)

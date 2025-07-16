@@ -7,7 +7,7 @@ http_interactions:
       encoding: UTF-8
       string: '{"model":"meta-llama/llama-3.1-8b-instruct","messages":[{"role":"user","content":[{"type":"text","text":"Can
         you you tell me a joke? Respond in JSON format. Include nothing outside of
-        the JSON."}]}],"temperature":0.7,"max_tokens":null}'
+        the JSON."}]}],"temperature":0.7,"max_tokens":null,"response_format":{"type":"json_object"}}'
     headers:
       Authorization:
       - "<PLACEHOLDER_AUTHORIZATION>"
@@ -25,7 +25,7 @@ http_interactions:
       message: OK
     headers:
       Date:
-      - Tue, 10 Jun 2025 19:55:14 GMT
+      - Wed, 16 Jul 2025 13:55:33 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -36,14 +36,21 @@ http_interactions:
       - "*"
       Vary:
       - Accept-Encoding
+      Permissions-Policy:
+      - payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com"
+        "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+      Referrer-Policy:
+      - no-referrer, strict-origin-when-cross-origin
+      X-Content-Type-Options:
+      - nosniff
       Server:
       - cloudflare
       Cf-Ray:
-      - 94db6cd5acefc9a1-IAD
+      - 9601ff711b91708f-ATL
     body:
       encoding: ASCII-8BIT
-      string: "\n         \n\n         \n{\"id\":\"gen-abc123\",\"provider\":\"DeepInfra\",\"model\":\"meta-llama/llama-3.1-8b-instruct\",\"object\":\"chat.completion\",\"created\":1749585314,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"stop\",\"native_finish_reason\":\"stop\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\n
-        \ \\\"joke\\\": \\\"What do you call a fake noodle?\\\",\\n  \\\"answer\\\":
-        \\\"An impasta\\\"\\n}\",\"refusal\":null,\"reasoning\":null}}],\"usage\":{\"prompt_tokens\":30,\"completion_tokens\":26,\"total_tokens\":56}}"
-  recorded_at: Tue, 10 Jun 2025 19:55:15 GMT
+      string: "\n         \n{\"id\":\"gen-abc123-70VUgygT8ZOHo2bLUG1O\",\"provider\":\"Lambda\",\"model\":\"meta-llama/llama-3.1-8b-instruct\",\"object\":\"chat.completion\",\"created\":1752674132,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"stop\",\"native_finish_reason\":\"stop\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\n
+        \ \\\"joke\\\": \\\"Why don't scientists trust atoms?\\\",\\n  \\\"answer\\\":
+        \\\"Because they make up everything!\\\"\\n}\",\"refusal\":null,\"reasoning\":null}}],\"usage\":{\"prompt_tokens\":55,\"completion_tokens\":27,\"total_tokens\":82,\"prompt_tokens_details\":null}}"
+  recorded_at: Wed, 16 Jul 2025 13:55:33 GMT
 recorded_with: VCR 6.3.1
