@@ -166,6 +166,12 @@ RSpec.describe Raif::Utils::HtmlFragmentProcessor do
         expect { described_class.process_links(nil, add_target_blank: true, strip_tracking_parameters: true) }.not_to raise_error
       end
 
+      it "handles links with empty href" do
+        html = '<a href="">Link</a>'
+        result = described_class.process_links(html, add_target_blank: true, strip_tracking_parameters: true)
+        expect(result).to include("<a href=\"\" target=\"_blank\" rel=\"noopener\">Link</a>")
+      end
+
       it "handles links with various URL formats" do
         html = '
         <a href="https://example.com">HTTPS</a>
