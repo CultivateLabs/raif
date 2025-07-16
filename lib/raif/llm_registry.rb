@@ -298,6 +298,18 @@ module Raif
           output_token_cost: 0.03 / 1_000_000,
         },
         {
+          key: :open_router_llama_4_maverick,
+          api_name: "meta-llama/llama-4-maverick",
+          input_token_cost: 0.15 / 1_000_000,
+          output_token_cost: 0.60 / 1_000_000,
+        },
+        {
+          key: :open_router_llama_4_scout,
+          api_name: "meta-llama/llama-4-scout",
+          input_token_cost: 0.08 / 1_000_000,
+          output_token_cost: 0.30 / 1_000_000,
+        },
+        {
           key: :open_router_gemini_2_0_flash,
           api_name: "google/gemini-2.0-flash-001",
           input_token_cost: 0.1 / 1_000_000,
