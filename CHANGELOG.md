@@ -1,3 +1,7 @@
+## v1.2.1
+
+- Added support for Meta's Llama 4 models. [#170](https://github.com/CultivateLabs/raif/pull/170)
+
 ## v1.2.0
 
 - Added streaming support to improve real-time response handling. [#149](https://github.com/CultivateLabs/raif/pull/149)
