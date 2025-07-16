@@ -16,9 +16,8 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/cultivatelabs/raif"
   spec.metadata["changelog_uri"] = "https://github.com/cultivatelabs/raif/blob/main/CHANGELOG.md"
-
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
-    Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
+    Dir["{app,config,db,lib,spec/support}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
   end
 
   spec.add_dependency "aws-sdk-bedrockruntime"
