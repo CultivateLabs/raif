@@ -44,11 +44,11 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
           response_format: :json
         )
 
-        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"What do you call a fake noodle?\",\n  \"answer\": \"An impasta\"\n}")
+        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"Why don't scientists trust atoms?\",\n  \"answer\": \"Because they make up everything!\"\n}") # rubocop:disable Layout/LineLength
         expect(model_completion.response_format).to eq("json")
-        expect(model_completion.parsed_response).to eq({ "joke" => "What do you call a fake noodle?", "answer" => "An impasta" })
-        expect(model_completion.completion_tokens).to eq(26)
-        expect(model_completion.prompt_tokens).to eq(30)
+        expect(model_completion.parsed_response).to eq({ "joke" => "Why don't scientists trust atoms?", "answer" => "Because they make up everything!" }) # rubocop:disable Layout/LineLength
+        expect(model_completion.completion_tokens).to eq(27)
+        expect(model_completion.prompt_tokens).to eq(55)
         expect(model_completion.response_array).to eq([{
           "logprobs" => nil,
           "finish_reason" => "stop",
@@ -57,7 +57,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
           "message" =>
          {
            "role" => "assistant",
-           "content" => "{\n  \"joke\": \"What do you call a fake noodle?\",\n  \"answer\": \"An impasta\"\n}",
+           "content" => "{\n  \"joke\": \"Why don't scientists trust atoms?\",\n  \"answer\": \"Because they make up everything!\"\n}",
            "refusal" => nil,
            "reasoning" => nil
          }
@@ -154,11 +154,11 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
           deltas << delta
         end
 
-        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"Why don't skeletons fight each other? They don't have the guts.\"\n}")
-        expect(model_completion.parsed_response).to eq({ "joke" => "Why don't skeletons fight each other? They don't have the guts." })
-        expect(model_completion.completion_tokens).to eq(23)
+        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}")
+        expect(model_completion.parsed_response).to eq({ "joke" => "Why don't scientists trust atoms? Because they make up everything!" })
+        expect(model_completion.completion_tokens).to eq(21)
         expect(model_completion.prompt_tokens).to eq(70)
-        expect(model_completion.total_tokens).to eq(93)
+        expect(model_completion.total_tokens).to eq(91)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([
           {
@@ -174,14 +174,13 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         expect(model_completion.model_api_name).to eq("meta-llama/llama-3.1-8b-instruct")
 
         expect(deltas).to eq([
-          "{\n \"joke\":",
+          "{\n  \"joke\":",
           " \"Why don't",
-          " skeletons",
-          " fight each",
-          " other? They",
-          " don't have",
-          " the guts.\"\n",
-          "}"
+          " scientists",
+          " trust atoms",
+          "? Because they",
+          " make up everything",
+          "!\"\n}"
         ])
       end
 
