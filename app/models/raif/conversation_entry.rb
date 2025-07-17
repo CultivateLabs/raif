@@ -17,7 +17,6 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
 
   delegate :available_model_tools, to: :raif_conversation
   delegate :system_prompt, :llm_model_key, :citations, to: :raif_model_completion, allow_nil: true
-  delegate :json_response_schema, to: :class
 
   accepts_nested_attributes_for :raif_user_tool_invocation
 
