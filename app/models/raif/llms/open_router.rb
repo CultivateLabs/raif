@@ -38,9 +38,16 @@ private
   end
 
   def update_model_completion(model_completion, response_json)
+    raw_response = if model_completion.response_format_json?
+      extract_json_response(response_json)
+    else
+      extract_text_response(response_json)
+    end
+
     model_completion.update!(
+      response_id: response_json["id"],
       response_tool_calls: extract_response_tool_calls(response_json),
-      raw_response: response_json.dig("choices", 0, "message", "content"),
+      raw_response: raw_response,
       response_array: response_json["choices"],
       completion_tokens: response_json.dig("usage", "completion_tokens"),
       prompt_tokens: response_json.dig("usage", "prompt_tokens"),
@@ -63,6 +70,20 @@ private
 
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
+
+      if model_completion.json_response_schema.present?
+        validate_json_schema!(model_completion.json_response_schema)
+
+        tools << {
+          type: "function",
+          function: {
+            name: "json_response",
+            description: "Generate a structured JSON response based on the provided schema.",
+            parameters: model_completion.json_response_schema
+          }
+        }
+      end
+
       params[:tools] = tools unless tools.blank?
     end
 
@@ -78,6 +99,24 @@ private
     end
 
     params
+  end
+
+  def extract_text_response(resp)
+    resp&.dig("choices", 0, "message", "content")
+  end
+
+  def extract_json_response(resp)
+    return extract_text_response(resp) if resp.dig("choices", 0, "message", "tool_calls").blank?
+
+    tool_response = resp.dig("choices", 0, "message", "tool_calls").find do |tool_call|
+      tool_call["function"]["name"] == "json_response"
+    end
+
+    if tool_response&.dig("function", "arguments")
+      tool_response["function"]["arguments"]
+    else
+      extract_text_response(resp)
+    end
   end
 
   def extract_response_tool_calls(resp)
