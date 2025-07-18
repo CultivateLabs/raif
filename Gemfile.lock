@@ -218,7 +218,7 @@ GEM
       reline (>= 0.4.2)
     jmespath (1.6.2)
     json (2.11.3)
-    json-schema (5.1.1)
+    json-schema (5.2.1)
       addressable (~> 2.8)
       bigdecimal (~> 3.1)
     language_server-protocol (3.17.0.4)
