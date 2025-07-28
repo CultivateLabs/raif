@@ -195,6 +195,8 @@ Currently included OpenRouter models:
 - `open_router_claude_3_7_sonnet`
 - `open_router_llama_3_3_70b_instruct`
 - `open_router_llama_3_1_8b_instruct`
+- `open_router_llama_4_maverick`
+- `open_router_llama_4_scout`
 - `open_router_gemini_2_0_flash`
 - `open_router_deepseek_chat_v3`
 

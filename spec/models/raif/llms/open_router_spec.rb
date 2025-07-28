@@ -37,18 +37,18 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       end
     end
 
-    context "when the response format is json" do
+    context "when the response format is json and model does not use json_response tool" do
       it "makes a request to the OpenRouter API and processes the json response", vcr: { cassette_name: "open_router/json_response" } do
         model_completion = llm.chat(
           messages: [{ role: "user", content: "Can you you tell me a joke? Respond in JSON format. Include nothing outside of the JSON." }],
           response_format: :json
         )
 
-        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"What do you call a fake noodle?\",\n  \"answer\": \"An impasta\"\n}")
+        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"Why don't scientists trust atoms?\",\n  \"answer\": \"Because they make up everything!\"\n}") # rubocop:disable Layout/LineLength
         expect(model_completion.response_format).to eq("json")
-        expect(model_completion.parsed_response).to eq({ "joke" => "What do you call a fake noodle?", "answer" => "An impasta" })
-        expect(model_completion.completion_tokens).to eq(26)
-        expect(model_completion.prompt_tokens).to eq(30)
+        expect(model_completion.parsed_response).to eq({ "joke" => "Why don't scientists trust atoms?", "answer" => "Because they make up everything!" }) # rubocop:disable Layout/LineLength
+        expect(model_completion.completion_tokens).to eq(27)
+        expect(model_completion.prompt_tokens).to eq(55)
         expect(model_completion.response_array).to eq([{
           "logprobs" => nil,
           "finish_reason" => "stop",
@@ -57,10 +57,66 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
           "message" =>
          {
            "role" => "assistant",
-           "content" => "{\n  \"joke\": \"What do you call a fake noodle?\",\n  \"answer\": \"An impasta\"\n}",
+           "content" => "{\n  \"joke\": \"Why don't scientists trust atoms?\",\n  \"answer\": \"Because they make up everything!\"\n}",
            "refusal" => nil,
            "reasoning" => nil
          }
+        }])
+      end
+    end
+
+    context "when the response format is JSON and model uses json_response tool" do
+      let(:llm){ Raif.llm(:open_router_llama_4_maverick) }
+      let(:test_task) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+
+      it "extracts JSON response from json_response tool call", vcr: { cassette_name: "open_router/format_json_with_tool" } do
+        model_completion = llm.chat(
+          messages: [{
+            role: "user",
+            content: "Please give me a JSON object with a joke and answer. Don't include any other text in your response. Use the json_response tool to provide your response." # rubocop:disable Layout/LineLength
+          }],
+          response_format: :json,
+          source: test_task
+        )
+
+        expect(model_completion.parsed_response).to eq({
+          "joke" => "Why don't scientists trust atoms?",
+          "answer" => "Because they make up everything."
+        })
+
+        expect(model_completion.raw_response).to eq("{\"joke\": \"Why don't scientists trust atoms?\", \"answer\": \"Because they make up everything.\"}") # rubocop:disable Layout/LineLength
+        expect(model_completion.response_tool_calls).to eq([{
+          "name" => "json_response",
+          "arguments" => {
+            "joke" => "Why don't scientists trust atoms?",
+            "answer" => "Because they make up everything."
+          }
+        }])
+        expect(model_completion.completion_tokens).to eq(33)
+        expect(model_completion.prompt_tokens).to eq(217)
+        expect(model_completion.total_tokens).to eq(250)
+        expect(model_completion.response_format).to eq("json")
+        expect(model_completion.response_id).to eq("gen-abc123-Xzzn8cgXV0Pew0ckjxYE")
+        expect(model_completion.response_array).to eq([{
+          "logprobs" => nil,
+          "finish_reason" => "tool_calls",
+          "native_finish_reason" => "tool_calls",
+          "index" => 0,
+          "message" => {
+            "role" => "assistant",
+            "content" => "",
+            "refusal" => nil,
+            "reasoning" => nil,
+            "tool_calls" => [{
+              "id" => "chatcmpl-abc123-9807d1c0536c4e46903bc13b4a820170",
+              "type" => "function",
+              "index" => 0,
+              "function" => {
+                "name" => "json_response",
+                "arguments" => "{\"joke\": \"Why don't scientists trust atoms?\", \"answer\": \"Because they make up everything.\"}"
+              }
+            }]
+          }
         }])
       end
     end
@@ -154,11 +210,11 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
           deltas << delta
         end
 
-        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"Why don't skeletons fight each other? They don't have the guts.\"\n}")
-        expect(model_completion.parsed_response).to eq({ "joke" => "Why don't skeletons fight each other? They don't have the guts." })
-        expect(model_completion.completion_tokens).to eq(23)
+        expect(model_completion.raw_response).to eq("{\n  \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}")
+        expect(model_completion.parsed_response).to eq({ "joke" => "Why don't scientists trust atoms? Because they make up everything!" })
+        expect(model_completion.completion_tokens).to eq(21)
         expect(model_completion.prompt_tokens).to eq(70)
-        expect(model_completion.total_tokens).to eq(93)
+        expect(model_completion.total_tokens).to eq(91)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([
           {
@@ -174,14 +230,13 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         expect(model_completion.model_api_name).to eq("meta-llama/llama-3.1-8b-instruct")
 
         expect(deltas).to eq([
-          "{\n \"joke\":",
+          "{\n  \"joke\":",
           " \"Why don't",
-          " skeletons",
-          " fight each",
-          " other? They",
-          " don't have",
-          " the guts.\"\n",
-          "}"
+          " scientists",
+          " trust atoms",
+          "? Because they",
+          " make up everything",
+          "!\"\n}"
         ])
       end
 

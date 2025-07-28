@@ -137,6 +137,7 @@ class Raif::Utils::HtmlFragmentProcessor
     #   strip_tracking_parameters("/path?utm_source=test&param=keep")
     #   # => "/path?param=keep"
     def strip_tracking_parameters(url)
+      return url if url.blank?
       return url unless url.include?("?")
 
       begin
