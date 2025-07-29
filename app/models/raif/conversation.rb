@@ -47,6 +47,8 @@ class Raif::Conversation < Raif::ApplicationRecord
     )
   rescue StandardError => e
     Rails.logger.error("Error processing conversation entry ##{entry.id}. #{e.message}")
+    Rails.logger.error(e.backtrace.join("\n"))
+
     entry.failed!
 
     if defined?(Airbrake)
@@ -56,6 +58,8 @@ class Raif::Conversation < Raif::ApplicationRecord
 
       Airbrake.notify(notice)
     end
+
+    entry
   end
 
   def process_model_response_message(message:, entry:)
