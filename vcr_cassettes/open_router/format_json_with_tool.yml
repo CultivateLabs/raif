@@ -1,0 +1,57 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://openrouter.ai/api/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"meta-llama/llama-4-maverick","messages":[{"role":"user","content":[{"type":"text","text":"Please
+        give me a JSON object with a joke and answer. Don''t include any other text
+        in your response. Use the json_response tool to provide your response."}]}],"temperature":0.7,"max_tokens":null,"tools":[{"type":"function","function":{"name":"json_response","description":"Generate
+        a structured JSON response based on the provided schema.","parameters":{"type":"object","additionalProperties":false,"properties":{"joke":{"type":"string"},"answer":{"type":"string"}},"required":["joke","answer"]}}}],"response_format":{"type":"json_object"}}'
+    headers:
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - Faraday v2.13.1
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Thu, 17 Jul 2025 16:01:33 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Access-Control-Allow-Origin:
+      - "*"
+      Vary:
+      - Accept-Encoding
+      Permissions-Policy:
+      - payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com"
+        "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+      Referrer-Policy:
+      - no-referrer, strict-origin-when-cross-origin
+      X-Content-Type-Options:
+      - nosniff
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 960af5635eee7cc6-ATL
+    body:
+      encoding: ASCII-8BIT
+      string: "\n         \n{\"id\":\"gen-abc123-Xzzn8cgXV0Pew0ckjxYE\",\"provider\":\"Lambda\",\"model\":\"meta-llama/llama-4-maverick\",\"object\":\"chat.completion\",\"created\":1752768092,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"tool_calls\",\"native_finish_reason\":\"tool_calls\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"\",\"refusal\":null,\"reasoning\":null,\"tool_calls\":[{\"id\":\"chatcmpl-abc123-9807d1c0536c4e46903bc13b4a820170\",\"type\":\"function\",\"index\":0,\"function\":{\"name\":\"json_response\",\"arguments\":\"{\\\"joke\\\":
+        \\\"Why don't scientists trust atoms?\\\", \\\"answer\\\": \\\"Because they
+        make up everything.\\\"}\"}}]}}],\"usage\":{\"prompt_tokens\":217,\"completion_tokens\":33,\"total_tokens\":250}}"
+  recorded_at: Thu, 17 Jul 2025 16:01:33 GMT
+recorded_with: VCR 6.3.1
