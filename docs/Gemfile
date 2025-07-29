@@ -16,8 +16,6 @@ gem "jekyll", "~> 4.3.3"
 # The theme of choice
 gem "just-the-docs", "0.10.0"
 
-gem "yard"
-
 # Ruby 3.4+ compatibility
 gem "csv"
 gem "logger"

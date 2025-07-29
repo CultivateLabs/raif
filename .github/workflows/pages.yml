@@ -25,14 +25,26 @@ jobs:
   # Build job
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./docs
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Ruby
+      # set up ruby & gems in root for YARD
+      - name: Setup Ruby (root)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ruby-3.4.2
+          bundler-cache: true
+
+      # Build YARD docs in root, output to docs/yard/
+      - name: Build YARD Documentation
+        run: |
+          bundle exec rake yard
+          mkdir -p docs/yard
+          cp -r doc/* docs/yard/
+
+      # Install gems in docs/ (for Jekyll)
+      - name: Setup Ruby (docs)
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ruby-3.4.2
@@ -43,20 +55,13 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
 
-      - name: Build YARD Documentation
-        run: |
-          cd ..
-          bundle exec rake yard
-          mkdir -p docs/yard
-          cp -r doc/* docs/yard/
-        working-directory: ./docs
-
       - name: Build with Jekyll
         run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
         env:
           JEKYLL_ENV: production
+        working-directory: ./docs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs/_site/ 
+          path: ./docs/_site/
