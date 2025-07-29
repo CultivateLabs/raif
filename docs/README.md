@@ -2,14 +2,7 @@
 
 This directory contains the Jekyll-based documentation site for Raif, built with the [just-the-docs](https://just-the-docs.github.io/just-the-docs/) theme.
 
-## Local Development
-
-### Prerequisites
-
-- Ruby 3.0+
-- Bundler
-
-### Setup
+## Setup
 
 1. Navigate to the docs directory:
    ```bash
