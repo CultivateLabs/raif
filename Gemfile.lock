@@ -421,7 +421,6 @@ GEM
     websocket-extensions (0.1.5)
     xpath (3.2.0)
       nokogiri (~> 1.8)
-    yard (0.9.37)
     zeitwerk (2.7.3)
 
 PLATFORMS
@@ -453,7 +452,6 @@ DEPENDENCIES
   stimulus-rails
   vcr
   webmock
-  yard
 
 BUNDLED WITH
    2.5.14
