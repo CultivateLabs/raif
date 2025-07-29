@@ -1,3 +1,7 @@
+## v1.2.2 (unreleased)
+
+- When requesting JSON from OpenRouter models & a `json_response_schema` is provided, give the model a JSON response tool that it can call. [#177](https://github.com/CultivateLabs/raif/pull/177)
+
 ## v1.2.1
 
 - Added support for Meta's Llama 4 models. [#170](https://github.com/CultivateLabs/raif/pull/170)
