@@ -41,7 +41,7 @@ jobs:
         run: |
           bundle exec rake yard
           mkdir -p docs/yard
-          cp -r doc/* docs/yard/
+          cp -r doc/* docs/api/
 
       # Install gems in docs/ (for Jekyll)
       - name: Setup Ruby (docs)
