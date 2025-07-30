@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/raif/cli"
+
+# Run the CLI
+Raif::CLI::Runner.new(ARGV).run

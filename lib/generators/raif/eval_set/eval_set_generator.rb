@@ -33,10 +33,10 @@ module Raif
       end
 
       def show_instructions
-        say "\nEval set created! You can now:"
-        say "  1. Add eval blocks to your new eval set"
-        say "  2. Run it with: rails raif:evals:run EVAL_SETS=#{name}EvalSet"
-        say "  3. Or run all eval sets with: rails raif:evals:run"
+        say "\nEval set created!"
+        say "To run this eval set: bundle exec raif evals #{@full_class_name}"
+        say "To run all eval sets: bundle exec raif evals"
+        say ""
       end
     end
   end

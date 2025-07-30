@@ -15,6 +15,16 @@ module Raif
       end
 
       def execute
+        # Load setup file if it exists
+        setup_file = Rails.root.join("raif_evals", "setup.rb")
+        if setup_file.exist?
+          require setup_file
+        else
+          output.puts Raif::Utils::Colors.red("\n\nNo setup file found. To set up Raif evals, run:\n")
+          output.puts Raif::Utils::Colors.red("bundle exec raif evals:setup\n")
+          exit 1
+        end
+
         output.puts "Starting Raif Eval Run"
         output.puts "=" * 50
 
