@@ -7,6 +7,8 @@ module Raif
   module CLI
     class Evals < Base
       def run
+        require "raif/evals"
+
         # Set test environment by default for evals
         ENV["RAILS_ENV"] ||= "test"
 

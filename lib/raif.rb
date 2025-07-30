@@ -10,7 +10,6 @@ require "raif/llm_registry"
 require "raif/embedding_model_registry"
 require "raif/json_schema_builder"
 require "raif/migration_checker"
-require "raif/evals"
 
 require "faraday"
 require "event_stream_parser"

@@ -14,6 +14,7 @@ module Raif
 
       def find_rails_root
         current = Dir.pwd
+
         until File.exist?(File.join(current, "config", "environment.rb"))
           parent = File.dirname(current)
           if parent == current
@@ -21,8 +22,10 @@ module Raif
             puts "Please run this command from within a Rails application directory"
             exit 1
           end
+
           current = parent
         end
+
         current
       end
 
