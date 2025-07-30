@@ -12,7 +12,7 @@ permalink: /
 A Rails engine for adding AI-powered features to Rails applications.
 {: .fs-6 .fw-300 }
 
-[Get started now](getting_started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Get started now](setup){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View it on GitHub](https://github.com/CultivateLabs/raif){:target="_blank"}{: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
