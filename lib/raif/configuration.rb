@@ -42,7 +42,7 @@ module Raif
     def initialize
       # Set default config
       @agent_types = Set.new(["Raif::Agents::ReActAgent", "Raif::Agents::NativeToolCallingAgent"])
-      @anthropic_api_key = ENV["ANTHROPIC_API_KEY"]
+      @anthropic_api_key = Rails.env.test? ? "placeholder-anthropic-api-key" : ENV["ANTHROPIC_API_KEY"]
       @bedrock_models_enabled = false
       @anthropic_models_enabled = ENV["ANTHROPIC_API_KEY"].present?
       @authorize_admin_controller_action = ->{ false }
@@ -66,10 +66,11 @@ module Raif
         Faraday::ServerError,
       ]
       @model_superclass = "ApplicationRecord"
-      @open_ai_api_key = ENV["OPENAI_API_KEY"]
+      @open_ai_api_key = Rails.env.test? ? "placeholder-open-ai-api-key" : ENV["OPENAI_API_KEY"]
       @open_ai_embedding_models_enabled = ENV["OPENAI_API_KEY"].present?
       @open_ai_models_enabled = ENV["OPENAI_API_KEY"].present?
-      @open_router_api_key = ENV["OPEN_ROUTER_API_KEY"].presence || ENV["OPENROUTER_API_KEY"]
+      open_router_api_key = ENV["OPEN_ROUTER_API_KEY"].presence || ENV["OPENROUTER_API_KEY"]
+      @open_router_api_key = Rails.env.test? ? "placeholder-open-router-api-key" : open_router_api_key
       @open_router_models_enabled = @open_router_api_key.present?
       @open_router_app_name = nil
       @open_router_site_url = nil

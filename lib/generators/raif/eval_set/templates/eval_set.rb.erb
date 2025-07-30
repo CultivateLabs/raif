@@ -1,0 +1,16 @@
+class <%= @full_class_name %> < Raif::Evals::EvalSet
+  # Setup method runs before each eval
+  setup do
+    # Common setup code
+  end
+
+  # Teardown runs after each eval
+  teardown do
+    # Cleanup code
+  end
+
+  eval "description of your eval" do
+    # Your eval code here
+    # expect_tool_invocation, expect_no_tool_invocation, expect, etc.
+  end
+end
