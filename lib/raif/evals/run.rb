@@ -17,7 +17,7 @@ module Raif
       def execute
         # Load setup file if it exists
         setup_file = Rails.root.join("raif_evals", "setup.rb")
-        if setup_file.exist?
+        if File.exist?(setup_file)
           require setup_file
         else
           output.puts Raif::Utils::Colors.red("\n\nNo setup file found. To set up Raif evals, run:\n")

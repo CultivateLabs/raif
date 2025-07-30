@@ -11,6 +11,7 @@ module Raif
 
         # Set test environment by default for evals
         ENV["RAILS_ENV"] ||= "test"
+        ENV["RAIF_RUNNING_EVALS"] = "true"
 
         eval_sets = []
 

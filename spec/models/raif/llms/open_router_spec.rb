@@ -8,6 +8,10 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
 
   let(:llm){ Raif.llm(:open_router_llama_3_1_8b_instruct) }
 
+  before do
+    allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
+  end
+
   describe "#chat" do
     context "when the response format is text" do
       it "makes a request to the OpenRouter API and processes the text response", vcr: { cassette_name: "open_router/text_response" } do

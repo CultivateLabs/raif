@@ -44,16 +44,9 @@ RSpec.describe Raif::Evals::Run do
     context "with auto-discovery" do
       let(:eval_sets_dir) { Rails.root.join("raif_evals", "eval_sets") }
 
-      before do
-        FileUtils.mkdir_p(eval_sets_dir)
-      end
-
-      after do
-        FileUtils.rm_rf(Rails.root.join("raif_evals"))
-      end
-
       it "discovers eval set files" do
-        File.write(eval_sets_dir.join("discovered_eval_set.rb"), <<~RUBY)
+        discovered_file = eval_sets_dir.join("discovered_eval_set.rb")
+        File.write(discovered_file, <<~RUBY)
           class DiscoveredEvalSet < Raif::Evals::EvalSet
             eval "discovered" do
               expect "found" do
@@ -65,13 +58,16 @@ RSpec.describe Raif::Evals::Run do
 
         run = described_class.new
         expect(run.eval_sets.map(&:name)).to include("DiscoveredEvalSet")
+      ensure
+        FileUtils.rm(discovered_file)
       end
 
       it "handles namespaced eval sets" do
         namespace_dir = eval_sets_dir.join("my_module")
         FileUtils.mkdir_p(namespace_dir)
+        namespaced_file = namespace_dir.join("namespaced_eval_set.rb")
 
-        File.write(namespace_dir.join("namespaced_eval_set.rb"), <<~RUBY)
+        File.write(namespaced_file, <<~RUBY)
           module MyModule
             class NamespacedEvalSet < Raif::Evals::EvalSet
               eval "namespaced" do
@@ -85,6 +81,9 @@ RSpec.describe Raif::Evals::Run do
 
         run = described_class.new
         expect(run.eval_sets.map(&:name)).to include("MyModule::NamespacedEvalSet")
+      ensure
+        FileUtils.rm(namespaced_file)
+        FileUtils.rmdir(namespace_dir) if Dir.exist?(namespace_dir) && Dir.empty?(namespace_dir)
       end
     end
   end
@@ -114,7 +113,6 @@ RSpec.describe Raif::Evals::Run do
 
     it "exports results to JSON file" do
       results_dir = Rails.root.join("raif_evals", "results")
-      FileUtils.mkdir_p(results_dir)
 
       run.execute
 
@@ -129,8 +127,8 @@ RSpec.describe Raif::Evals::Run do
         "total_evals" => 3,
         "passed_evals" => 2
       )
-
-      FileUtils.rm_rf(Rails.root.join("raif_evals"))
+    ensure
+      FileUtils.rm(json_file)
     end
 
     it "prints summary to output" do
@@ -142,7 +140,14 @@ RSpec.describe Raif::Evals::Run do
       expect(output_string).to include("Running AnotherEvalSet")
       expect(output_string).to include("SUMMARY")
       expect(output_string).to include("Eval Sets: 2")
-      expect(output_string).to include("Evals: 2/3 passed")
+      expect(output_string).to include("Evals:")
+      expect(output_string).to include("  3 total")
+      expect(output_string).to include("  2 passed")
+      expect(output_string).to include("  1 failed")
+      expect(output_string).to include("Expectations:")
+      expect(output_string).to include("  3 total")
+      expect(output_string).to include("  2 passed")
+      expect(output_string).to include("  1 failed")
     end
   end
 end

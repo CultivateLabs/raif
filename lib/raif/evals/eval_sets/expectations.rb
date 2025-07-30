@@ -8,14 +8,14 @@ module Raif
         def expect(description, &block)
           result = begin
             if block.call
-              output.puts "  ✓ #{description}"
+              output.puts Raif::Utils::Colors.green("  ✓ #{description}")
               ExpectationResult.new(description: description, status: :passed)
             else
-              output.puts "  ✗ #{description}"
+              output.puts Raif::Utils::Colors.red("  ✗ #{description}")
               ExpectationResult.new(description: description, status: :failed)
             end
           rescue => e
-            output.puts "  ✗ #{description} (Error: #{e.message})"
+            output.puts Raif::Utils::Colors.red("  ✗ #{description} (Error: #{e.message})")
             ExpectationResult.new(description: description, status: :error, error: e)
           end
 

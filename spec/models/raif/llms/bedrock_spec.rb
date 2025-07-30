@@ -6,6 +6,7 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
   let(:llm){ Raif.llm(:bedrock_claude_3_5_sonnet) }
 
   before do
+    allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
     allow(Raif.config).to receive(:bedrock_models_enabled).and_return(true)
 
     # To record new VCR cassettes, set real credentials here.
