@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Customization
-nav_order: 8
+nav_order: 6
 description: "Customizing Raif for your application"
 ---
 

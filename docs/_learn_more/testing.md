@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Testing
-nav_order: 9
+nav_order: 7
 description: "Testing with Raif helpers and factories"
 ---
 

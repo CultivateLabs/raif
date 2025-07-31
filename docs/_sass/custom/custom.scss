@@ -156,6 +156,10 @@ $code-font-stack: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Cod
   }
 }
 
+.site-nav {
+  padding-top: 1rem;
+}
+
 .navigation-list-item {
   margin: 0.25rem 0;
   
@@ -230,6 +234,15 @@ $code-font-stack: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Cod
   &::placeholder {
     color: $search-result-preview-color;
   }
+}
+
+// =============================================================================
+// IMAGES
+// =============================================================================
+.img-border {
+  border: 1px solid $border-color;
+  border-radius: $radius;
+  box-shadow: $shadow-light;
 }
 
 // =============================================================================
@@ -470,7 +483,7 @@ div.language-yaml::after, div.language-yml::after { content: "YAML"; }
 .site-footer {
   background: $sidebar-color;
   border-top: 1px solid $border-color;
-  padding: 2rem 1rem;
+  padding: 1rem;
   margin-top: 3rem;
   
   .footer-link {

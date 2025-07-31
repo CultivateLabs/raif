@@ -1,13 +1,11 @@
 ---
 layout: default
-title: Images/Files/PDF's
-nav_order: 5
-description: "Working with images, files, and PDFs in Raif"
+title: Images/Files/PDFs
+nav_order: 3
+description: "Support for including images and PDF in prompts"
 ---
 
-# Images/Files/PDF's
-
-## Sending Images/Files/PDF's to the LLM
+# Sending Images/Files/PDFs to the LLM
 
 Raif supports images, files, and PDF's in the messages sent to the LLM.
 
@@ -49,9 +47,9 @@ model_completion = llm.chat(messages: [
 ])
 ```
 
-### Images/Files/PDF's in Tasks
+## Images/Files/PDFs in Tasks
 
-You can include images and files/PDF's when running a `Raif::Task`:
+You can include images and files/PDFs when running a `Raif::Task`:
 
 To include a file/PDF:
 ```ruby

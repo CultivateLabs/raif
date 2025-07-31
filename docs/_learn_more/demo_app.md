@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Demo App
-nav_order: 10
+nav_order: 8
 description: "Raif demo application"
 ---
 

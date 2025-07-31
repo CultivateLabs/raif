@@ -97,6 +97,13 @@ collections:
   guides:
     permalink: "/:collection/:name/"
     output: true
+  getting_started:
+    output: true
+  key_raif_concepts:
+    # permalink: "/key_raif_concepts/:name/"
+    output: true
+  learn_more:
+    output: true
 
 defaults:
   - scope:
@@ -104,3 +111,12 @@ defaults:
       type: "guides"
     values:
       layout: "default" 
+
+just_the_docs:
+  collections:
+    getting_started:
+      name: Getting Started
+    key_raif_concepts:
+      name: Key Raif Concepts
+    learn_more:
+      name: Learn More
