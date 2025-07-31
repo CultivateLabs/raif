@@ -6,7 +6,11 @@ description: "Raif (Ruby AI Framework) - A Rails engine for adding AI-powered fe
 permalink: /
 ---
 
-# Raif - Ruby AI Framework
+<div style="text-align: center; margin-bottom: 2rem;">
+  <img src="{{ site.baseurl }}/assets/images/raif-logo.svg" alt="Raif Logo" style="height: 120px; width: auto;">
+</div>
+
+# Raif - a Ruby AI Framework
 {: .fs-9 }
 
 A Rails engine for adding AI-powered features to Rails applications.
