@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-YARD-blue.svg)](https://cultivatelabs.github.io/raif/)
 
-![Raif Logo](docs/assets/images/raif-logo.svg){:width="200px"}
+![Raif Logo](docs/assets/images/raif-logo-400.png)
 
 
 Raif (Ruby AI Framework) is a Rails engine that helps you add AI-powered features to your Rails apps, such as [tasks](https://docs.raif.ai/key_raif_concepts/tasks), [conversations](https://docs.raif.ai/key_raif_concepts/conversations), and [agents](https://docs.raif.ai/key_raif_concepts/agents).  It supports for multiple LLM providers including [OpenAI](https://docs.raif.ai/getting_started/setup#openai), [Anthropic Claude](https://docs.raif.ai/getting_started/setup#anthropic), [AWS Bedrock](https://docs.raif.ai/getting_started/setup#aws-bedrock), and [OpenRouter](https://docs.raif.ai/getting_started/setup#openrouter).
