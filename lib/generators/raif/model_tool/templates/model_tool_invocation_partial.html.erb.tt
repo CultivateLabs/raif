@@ -1,0 +1,10 @@
+<%# 
+This partial is used to render a model tool invocation to the user in the conversation interface.
+If you don't want the tool invocation to be displayed to the user, you can override the `renderable?` method in your model tool class to return false
+%>
+
+<div class="raif-model-tool-invocation">
+  <h5><%= model_tool_invocation.tool_type.demodulize.titleize %> Result</h5>
+  <pre><%= JSON.pretty_generate(model_tool_invocation.result || {}) %></pre>
+  <p>Edit this file in <code><%= __FILE__ %></code> to customize the display of the tool invocation.</p>
+</div>

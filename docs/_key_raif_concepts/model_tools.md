@@ -22,68 +22,50 @@ rails generate raif:model_tool GoogleSearch
 
 This will create a new model tool in `app/models/raif/model_tools/google_search.rb`:
 
+Below is an example of a model tool that executes a Google search and returns the results:
+
 ```ruby
 class Raif::ModelTools::GoogleSearch < Raif::ModelTool
-  # For example tool implementations, see: 
-  # Wikipedia Search Tool: https://github.com/CultivateLabs/raif/blob/main/app/models/raif/model_tools/wikipedia_search.rb
-  # Fetch URL Tool: https://github.com/CultivateLabs/raif/blob/main/app/models/raif/model_tools/fetch_url.rb
-
-  # Define the schema for the arguments that the LLM should use when invoking your tool.
-  # It should be a valid JSON schema. When the model invokes your tool,
-  # the arguments it provides will be validated against this schema using JSON::Validator from the json-schema gem.
-  #
-  # All attributes will be required and additionalProperties will be set to false.
-  #
-  # This schema would expect the model to invoke your tool with an arguments JSON object like:
-  # { "query" : "some query here" }
-  tool_arguments_schema do
-    string :query, description: "The query to search for"
-  end
-
-  # An example of how the LLM should invoke your tool. This should return a hash with name and arguments keys.
-  # `to_json` will be called on it and provided to the LLM as an example of how to invoke your tool.
-  example_model_invocation do
-    {
-      "name": tool_name,
-      "arguments": { "query": "example query here" }
-    }
-  end
-
   tool_description do
     "Description of your tool that will be provided to the LLM so it knows when to invoke it"
   end
 
-  # When your tool is invoked by the LLM in a Raif::Agent loop, 
-  # the results of the tool invocation are provided back to the LLM as an observation.
-  # This method should return whatever you want provided to the LLM.
-  # For example, if you were implementing a GoogleSearch tool, this might return a JSON
-  # object containing search results for the query.
-  def self.observation_for_invocation(tool_invocation)
-    return "No results found" unless tool_invocation.result.present?
-
-    JSON.pretty_generate(tool_invocation.result)
+  tool_arguments_schema do
+    string :query, description: "The query to search the web for"
+    integer :max_results, description: "The maximum number of results to return"
+    boolean :include_images, description: "Whether to include images in the results"
+    array :exclude_domains do
+      items type: "string"
+    end
   end
 
-  # When the LLM invokes your tool, this method will be called with a `Raif::ModelToolInvocation` record as an argument.
-  # It should handle the actual execution of the tool. 
-  # For example, if you are implementing a GoogleSearch tool, this method should run the actual search
-  # and store the results in the tool_invocation's result JSON column.
-  def self.process_invocation(tool_invocation)
-    # Extract arguments from tool_invocation.tool_arguments
-    # query = tool_invocation.tool_arguments["query"]
-    #
-    # Process the invocation and perform the desired action
-    # ...
-    #
-    # Store the results in the tool_invocation
-    # tool_invocation.update!(
-    #   result: {
-    #     # Your result data structure
-    #   }
-    # )
-    #
-    # Return the result
-    # tool_invocation.result
+  class << self
+    def observation_for_invocation(tool_invocation)
+      return "No results found" unless tool_invocation.result.present?
+
+      JSON.pretty_generate(tool_invocation.result)
+    end
+
+    # When your tool is invoked in a Raif::Conversation, should the result be automatically provided back to the model?
+    # When true, observation_for_invocation will be used to produce the observation provided to the model
+    def triggers_observation_to_model?
+      false
+    end
+
+    def process_invocation(tool_invocation)
+      # tool_invocation.tool_arguments will be a JSON object matching your tool_arguments_schema
+      query = tool_invocation.tool_arguments["query"]
+      max_results = tool_invocation.tool_arguments["max_results"]
+      include_images = tool_invocation.tool_arguments["include_images"]
+      exclude_domains = tool_invocation.tool_arguments["exclude_domains"]
+
+      # Assumes your application has a GoogleSearchService that can execute a Google search
+      # and return an array of results
+      search_results = GoogleSearchService.execute(query: query, max_results: max_results, include_images: include_images, exclude_domains: exclude_domains)
+
+      # Store the results in the tool_invocation
+      tool_invocation.update!(result: search_results)
+    end
   end
 
 end
@@ -93,15 +75,39 @@ end
 
 When the LLM invokes your tool, it will include a JSON object of arguments. You can use the `tool_arguments_schema` method to define the schema for these arguments. When the model invokes your tool, the arguments it provides will be validated against this schema using JSON::Validator from the json-schema gem.
 
-All attributes will be required and `additionalProperties` will be set to false.
+See [JSON Schemas](../learn_more/json_schemas) for more information about defining JSON schemas.
+
+## Processing Model Tool Inovcations
+
+When the LLM invokes your tool, Raif will call your tool's `process_invocation` method with a `Raif::ModelToolInvocation` record as an argument.
+
+You should implement `process_invocation` to perform whatever actions are appropriate for your tool and store the results in the `tool_invocation.result` JSON column.
+
+## Model Tool Observations
+
+When your tool is being invoked in a [conversation](conversations) or [agent](agents), the results of the tool invocation are provided back to the LLM as an observation.
+
+To control the manner in which the result is provided to the LLM, implement the `observation_for_invocation` method.
+
+## Using Model Tools
+
+`Raif::Task`, `Raif::Conversation`, and `Raif::Agent` all have an `available_model_tools` array to support the use of model tools. To make your tool available to the LLM, all you have to do is include it in the `available_model_tools` array.
+
+Read more for each:
+- [Tasks](../key_raif_concepts/tasks#using-model-tools)
+- [Conversations](../key_raif_concepts/conversations#using-model-tools)
+- [Agents](../key_raif_concepts/agents#using-model-tools)
+
+
+
 
 # Provider-Managed Tools
 
 In addition to the ability to create your own model tools, Raif supports provider-managed tools. These are tools that are built into certain LLM providers and run on the provider's infrastructure:
 
-- **`Raif::ModelTools::ProviderManaged::WebSearch`**: Performs real-time web searches and returns relevant results
-- **`Raif::ModelTools::ProviderManaged::CodeExecution`**: Executes code in a secure sandboxed environment (e.g. Python)
-- **`Raif::ModelTools::ProviderManaged::ImageGeneration`**: Generates images based on text descriptions
+- **`Raif::ModelTools::ProviderManaged::WebSearch`** - Performs real-time web searches and consideres relevant results when generating a response
+- **`Raif::ModelTools::ProviderManaged::CodeExecution`** - Executes code in a secure sandboxed environment (e.g. Python)
+- **`Raif::ModelTools::ProviderManaged::ImageGeneration`** - Generates images based on text descriptions
 
 Current provider-managed tool support:
 
@@ -109,11 +115,11 @@ Current provider-managed tool support:
 |:-----------------------|:---------:|:-------------:|:---------------:|
 | OpenAI Responses API   | ✅        | ✅            | ✅               |
 | OpenAI Completions API | ❌        | ❌            | ❌               |
-| Anthropic Claude       | ✅        | ✅            | ✅               |
+| Anthropic Claude       | ✅        | ✅            | ❌               |
 | AWS Bedrock (Claude)   | ❌        | ❌            | ❌               |
 | OpenRouter             | ❌        | ❌            | ❌               |
 
-To use provider-managed tools, include them in the `available_model_tools` array:
+To use provider-managed tools, include them in the `available_model_tools` array, just like any other model tool:
 
 ```ruby
 # In a conversation
@@ -125,20 +131,20 @@ conversation = Raif::Conversation.create!(
   ]
 )
 
-# In an agent
-agent = Raif::Agents::ReActAgent.new(
-  task: "Search for recent news about AI and create a summary chart",
-  available_model_tools: [
-    "Raif::ModelTools::ProviderManaged::WebSearch",
-    "Raif::ModelTools::ProviderManaged::CodeExecution"
-  ],
-  creator: current_user
-)
+# In a task definition
+class MyTask < Raif::Task
+  before_create ->{
+    self.available_model_tools = [
+      "Raif::ModelTools::ProviderManaged::WebSearch",
+      "Raif::ModelTools::ProviderManaged::CodeExecution"
+    ]
+  }
+end
 
-# Directly in a chat
+# Or directly in a chat
 llm = Raif.llm(:open_ai_responses_gpt_4_1)
 model_completion = llm.chat(
   messages: [{ role: "user", content: "What are the latest developments in Ruby on Rails?" }], 
-  available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
+  available_model_tools: ["Raif::ModelTools::ProviderManaged::WebSearch"]
 )
 ```

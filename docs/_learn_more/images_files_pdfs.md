@@ -5,11 +5,13 @@ nav_order: 3
 description: "Support for including images and PDF in prompts"
 ---
 
+{% include table-of-contents.md %}
+
 # Sending Images/Files/PDFs to the LLM
 
-Raif supports images, files, and PDF's in the messages sent to the LLM.
+Raif supports including images, files, and PDF's in the messages sent to the LLM. This page describes using them as inputs to the LLM. If you're looking to create images as outputs, see the [provider-managed tools](../key_raif_concepts/model_tools#provider-managed-tools) documentation.
 
-To include an image, file/PDF in a message, you can use the `Raif::ModelImageInput` and `Raif::ModelFileInput`.
+To include an image or file/PDF in a message, you can use the `Raif::ModelImageInput` and `Raif::ModelFileInput`.
 
 To include an image:
 ```ruby
@@ -47,7 +49,7 @@ model_completion = llm.chat(messages: [
 ])
 ```
 
-## Images/Files/PDFs in Tasks
+# Images/Files/PDFs in Tasks
 
 You can include images and files/PDFs when running a `Raif::Task`:
 

@@ -17,6 +17,6 @@ bin/rails db:create db:prepare
 OPENAI_API_KEY=your-openai-api-key-here bin/rails s
 ```
 
-You can then access the app at [http://localhost:3000](http://localhost:3000).
+You can then access the app at [http://localhost:3000](http://localhost:3000)
 
-![Demo App Screenshot](./screenshots/demo-app.png)
+![Demo App Screenshot](../assets/images/screenshots/demo-app.png){:class="img-border"}

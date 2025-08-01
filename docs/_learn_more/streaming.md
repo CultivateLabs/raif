@@ -7,7 +7,7 @@ description: "Streaming responses from the LLM"
 
 # Streaming Responses
 
-You can enable streaming for any chat call by passing a block to the `chat` method. When streaming is enabled, the block will be called with partial responses as they're received from the LLM:
+You can enable streaming for any chat call by passing a block to the `chat` method. When streaming is enabled, the block will be called with partial responses as they're received from the LLM. Streaming is enabled by default in [conversations](../key_raif_concepts/conversations).
 
 ```ruby
 llm = Raif.llm(:open_ai_gpt_4o)
@@ -26,7 +26,9 @@ end
 puts model_completion.raw_response
 ```
 
-You can configure the streaming update frequency by adjusting the chunk size threshold in your Raif configuration:
+## Streaming Chunk Size Configuration
+
+By default, Raif will update the `Raif::ModelCompletion` and call the block after 25 characters have been accumuluated from the streaming response. If you want this to happen more or less frequently, you can change the streaming_chunk_size configuration option in your initializer:
 
 ```ruby
 Raif.configure do |config|

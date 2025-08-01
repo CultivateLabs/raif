@@ -5,9 +5,9 @@ nav_order: 6
 description: "Customizing Raif for your application"
 ---
 
-# Customization
+{% include table-of-contents.md %}
 
-## Controllers
+# Customizing Controllers
 
 You can override Raif's controllers by creating your own that inherit from Raif's base controllers:
 
@@ -29,7 +29,7 @@ Raif.configure do |config|
 end
 ```
 
-## Models
+# Customizing Models
 
 By default, Raif models inherit from `ApplicationRecord`. You can change this:
 
@@ -39,7 +39,7 @@ Raif.configure do |config|
 end
 ```
 
-## Views
+# Customizing Views
 
 You can customize Raif's views by copying them to your application and modifying them. To copy the conversation-related views, run:
 
@@ -53,7 +53,7 @@ This will copy all conversation and conversation entry views to your application
 
 These views will automatically override Raif's default views. You can customize them to match your application's look and feel while maintaining the same functionality.
 
-## System Prompts
+# Customizing System Prompts
 
 If you don't want to override the system prompt entirely in your task/conversation subclasses, you can customize the intro portion of the system prompts for conversations and tasks:
 
@@ -61,15 +61,16 @@ If you don't want to override the system prompt entirely in your task/conversati
 Raif.configure do |config|
   config.conversation_system_prompt_intro = "You are a helpful assistant who specializes in customer support."
   config.task_system_prompt_intro = "You are a helpful assistant who specializes in data analysis."
+
   # or with a lambda
   config.task_system_prompt_intro = ->(task) { "You are a helpful assistant who specializes in #{task.name}." }
   config.conversation_system_prompt_intro = ->(conversation) { "You are a helpful assistant talking to #{conversation.creator.email}. Today's date is #{Date.today.strftime('%B %d, %Y')}." }
 end
 ```
 
-## Adding LLM Models
+# Adding LLM Models
 
-You can easily add new LLM models to Raif:
+You can easily add new LLM models to Raif. The first argument is the [provider adapter class](https://github.com/CultivateLabs/raif/tree/main/app/models/raif/llms){:target="_blank"} to use and the second argument is a hash defining the specifics of the model:
 
 ```ruby
 # Register the model in Raif's LLM registry

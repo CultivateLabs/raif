@@ -9,6 +9,8 @@ module Raif
 
       def create_model_tool_file
         template "model_tool.rb.tt", File.join("app/models/raif/model_tools", "#{file_name}.rb")
+        # Generate the view partial for the tool invocation
+        template "model_tool_invocation_partial.html.erb.tt", File.join("app/views/raif/model_tool_invocations", "#{file_name}.html.erb")
       end
 
       def success_message

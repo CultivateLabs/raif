@@ -7,7 +7,7 @@ description: "Working with vector embeddings in Raif"
 
 # Embedding Models
 
-Raif supports generation of vector embeddings. You can enable and configure embedding models in your Raif configuration:
+Raif supports generation of vector embeddings. You can enable and configure embedding models in your Raif initializer:
 
 ```ruby
 Raif.configure do |config|
@@ -32,7 +32,7 @@ Raif currently supports the following embedding models:
 
 ## Creating Embeddings
 
-By default, Raif will used `Raif.config.default_embedding_model_key` to create embeddings. To create an embedding for a piece of text:
+By default, Raif will used `Raif.config.default_embedding_model_key` as the model for creating embeddings. To create an embedding for a piece of text:
 
 ```ruby
 # Generate an embedding for a piece of text

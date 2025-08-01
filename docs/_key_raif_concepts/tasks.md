@@ -68,7 +68,7 @@ summary = task.parsed_response
 
 If you want the LLM to return a JSON response, use `llm_response_format :json` in your task. 
 
-If you're using OpenAI, Raif will set the response to use [JSON mode](https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat#json-mode){:target="_blank"}. If you define a JSON schema, it will trigger utilization of OpenAI's [structured outputs](https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat#structured-outputs){:target="_blank"} feature. If you're using Anthropic, Raif will insert a tool for Claude to use to generate a JSON response.
+If you're using OpenAI, Raif will set the response to use [JSON mode](https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat#json-mode){:target="_blank"}. If you define a JSON schema using the `json_response_schema` method, it will trigger utilization of OpenAI's [structured outputs](https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat#structured-outputs){:target="_blank"} feature. If you're using Anthropic, Raif will insert a tool for Claude to use to generate a JSON response.
 
 ```bash
 rails generate raif:task WebSearchQueryGeneration --response-format json
@@ -104,6 +104,28 @@ end
 
 ```
 
+# Using Model Tools
+
+`Raif::Task` supports the use of [model tools](../key_raif_concepts/model_tools). Any model tool that is included in the task's `available_model_tools` array will be available to the LLM when the task is run.
+
+You can provide the tools at runtime:
+```ruby
+Raif::Tasks::DocumentSummarization.run(
+  document: document, 
+  creator: user, 
+  available_model_tools: ["Raif::ModelTools::GoogleSearch"]
+)
+```
+
+Or if you want all instances of a task to have the tools available by default:
+```ruby
+class MyTask < Raif::Task
+  before_create ->{
+    self.available_model_tools << "Raif::ModelTools::GoogleSearch"
+  }
+end
+```
+
 # Task Language Preference
 
 Tasks support the ability to specify a language preference for the LLM response. When enabled, Raif will add a line to the system prompt that looks something like:
@@ -121,3 +143,29 @@ task = Raif::Tasks::DocumentSummarization.run(document: document, creator: user,
 ```
 
 The current list of valid language keys can be found [here](https://github.com/CultivateLabs/raif/blob/main/lib/raif/languages.rb).
+
+# Overriding the LLM Model
+
+By default, `Raif::Task`'s will use the model specified in `Raif.config.default_llm_model_key`. You can override in various places. 
+
+By passing a different model key to the `run` method:
+```
+task = Raif::Tasks::DocumentSummarization.run(
+  document: document,
+  creator: user,
+  llm_model_key: "open_ai_gpt_4_1"
+)
+```
+
+Overriding in the task definition:
+```ruby
+class MyTask < Raif::Task
+  def default_llm_model_key
+    if Rails.env.production?
+      :open_ai_gpt_4_1
+    else
+      :open_ai_gpt_4_1_mini
+    end
+  end
+end
+```
