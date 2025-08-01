@@ -72,8 +72,6 @@ View the [chatting with the LLM docs](https://docs.raif.ai/getting_started/chatt
 
 We welcome contributions to Raif! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-**Important**: All PR's should be made against the `dev` branch.
-
 # License
 
 The gem is available as open source under the terms of the MIT License.
