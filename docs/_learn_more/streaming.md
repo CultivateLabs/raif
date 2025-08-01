@@ -28,7 +28,7 @@ puts model_completion.raw_response
 
 ## Streaming Chunk Size Configuration
 
-By default, Raif will update the `Raif::ModelCompletion` and call the block after 25 characters have been accumuluated from the streaming response. If you want this to happen more or less frequently, you can change the streaming_chunk_size configuration option in your initializer:
+By default, Raif will update the `Raif::ModelCompletion` and call the block after 25 characters have been accumulated from the streaming response. If you want this to happen more or less frequently, you can change the streaming_chunk_size configuration option in your initializer:
 
 ```ruby
 Raif.configure do |config|

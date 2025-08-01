@@ -27,7 +27,7 @@ llm = Raif.llm(:open_ai_gpt_4o)
 messages = [
   { role: "user", content: "Hello" },
   { role: "assistant", content: "Hello! How can I assist you today?" },
-  { role: "user", content: "Can you you tell me a joke?" },
+  { role: "user", content: "Can you tell me a joke?" },
 ]
 
 system_prompt = "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key. Do not include any other text in your response outside the JSON object."

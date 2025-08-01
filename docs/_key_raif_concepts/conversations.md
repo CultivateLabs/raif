@@ -175,7 +175,7 @@ Each time a conversation entry is updated during the streaming response, Raif wi
 
 ## Streaming Chunk Size Configuration
 
-By default, Raif will update the conversation entry's associated `Raif::ModelCompletion` and call `broadcast_replace_to(conversation)` after 25 characters have been accumuluated from the streaming response. If you want this to happen more or less frequently,
+By default, Raif will update the conversation entry's associated `Raif::ModelCompletion` and call `broadcast_replace_to(conversation)` after 25 characters have been accumulated from the streaming response. If you want this to happen more or less frequently,
 you can change the `streaming_chunk_size` configuration option in your initializer:
 
 ```ruby

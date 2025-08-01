@@ -24,7 +24,7 @@ Raif currently supports the following embedding models:
 
 ### OpenAI
 - `open_ai_text_embedding_3_small`
-- `open_ai_text_embed ding_3_large`
+- `open_ai_text_embedding_3_large`
 - `open_ai_text_embedding_ada_002`
 
 ### AWS Bedrock
@@ -32,7 +32,7 @@ Raif currently supports the following embedding models:
 
 ## Creating Embeddings
 
-By default, Raif will used `Raif.config.default_embedding_model_key` as the model for creating embeddings. To create an embedding for a piece of text:
+By default, Raif will use `Raif.config.default_embedding_model_key` as the model for creating embeddings. To create an embedding for a piece of text:
 
 ```ruby
 # Generate an embedding for a piece of text

@@ -77,7 +77,7 @@ When the LLM invokes your tool, it will include a JSON object of arguments. You 
 
 See [JSON Schemas](../learn_more/json_schemas) for more information about defining JSON schemas.
 
-## Processing Model Tool Inovcations
+## Processing Model Tool Invocations
 
 When the LLM invokes your tool, Raif will call your tool's `process_invocation` method with a `Raif::ModelToolInvocation` record as an argument.
 
@@ -105,7 +105,7 @@ Read more for each:
 
 In addition to the ability to create your own model tools, Raif supports provider-managed tools. These are tools that are built into certain LLM providers and run on the provider's infrastructure:
 
-- **`Raif::ModelTools::ProviderManaged::WebSearch`** - Performs real-time web searches and consideres relevant results when generating a response
+- **`Raif::ModelTools::ProviderManaged::WebSearch`** - Performs real-time web searches and considers relevant results when generating a response
 - **`Raif::ModelTools::ProviderManaged::CodeExecution`** - Executes code in a secure sandboxed environment (e.g. Python)
 - **`Raif::ModelTools::ProviderManaged::ImageGeneration`** - Generates images based on text descriptions
 
