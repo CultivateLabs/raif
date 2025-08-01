@@ -1,0 +1,122 @@
+# Welcome to Jekyll!
+#
+# This config file is meant for settings that affect your whole blog, values
+# which you are expected to set up once and rarely edit after that. If you find
+# yourself editing this file very often, consider using Jekyll's data files
+# feature for the data you need to update frequently.
+#
+# For technical reasons, this file is *NOT* reloaded automatically when you use
+# 'bundle exec jekyll serve'. If you change this file, please restart the server process.
+
+# Site settings
+title: Raif Documentation
+description: "Ruby AI Framework - A Rails engine for adding AI-powered features to Rails applications"
+baseurl: "/raif" # the subpath of your site, e.g. /blog
+url: "https://cultivatelabs.github.io" # the base hostname & protocol for your site
+
+# Logo
+logo: "/assets/images/raif-logo-white.svg"
+
+# Theme
+theme: just-the-docs
+color_scheme: raif # Options: light, dark, or custom
+
+# Just the Docs theme configuration
+search_enabled: true
+search:
+  heading_level: 2
+  previews: 2
+  preview_words_before: 3
+  preview_words_after: 3
+  tokenizer_separator: /[\s/]+/
+  rel_url: true
+  button: false
+
+# Aux links for the upper right navigation
+aux_links:
+  "Raif on GitHub":
+    - "//github.com/CultivateLabs/raif"
+
+# Makes Aux links open in a new tab. Default is false
+aux_links_new_tab: true
+
+# Heading anchor links appear on hover over h1-h6 tags in page content
+# allowing users to deep link to a particular heading on a page.
+heading_anchors: true
+
+# Footer content
+# appears at the bottom of every page's main content
+# Note: The footer_content option is deprecated and will be removed in a future major release. Please use `_includes/footer_custom.html` for more robust markup / liquid-based content.
+footer_content: "Copyright &copy; 2024 Raif. Distributed under the <a href=\"https://github.com/CultivateLabs/raif/tree/master/LICENSE.txt\">MIT license.</a>"
+
+# Footer last edited timestamp
+last_edit_timestamp: true # show or hide edit time - page must have `last_modified_date` defined in the frontmatter
+last_edit_time_format: "%b %e %Y at %I:%M %p" # uses ruby's time format: https://ruby-doc.org/stdlib-2.7.0/libdoc/time/rdoc/Time.html#method-i-strftime
+
+# Footer "Edit this page on GitHub" link text
+gh_edit_link: true # show or hide edit this page link
+gh_edit_link_text: "Edit this page on GitHub."
+gh_edit_repository: "https://github.com/CultivateLabs/raif" # the github URL for your repo
+gh_edit_branch: "main" # the branch that your docs is served from
+gh_edit_source: docs # the source that your files originate from
+gh_edit_view_mode: "tree" # "tree" or "edit" if you want the user to jump into the editor immediately
+
+# Google Analytics Tracking (optional)
+# e.g, UA-1234567-89
+ga_tracking: 
+ga_tracking_anonymize_ip: true # Use GDPR compliant Google Analytics settings (true/nil by default)
+
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
+
+# Exclude from processing.
+exclude:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Collections for organizing content (optional)
+collections:
+  guides:
+    permalink: "/:collection/:name/"
+    output: true
+  getting_started:
+    output: true
+  key_raif_concepts:
+    # permalink: "/key_raif_concepts/:name/"
+    output: true
+  learn_more:
+    output: true
+
+defaults:
+  - scope:
+      path: ""
+      type: "guides"
+    values:
+      layout: "default" 
+
+just_the_docs:
+  collections:
+    getting_started:
+      name: Getting Started
+    key_raif_concepts:
+      name: Key Raif Concepts
+    learn_more:
+      name: Learn More

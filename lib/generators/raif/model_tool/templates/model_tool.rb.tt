@@ -14,6 +14,8 @@ class Raif::ModelTools::<%= class_name %> < Raif::ModelTool
   # the arguments it provides will be validated against this schema using JSON::Validator from the json-schema gem.
   #
   # All attributes will be required and additionalProperties will be set to false.
+  #
+  # See https://docs.raif.ai/learn_more/json_schemas for more information about defining JSON schemas.
   tool_arguments_schema do
     # string :title, description: "The title of the operation", minLength: 3
     #

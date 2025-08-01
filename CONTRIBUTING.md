@@ -1,13 +1,5 @@
 # Contributing to Raif
 
-## Branch Workflow
-
-**Important:** All pull requests should be made against the `dev` branch, not `main`. 
-
-- `main` - Production-ready releases
-- `dev` - Development branch where all PRs are merged
-- Feature branches should be created from and merged into `dev`
-
 ## Development Environment Setup
 
 ### Setup Steps
@@ -20,7 +12,7 @@ git clone https://github.com/YOUR_USERNAME/raif.git
 cd raif
 git remote add upstream https://github.com/CultivateLabs/raif.git
 git fetch upstream
-git checkout dev
+git checkout main
 ```
 
 2. **Install Ruby dependencies:**

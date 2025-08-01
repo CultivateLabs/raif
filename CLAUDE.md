@@ -74,11 +74,10 @@ Raif.llm(:anthropic_claude_3_5_sonnet)  # Returns configured instance
 
 ## Important Development Practices
 
-1. **Branch Workflow**: All PRs must go to `dev` branch, NOT `main`
-2. **API Keys**: Set via environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
-3. **Migrations**: Run `rails raif:install:migrations` to copy engine migrations
-4. **View Customization**: Use `rails g raif:views` to override engine views
-5. **Factory Access**: Host apps automatically get Raif's factories via FactoryBot
+1. **API Keys**: Set via environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+2. **Migrations**: Run `rails raif:install:migrations` to copy engine migrations
+3. **View Customization**: Use `rails g raif:views` to override engine views
+4. **Factory Access**: Host apps automatically get Raif's factories via FactoryBot
 
 ## Generators
 
