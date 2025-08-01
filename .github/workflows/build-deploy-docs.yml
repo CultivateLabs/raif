@@ -40,7 +40,7 @@ jobs:
       - name: Build YARD Documentation
         run: |
           bundle exec rake yard
-          mkdir -p docs/yard
+          mkdir -p docs/api
           cp -r doc/* docs/api/
 
       # Install gems in docs/ (for Jekyll)
