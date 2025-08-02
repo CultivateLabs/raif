@@ -77,3 +77,7 @@ Stats & estimated cost tracking:
 
 Aggregated task stats & estimated cost tracking:
 ![Aggregated Task Stats](../assets/images/screenshots/admin-stats-tasks.png){:class="img-border"}
+
+---
+
+**Read next:** [Streaming Responses](streaming)

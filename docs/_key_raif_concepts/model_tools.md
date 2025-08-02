@@ -148,3 +148,7 @@ model_completion = llm.chat(
   available_model_tools: ["Raif::ModelTools::ProviderManaged::WebSearch"]
 )
 ```
+
+---
+
+**Read next:** [Web Admin](../learn_more/web_admin)

@@ -38,3 +38,7 @@ Raif.configure do |config|
   config.streaming_update_chunk_size_threshold = 50 # default is 25
 end
 ```
+
+---
+
+**Read next:** [Images/Files/PDFs](images_files_pdfs)

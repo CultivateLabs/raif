@@ -9,7 +9,7 @@ description: "Direct LLM interaction using Raif"
 
 When using Raif, you'll most often want to utilize the higher level abstractions like [Tasks](../key_raif_concepts/tasks), [Conversations](../key_raif_concepts/conversations), and [Agents](../key_raif_concepts/agents). But when needed, you can utilize the lower level `Raif::Llm` to chat with the model directly.
 
-In Raif, **all** calls to the LLM generate a `Raif::ModelCompletion` record, providing you a log of all interactions with the LLM which can be viewed in the [web admin](../learn_more/web_admin).
+In Raif, **all** calls to the LLM generate a `Raif::ModelCompletion` record. This provides you with a log of all interactions with the LLM, which can be viewed in the [web admin](../learn_more/web_admin).
 
 Call `Raif::Llm#chat` with either a `message` string or `messages` array:
 ```ruby
@@ -43,4 +43,8 @@ puts model_completion.raw_response
 puts model_completion.parsed_response # will strip backticks, parse the JSON, and give you a Ruby hash
 # => {"joke" => "Why don't skeletons fight each other? They don't have the guts."}
 ```
+
+---
+
+**Read next:** [Tasks](../key_raif_concepts/tasks)
 

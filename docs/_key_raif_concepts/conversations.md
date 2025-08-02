@@ -183,3 +183,7 @@ Raif.configure do |config|
   config.streaming_chunk_size = 100
 end
 ```
+
+---
+
+**Read next:** [Agents](agents)

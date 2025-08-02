@@ -54,3 +54,7 @@ Or to generate embeddings for a piece of text with a specific model:
 model = Raif.embedding_model(:open_ai_text_embedding_3_small)
 embedding = model.generate_embedding!("Your text here")
 ```
+
+---
+
+**Read next:** [Customization](customization)

@@ -102,3 +102,7 @@ This schema would expect the LLM to return a JSON object like:
   "exclude_domains": ["example.com", "example.org"]
 }
 ```
+
+---
+
+**Read next:** [Embedding Models](embedding_models)

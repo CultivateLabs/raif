@@ -65,3 +65,7 @@ end
 ```
 
 Raif also provides FactoryBot factories for its models. You can use them to create Raif models for testing. If you're using `factory_bot_rails`, they will be added automatically to `config.factory_bot.definition_file_paths`. The available factories can be found [here](https://github.com/CultivateLabs/raif/tree/main/spec/factories/shared).
+
+---
+
+**Read next:** [Demo App](demo_app)

@@ -74,3 +74,7 @@ task = Raif::Tasks::ImageDescriptionGeneration.run(
   images: [image]
 )
 ```
+
+---
+
+**Read next:** [JSON Schemas](json_schemas)

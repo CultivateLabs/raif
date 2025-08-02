@@ -162,3 +162,7 @@ Currently included OpenRouter models:
 - `open_router_llama_3_3_70b_instruct`
 - `open_router_llama_4_maverick`
 - `open_router_llama_4_scout`
+
+---
+
+**Read next:** [Chatting with the LLM](chatting_with_the_llm)

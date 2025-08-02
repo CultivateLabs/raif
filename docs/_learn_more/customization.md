@@ -90,3 +90,7 @@ Raif.configure do |config|
   config.default_llm_model_key = "open_router_gemini_flash_1_5_8b"
 end
 ```
+
+---
+
+**Read next:** [Testing](testing)
