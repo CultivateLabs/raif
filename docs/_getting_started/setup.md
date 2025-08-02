@@ -37,7 +37,7 @@ rails db:migrate
 
 # Configuring LLM Providers & API Keys
 
-You **must configure at least one API key** for an LLM provider ([OpenAI](#openai), [Anthropic Claude](#anthropic-claude), [AWS Bedrock](#aws-bedrock-claude), [OpenRouter](#openrouter)). 
+You **must configure at least one API key** for an LLM provider ([OpenAI](#openai), [Anthropic](#anthropic), [AWS Bedrock](#aws-bedrock), [OpenRouter](#openrouter)). 
 
 By default, the initializer will load them from environment variables (e.g. `ENV["OPENAI_API_KEY"]`, `ENV["ANTHROPIC_API_KEY"]`, `ENV["OPEN_ROUTER_API_KEY"]`). Alternatively, you can set them directly in `config/initializers/raif.rb`.
 
@@ -72,7 +72,7 @@ Currently supported OpenAI Responses API models:
 
 ### OpenAI Completions API
 
-This adapter utilizes OpenAI's legacy [Completions API](https://platform.openai.com/docs/api-reference/chat). This API does not support [provider-managed tools](../key_raif_concepts/model_tools#provider-managed-tools) like web search, code execution, and image generation. To utilize those, use the newer [Responses API](#openai-responses-api) instead.
+This adapter utilizes OpenAI's legacy [Completions API](https://platform.openai.com/docs/api-reference/chat){:target="_blank"}. This API does not support [provider-managed tools](../key_raif_concepts/model_tools#provider-managed-tools) like web search, code execution, and image generation. To utilize those, use the newer [Responses API](#openai-responses-api) instead.
 
 ```ruby
 Raif.configure do |config|
@@ -118,7 +118,7 @@ Currently supported Anthropic models:
 
 ## AWS Bedrock
 
-Note: Raif utilizes the [AWS Bedrock gem](https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/BedrockRuntime/Client.html) and AWS credentials should be configured via the AWS SDK (environment variables, IAM role, etc.)
+Note: Raif utilizes the [AWS Bedrock gem](https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/BedrockRuntime/Client.html){:target="_blank"} and AWS credentials should be configured via the AWS SDK (environment variables, IAM role, etc.)
 
 ```ruby
 Raif.configure do |config|
