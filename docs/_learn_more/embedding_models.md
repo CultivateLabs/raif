@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Embedding Models
-nav_order: 5
+nav_order: 6
 description: "Working with vector embeddings in Raif"
 ---
 

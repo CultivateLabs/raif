@@ -16,7 +16,15 @@ For example, say you have a `Document` model in your app and want to have a summ
 rails generate raif:task DocumentSummarization --response-format html
 ```
 
-This will create a new task in `app/models/raif/tasks/document_summarization.rb`:
+This will create a new task in `app/models/raif/tasks/document_summarization.rb`.
+
+If you don't specify a response format, it will default to `:text`, which expects a plaintext response from the LLM. If you want the LLM to return a formatted response, you can specify the response format as `:html` or `:json`. Make sure to include instructions in your prompt to the LLM to return the response in the specified format.
+
+If you specify a response format, Raif will automatically parse the response for you, which is described in more detail in the [Response Formats](../learn_more/response_formats) docs. You can utilize the `parsed_response` method to get the parsed response or `raw_response` to get the raw, unprocessed response.
+
+# HTML Response Format Tasks
+
+Below is an example task that uses the `:html` response format:
 
 ```ruby
 class Raif::Tasks::DocumentSummarization < Raif::ApplicationTask
@@ -126,24 +134,6 @@ class MyTask < Raif::Task
 end
 ```
 
-# Task Language Preference
-
-Tasks support the ability to specify a language preference for the LLM response. When enabled, Raif will add a line to the system prompt that looks something like:
-```
-You're collaborating with teammate who speaks Spanish. Please respond in Spanish.
-```
-
-You can trigger this behavior in a couple ways:
-
-1. If the `creator` you pass to the `run` method responds to `preferred_language_key`, Raif will use that value.
-
-2. Pass `requested_language_key` as an argument to the `run` method:
-```
-task = Raif::Tasks::DocumentSummarization.run(document: document, creator: user, requested_language_key: "es")
-```
-
-The current list of valid language keys can be found [here](https://github.com/CultivateLabs/raif/blob/main/lib/raif/languages.rb).
-
 # Overriding the LLM Model
 
 By default, `Raif::Task`'s will use the model specified in `Raif.config.default_llm_model_key`. You can override in various places. 
@@ -157,7 +147,7 @@ task = Raif::Tasks::DocumentSummarization.run(
 )
 ```
 
-Overriding in the task definition:
+Or by overriding `default_llm_model_key`in the task definition:
 ```ruby
 class MyTask < Raif::Task
   def default_llm_model_key
@@ -169,6 +159,29 @@ class MyTask < Raif::Task
   end
 end
 ```
+
+
+# Task Language Preference
+
+Tasks support the ability to specify a language preference for the LLM response. When enabled, Raif will add a line to the system prompt that looks something like:
+```
+You're collaborating with teammate who speaks Spanish. Please respond in Spanish.
+```
+
+You can trigger this behavior in a couple ways:
+
+1. If the `creator` you pass to the `run` method responds to `preferred_language_key`, Raif will use that value.
+
+2. Pass `requested_language_key` as an argument to the `run` method:
+```
+task = Raif::Tasks::DocumentSummarization.run(
+  document: document,
+  creator: user,
+  requested_language_key: "es"
+)
+```
+
+The current list of valid language keys can be found [here](https://github.com/CultivateLabs/raif/blob/main/lib/raif/languages.rb).
 
 ---
 

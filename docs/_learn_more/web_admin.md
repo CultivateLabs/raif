@@ -80,4 +80,4 @@ Aggregated task stats & estimated cost tracking:
 
 ---
 
-**Read next:** [Streaming Responses](streaming)
+**Read next:** [Response Formats](response_formats)

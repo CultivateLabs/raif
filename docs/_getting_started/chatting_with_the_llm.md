@@ -19,7 +19,7 @@ puts model_completion.raw_response
 # => "Hello! How can I assist you today?"
 ```
 
-The `Raif::ModelCompletion` class will handle parsing the response for you, should you ask for a different response format (which can be `:html`, `:text`, or `:json`). 
+The `Raif::ModelCompletion` class will handle [parsing the response](../learn_more/response_formats) for you, should you ask for a different response format (which can be `:html`, `:text`, or `:json`). 
 
 You can also provide a `system_prompt` to the `chat` method:
 ```ruby

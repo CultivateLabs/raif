@@ -1,7 +1,7 @@
 ---
 layout: default
 title: JSON Schemas
-nav_order: 4
+nav_order: 5
 description: "Defining JSON Schemas in Raif"
 ---
 

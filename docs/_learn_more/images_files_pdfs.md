@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Images/Files/PDFs
-nav_order: 3
+nav_order: 4
 description: "Support for including images and PDF in prompts"
 ---
 

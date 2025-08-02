@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Streaming Responses
-nav_order: 2
+nav_order: 3
 description: "Streaming responses from the LLM"
 ---
 
