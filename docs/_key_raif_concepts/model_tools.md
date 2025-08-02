@@ -9,25 +9,25 @@ description: "Custom tools that agents and conversations can invoke"
 
 # Model Tools
 
-Raif supports the creation of custom tools that the LLM can invoke in your [agents](agents) and [conversations](conversations#tool-calling).
+Raif supports the creation of custom tools that the LLM can invoke in your [tasks](tasks), [conversations](conversations#tool-calling), and [agents](agents).
 
 Two example tools are provided:
-- [`Raif::ModelTools::WikipediaSearch`](https://github.com/CultivateLabs/raif/blob/main/app/models/raif/model_tools/wikipedia_search.rb)
-- [`Raif::ModelTools::FetchUrl`](https://github.com/CultivateLabs/raif/blob/main/app/models/raif/model_tools/fetch_url.rb)
+- `Raif::ModelTools::WikipediaSearch` - [View Source](https://github.com/CultivateLabs/raif/blob/main/app/models/raif/model_tools/wikipedia_search.rb)
+- `Raif::ModelTools::FetchUrl` - [View Source](https://github.com/CultivateLabs/raif/blob/main/app/models/raif/model_tools/fetch_url.rb)
 
 To create a new model tool, run the generator:
 ```bash
 rails generate raif:model_tool GoogleSearch
 ```
 
-This will create a new model tool in `app/models/raif/model_tools/google_search.rb`:
+This will create a new model tool in `app/models/raif/model_tools/google_search.rb` and a partial in `app/views/raif/model_tool_invocations/_google_search.html.erb` to display the tool invocation in the conversation interface.
 
 Below is an example of a model tool that executes a Google search and returns the results:
 
 ```ruby
 class Raif::ModelTools::GoogleSearch < Raif::ModelTool
   tool_description do
-    "Description of your tool that will be provided to the LLM so it knows when to invoke it"
+    "Searches Google for the given query and returns the results as JSON."
   end
 
   tool_arguments_schema do

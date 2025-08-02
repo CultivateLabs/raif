@@ -7,7 +7,9 @@ description: "Streaming responses from the LLM"
 
 # Streaming Responses
 
-You can enable streaming for any chat call by passing a block to the `chat` method. When streaming is enabled, the block will be called with partial responses as they're received from the LLM. Streaming is enabled by default in [conversations](../key_raif_concepts/conversations).
+You can enable streaming for any chat call by passing a block to the `chat` method. When streaming is enabled, the block will be called with partial responses as they're received from the LLM. 
+
+Streaming is enabled by default in [conversations](../key_raif_concepts/conversations).
 
 ```ruby
 llm = Raif.llm(:open_ai_gpt_4o)

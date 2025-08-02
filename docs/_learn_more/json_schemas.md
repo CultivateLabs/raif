@@ -31,8 +31,6 @@ When defining a JSON schema, you can use the following methods:
 
 ## Task JSON Schema
 
-Below is an example of a task JSON schema that defines a response for a task that returns a JSON object with a `name` and `age` attribute:
-
 ```ruby
 class MyPersonGenerationTask < Raif::Task
   json_response_schema do
@@ -40,6 +38,7 @@ class MyPersonGenerationTask < Raif::Task
     integer :age, description: "The age of the person"
     boolean :is_student, description: "Whether the person is a student"
 
+    # An array of pet objects
     array :pets do
       object do
         string :name, description: "The name of the pet"
@@ -47,6 +46,7 @@ class MyPersonGenerationTask < Raif::Task
       end
     end
 
+    # An array of strings
     array :favorite_colors do
       items type: "string"
     end
@@ -76,8 +76,6 @@ This schema would expect the LLM to return a JSON object like:
 ```
 
 ## Tool Arguments Schema
-
-Below is an example of a tool arguments schema that defines the arguments for a tool that generates a person:
 
 ```ruby
 class WebSearchTool < Raif::ModelTool
