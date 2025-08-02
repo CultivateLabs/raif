@@ -127,6 +127,12 @@ $code-font-stack: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Cod
   }
 }
 
+@media (min-width: 50rem) {
+  .side-bar + .main {
+    margin-left: 17rem;
+  }
+}
+
 .main-content-wrap {
   @media (max-width: 49.99rem) {
     padding-left: 0;
@@ -213,6 +219,23 @@ $code-font-stack: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Cod
       height: 100%;
       fill: $search-result-preview-color;
     }
+  }
+}
+
+// Tablet-specific search adjustments
+@media (min-width: 50rem) and (max-width: 66.5rem) {
+  .search {
+    max-width: 50%;
+    margin-right: 1rem;
+  }
+  
+  // Ensure proper header layout on tablets
+  .main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 }
 
@@ -500,6 +523,47 @@ div.language-yaml::after, div.language-yml::after { content: "YAML"; }
 // RESPONSIVE DESIGN
 // =============================================================================
 
+@media (max-width: 49.99rem) {
+  // Add padding to main content on mobile
+  .main-content-wrap {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  // Ensure the main content itself has proper spacing
+  .main-content {
+    padding: 1rem;
+  }
+  
+  // Add padding to page content
+  .page-content {
+    padding: 0 1rem;
+  }
+  
+  // Adjust header padding on mobile
+  .main-header {
+    padding: 0 1rem;
+  }
+  
+  // Ensure search has proper spacing
+  .search {
+    padding: 0 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  // Navigation padding
+  .site-nav {
+    padding: 1rem;
+  }
+  
+  // Page header adjustments
+  .main-content .page-header {
+    padding: 1.5rem;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
 @media (max-width: 767.98px) {
   .callout, 
   .code-example, 
@@ -507,5 +571,38 @@ div.language-yaml::after, div.language-yml::after { content: "YAML"; }
     margin-left: -1rem;
     margin-right: -1rem;
     border-radius: 0;
+  }
+  
+  // Smaller padding on very small screens
+  .main-content-wrap {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  
+  // Adjust code block padding for smaller screens
+  div.highlighter-rouge pre,
+  .highlight pre {
+    padding: 1rem;
+  }
+  
+  // Smaller padding for cards on mobile
+  .callout,
+  .code-example {
+    padding: 1rem;
+  }
+  
+  // Table wrapper adjustments
+  .table-wrapper {
+    font-size: 0.875rem;
+    
+    table {
+      thead th {
+        padding: 0.75rem;
+      }
+      
+      tbody td {
+        padding: 0.75rem;
+      }
+    }
   }
 } 
