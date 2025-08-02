@@ -4,7 +4,7 @@ If you don't want the tool invocation to be displayed to the user, you can overr
 %>
 
 <div class="raif-model-tool-invocation">
-  <h5><%= model_tool_invocation.tool_type.demodulize.titleize %> Result</h5>
-  <pre><%= JSON.pretty_generate(model_tool_invocation.result || {}) %></pre>
-  <p>Edit this file in <code><%= __FILE__ %></code> to customize the display of the tool invocation.</p>
+  <h5><%%= <%= file_name %>.tool_type.demodulize.titleize %> Result</h5>
+  <pre><%%= JSON.pretty_generate(<%= file_name %>.result || {}) %></pre>
+  <p>Edit this file in <code><%%= __FILE__ %></code> to customize the display of the tool invocation.</p>
 </div>
