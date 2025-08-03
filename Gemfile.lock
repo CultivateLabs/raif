@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    raif (1.2.2.pre)
+    raif (1.2.2)
       aws-sdk-bedrockruntime
       event_stream_parser (>= 1.0)
       faraday (>= 2.0)
