@@ -3,7 +3,7 @@ name: Deploy Jekyll docs site to Pages
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: ["main", "feature/jekyll-docs"]
+    branches: ["main"]
     paths: ["docs/**"]
 
   # Allows you to run this workflow manually from the Actions tab
