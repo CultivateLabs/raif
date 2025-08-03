@@ -106,9 +106,10 @@ private
   end
 
   def extract_json_response(resp)
-    return extract_text_response(resp) if resp.dig("choices", 0, "message", "tool_calls").blank?
+    tool_calls = resp.dig("choices", 0, "message", "tool_calls")
+    return extract_text_response(resp) if tool_calls.blank?
 
-    tool_response = resp.dig("choices", 0, "message", "tool_calls").find do |tool_call|
+    tool_response = tool_calls.find do |tool_call|
       tool_call["function"]["name"] == "json_response"
     end
 
@@ -120,9 +121,10 @@ private
   end
 
   def extract_response_tool_calls(resp)
-    return if resp.dig("choices", 0, "message", "tool_calls").blank?
+    tool_calls = resp.dig("choices", 0, "message", "tool_calls")
+    return if tool_calls.blank?
 
-    resp.dig("choices", 0, "message", "tool_calls").map do |tool_call|
+    tool_calls.map do |tool_call|
       {
         "name" => tool_call["function"]["name"],
         "arguments" => JSON.parse(tool_call["function"]["arguments"])
