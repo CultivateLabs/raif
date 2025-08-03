@@ -1,0 +1,45 @@
+//
+// Custom color scheme for Raif documentation - matches admin interface
+//
+
+// Brand colors - matching admin interface
+$raif-primary: #3b82f6;     // Blue (matches admin primary)
+$raif-secondary: #1e3a8a;   // Dark blue (matches admin secondary)
+$raif-accent: #0ea5e9;      // Light blue (matches admin accent)
+$raif-success: #10b981;     // Emerald
+$raif-warning: #f59e0b;     // Amber (matches admin warning)
+$raif-danger: #ef4444;      // Red (matches admin danger)
+
+// Background colors - matching admin styling
+$body-background-color: #ffffff;
+$sidebar-color: #f8fafc;    // Light gray-blue
+$search-background-color: #f0f9ff;  // Very light blue
+$table-background-color: #ffffff;
+$code-background-color: #f0f9ff;    // Light blue background for code
+$feedback-color: darken($sidebar-color, 3%);
+
+// Text colors - matching admin interface
+$body-text-color: #525f7f;          // Matches admin text color
+$body-heading-color: $raif-secondary; // Dark blue for headings
+$search-result-preview-color: #8898aa; // Matches admin muted text
+$nav-child-link-color: #8898aa;
+$link-color: $raif-primary;
+$btn-primary-color: $raif-primary;
+
+// Border colors - matching admin styling
+$border-color: #e2e8f0;
+$table-border-color: #e2e8f0;
+
+// Code highlighting
+$code-linenumber-color: #94a3b8;
+
+// Button styles
+$base-button-color: #f8fafc;
+
+// Navigation - use rem units to match theme
+$nav-width: 16.5rem;
+$nav-list-item-height: 2rem;
+$nav-list-item-height-sm: 1.5rem;
+
+// Search
+$search-results-border-color: $border-color; 

@@ -1,0 +1,608 @@
+//
+// Custom styles for Raif documentation - matching admin interface
+//
+
+// =============================================================================
+// VARIABLES
+// =============================================================================
+
+$shadow-light: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+$shadow-hover: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+$radius: 8px;
+$transition: all 0.2s ease;
+$code-font-stack: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+
+// =============================================================================
+// MIXINS
+// =============================================================================
+
+@mixin card-style {
+  background: white;
+  border: 1px solid $border-color;
+  border-radius: $radius;
+  box-shadow: $shadow-light;
+  transition: $transition;
+  
+  &:hover {
+    box-shadow: $shadow-hover;
+    transform: translateY(-1px);
+  }
+}
+
+@mixin gradient-button($color) {
+  background: linear-gradient(135deg, $color, darken($color, 5%));
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: $radius;
+  box-shadow: $shadow-light;
+  transition: $transition;
+  
+  &:hover {
+    background: linear-gradient(135deg, darken($color, 5%), darken($color, 10%));
+    box-shadow: $shadow-hover;
+    transform: translateY(-1px);
+    color: white;
+  }
+}
+
+@mixin label-style($color) {
+  background: linear-gradient(135deg, $color, darken($color, 10%));
+  color: white;
+  padding: 0.4em 0.8em;
+  font-weight: 600;
+  border-radius: 50rem;
+  box-shadow: 0 2px 4px rgba($color, 0.3);
+}
+
+@mixin callout-variant($color) {
+  border-color: $color;
+  border-left: 4px solid $color;
+  
+  .callout-title {
+    color: $color;
+  }
+}
+
+@mixin code-block-base {
+  @include card-style;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  position: relative;
+  
+  &::before {
+    content: "";
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, $raif-primary, $raif-accent);
+  }
+  
+  pre {
+    padding: 1.5rem;
+    margin: 0;
+    background-color: #f8fafc;
+    color: $raif-secondary;
+    font-family: $code-font-stack;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    border-radius: 0;
+    
+    code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+      color: inherit;
+    }
+  }
+}
+
+// =============================================================================
+// LAYOUT & STRUCTURE
+// =============================================================================
+
+.main-header{
+  border-bottom: none !important;
+  margin-top: 10px;
+}
+
+// Sidebar alignment
+.side-bar {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+  
+  @media (min-width: 50rem) {
+    position: fixed;
+    left: 0 !important;
+    top: 0;
+    width: 16.5rem;
+  }
+}
+
+.main {
+  @media (min-width: 50rem) {
+    margin-left: 16.5rem;
+  }
+}
+
+@media (min-width: 50rem) {
+  .side-bar + .main {
+    margin-left: 17rem;
+  }
+}
+
+.main-content-wrap {
+  @media (max-width: 49.99rem) {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
+  .main-content .page {
+    max-width: none;
+  }
+}
+
+// =============================================================================
+// HEADER & NAVIGATION
+// =============================================================================
+
+.site-header {
+  background: linear-gradient(135deg, $raif-secondary, darken($raif-secondary, 10%)) !important;
+  border-bottom: none;
+  box-shadow: $shadow-light;
+
+  .site-title, .site-nav .page-link {
+    color: white !important;
+    
+    &:hover {
+      color: rgba(255, 255, 255, 0.8) !important;
+    }
+  }
+}
+
+.site-nav {
+  padding-top: 1rem;
+}
+
+.navigation-list-item {
+  margin: 0.25rem 0;
+  
+  .navigation-list-link {
+    border-radius: $radius;
+    padding: 0.75rem 1rem;
+    color: $body-text-color;
+    transition: $transition;
+    
+    &:hover {
+      background-color: rgba($raif-primary, 0.1);
+      color: $raif-primary;
+      transform: translateX(2px);
+    }
+  }
+  
+  &.active .navigation-list-link {
+    background-color: rgba($raif-primary, 0.1);
+    color: $raif-primary;
+    font-weight: 600;
+    border-left: 3px solid $raif-primary;
+  }
+}
+
+// =============================================================================
+// SEARCH
+// =============================================================================
+
+.search {
+  position: relative;
+  
+  .search-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1rem;
+    height: 1rem;
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 1;
+    
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: $search-result-preview-color;
+    }
+  }
+}
+
+// Tablet-specific search adjustments
+@media (min-width: 50rem) and (max-width: 66.5rem) {
+  .search {
+    max-width: 50%;
+    margin-right: 1rem;
+  }
+  
+  // Ensure proper header layout on tablets
+  .main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+}
+
+.search-input {
+  border: 2px solid $border-color;
+  border-radius: $radius;
+  padding: 0.75rem 1rem 0.75rem 2.5rem !important;
+  transition: $transition;
+  // box-shadow: $shadow-light;
+  width: 100%;
+  background-color: white;
+  
+  &:focus {
+    border-color: $raif-primary;
+    box-shadow: 0 0 0 3px rgba($raif-primary, 0.1), $shadow-light;
+    outline: none;
+  }
+  
+  &::placeholder {
+    color: $search-result-preview-color;
+  }
+}
+
+// =============================================================================
+// IMAGES
+// =============================================================================
+.img-border {
+  border: 1px solid $border-color;
+  border-radius: $radius;
+  box-shadow: $shadow-light;
+}
+
+// =============================================================================
+// CODE BLOCKS & SYNTAX HIGHLIGHTING
+// =============================================================================
+
+// Only apply code block styling to div.highlighter-rouge (block elements)
+div.highlighter-rouge {
+  @include code-block-base;
+  
+  .highlight {
+    margin: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    
+    &::before {
+      display: none;
+    }
+  }
+}
+
+// Fallback for standalone .highlight elements
+.highlight:not(.highlighter-rouge .highlight) {
+  @include code-block-base;
+}
+
+// Inline code
+code {
+  background-color: rgba($raif-primary, 0.1);
+  color: $raif-secondary;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: $code-font-stack;
+  font-size: 0.85em;
+  font-weight: 500;
+  white-space: nowrap; // Prevent inline code from breaking across lines
+  
+  // Reset code block styling for inline code with highlighter-rouge class
+  &.highlighter-rouge {
+    background-color: rgba($raif-primary, 0.1) !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0.2em 0.4em !important;
+    display: inline !important;
+    position: static !important;
+    
+    &::before {
+      display: none !important;
+    }
+  }
+  
+  // Reset within code blocks
+  .highlight &,
+  div.highlighter-rouge & {
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    white-space: pre; // Allow normal wrapping in code blocks
+  }
+}
+
+// Language labels - only for block code
+div.highlighter-rouge::after {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: rgba($raif-primary, 0.1);
+  color: $raif-primary;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  content: "";
+}
+
+// Language-specific labels - only for block code
+div.language-ruby::after { content: "Ruby"; }
+div.language-bash::after { content: "Bash"; }
+div.language-javascript::after { content: "JavaScript"; }
+div.language-css::after { content: "CSS"; }
+div.language-html::after { content: "HTML"; }
+div.language-json::after { content: "JSON"; }
+div.language-yaml::after, div.language-yml::after { content: "YAML"; }
+
+// Syntax highlighting
+.highlight {
+  .c, .c1, .cm { color: #6b7280; font-style: italic; }
+  .k, .kd, .kn, .kp, .kr, .kt { color: $raif-primary; font-weight: 600; }
+  .s, .s1, .s2, .sb, .sc, .sd, .se, .sh, .si, .sx { color: #059669; }
+  .m, .mf, .mh, .mi, .mo { color: #dc2626; }
+  .n, .na, .nb, .nc, .nd, .ne, .nf, .ni, .nl, .nn, .no, .nt, .nv { color: $raif-secondary; }
+  .o, .ow { color: $raif-accent; }
+  .p { color: $raif-secondary; }
+  .gd { background-color: #fee2e2; color: #dc2626; }
+  .gi { background-color: #dcfce7; color: #059669; }
+}
+
+// =============================================================================
+// BUTTONS & INTERACTIVE ELEMENTS
+// =============================================================================
+
+.btn-raif {
+  @include gradient-button($raif-primary);
+}
+
+.btn-outline-raif {
+  background-color: white;
+  border: 2px solid $raif-primary;
+  color: $raif-primary;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: $radius;
+  box-shadow: $shadow-light;
+  transition: $transition;
+  
+  &:hover {
+    background-color: $raif-primary;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: $shadow-hover;
+  }
+}
+
+// =============================================================================
+// LABELS & BADGES
+// =============================================================================
+
+.label-raif { @include label-style($raif-primary); }
+.label-feature { @include label-style($raif-success); }
+.label-warning { @include label-style($raif-warning); }
+
+// =============================================================================
+// CONTENT COMPONENTS
+// =============================================================================
+
+// Page headers
+.main-content .page-header {
+  @include card-style;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border-left: 4px solid $raif-primary;
+
+  h1 {
+    color: $raif-secondary;
+    margin-bottom: 0.5rem;
+  }
+
+  .fs-6 {
+    color: $search-result-preview-color;
+  }
+}
+
+// Tables
+.table-wrapper {
+  @include card-style;
+  overflow: hidden;
+  margin: 1.5rem 0;
+
+  table {
+    margin-bottom: 0;
+    
+    thead {
+      background: linear-gradient(135deg, rgba($raif-primary, 0.1), rgba($raif-accent, 0.1));
+      
+      th {
+        color: $raif-secondary;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        padding: 1rem;
+        border: none;
+      }
+    }
+
+    tbody tr {
+      transition: $transition;
+      
+      &:hover {
+        background-color: rgba($raif-primary, 0.05);
+      }
+      
+      td {
+        padding: 1rem;
+        border-color: rgba($border-color, 0.5);
+      }
+    }
+  }
+}
+
+// Callouts
+.callout {
+  @include card-style;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  
+  &.callout-info { @include callout-variant($raif-accent); }
+  &.callout-success { @include callout-variant($raif-success); }
+  &.callout-warning { @include callout-variant($raif-warning); }
+  &.callout-danger { @include callout-variant($raif-danger); }
+}
+
+.callout-title {
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  font-size: 1.1em;
+}
+
+// Code examples
+.code-example {
+  @include card-style;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  
+  &::before {
+    content: "Example";
+    display: block;
+    color: $search-result-preview-color;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid $border-color;
+  }
+}
+
+// =============================================================================
+// FOOTER
+// =============================================================================
+
+.site-footer {
+  background: $sidebar-color;
+  border-top: 1px solid $border-color;
+  padding: 1rem;
+  margin-top: 3rem;
+  
+  .footer-link {
+    color: $raif-primary;
+    font-weight: 500;
+    
+    &:hover {
+      color: $raif-secondary;
+    }
+  }
+}
+
+// =============================================================================
+// RESPONSIVE DESIGN
+// =============================================================================
+
+@media (max-width: 49.99rem) {
+  // Add padding to main content on mobile
+  .main-content-wrap {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  // Ensure the main content itself has proper spacing
+  .main-content {
+    padding: 1rem;
+  }
+  
+  // Add padding to page content
+  .page-content {
+    padding: 0 1rem;
+  }
+  
+  // Adjust header padding on mobile
+  .main-header {
+    padding: 0 1rem;
+  }
+  
+  // Ensure search has proper spacing
+  .search {
+    padding: 0 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  // Navigation padding
+  .site-nav {
+    padding: 1rem;
+  }
+  
+  // Page header adjustments
+  .main-content .page-header {
+    padding: 1.5rem;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .callout, 
+  .code-example, 
+  .table-wrapper {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    border-radius: 0;
+  }
+  
+  // Smaller padding on very small screens
+  .main-content-wrap {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  
+  // Adjust code block padding for smaller screens
+  div.highlighter-rouge pre,
+  .highlight pre {
+    padding: 1rem;
+  }
+  
+  // Smaller padding for cards on mobile
+  .callout,
+  .code-example {
+    padding: 1rem;
+  }
+  
+  // Table wrapper adjustments
+  .table-wrapper {
+    font-size: 0.875rem;
+    
+    table {
+      thead th {
+        padding: 0.75rem;
+      }
+      
+      tbody td {
+        padding: 0.75rem;
+      }
+    }
+  }
+} 

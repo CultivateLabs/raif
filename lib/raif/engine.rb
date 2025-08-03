@@ -120,7 +120,8 @@ module Raif
         Rails.application.config.assets.precompile += [
           "raif.js",
           "raif.css",
-          "raif_admin.css"
+          "raif_admin.css",
+          "raif-logo-white.svg"
         ]
       end
     end

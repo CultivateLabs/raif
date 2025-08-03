@@ -69,8 +69,8 @@ module Raif
       @open_ai_api_key = ENV["OPENAI_API_KEY"]
       @open_ai_embedding_models_enabled = ENV["OPENAI_API_KEY"].present?
       @open_ai_models_enabled = ENV["OPENAI_API_KEY"].present?
-      @open_router_api_key = ENV["OPENROUTER_API_KEY"]
-      @open_router_models_enabled = ENV["OPENROUTER_API_KEY"].present?
+      @open_router_api_key = ENV["OPEN_ROUTER_API_KEY"].presence || ENV["OPENROUTER_API_KEY"]
+      @open_router_models_enabled = @open_router_api_key.present?
       @open_router_app_name = nil
       @open_router_site_url = nil
       @streaming_update_chunk_size_threshold = 25
@@ -82,7 +82,7 @@ module Raif
         puts <<~EOS
 
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          No LLMs are enabled in Raif. Make sure you have an API key configured for at least one LLM provider. You can do this by setting an API key in your environment variables or in config/initializers/raif.rb (e.g. ENV["OPENAI_API_KEY"], ENV["ANTHROPIC_API_KEY"], ENV["OPENROUTER_API_KEY"]).
+          No LLMs are enabled in Raif. Make sure you have an API key configured for at least one LLM provider. You can do this by setting an API key in your environment variables or in config/initializers/raif.rb (e.g. ENV["OPENAI_API_KEY"], ENV["ANTHROPIC_API_KEY"], ENV["OPEN_ROUTER_API_KEY"]).
 
           See the README for more information: https://github.com/CultivateLabs/raif#setup
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -133,7 +133,7 @@ module Raif
 
       if open_router_models_enabled && open_router_api_key.blank?
         raise Raif::Errors::InvalidConfigError,
-          "Raif.config.open_router_api_key is required when Raif.config.open_router_models_enabled is true. Set it via Raif.config.open_router_api_key or ENV['OPENROUTER_API_KEY']" # rubocop:disable Layout/LineLength
+          "Raif.config.open_router_api_key is required when Raif.config.open_router_models_enabled is true. Set it via Raif.config.open_router_api_key or ENV['OPEN_ROUTER_API_KEY']" # rubocop:disable Layout/LineLength
       end
     end
 
