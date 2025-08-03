@@ -1,3 +1,8 @@
+## v1.2.2
+
+- When requesting JSON from OpenRouter models & a `json_response_schema` is provided, give the model a JSON response tool that it can call. [#177](https://github.com/CultivateLabs/raif/pull/177)
+- The `Raif::ModelTool` generator now creates a partial in `app/views/raif/model_tool_invocations/_<tool_name>.html.erb` to display the tool invocation in the conversation interface. [#189](https://github.com/CultivateLabs/raif/pull/189)
+
 ## v1.2.1
 
 - Added support for Meta's Llama 4 models. [#170](https://github.com/CultivateLabs/raif/pull/170)

@@ -28,11 +28,11 @@ Raif.configure do |config|
   # Whether Titan embedding models are enabled. Defaults to false
   # config.bedrock_embedding_models_enabled = false
 
-  # Your OpenRouter API key. Defaults to ENV["OPENROUTER_API_KEY"]
-  # config.open_router_api_key = ENV["OPENROUTER_API_KEY"]
+  # Your OpenRouter API key. Defaults to ENV["OPEN_ROUTER_API_KEY"]
+  # config.open_router_api_key = ENV["OPEN_ROUTER_API_KEY"]
 
   # Whether OpenRouter models are enabled.
-  # config.open_router_models_enabled = ENV["OPENROUTER_API_KEY"].present?
+  # config.open_router_models_enabled = ENV["OPEN_ROUTER_API_KEY"].present?
 
   # The app name to include in OpenRouter API requests headers. Optional.
   # config.open_router_app_name = "My App"
