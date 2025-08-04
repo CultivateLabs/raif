@@ -9,6 +9,7 @@ module Raif
     include Raif::Concerns::LlmResponseParsing
     include Raif::Concerns::LlmTemperature
     include Raif::Concerns::JsonSchemaDefinition
+    include Raif::Concerns::TaskRunArgs
 
     llm_temperature 0.7
 
@@ -56,7 +57,16 @@ module Raif
     # @param args [Hash] Additional arguments to pass to the instance of the task that is created.
     # @return [Raif::Task, nil] The task instance that was created and run.
     def self.run(creator:, available_model_tools: [], llm_model_key: nil, images: [], files: [], **args)
-      task = new(creator:, llm_model_key:, available_model_tools:, started_at: Time.current, images: images, files: files, **args)
+      task = new(
+        creator: creator,
+        llm_model_key: llm_model_key,
+        available_model_tools: available_model_tools,
+        started_at: Time.current,
+        images: images,
+        files: files,
+        task_run_args: serialize_task_run_args(args),
+        **args
+      )
 
       task.save!
       task.run

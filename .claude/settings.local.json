@@ -4,7 +4,11 @@
       "Bash(ls:*)",
       "Bash(find:*)",
       "Bash(mkdir:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(bin/rails generate migration:*)",
+      "Bash(bin/rails:*)",
+      "Bash(bundle exec rspec:*)",
+      "Bash(rails:*)"
     ],
     "deny": []
   }

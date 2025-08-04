@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_03_202013) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_04_015504) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,6 +40,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_03_202013) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "documents", force: :cascade do |t|
+    t.string "title"
+    t.text "content"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "raif_agents", force: :cascade do |t|
@@ -159,6 +166,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_03_202013) do
     t.string "llm_model_key", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "task_run_args", default: {}
     t.index ["completed_at"], name: "index_raif_tasks_on_completed_at"
     t.index ["created_at"], name: "index_raif_tasks_on_created_at"
     t.index ["creator_type", "creator_id"], name: "index_raif_tasks_on_creator"
