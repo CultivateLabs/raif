@@ -40,6 +40,7 @@ module Raif
           say "  bundle exec raif evals                     # Run all evals in test env"
           say "  bundle exec raif evals CustomerSupport     # Run specific eval set"
           say "  bundle exec raif evals -e development      # Force different environment"
+          say ""
         end
       end
     end

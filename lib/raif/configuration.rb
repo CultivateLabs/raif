@@ -57,7 +57,7 @@ module Raif
       @conversations_controller = "Raif::ConversationsController"
       @current_user_method = :current_user
       @default_embedding_model_key = "open_ai_text_embedding_3_small"
-      @default_llm_model_key = "open_ai_gpt_4o"
+      @default_llm_model_key = ENV["RAIF_DEFAULT_LLM_MODEL_KEY"].presence || "open_ai_gpt_4o"
       @llm_api_requests_enabled = !default_disable_llm_api_requests?
       @llm_request_max_retries = 2
       @llm_request_retriable_exceptions = [
