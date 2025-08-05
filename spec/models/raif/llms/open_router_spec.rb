@@ -179,7 +179,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
                 "index" => 0,
                 "function" => {
                   "name" => "json_response",
-                  "arguments" => "{\"answer\":\"What do you call a fish with no eyes? Fsh.\",\"joke\":\"Why did the scarecrow win an award? Because he was outstanding in his field!\"}"
+                  "arguments" => "{\"answer\":\"What do you call a fish with no eyes? Fsh.\",\"joke\":\"Why did the scarecrow win an award? Because he was outstanding in his field!\"}" # rubocop:disable Layout/LineLength
                 }
               }]
             }
