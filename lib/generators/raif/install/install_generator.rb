@@ -2,7 +2,6 @@
 
 require "rails/generators"
 require "rails/generators/migration"
-require "raif/cli"
 
 module Raif
   module Generators
@@ -25,13 +24,22 @@ module Raif
       end
 
       def add_engine_route
+        routes_file = "config/routes.rb"
+
+        if File.exist?(routes_file)
+          routes_content = File.read(routes_file)
+          if routes_content.include?("mount Raif::Engine")
+            say "Raif is already mounted in #{routes_file}, skipping route", :yellow
+            return
+          end
+        end
+
         route 'mount Raif::Engine => "/raif"'
       end
 
       def setup_evals
-        say "\n\nSetting up Raif evals...", :green
-
-        Raif::CLI::EvalsSetup.new.run
+        say "\nSetting up Raif evals...", :green
+        generate "raif:evals:setup"
       end
     end
   end
