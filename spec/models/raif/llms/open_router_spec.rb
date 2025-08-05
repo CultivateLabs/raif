@@ -66,58 +66,125 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
     end
 
     context "when the response format is JSON and model uses json_response tool" do
-      let(:llm){ Raif.llm(:open_router_llama_4_maverick) }
       let(:test_task) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
 
-      it "extracts JSON response from json_response tool call", vcr: { cassette_name: "open_router/format_json_with_tool" } do
-        model_completion = llm.chat(
-          messages: [{
-            role: "user",
-            content: "Please give me a JSON object with a joke and answer. Don't include any other text in your response. Use the json_response tool to provide your response." # rubocop:disable Layout/LineLength
-          }],
-          response_format: :json,
-          source: test_task
-        )
+      context "when using open_router_llama_4_maverick" do
+        let(:llm){ Raif.llm(:open_router_llama_4_maverick) }
+        it "extracts JSON response from json_response tool call", vcr: { cassette_name: "open_router/format_json_with_tool_llama4_maverick" } do
+          allow(Raif.config).to receive(:open_router_api_key).and_return(ENV["OPENROUTER_API_KEY"])
+          model_completion = llm.chat(
+            messages: [{
+              role: "user",
+              content: "Please give me a JSON object with a joke and answer. Don't include any other text in your response. Use the json_response tool to provide your response." # rubocop:disable Layout/LineLength
+            }],
+            response_format: :json,
+            source: test_task
+          )
 
-        expect(model_completion.parsed_response).to eq({
-          "joke" => "Why don't scientists trust atoms?",
-          "answer" => "Because they make up everything."
-        })
-
-        expect(model_completion.raw_response).to eq("{\"joke\": \"Why don't scientists trust atoms?\", \"answer\": \"Because they make up everything.\"}") # rubocop:disable Layout/LineLength
-        expect(model_completion.response_tool_calls).to eq([{
-          "name" => "json_response",
-          "arguments" => {
+          expect(model_completion.parsed_response).to eq({
             "joke" => "Why don't scientists trust atoms?",
             "answer" => "Because they make up everything."
-          }
-        }])
-        expect(model_completion.completion_tokens).to eq(33)
-        expect(model_completion.prompt_tokens).to eq(217)
-        expect(model_completion.total_tokens).to eq(250)
-        expect(model_completion.response_format).to eq("json")
-        expect(model_completion.response_id).to eq("gen-abc123-Xzzn8cgXV0Pew0ckjxYE")
-        expect(model_completion.response_array).to eq([{
-          "logprobs" => nil,
-          "finish_reason" => "tool_calls",
-          "native_finish_reason" => "tool_calls",
-          "index" => 0,
-          "message" => {
-            "role" => "assistant",
-            "content" => "",
-            "refusal" => nil,
-            "reasoning" => nil,
-            "tool_calls" => [{
-              "id" => "chatcmpl-abc123-9807d1c0536c4e46903bc13b4a820170",
-              "type" => "function",
-              "index" => 0,
-              "function" => {
-                "name" => "json_response",
-                "arguments" => "{\"joke\": \"Why don't scientists trust atoms?\", \"answer\": \"Because they make up everything.\"}"
-              }
-            }]
-          }
-        }])
+          })
+
+          expect(model_completion.raw_response).to eq("{\"joke\": \"Why don't scientists trust atoms?\", \"answer\": \"Because they make up everything.\"}") # rubocop:disable Layout/LineLength
+          expect(model_completion.response_tool_calls).to eq([{
+            "name" => "json_response",
+            "arguments" => {
+              "joke" => "Why don't scientists trust atoms?",
+              "answer" => "Because they make up everything."
+            }
+          }])
+          expect(model_completion.completion_tokens).to eq(33)
+          expect(model_completion.prompt_tokens).to eq(217)
+          expect(model_completion.total_tokens).to eq(250)
+          expect(model_completion.response_format).to eq("json")
+          expect(model_completion.response_id).to eq("gen-abc123-Xzzn8cgXV0Pew0ckjxYE")
+          expect(model_completion.response_array).to eq([{
+            "logprobs" => nil,
+            "finish_reason" => "tool_calls",
+            "native_finish_reason" => "tool_calls",
+            "index" => 0,
+            "message" => {
+              "role" => "assistant",
+              "content" => "",
+              "refusal" => nil,
+              "reasoning" => nil,
+              "tool_calls" => [{
+                "id" => "chatcmpl-abc123-9807d1c0536c4e46903bc13b4a820170",
+                "type" => "function",
+                "index" => 0,
+                "function" => {
+                  "name" => "json_response",
+                  "arguments" => "{\"joke\": \"Why don't scientists trust atoms?\", \"answer\": \"Because they make up everything.\"}"
+                }
+              }]
+            }
+          }])
+        end
+      end
+
+      context "when using open_router_open_ai_gpt_oss_20b" do
+        let(:llm){ Raif.llm(:open_router_open_ai_gpt_oss_20b) }
+        it "extracts JSON response from json_response tool call", vcr: { cassette_name: "open_router/format_json_with_tool_gpt_oss_20b" } do
+          allow(Raif.config).to receive(:open_router_api_key).and_return(ENV["OPENROUTER_API_KEY"])
+
+          model_completion = llm.chat(
+            messages: [{
+              role: "user",
+              content: "Please give me a JSON object with a joke and answer. Don't include any other text in your response. Use the json_response tool to provide your response." # rubocop:disable Layout/LineLength
+            }],
+            response_format: :json,
+            source: test_task
+          )
+
+          expect(model_completion.parsed_response).to eq({
+            "answer" => "What do you call a fish with no eyes? Fsh.",
+            "joke" => "Why did the scarecrow win an award? Because he was outstanding in his field!"
+          })
+
+          expect(model_completion.raw_response).to eq("{\"answer\":\"What do you call a fish with no eyes? Fsh.\",\"joke\":\"Why did the scarecrow win an award? Because he was outstanding in his field!\"}") # rubocop:disable Layout/LineLength
+          expect(model_completion.response_tool_calls).to eq([{
+            "name" => "json_response",
+            "arguments" => {
+              "joke" => "Why did the scarecrow win an award? Because he was outstanding in his field!",
+              "answer" => "What do you call a fish with no eyes? Fsh."
+            }
+          }])
+          expect(model_completion.completion_tokens).to eq(71)
+          expect(model_completion.prompt_tokens).to eq(160)
+          expect(model_completion.total_tokens).to eq(231)
+          expect(model_completion.response_format).to eq("json")
+          expect(model_completion.response_id).to eq("gen-abc123-WQ3Wm9AMMlb2WZU5qCQk")
+          expect(model_completion.response_array).to eq([{
+            "logprobs" => nil,
+            "finish_reason" => "tool_calls",
+            "native_finish_reason" => "stop",
+            "index" => 0,
+            "message" => {
+              "role" => "assistant",
+              "content" => "",
+              "refusal" => nil,
+              "reasoning" => "We must use the json_response tool. So we need to call it.",
+              "reasoning_details" => [
+                {
+                  "format" => "unknown",
+                  "index" => 0,
+                  "text" => "We must use the json_response tool. So we need to call it.",
+                  "type" => "reasoning.text"
+                }
+              ],
+              "tool_calls" => [{
+                "id" => "fc_abc123-444c-4c46-8e42-838348740c0b",
+                "type" => "function",
+                "index" => 0,
+                "function" => {
+                  "name" => "json_response",
+                  "arguments" => "{\"answer\":\"What do you call a fish with no eyes? Fsh.\",\"joke\":\"Why did the scarecrow win an award? Because he was outstanding in his field!\"}"
+                }
+              }]
+            }
+          }])
+        end
       end
     end
 
