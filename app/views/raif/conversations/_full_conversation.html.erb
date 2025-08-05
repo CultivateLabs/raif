@@ -1,14 +1,11 @@
 <%= turbo_stream_from conversation %>
 
-<div id="<%= dom_id(conversation, :entries) %>" class="flex-grow-1 overflow-auto" data-controller="raif--conversations">
-  <%= render "raif/conversation_entries/message",
-        content: conversation.initial_chat_message,
-        message_type: :model_response %>
-
+<div id="<%= dom_id(conversation, :entries) %>" class="flex-grow-1 overflow-auto raif-conversation-entries-container" data-controller="raif--conversations">
+  <%= render conversation.initial_chat_message_partial_path, conversation: conversation %>
   <%= render conversation.entries.oldest_first %>
 </div>
 
-<div id="<%= dom_id(conversation, :entry_input) %>">
+<div id="<%= dom_id(conversation, :entry_input) %>" class="raif-conversation-entry-input-container">
   <%= render "raif/conversation_entries/form_with_available_tools",
         conversation: conversation,
         conversation_entry: Raif::ConversationEntry.new %>

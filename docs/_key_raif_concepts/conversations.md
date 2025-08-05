@@ -92,6 +92,16 @@ class Raif::Conversations::CustomerSupport < Raif::Conversation
 end
 ```
 
+You'll also need to add the conversation type to your initializer:
+
+```ruby
+Raif.configure do |config|
+  config.conversation_types += [
+    "Raif::Conversations::CustomerSupport"
+  ]
+end
+```
+
 # Conversation Entries
 
 Each time the user submits a message, a `Raif::ConversationEntry` record is created to store the user's message & the LLM's response. By default, Raif will:
