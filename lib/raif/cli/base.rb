@@ -5,7 +5,7 @@ module Raif
     class Base
       attr_reader :args, :options
 
-      def initialize(args)
+      def initialize(args = [])
         @args = args
         @options = {}
       end

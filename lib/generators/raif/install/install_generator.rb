@@ -2,6 +2,7 @@
 
 require "rails/generators"
 require "rails/generators/migration"
+require "raif/cli"
 
 module Raif
   module Generators
@@ -25,6 +26,12 @@ module Raif
 
       def add_engine_route
         route 'mount Raif::Engine => "/raif"'
+      end
+
+      def setup_evals
+        say "\n\nSetting up Raif evals...", :green
+
+        Raif::CLI::EvalsSetup.new.run
       end
     end
   end
