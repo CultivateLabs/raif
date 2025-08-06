@@ -37,11 +37,6 @@ module Raif
 
       def show_instructions
         say "\nTask created!"
-        unless options[:skip_eval_set]
-          say "Eval set created for testing your task!"
-          say "To run the eval set: bundle exec raif evals #{task_class_name}TaskEvalSet"
-          say "To run all eval sets: bundle exec raif evals"
-        end
         say ""
       end
 

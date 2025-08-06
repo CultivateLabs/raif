@@ -12,6 +12,11 @@ module Raif
         default: "text",
         desc: "Response format for the task (text, html, or json)"
 
+      class_option :skip_eval_set,
+        type: :boolean,
+        default: false,
+        desc: "Skip generating the corresponding eval set"
+
       def create_application_conversation
         template "application_conversation.rb.tt",
           "app/models/raif/application_conversation.rb" unless File.exist?("app/models/raif/application_conversation.rb")
@@ -23,6 +28,18 @@ module Raif
 
       def create_directory
         empty_directory "app/models/raif/conversations" unless File.directory?("app/models/raif/conversations")
+      end
+
+      def create_eval_set
+        return if options[:skip_eval_set]
+
+        eval_set_path = if class_path.any?
+          File.join("raif_evals", "eval_sets", class_path, "#{file_name}_conversation_eval_set.rb")
+        else
+          File.join("raif_evals", "eval_sets", "#{file_name}_conversation_eval_set.rb")
+        end
+
+        template "conversation_eval_set.rb.tt", eval_set_path
       end
 
       def success_message
