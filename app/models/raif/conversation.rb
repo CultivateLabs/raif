@@ -34,6 +34,10 @@ class Raif::Conversation < Raif::ApplicationRecord
     I18n.t("#{self.class.name.underscore.gsub("/", ".")}.initial_chat_message")
   end
 
+  def initial_chat_message_partial_path
+    "raif/conversations/initial_chat_message"
+  end
+
   def prompt_model_for_entry_response(entry:, &block)
     update(system_prompt: build_system_prompt)
 

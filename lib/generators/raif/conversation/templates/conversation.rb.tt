@@ -3,7 +3,7 @@
 module Raif
   module Conversations
     class <%= class_name %> < Raif::ApplicationConversation
-      # Set the response format for the task. Options are :html, :text, or :json.
+      # Set the response format for the conversation. Options are :html, :text, or :json.
       # If you set this to something other than :text, make sure to include instructions to the model in your system prompt
       llm_response_format :<%= options[:response_format] %>
 
