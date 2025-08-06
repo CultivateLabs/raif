@@ -25,9 +25,8 @@ module Raif
 
       def extract_tag_content(tag_name)
         match = model_response_text.match(%r{<#{tag_name}>(.*?)</#{tag_name}>}m)
-        match ? match[1].strip : nil
+        match[1].strip if match
       end
-
     end
   end
 end

@@ -39,6 +39,7 @@ Layout/AccessModifierIndentation:
   EnforcedStyle: outdent
 
 Layout/LineLength:
+  Enabled: true
   Max: 150
   Exclude:
     - 'lib/generators/raif/install/templates/initializer.rb'
