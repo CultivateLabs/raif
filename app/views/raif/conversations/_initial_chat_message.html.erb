@@ -1,0 +1,5 @@
+<%# locals: (conversation:) %>
+
+<%= render "raif/conversation_entries/message",
+      content: conversation.initial_chat_message,
+      message_type: :model_response %>
