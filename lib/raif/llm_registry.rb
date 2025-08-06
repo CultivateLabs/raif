@@ -112,7 +112,7 @@ module Raif
         input_token_cost: 1.1 / 1_000_000,
         output_token_cost: 4.4 / 1_000_000,
         model_provider_settings: { supports_temperature: false },
-      },
+      }
     ]
 
     open_ai_responses_models = open_ai_models.dup.map.with_index do |model, _index|
@@ -321,6 +321,18 @@ module Raif
           input_token_cost: 0.27 / 1_000_000,
           output_token_cost: 1.1 / 1_000_000,
         },
+        {
+          key: :open_router_open_ai_gpt_oss_120b,
+          api_name: "gpt-oss-120b",
+          input_token_cost: 0.15 / 1_000_000,
+          output_token_cost: 0.6 / 1_000_000,
+        },
+        {
+          key: :open_router_open_ai_gpt_oss_20b,
+          api_name: "gpt-oss-20b",
+          input_token_cost: 0.05 / 1_000_000,
+          output_token_cost: 0.2 / 1_000_000,
+        }
       ]
     }
   end
