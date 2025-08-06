@@ -11,11 +11,9 @@ description: "Create and run LLM evals to help you iterate, test, and improve yo
 
 Raif includes the ability to create and run LLM evals to help you iterate, test, and improve your prompts.
 
-When you run the install command during [setup](../getting_started/setup#initial-setup), it will automatically set up evals for you.
-
-If you want to set up evals manually, you can run:
+Evals are automatically set up when you run the install command during [setup](../getting_started/setup#initial-setup). If you need to set up evals manually, you can run:
 ```bash
-raif evals:setup
+bundle exec raif evals:setup
 ```
 
 This will:
@@ -25,4 +23,145 @@ This will:
   - `files` - For any files (e.g. a PDF document or HTML page) that you want to use in your evals.
   - `results` - Where the results of your eval runs will be stored.
 
+# Creating an Eval Set
+
+Raif's generators for [tasks](tasks), [conversations](conversations), and [agents](agents) will automatically create a related eval set for you. To create an eval set manually, you can run:
+
+```bash
+rails g raif:eval_set MyExample
+```
+
+This will create `raif_evals/eval_sets/my_example_eval_set.rb`. Each eval set is made up of:
+- A `setup` block that runs before each eval
+- A `teardown` block that runs after each eval
+- One or more `eval` blocks, each containing:
+  - A description of the eval
+  - One or more `expect` blocks that return true or false to indicate if the eval passed or failed
+
+# Running Evals
+
+To run all evals, you can run:
+
+```bash
+bundle exec raif evals
+```
+
+By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
+
+While Raif makes it intentionally difficult to run your normal test suite using real LLM provider API keys, the nature of evals makes it essential that actual API keys are available. When running evals, Raif will load API keys from your initializer, as described in the [setup docs](../getting_started/setup#initial-setup).
+
+# Example Eval Set
+
+Below is an example eval set for the `Raif::Tasks::DocumentSummarization` task created in the [tasks docs](tasks#html-response-format-tasks).
+
+```ruby
+class Raif::Tasks::DocumentSummarizationTaskEvalSet < Raif::Evals::EvalSet
+  # Setup method runs before each eval
+  setup do
+    # Assumes your app has a User model
+    @user = User.create!(
+      email: "test@example.com",
+      password: "password",
+      password_confirmation: "password"
+    )
+  end
+
+  # Teardown runs after each eval
+  teardown do
+    # Cleanup code
+  end
+
+  eval "Raif::Tasks::DocumentSummarization produces expected output" do
+    # Assumes your app has a Document model
+    document = Document.create!(
+      title: "Example Document",
+      content: file("documents/example.html"), # assumes a file exists at raif_evals/files/documents/example.html
+      creator: @user
+    )
+
+    task = Raif::Tasks::DocumentSummarization.run(
+      creator: @user,
+      document: document,
+    )
+
+    expect "task completes successfully" do
+      task.completed?
+    end
+
+    expect "summary is between 100 and 1000 words" do
+      task.parsed_response.length.between?(100, 1000)
+    end
+
+    basic_html_tags = %w[p b i div strong]
+    expect "contains basic HTML tags in the output" do
+      basic_html_tags.any?{ |tag| task.parsed_response.include?("<#{tag}>") }
+    end
+  end
+
+  eval "handles documents that are too short to summarize" do
+    # Assumes your app has a Document model
+    document = Document.create!(
+      title: "Example Document",
+      content: "short doc",
+      creator: @user
+    )
+
+    task = Raif::Tasks::DocumentSummarization.run(
+      creator: @user,
+      document: document,
+    )
+
+    expect "returns exactly the text 'Unable to generate summary'" do
+      task.parsed_response == "Unable to generate summary"
+    end
+  end
+end
+```
+
+# Expect Blocks
+
+Each eval is made up of one or more `expect` blocks. Each `expect` block should return true or false to indicate if the eval passed or failed.
+
+These are similar to expectations/assertions in a normal test suite. But unlike test suite expectations/assertions, a failure in an `expect` block will not terminate the `eval`. Your evals are expected to run against an actual LLM (costing you API bills), so this allows you to test multiple `expect` blocks via a single API call, even if some of them fail.
+
+All `expect` blocks in an `eval` will be evaluated each time the eval is run.
+
+
+
+# Expecting Tool Calls
+
+In addition to basic `expect` blocks, you can use `expect_tool_invocation` to ensure the LLM invoked a specific tool in its response.
+
+```ruby
+eval "invokes the WikipediaSearch tool" do
+  user = User.create!(
+    email: "test@example.com",
+    password: "password",
+    password_confirmation: "password"
+  )
+
+  conversation = Raif::Conversation.create(
+    creator: user,
+    tools: ["Raif::ModelTools::WikipediaSearch"]
+  )
+
+  conversation_entry = conversation.entries.create!(
+    user_message: "What pages does Wikipedia have about the moon?",
+    creator: user
+  )
+
+  conversation_entry.process_entry!
+
+  expect_tool_invocation(conversation_entry, "Raif::ModelTools::WikipediaSearch", with: { "query" => "moon" })
+end
+```
+
+
+# Setting the LLM for Evals
+
+Raif defaults to using `Raif.config.default_llm_model_key` for LLM API calls. You can override this setting via the `RAIF_DEFAULT_LLM_MODEL_KEY` environment variable.
+
+```bash
+RAIF_DEFAULT_LLM_MODEL_KEY=anthropic_claude_4_sonnet bundle exec raif evals
+```
 
