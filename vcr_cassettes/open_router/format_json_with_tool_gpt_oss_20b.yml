@@ -1,0 +1,59 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://openrouter.ai/api/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"gpt-oss-20b","messages":[{"role":"user","content":[{"type":"text","text":"Please
+        give me a JSON object with a joke and answer. Don''t include any other text
+        in your response. Use the json_response tool to provide your response."}]}],"temperature":0.7,"max_tokens":null,"tools":[{"type":"function","function":{"name":"json_response","description":"Generate
+        a structured JSON response based on the provided schema.","parameters":{"type":"object","additionalProperties":false,"properties":{"joke":{"type":"string"},"answer":{"type":"string"}},"required":["joke","answer"]}}}]}'
+    headers:
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - Faraday v2.13.4
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 05 Aug 2025 18:21:53 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Access-Control-Allow-Origin:
+      - "*"
+      Vary:
+      - Accept-Encoding
+      Permissions-Policy:
+      - payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com"
+        "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+      Referrer-Policy:
+      - no-referrer, strict-origin-when-cross-origin
+      X-Content-Type-Options:
+      - nosniff
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 96a85117aa822f24-IAD
+    body:
+      encoding: ASCII-8BIT
+      string: '{"id":"gen-abc123-WQ3Wm9AMMlb2WZU5qCQk","provider":"Groq","model":"openai/gpt-oss-20b","object":"chat.completion","created":1754418113,"choices":[{"logprobs":null,"finish_reason":"tool_calls","native_finish_reason":"stop","index":0,"message":{"role":"assistant","content":"","refusal":null,"reasoning":"We
+        must use the json_response tool. So we need to call it.","tool_calls":[{"id":"fc_abc123-444c-4c46-8e42-838348740c0b","type":"function","function":{"name":"json_response","arguments":"{\"answer\":\"What
+        do you call a fish with no eyes? Fsh.\",\"joke\":\"Why did the scarecrow win
+        an award? Because he was outstanding in his field!\"}"},"index":0}],"reasoning_details":[{"type":"reasoning.text","text":"We
+        must use the json_response tool. So we need to call it.","format":"unknown","index":0}]}}],"system_fingerprint":"fp_abc123","usage":{"prompt_tokens":160,"completion_tokens":71,"total_tokens":231}}'
+  recorded_at: Tue, 05 Aug 2025 18:21:53 GMT
+recorded_with: VCR 6.3.1
