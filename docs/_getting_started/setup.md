@@ -47,6 +47,8 @@ By default, the initializer will load them from environment variables (e.g. `ENV
 
 Use this adapter to utilize OpenAI's newer [Responses API](https://platform.openai.com/docs/api-reference/responses){:target="_blank"}, which supports [provider-managed tools](../key_raif_concepts/model_tools#provider-managed-tools), including web search, code execution, and image generation.
 
+Note: OpenAI's [GPT-OSS models](https://openai.com/index/introducing-gpt-oss/){:target="_blank"} are not supported by OpenAI's API, but are available via [OpenRouter](#openrouter).
+
 ```ruby
 Raif.configure do |config|
   config.open_ai_models_enabled = true
@@ -162,6 +164,8 @@ Currently included OpenRouter models:
 - `open_router_llama_3_3_70b_instruct`
 - `open_router_llama_4_maverick`
 - `open_router_llama_4_scout`
+- `open_router_open_ai_gpt_oss_120b`
+- `open_router_open_ai_gpt_oss_20b`
 
 ---
 

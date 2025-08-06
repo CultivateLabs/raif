@@ -7,20 +7,43 @@ if [ "$1" = "-a" ]; then
   I18N_CMD="bundle exec i18n-tasks normalize"
 else
   RUBOCOP_CMD="rubocop"
-  ERBLINT_CMD="bundle exec erb_lint --lint-all"
+  ERBLINT_CMD="bundle exec erb_lint --cache --lint-all"
   I18N_CMD="bundle exec i18n-tasks health"
 fi
 
+# Set initial exit code
+EXIT_CODE=0
+
 echo "==> Running rubocop\n"
 $RUBOCOP_CMD
+if [ $? -ne 0 ]; then
+  EXIT_CODE=1
+fi
 
 echo "\n\n==> Running erb lint\n"
 $ERBLINT_CMD
+if [ $? -ne 0 ]; then
+  EXIT_CODE=1
+fi
 
 echo "\n\n==> Running i18n-tasks\n"
 $I18N_CMD
+if [ $? -ne 0 ]; then
+  EXIT_CODE=1
+fi
 
 if [ "$1" = "-a" ]; then
   echo "\n\n==> Running i18n-tasks health\n"
   bundle exec i18n-tasks health
+  if [ $? -ne 0 ]; then
+    EXIT_CODE=1
+  fi
 fi
+
+if [ $EXIT_CODE -eq 0 ]; then
+  echo "\n\n"
+  echo "\033[32m✅ All linting passed! ✅\033[0m"
+  echo "\n\n"
+fi
+
+exit $EXIT_CODE

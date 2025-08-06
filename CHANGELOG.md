@@ -1,3 +1,7 @@
+## v1.2.3 (Unreleased)
+
+- Added support for OpenAI's GPT-OSS models. [#207](https://github.com/CultivateLabs/raif/pull/207)
+
 ## v1.2.2
 
 - When requesting JSON from OpenRouter models & a `json_response_schema` is provided, give the model a JSON response tool that it can call. [#177](https://github.com/CultivateLabs/raif/pull/177)

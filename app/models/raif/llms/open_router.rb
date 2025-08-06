@@ -93,7 +93,9 @@ private
       params[:stream_options] = { include_usage: true }
     end
 
-    if model_completion.response_format_json?
+    # OpenRouter will sometimes complain about combining response_format json and tool calling.
+    # If we're telling it to use the json_response tool, then the json_object response_format should be irrelevant.
+    if model_completion.response_format_json? && params[:tools].blank?
       params[:response_format] = { type: "json_object" }
       model_completion.response_format_parameter = "json_object"
     end
