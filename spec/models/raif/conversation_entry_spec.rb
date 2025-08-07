@@ -41,6 +41,53 @@ RSpec.describe Raif::ConversationEntry, type: :model do
       end
     end
 
+    context "when the response includes a tool call that triggers an observation back to the LLM" do
+      before do
+        conversation.update!(available_model_tools: ["Raif::ModelTools::CurrentTemperatureTestTool"])
+
+        tool_calls = [{
+          "name": "current_temperature_test_tool",
+          "arguments": { "zip_code": "12345" }
+        }]
+
+        stub_raif_conversation(conversation) do |_messages, model_completion|
+          model_completion.response_tool_calls = tool_calls
+
+          ""
+        end
+      end
+
+      it "processes the entry, invokes the tool, and creates a follow-up entry" do
+        entry.process_entry!
+
+        # It automatically created a follow-up entry
+        expect(entry.raif_conversation.entries.count).to eq(2)
+
+        expect(entry.reload).to be_completed
+        expect(entry.model_response_message).to eq(nil)
+        expect(entry.raif_model_tool_invocations.count).to eq(1)
+
+        mti = entry.raif_model_tool_invocations.first
+        expect(mti.tool_name).to eq("current_temperature_test_tool")
+        expect(mti.tool_arguments).to eq({ "zip_code" => "12345" })
+
+        follow_up_entry = entry.raif_conversation.entries.newest_first.first
+        expect(Raif::ConversationEntryJob).to have_been_enqueued.with(conversation_entry: follow_up_entry)
+
+        expect(follow_up_entry.creator).to eq(entry.creator)
+
+        llm_messages = conversation.llm_messages
+        expect(llm_messages).to include({
+          "role" => "assistant",
+          "content" => "Invoking tool: current_temperature_test_tool with arguments: {\"zip_code\":\"12345\"}"
+        })
+        expect(llm_messages).to include({
+          "role" => "assistant",
+          "content" => "The current temperature for zip code 12345 is 72 degrees Fahrenheit."
+        })
+      end
+    end
+
     context "when the response does not include a tool call" do
       before do
         stub_raif_conversation(conversation) do |_messages|
