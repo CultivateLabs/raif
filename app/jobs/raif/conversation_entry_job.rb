@@ -16,7 +16,7 @@ module Raif
       Turbo::StreamsChannel.broadcast_action_to(
         conversation,
         action: :raif_scroll_to_bottom,
-        target: dom_id(conversation, :entries)
+        target: ActionView::RecordIdentifier.dom_id(conversation, :entries)
       )
     rescue StandardError => e
       logger.error "Error processing conversation entry: #{e.message}"

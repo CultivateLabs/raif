@@ -10,7 +10,7 @@
     <% end %>
   <% end %>
 
-  <div class="d-flex px-2">
+  <div class="d-flex px-2 align-items-center">
     <%= f.text_field :user_message,
           class: "form-control me-2",
           placeholder: conversation_entry.raif_user_tool_invocation&.message_input_placeholder.presence || t("raif.common.type_your_message"),

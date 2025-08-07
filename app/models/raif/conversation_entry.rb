@@ -83,7 +83,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   def create_entry_for_observation!
     follow_up_entry = raif_conversation.entries.create!(creator: creator)
     Raif::ConversationEntryJob.perform_later(conversation_entry: follow_up_entry)
-    follow_up_entry.broadcast_append_to raif_conversation, target: dom_id(raif_conversation, :entries)
+    follow_up_entry.broadcast_append_to raif_conversation, target: ActionView::RecordIdentifier.dom_id(raif_conversation, :entries)
   end
 
 private
@@ -94,13 +94,11 @@ private
       self.model_response_message = raif_conversation.process_model_response_message(message: raif_model_completion.parsed_response, entry: self)
       save!
 
-      if raif_model_completion.response_tool_calls.present?
-        raif_model_completion.response_tool_calls.each do |tool_call|
-          tool_klass = available_model_tools_map[tool_call["name"]]
-          next if tool_klass.nil?
+      raif_model_completion.response_tool_calls&.each do |tool_call|
+        tool_klass = available_model_tools_map[tool_call["name"]]
+        next if tool_klass.nil?
 
-          tool_klass.invoke_tool(tool_arguments: tool_call["arguments"], source: self)
-        end
+        tool_klass.invoke_tool(tool_arguments: tool_call["arguments"], source: self)
       end
 
       completed!
