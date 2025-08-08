@@ -25,7 +25,8 @@ module Raif
           exit 1
         end
 
-        output.puts "Starting Raif Eval Run"
+        output.puts "\nStarting Raif Eval Run"
+        output.puts "Raif.config.default_llm_model_key: #{Raif.config.default_llm_model_key}"
         output.puts "=" * 50
 
         @eval_sets.each do |eval_set_class|
