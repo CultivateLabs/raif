@@ -58,6 +58,9 @@ end
 ```
 
 Currently supported OpenAI Responses API models:
+- `open_ai_responses_gpt_5`
+- `open_ai_responses_gpt_5_mini`
+- `open_ai_responses_gpt_5_nano`
 - `open_ai_responses_gpt_3_5_turbo`
 - `open_ai_responses_gpt_4_1`
 - `open_ai_responses_gpt_4_1_mini`
@@ -85,6 +88,9 @@ end
 ```
 
 Currently supported OpenAI Completions API models:
+- `open_ai_gpt_5`
+- `open_ai_gpt_5_mini`
+- `open_ai_gpt_5_nano`
 - `open_ai_gpt_3_5_turbo`
 - `open_ai_gpt_4_1`
 - `open_ai_gpt_4_1_mini`

@@ -1,6 +1,7 @@
 ## v1.2.3 (Unreleased)
 
 - Added support for OpenAI's GPT-OSS models. [#207](https://github.com/CultivateLabs/raif/pull/207)
+- Added support for OpenAI's GPT-5 models. [#212](https://github.com/CultivateLabs/raif/pull/212)
 
 ## v1.2.2
 
