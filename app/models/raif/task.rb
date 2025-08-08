@@ -33,6 +33,7 @@ module Raif
     attr_accessor :files, :images
 
     after_initialize -> { self.available_model_tools ||= [] }
+    after_initialize -> { self.task_run_args ||= {} }
 
     def status
       if completed_at?
