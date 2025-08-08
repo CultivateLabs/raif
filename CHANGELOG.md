@@ -2,6 +2,7 @@
 
 - Added support for OpenAI's GPT-OSS models. [#207](https://github.com/CultivateLabs/raif/pull/207)
 - Added support for OpenAI's GPT-5 models. [#212](https://github.com/CultivateLabs/raif/pull/212)
+- `Raif::Task` subclasses can now use `task_run_arg` to define persisted arguments for the task. [#214](https://github.com/CultivateLabs/raif/pull/214)
 
 ## v1.2.2
 
