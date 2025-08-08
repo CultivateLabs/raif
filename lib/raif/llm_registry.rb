@@ -112,6 +112,27 @@ module Raif
         input_token_cost: 1.1 / 1_000_000,
         output_token_cost: 4.4 / 1_000_000,
         model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_gpt_5,
+        api_name: "gpt-5",
+        input_token_cost: 1.25 / 1_000_000,
+        output_token_cost: 10.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_gpt_5_mini,
+        api_name: "gpt-5-mini",
+        input_token_cost: 0.25 / 1_000_000,
+        output_token_cost: 2.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_gpt_5_nano,
+        api_name: "gpt-5-nano",
+        input_token_cost: 0.05 / 1_000_000,
+        output_token_cost: 0.4 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
       }
     ]
 
