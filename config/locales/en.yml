@@ -68,6 +68,9 @@ en:
       open_ai_gpt_4_1_nano: OpenAI GPT-4.1 Nano
       open_ai_gpt_4o: OpenAI GPT-4o
       open_ai_gpt_4o_mini: OpenAI GPT-4o Mini
+      open_ai_gpt_5: OpenAI GPT-5
+      open_ai_gpt_5_mini: OpenAI GPT-5 Mini
+      open_ai_gpt_5_nano: OpenAI GPT-5 Nano
       open_ai_o1: OpenAI o1
       open_ai_o1_mini: OpenAI o1 Mini
       open_ai_o3: OpenAI o3
@@ -79,6 +82,9 @@ en:
       open_ai_responses_gpt_4_1_nano: OpenAI GPT-4.1 Nano (Responses API)
       open_ai_responses_gpt_4o: OpenAI GPT-4o (Responses API)
       open_ai_responses_gpt_4o_mini: OpenAI GPT-4o Mini (Responses API)
+      open_ai_responses_gpt_5: OpenAI GPT-5 (Responses API)
+      open_ai_responses_gpt_5_mini: OpenAI GPT-5 Mini (Responses API)
+      open_ai_responses_gpt_5_nano: OpenAI GPT-5 Nano (Responses API)
       open_ai_responses_o1: OpenAI o1 (Responses API)
       open_ai_responses_o1_mini: OpenAI o1 Mini (Responses API)
       open_ai_responses_o1_pro: OpenAI o1 Pro (Responses API)
