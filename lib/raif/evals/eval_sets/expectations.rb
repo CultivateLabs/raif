@@ -20,6 +20,7 @@ module Raif
           end
 
           current_eval.add_expectation_result(result)
+          result
         end
 
         def expect_tool_invocation(tool_invoker, tool_name, with: {})
