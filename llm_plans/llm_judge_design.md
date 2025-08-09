@@ -441,7 +441,7 @@ module Raif
         
         # Scored evaluation
         def expect_llm_judge_score(output, scoring_rubric:, min_score: 7, scale_min: 0, scale_max: 10, **options)
-          scoring_rubric_obj = scoring_rubric.is_a?(Symbol) ? ScoringRubric.send(scoring_rubric) : scoring_rubric
+          scoring_rubric_obj = scoring_rubric
           
           judge_task = LlmJudges::Scored.run(
             content_to_judge: output,
@@ -573,7 +573,7 @@ class ContentQualityEvalSet < Raif::Evals::EvalSet
     
     expect_llm_judge_score task.parsed_response,
       min_score: 8,
-      scoring_rubric: :clarity  # Uses built-in ScoringRubric.clarity rubric
+      scoring_rubric: ScoringRubric.clarity  # Built-in rubric
   end
 end
 
