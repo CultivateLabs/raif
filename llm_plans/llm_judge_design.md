@@ -462,9 +462,9 @@ module Raif
         end
         
         # Comparative judgment  
-        def expect_llm_judge_prefers(content_a, over:, criteria:, allow_ties: true, **options)
+        def expect_llm_judge_prefers(content_to_judge, over:, criteria:, allow_ties: true, **options)
           judge_task = LlmJudges::Comparative.run(
-            content_to_judge: content_a,
+            content_to_judge: content_to_judge,
             content_over: over,
             comparison_criteria: criteria,
             allow_ties: allow_ties,
