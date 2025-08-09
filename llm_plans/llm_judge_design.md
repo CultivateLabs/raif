@@ -250,9 +250,24 @@ module Raif
     module LlmJudges
       class Comparative < Raif::Evals::LlmJudge
         # Define task_run_args specific to comparative judge
-         task_run_arg :content_over
+        task_run_arg :over_content
         task_run_arg :comparison_criteria
         task_run_arg :allow_ties
+
+        attr_accessor :content_a, :content_b, :expected_winner
+
+        before_create do
+          self.expected_winner = ["A", "B"].sample
+
+          if expected_winner == "A"
+            self.content_a = content_to_judge 
+            self.content_b = over_content
+          else
+            self.content_a = over_content
+            self.content_b = content_to_judge
+          end
+        end
+
         
         json_response_schema do
           string :winner, description: "Which content is better (A, B, or tie)", enum: ["A", "B", "tie"]
@@ -279,32 +294,27 @@ module Raif
             Compare the following two pieces of content:
             
             CONTENT A:
-           #{content_to_judge}
+           #{content_a}
             
             CONTENT B:
-           #{content_over}
+           #{content_b}
             
             #{additional_context if additional_context.present?}
             
             Which content better meets the comparison criteria?
           PROMPT
         end
-        
-        # Judgment accessor methods
-        def winner
-          parsed_response["winner"] if completed?
-        end
-        
-        def a_wins?
-          winner == "A"
-        end
-        
-        def b_wins?
-          winner == "B"
-        end
-        
+
         def tie?
-          winner == "tie"
+          return unless completed?
+
+          parsed_response["winner"] == "tie"
+        end
+
+        def correct_expected_winner?
+          return unless completed?
+
+          parsed_response["winner"] == expected_winner
         end
       end
     end
@@ -465,7 +475,7 @@ module Raif
         def expect_llm_judge_prefers(content_to_judge, over:, criteria:, allow_ties: true, **options)
           judge_task = LlmJudges::Comparative.run(
             content_to_judge: content_to_judge,
-            content_over: over,
+            over_content: over,
             comparison_criteria: criteria,
             allow_ties: allow_ties,
             creator: current_eval,
@@ -475,7 +485,7 @@ module Raif
           expectation_result = expect "LLM judge prefers A over B: #{criteria}" do
             output.puts "    Winner: #{judge_task.winner}"
             output.puts "    #{judge_task.judgment_reasoning}" if verbose?
-            judge_task.a_wins?
+            judge_task.correct_expected_winner?
           end
           
           if expectation_result
