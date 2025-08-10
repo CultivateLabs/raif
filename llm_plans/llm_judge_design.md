@@ -335,22 +335,29 @@ module Raif
       def initialize(name:, description:, levels:)
         @name = name
         @description = description
-        @levels = levels  # Array of { score_range: [min, max] or (min..max), description: "..." }
+        # Levels can be either ranges or single scores:
+        # - { score_range: (min..max) }
+        # - { score: Integer }
+        # Each level must include a :description
+        @levels = levels
       end
       
       def to_prompt
         prompt = "#{description}\n\nScoring levels:\n"
         levels.each do |level|
-          range = level[:score_range]
-          min, max = case range
-                     when Range
-                       [range.begin, range.exclude_end? ? range.end - 1 : range.end]
-                     when Array
-                       [range[0], range[1]]
-                     else
-                       raise ArgumentError, "score_range must be Array [min, max] or Range"
-                     end
-          prompt += "- Score #{min}-#{max}: #{level[:description]}\n"
+          if level.key?(:score)
+            score = level[:score]
+            prompt += "- Score #{score}: #{level[:description]}\n"
+          else
+            range = level[:score_range]
+            min, max = case range
+                       when Range
+                         [range.begin, range.exclude_end? ? range.end - 1 : range.end]
+                       else
+                         raise ArgumentError, "level must include :score or :score_range (Range)"
+                       end
+            prompt += "- Score #{min}-#{max}: #{level[:description]}\n"
+          end
         end
         prompt
       end

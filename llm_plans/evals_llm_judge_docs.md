@@ -187,7 +187,7 @@ eval "must choose the better response" do
   expect_llm_judge_prefers response_a.parsed_response,
     over: response_b.parsed_response,
     criteria: "Better addresses user needs",
-    allow_ties: false  # Force the judge to pick a winner
+    allow_ties: false  # Instructs the judge to pick a winner
 end
 ```
 
