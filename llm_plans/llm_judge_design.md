@@ -132,8 +132,8 @@ module Raif
           <<~EXAMPLE
             
             Output: #{example[:output]}
-            Judgment: #{example[:passes] ? "PASS" : "FAIL"}
             Reasoning: #{example[:reasoning]}
+            Judgment: #{example[:passes] ? "PASS" : "FAIL"}
           EXAMPLE
         end
       end
@@ -448,7 +448,7 @@ module Raif
         end
         
         # Scored evaluation
-        def expect_llm_judge_score(output, scoring_rubric:, min_score: 7, scale_min: 0, scale_max: 10, llm_judge_model_key: nil, additional_context: nil)
+        def expect_llm_judge_score(output, scoring_rubric:, min_passing_score: 7, scale_min: 0, scale_max: 10, llm_judge_model_key: nil, additional_context: nil)
           scoring_rubric_obj = scoring_rubric
           
           judge_task = LlmJudges::Scored.run(
@@ -462,10 +462,10 @@ module Raif
           )
           
           rubric_name = scoring_rubric_obj.respond_to?(:name) ? scoring_rubric_obj.name : "custom"
-          expectation_result = expect "LLM judge score (#{rubric_name}): >= #{min_score}" do
+          expectation_result = expect "LLM judge score (#{rubric_name}): >= #{min_passing_score}" do
             output.puts "    Score: #{judge_task.judgment_score}/#{scale_max}"
             output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
-            judge_task.judgment_score >= min_score
+            judge_task.judgment_score >= min_passing_score
           end
           
           if expectation_result
@@ -572,7 +572,7 @@ class ContentQualityEvalSet < Raif::Evals::EvalSet
       ]
     )
     
-    expect_llm_judge_score task.parsed_response, min_score: 7, scoring_rubric: rubric
+    expect_llm_judge_score task.parsed_response, min_passing_score: 7, scoring_rubric: rubric
   end
   
   # Using predefined rubric
@@ -580,7 +580,7 @@ class ContentQualityEvalSet < Raif::Evals::EvalSet
     task = ExplainerTask.run(concept: "database indexing")
     
     expect_llm_judge_score task.parsed_response,
-      min_score: 8,
+      min_passing_score: 8,
       scoring_rubric: ScoringRubric.clarity  # Built-in rubric
   end
 end
