@@ -35,7 +35,7 @@ module Raif
       task_run_arg :additional_context
       
       def default_llm_model_key
-        Raif.config.default_llm_judge_model_key || super
+        Raif.config.evals_default_llm_judge_model_key || super
       end
       
       # Base methods that subclasses can override
@@ -267,7 +267,6 @@ module Raif
             self.content_b = content_to_judge
           end
         end
-
         
         json_response_schema do
           string :winner, description: "Which content is better (A, B, or tie)", enum: ["A", "B", "tie"]
@@ -336,14 +335,22 @@ module Raif
       def initialize(name:, description:, levels:)
         @name = name
         @description = description
-        @levels = levels  # Array of { score_range: [min, max], description: "..." }
+        @levels = levels  # Array of { score_range: [min, max] or (min..max), description: "..." }
       end
       
       def to_prompt
         prompt = "#{description}\n\nScoring levels:\n"
         levels.each do |level|
           range = level[:score_range]
-          prompt += "- Score #{range[0]}-#{range[1]}: #{level[:description]}\n"
+          min, max = case range
+                     when Range
+                       [range.begin, range.exclude_end? ? range.end - 1 : range.end]
+                     when Array
+                       [range[0], range[1]]
+                     else
+                       raise ArgumentError, "score_range must be Array [min, max] or Range"
+                     end
+          prompt += "- Score #{min}-#{max}: #{level[:description]}\n"
         end
         prompt
       end
@@ -355,11 +362,11 @@ module Raif
             name: :accuracy,
             description: "Evaluates factual correctness and precision",
             levels: [
-              { score_range: [9, 10], description: "Completely accurate with no errors" },
-              { score_range: [7, 8], description: "Mostly accurate with minor imprecisions" },
-              { score_range: [5, 6], description: "Generally accurate but some notable errors" },
-              { score_range: [3, 4], description: "Significant inaccuracies present" },
-              { score_range: [0, 2], description: "Mostly or entirely inaccurate" }
+              { score_range: (9..10), description: "Completely accurate with no errors" },
+              { score_range: (7..8), description: "Mostly accurate with minor imprecisions" },
+              { score_range: (5..6), description: "Generally accurate but some notable errors" },
+              { score_range: (3..4), description: "Significant inaccuracies present" },
+              { score_range: (0..2), description: "Mostly or entirely inaccurate" }
             ]
           )
         end
@@ -369,11 +376,11 @@ module Raif
             name: :helpfulness,
             description: "Evaluates how well the response addresses user needs",
             levels: [
-              { score_range: [9, 10], description: "Extremely helpful, fully addresses the need" },
-              { score_range: [7, 8], description: "Very helpful with good coverage" },
-              { score_range: [5, 6], description: "Moderately helpful but missing some aspects" },
-              { score_range: [3, 4], description: "Somewhat helpful but significant gaps" },
-              { score_range: [0, 2], description: "Not helpful or misleading" }
+              { score_range: (9..10), description: "Extremely helpful, fully addresses the need" },
+              { score_range: (7..8), description: "Very helpful with good coverage" },
+              { score_range: (5..6), description: "Moderately helpful but missing some aspects" },
+              { score_range: (3..4), description: "Somewhat helpful but significant gaps" },
+              { score_range: (0..2), description: "Not helpful or misleading" }
             ]
           )
         end
@@ -383,11 +390,11 @@ module Raif
             name: :clarity,
             description: "Evaluates clarity and comprehensibility",
             levels: [
-              { score_range: [9, 10], description: "Crystal clear and easy to understand" },
-              { score_range: [7, 8], description: "Clear with minor ambiguities" },
-              { score_range: [5, 6], description: "Generally clear but some confusion" },
-              { score_range: [3, 4], description: "Unclear in significant ways" },
-              { score_range: [0, 2], description: "Very unclear or incomprehensible" }
+              { score_range: (9..10), description: "Crystal clear and easy to understand" },
+              { score_range: (7..8), description: "Clear with minor ambiguities" },
+              { score_range: (5..6), description: "Generally clear but some confusion" },
+              { score_range: (3..4), description: "Unclear in significant ways" },
+              { score_range: (0..2), description: "Very unclear or incomprehensible" }
             ]
           )
         end
@@ -409,21 +416,22 @@ module Raif
       module LlmJudgeExpectations
         
         # Binary judgment
-        def expect_llm_judge_passes(output, criteria:, examples: [], strict: false, **options)
+        def expect_llm_judge_passes(output, criteria:, examples: [], strict: false, llm_judge_model_key: nil, additional_context: nil)
           judge_task = LlmJudges::Binary.run(
             content_to_judge: output,
             criteria: criteria,
             examples: examples,
             strict_mode: strict,
             creator: current_eval, # Link to current eval as creator
-            **options.slice(:llm_model_key, :additional_context)
+            llm_model_key: llm_judge_model_key,
+            additional_context: additional_context
           )
           
           expectation_result = expect "LLM judge: #{criteria}" do
             if judge_task.low_confidence?
               output.puts Raif::Utils::Colors.yellow("    ⚠ Low confidence: #{judge_task.judgment_confidence}")
             end
-            output.puts "    #{judge_task.judgment_reasoning}" if verbose?
+            output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
             judge_task.passes?
           end
           
@@ -440,7 +448,7 @@ module Raif
         end
         
         # Scored evaluation
-        def expect_llm_judge_score(output, scoring_rubric:, min_score: 7, scale_min: 0, scale_max: 10, **options)
+        def expect_llm_judge_score(output, scoring_rubric:, min_score: 7, scale_min: 0, scale_max: 10, llm_judge_model_key: nil, additional_context: nil)
           scoring_rubric_obj = scoring_rubric
           
           judge_task = LlmJudges::Scored.run(
@@ -449,13 +457,14 @@ module Raif
             scale_min: scale_min,
             scale_max: scale_max,
             creator: current_eval,
-            **options.slice(:llm_model_key, :additional_context)
+            llm_model_key: llm_judge_model_key,
+            additional_context: additional_context
           )
           
           rubric_name = scoring_rubric_obj.respond_to?(:name) ? scoring_rubric_obj.name : "custom"
           expectation_result = expect "LLM judge score (#{rubric_name}): >= #{min_score}" do
             output.puts "    Score: #{judge_task.judgment_score}/#{scale_max}"
-            output.puts "    #{judge_task.judgment_reasoning}" if verbose?
+            output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
             judge_task.judgment_score >= min_score
           end
           
@@ -472,19 +481,20 @@ module Raif
         end
         
         # Comparative judgment  
-        def expect_llm_judge_prefers(content_to_judge, over:, criteria:, allow_ties: true, **options)
+        def expect_llm_judge_prefers(content_to_judge, over:, criteria:, allow_ties: true, llm_judge_model_key: nil, additional_context: nil)
           judge_task = LlmJudges::Comparative.run(
             content_to_judge: content_to_judge,
             over_content: over,
             comparison_criteria: criteria,
             allow_ties: allow_ties,
             creator: current_eval,
-            **options.slice(:llm_model_key, :additional_context)
+            llm_model_key: llm_judge_model_key,
+            additional_context: additional_context
           )
           
           expectation_result = expect "LLM judge prefers A over B: #{criteria}" do
             output.puts "    Winner: #{judge_task.winner}"
-            output.puts "    #{judge_task.judgment_reasoning}" if verbose?
+            output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
             judge_task.correct_expected_winner?
           end
           
@@ -499,11 +509,6 @@ module Raif
           expectation_result
         end
         
-        private
-        
-        def verbose?
-          ENV["RAIF_EVALS_VERBOSE"] == "true"
-        end
       end
     end
   end
@@ -518,7 +523,10 @@ end
 # In config/initializers/raif.rb or raif_evals/setup.rb
 Raif.configure do |config|
   # Default model for LLM judges
-  config.default_llm_judge_model_key = :claude_3_5_sonnet
+  config.evals_default_llm_judge_model_key = :claude_3_5_sonnet
+  
+  # When true, eval output will include detailed LLM judge reasoning lines
+  config.evals_verbose_output = false
 end
 ```
 
