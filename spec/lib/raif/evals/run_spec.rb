@@ -44,6 +44,10 @@ RSpec.describe Raif::Evals::Run do
     context "with auto-discovery" do
       let(:eval_sets_dir) { Rails.root.join("raif_evals", "eval_sets") }
 
+      before do
+        FileUtils.mkdir_p eval_sets_dir
+      end
+
       it "discovers eval set files" do
         discovered_file = eval_sets_dir.join("discovered_eval_set.rb")
         File.write(discovered_file, <<~RUBY)
