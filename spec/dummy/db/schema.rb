@@ -166,7 +166,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_11_171150) do
     t.string "llm_model_key", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.jsonb "task_run_args", default: {}
+    t.jsonb "task_run_args"
     t.index ["completed_at"], name: "index_raif_tasks_on_completed_at"
     t.index ["created_at"], name: "index_raif_tasks_on_created_at"
     t.index ["creator_type", "creator_id"], name: "index_raif_tasks_on_creator"
