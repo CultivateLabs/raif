@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_04_015504) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_11_171150) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -154,8 +154,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_04_015504) do
     t.string "type", null: false
     t.text "prompt"
     t.text "raw_response"
-    t.string "creator_type", null: false
-    t.bigint "creator_id", null: false
+    t.string "creator_type"
+    t.bigint "creator_id"
     t.text "system_prompt"
     t.string "requested_language_key"
     t.integer "response_format", default: 0, null: false

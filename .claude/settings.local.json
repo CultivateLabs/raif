@@ -10,7 +10,10 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "Bash(mkdir:*)",
-      "Bash(rails:*)"
+      "Bash(rails:*)",
+      "Bash(bin/lint:*)",
+      "Bash(bundle exec rails console:*)",
+      "Bash(RAILS_ENV=test bundle exec rails console)"
     ],
     "deny": []
   }

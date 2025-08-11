@@ -32,6 +32,7 @@ module Raif
       :open_router_app_name,
       :open_router_site_url,
       :streaming_update_chunk_size_threshold,
+      :task_creator_optional,
       :task_system_prompt_intro,
       :user_tool_types
 
@@ -79,6 +80,7 @@ module Raif
       @open_router_app_name = nil
       @open_router_site_url = nil
       @streaming_update_chunk_size_threshold = 25
+      @task_creator_optional = true
       @user_tool_types = []
     end
 
