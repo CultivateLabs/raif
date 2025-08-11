@@ -59,7 +59,7 @@ RSpec.describe Raif::Evals::Run do
         run = described_class.new
         expect(run.eval_sets.map(&:name)).to include("DiscoveredEvalSet")
       ensure
-        FileUtils.rm(discovered_file)
+        FileUtils.rm(discovered_file) if File.exist?(discovered_file)
       end
 
       it "handles namespaced eval sets" do
