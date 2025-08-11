@@ -177,10 +177,14 @@ eval "produces high-quality technical documentation" do
 end
 ```
 
+### Built-in Scoring Rubrics
+
 Raif includes several built-in rubrics:
 - `ScoringRubric.accuracy` - Evaluates factual correctness (0-10)
 - `ScoringRubric.helpfulness` - Evaluates how helpful the response is (0-10)
 - `ScoringRubric.clarity` - Evaluates ease of understanding (0-10)
+
+### Custom Scoring Rubrics
 
 You can also create custom rubrics:
 
@@ -225,6 +229,28 @@ expect_llm_judge_score(
   min_passing_score: 7
 )
 ```
+
+Or you can provide the rubric as a string:
+
+```ruby
+rubric = <<~RUBRIC
+  - 10 points: Production-ready, follows all best practices
+  - 8 points: Good quality, minor improvements possible
+  - 6 points: Functional but needs refactoring
+  - 4 points: Poor quality, significant issues
+  - 2 points: Broken or severely flawed
+RUBRIC
+
+expect_llm_judge_score(
+  generated_code,
+  scoring_rubric: rubric,
+  min_passing_score: 7
+)
+```
+
+
+
+
 
 ## Comparative Judgments
 

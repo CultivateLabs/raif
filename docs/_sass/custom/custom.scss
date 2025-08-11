@@ -515,8 +515,14 @@ div.language-yaml::after, div.language-yml::after { content: "YAML"; }
     display: block;
   }
 
+  ol{ 
+    padding-left: 25px;
+  }
+
   #table-of-contents {
-    margin-left: 15px;
+    padding-left: 40px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #1e3a8a;
   }
   
   .toc-title {
