@@ -106,17 +106,29 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
     end
 
     it "creates a scored expectation with rubric name and minimum score and stores metadata" do
+      expect(Raif::Task.count).to eq(0)
+
       result = eval_set.expect_llm_judge_score(
         "test output",
         scoring_rubric: rubric,
         min_passing_score: 7,
-        llm_judge_model_key: :claude,
+        llm_judge_model_key: :raif_test_llm,
         additional_context: "technical content"
       )
 
       expect(result).to be_a(Raif::Evals::ExpectationResult)
+      expect(result.passed?).to eq(true)
       expect(result.description).to eq("LLM judge score (accuracy): >= 7")
-      expect(result.metadata).to be_a(Hash)
+      expect(result.metadata).to eq({ score: 8, reasoning: "Detailed reasoning", confidence: 0.8 })
+
+      expect(Raif::Task.count).to eq(1)
+
+      task = Raif::Task.last
+      expect(task.type).to eq("Raif::Evals::LlmJudges::Scored")
+      expect(task.response_format).to eq("json")
+      expect(task.started_at).to be_present
+      expect(task.completed_at).to be_present
+      expect(task.llm_model_key).to eq("raif_test_llm")
     end
 
     it "uses 'custom' in description for a string rubric" do
@@ -127,6 +139,35 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
       )
 
       expect(result.description).to eq("LLM judge score (custom): >= 7")
+    end
+
+    it "fails if the task fails" do
+      result = eval_set.expect_llm_judge_score(
+        "test output",
+        scoring_rubric: rubric,
+        min_passing_score: 7,
+        llm_judge_model_key: :invalid
+      )
+
+      expect(result.passed?).to eq(false)
+      expect(result.failed?).to eq(true)
+      expect(result.error_message).to include("Llm model key is not included in the list")
+    end
+
+    it "fails when score is below minimum passing score" do
+      stub_raif_task(Raif::Evals::LlmJudges::Scored) do |_messages, _model_completion|
+        { score: 5, reasoning: "Below threshold", confidence: 0.9 }.to_json
+      end
+
+      result = eval_set.expect_llm_judge_score(
+        "test output",
+        scoring_rubric: rubric,
+        min_passing_score: 7
+      )
+
+      expect(result.passed?).to eq(false)
+      expect(result.failed?).to eq(true)
+      expect(result.metadata).to eq({ score: 5, reasoning: "Below threshold", confidence: 0.9 })
     end
   end
 
@@ -139,18 +180,66 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
     end
 
     it "creates a comparative expectation, prints winner when available, and stores metadata" do
+      expect(Raif::Task.count).to eq(0)
+
       result = eval_set.expect_llm_judge_prefers(
         "content A",
         over: "content B",
         criteria: "Which is clearer?",
         allow_ties: true,
-        llm_judge_model_key: :claude,
+        llm_judge_model_key: :raif_test_llm,
         additional_context: "user documentation"
       )
 
       expect(result).to be_a(Raif::Evals::ExpectationResult)
+      expect(result.passed?).to eq(true)
       expect(result.description).to eq("LLM judge prefers A over B: Which is clearer?")
-      expect(result.metadata).to be_a(Hash)
+      expect(result.metadata[:winner]).to be_in(["A", "B"])
+      expect(result.metadata[:reasoning]).to eq("A is clearer")
+      expect(result.metadata[:confidence]).to eq(0.7)
+
+      expect(Raif::Task.count).to eq(1)
+
+      task = Raif::Task.last
+      expect(task.type).to eq("Raif::Evals::LlmJudges::Comparative")
+      expect(task.response_format).to eq("json")
+      expect(task.started_at).to be_present
+      expect(task.completed_at).to be_present
+      expect(task.llm_model_key).to eq("raif_test_llm")
+    end
+
+    it "fails if the task fails" do
+      result = eval_set.expect_llm_judge_prefers(
+        "content A",
+        over: "content B",
+        criteria: "Which is clearer?",
+        llm_judge_model_key: :invalid
+      )
+
+      expect(result.passed?).to eq(false)
+      expect(result.failed?).to eq(true)
+      expect(result.error_message).to include("Llm model key is not included in the list")
+    end
+
+    it "fails when judge prefers the wrong option" do
+      stub_raif_task(Raif::Evals::LlmJudges::Comparative) do |_messages, model_completion|
+        judge = model_completion.source
+        # Return the opposite of expected_winner to make it fail
+        wrong_winner = judge.expected_winner == "A" ? "B" : "A"
+        { winner: wrong_winner, reasoning: "Wrong choice", confidence: 0.8 }.to_json
+      end
+
+      result = eval_set.expect_llm_judge_prefers(
+        "content A",
+        over: "content B",
+        criteria: "Which is clearer?"
+      )
+
+      expect(result.passed?).to eq(false)
+      expect(result.failed?).to eq(true)
+      expect(result.metadata[:winner]).to be_in(["A", "B"])
+      expect(result.metadata[:reasoning]).to eq("Wrong choice")
+      expect(result.metadata[:confidence]).to eq(0.8)
     end
   end
 end

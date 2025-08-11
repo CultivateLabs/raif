@@ -143,7 +143,7 @@ module Raif
           end
 
           expectation_result = expect "LLM judge score (#{rubric_name}): >= #{min_passing_score}" do
-            judge_task.judgment_score >= min_passing_score
+            judge_task.completed? && judge_task.judgment_score && judge_task.judgment_score >= min_passing_score
           end
 
           if expectation_result
@@ -152,6 +152,8 @@ module Raif
               reasoning: judge_task.judgment_reasoning,
               confidence: judge_task.judgment_confidence,
             }.compact
+
+            expectation_result.error_message = judge_task.errors.full_messages.join(", ") if judge_task.errors.any?
           end
 
           expectation_result
@@ -220,7 +222,7 @@ module Raif
           end
 
           expectation_result = expect "LLM judge prefers A over B: #{criteria}" do
-            judge_task.correct_expected_winner?
+            judge_task.completed? && judge_task.correct_expected_winner?
           end
 
           if expectation_result
@@ -229,6 +231,8 @@ module Raif
               reasoning: judge_task.judgment_reasoning,
               confidence: judge_task.judgment_confidence,
             }.compact
+
+            expectation_result.error_message = judge_task.errors.full_messages.join(", ") if judge_task.errors.any?
           end
 
           expectation_result
