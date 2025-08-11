@@ -4,11 +4,13 @@ module Raif
   module Evals
     class ExpectationResult
       attr_reader :description, :status, :error
+      attr_accessor :metadata
 
-      def initialize(description:, status:, error: nil)
+      def initialize(description:, status:, error: nil, metadata: nil)
         @description = description
         @status = status
         @error = error
+        @metadata = metadata
       end
 
       def passed?
@@ -27,7 +29,8 @@ module Raif
         {
           description: description,
           status: status,
-          error: error&.message
+          error: error&.message,
+          metadata: metadata
         }.compact
       end
     end

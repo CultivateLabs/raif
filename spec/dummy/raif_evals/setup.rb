@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #
 # This file is loaded at the start of a run of your evals.
 #

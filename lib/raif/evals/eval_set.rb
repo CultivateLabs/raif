@@ -1,13 +1,15 @@
 # frozen_string_literal: true
 
 require "raif/evals/eval_sets/expectations"
+require "raif/evals/eval_sets/llm_judge_expectations"
 
 module Raif
   module Evals
     class EvalSet
       include Raif::Evals::EvalSets::Expectations
+      include Raif::Evals::EvalSets::LlmJudgeExpectations
 
-      attr_reader :current_eval, :output
+      attr_reader :current_eval, :output, :results
 
       def initialize(output: $stdout)
         @output = output
@@ -44,38 +46,42 @@ module Raif
       end
 
       def run
-        results = []
+        @results = []
 
         self.class.evals.each do |eval_definition|
-          @current_eval = Eval.new(description: eval_definition[:description])
-
-          output.puts "Running: #{eval_definition[:description]}"
-
-          ActiveRecord::Base.transaction do
-            instance_eval(&self.class.setup_block) if self.class.setup_block
-
-            begin
-              instance_eval(&eval_definition[:block])
-            rescue => e
-              output.puts Raif::Utils::Colors.red("  Error in eval block: #{e.message}")
-              @current_eval.add_expectation_result(
-                ExpectationResult.new(
-                  description: "Eval block execution",
-                  status: :error,
-                  error: e
-                )
-              )
-            ensure
-              instance_eval(&self.class.teardown_block) if self.class.teardown_block
-            end
-
-            results << @current_eval
-
-            raise ActiveRecord::Rollback
-          end
+          @results << run_eval(eval_definition)
         end
 
-        results
+        @results
+      end
+
+      def run_eval(eval_definition)
+        @current_eval = Eval.new(description: eval_definition[:description])
+
+        output.puts "Running: #{eval_definition[:description]}"
+
+        ActiveRecord::Base.transaction do
+          instance_eval(&self.class.setup_block) if self.class.setup_block
+
+          begin
+            instance_eval(&eval_definition[:block])
+          rescue => e
+            output.puts Raif::Utils::Colors.red("  Error in eval block: #{e.message}")
+            @current_eval.add_expectation_result(
+              ExpectationResult.new(
+                description: "Eval block execution",
+                status: :error,
+                error: e
+              )
+            )
+          ensure
+            instance_eval(&self.class.teardown_block) if self.class.teardown_block
+          end
+
+          raise ActiveRecord::Rollback
+        end
+
+        @current_eval
       end
 
       def file(filename)
