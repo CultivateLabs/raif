@@ -128,6 +128,170 @@ All `expect` blocks in an `eval` will be evaluated each time the eval is run.
 
 
 
+# LLM-as-Judge Expectations
+
+Raif includes built-in support for using LLMs to evaluate outputs, providing more flexible and nuanced testing than traditional assertions. These "LLM judges" can assess quality, compare outputs, and score responses against rubrics.
+
+## Binary Pass/Fail Judgments
+
+Use `expect_llm_judge_passes` to evaluate whether content meets specific criteria:
+
+```ruby
+eval "produces professional output" do
+  task = Raif::Tasks::CustomerResponse.run(creator: @user, query: "Fix my broken product!")
+  
+  expect_llm_judge_passes(
+    task.parsed_response,
+    criteria: "Response is polite, professional, and addresses the customer's concern"
+  )
+end
+```
+
+You can provide examples to guide the judge:
+
+```ruby
+expect_llm_judge_passes(
+  output,
+  criteria: "Contains a proper greeting",
+  examples: [
+    { content: "Hello! How can I help you today?", passes: true, reasoning: "Friendly greeting present" },
+    { content: "What do you want?", passes: false, reasoning: "No greeting, unprofessional tone" }
+  ],
+  strict: true  # Apply criteria strictly without leniency
+)
+```
+
+## Scored Evaluations
+
+Use `expect_llm_judge_score` to evaluate content against a numerical rubric:
+
+```ruby
+eval "produces high-quality technical documentation" do
+  task = Raif::Tasks::TechnicalWriter.run(creator: @user, topic: "API authentication")
+  
+  expect_llm_judge_score(
+    task.parsed_response,
+    scoring_rubric: Raif::Evals::ScoringRubric.clarity,
+    min_passing_score: 7
+  )
+end
+```
+
+Raif includes several built-in rubrics:
+- `ScoringRubric.accuracy` - Evaluates factual correctness (0-10)
+- `ScoringRubric.helpfulness` - Evaluates how helpful the response is (0-10)
+- `ScoringRubric.clarity` - Evaluates ease of understanding (0-10)
+
+You can also create custom rubrics:
+
+```ruby
+rubric = Raif::Evals::ScoringRubric.new(
+  name: :technical_depth,
+  description: "Evaluates technical depth and accuracy",
+  levels: [
+    { score: 10, description: "Expert-level technical detail with perfect accuracy" },
+    { score: 8, description: "Strong technical content with minor gaps" },
+    { score: 6, description: "Adequate technical coverage" },
+    { score: 4, description: "Basic technical content" },
+    { score: 2, description: "Minimal technical value" }
+  ]
+)
+
+expect_llm_judge_score(
+  output,
+  scoring_rubric: rubric,
+  min_passing_score: 8
+)
+```
+
+Or create rubrics with score ranges for more flexibility:
+
+```ruby
+rubric = Raif::Evals::ScoringRubric.new(
+  name: :code_quality,
+  description: "Evaluates code quality and best practices",
+  levels: [
+    { score_range: (9..10), description: "Production-ready, follows all best practices" },
+    { score_range: (7..8), description: "Good quality, minor improvements possible" },
+    { score_range: (5..6), description: "Functional but needs refactoring" },
+    { score_range: (3..4), description: "Poor quality, significant issues" },
+    { score_range: (0..2), description: "Broken or severely flawed" }
+  ]
+)
+
+expect_llm_judge_score(
+  generated_code,
+  scoring_rubric: rubric,
+  min_passing_score: 7
+)
+```
+
+## Comparative Judgments
+
+Use `expect_llm_judge_prefers` to compare two outputs and verify one is better. The comparative judge automatically randomizes position (A/B) in the prompt to avoid bias and supports tie detection:
+
+```ruby
+eval "new prompt improves over baseline" do
+  baseline_response = Raif::Tasks::OldSummarizer.run(creator: @user, document: doc).parsed_response
+  improved_response = Raif::Tasks::NewSummarizer.run(creator: @user, document: doc).parsed_response
+  
+  expect_llm_judge_prefers(
+    improved_response,
+    over: baseline_response,
+    criteria: "More concise while retaining all key information"
+  )
+end
+```
+
+Or if you want to instruct the judge to pick a winner, you can set `allow_ties` to false:
+```ruby
+eval "new prompt improves over baseline" do
+  baseline_response = Raif::Tasks::OldSummarizer.run(creator: @user, document: doc).parsed_response
+  improved_response = Raif::Tasks::NewSummarizer.run(creator: @user, document: doc).parsed_response
+  
+  expect_llm_judge_prefers(
+    improved_response,
+    over: baseline_response,
+    criteria: "More concise while retaining all key information",
+    allow_ties: false
+  )
+end
+```
+
+## Additional Context
+
+All judge expectations support providing additional context to help with evaluation:
+
+```ruby
+expect_llm_judge_passes(
+  task.parsed_response,
+  criteria: "Appropriate for the target audience",
+  additional_context: "The user is a beginner programmer with no Ruby experience"
+)
+```
+
+## Configuring the Judge LLM Model
+
+You can configure the LLM model used for judging in your initializer:
+
+```ruby
+Raif.configure do |config|
+  # Use a specific model for all judge evaluations (optional)
+  config.evals_default_llm_judge_model_key = :anthropic_claude_3_5_sonnet
+end
+```
+
+Or you can override the model for a specific judge expectation:
+
+```ruby
+expect_llm_judge_passes(
+  task.parsed_response,
+  criteria: "Appropriate for the target audience",
+  additional_context: "The user is a beginner programmer with no Ruby experience",
+  llm_judge_model_key: :anthropic_claude_3_5_sonnet
+)
+```
+
 # Expecting Tool Calls
 
 In addition to basic `expect` blocks, you can use `expect_tool_invocation` to ensure the LLM invoked a specific tool in its response.
