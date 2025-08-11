@@ -123,17 +123,17 @@ RSpec.describe Raif::Evals::ScoringRubric do
         expect(rubric.levels.length).to eq(5)
       end
 
-      it "has appropriate score ranges" do
+      it "has appropriate scores" do
         prompt = rubric.to_prompt
         expected = <<~PROMPT.strip
           Evaluates factual correctness and precision
 
           Scoring levels:
-          - 9-10: Completely accurate with no errors
-          - 7-8: Mostly accurate with minor imprecisions
-          - 5-6: Generally accurate but some notable errors
-          - 3-4: Significant inaccuracies present
-          - 0-2: Mostly or entirely inaccurate
+          - 5: Completely accurate with no errors
+          - 4: Mostly accurate with minor imprecisions
+          - 3: Generally accurate but some notable errors
+          - 2: Significant inaccuracies present
+          - 1: Mostly or entirely inaccurate
         PROMPT
 
         expect(prompt).to eq(expected)

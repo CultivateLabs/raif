@@ -180,9 +180,9 @@ end
 ### Built-in Scoring Rubrics
 
 Raif includes several built-in rubrics:
-- `ScoringRubric.accuracy` - Evaluates factual correctness (0-10)
-- `ScoringRubric.helpfulness` - Evaluates how helpful the response is (0-10)
-- `ScoringRubric.clarity` - Evaluates ease of understanding (0-10)
+- `ScoringRubric.accuracy` - Evaluates factual correctness (1-5)
+- `ScoringRubric.helpfulness` - Evaluates how helpful the response is (1-5)
+- `ScoringRubric.clarity` - Evaluates ease of understanding (1-5)
 
 ### Custom Scoring Rubrics
 
@@ -193,18 +193,18 @@ rubric = Raif::Evals::ScoringRubric.new(
   name: :technical_depth,
   description: "Evaluates technical depth and accuracy",
   levels: [
-    { score: 10, description: "Expert-level technical detail with perfect accuracy" },
-    { score: 8, description: "Strong technical content with minor gaps" },
-    { score: 6, description: "Adequate technical coverage" },
-    { score: 4, description: "Basic technical content" },
-    { score: 2, description: "Minimal technical value" }
+    { score: 5, description: "Expert-level technical detail with perfect accuracy" },
+    { score: 4, description: "Strong technical content with minor gaps" },
+    { score: 3, description: "Adequate technical coverage" },
+    { score: 2, description: "Basic technical content" },
+    { score: 1, description: "Minimal technical value" }
   ]
 )
 
 expect_llm_judge_score(
   output,
   scoring_rubric: rubric,
-  min_passing_score: 8
+  min_passing_score: 4
 )
 ```
 

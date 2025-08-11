@@ -96,30 +96,27 @@ module Raif
         prompt.strip
       end
 
-      # Factory methods for commonly used built-in rubrics.
-      # These provide standardized evaluation criteria for typical use cases.
       class << self
         # Creates a rubric for evaluating factual accuracy and correctness.
         #
         # This rubric focuses on whether information is factually correct,
         # precise, and free from errors or misconceptions.
         #
-        # @return [ScoringRubric] Pre-configured accuracy rubric (0-10 scale)
+        # @return [ScoringRubric] Pre-configured accuracy rubric (1-5 scale)
         #
         # @example
         #   rubric = ScoringRubric.accuracy
-        #   rubric.min_score #=> 0
-        #   rubric.max_score #=> 10
+        #   expect_llm_judge_score(response, scoring_rubric: rubric, min_passing_score: 4)
         def accuracy
           new(
             name: :accuracy,
             description: "Evaluates factual correctness and precision",
             levels: [
-              { score_range: (9..10), description: "Completely accurate with no errors" },
-              { score_range: (7..8), description: "Mostly accurate with minor imprecisions" },
-              { score_range: (5..6), description: "Generally accurate but some notable errors" },
-              { score_range: (3..4), description: "Significant inaccuracies present" },
-              { score_range: (0..2), description: "Mostly or entirely inaccurate" }
+              { score: 5, description: "Completely accurate with no errors" },
+              { score: 4, description: "Mostly accurate with minor imprecisions" },
+              { score: 3, description: "Generally accurate but some notable errors" },
+              { score: 2, description: "Significant inaccuracies present" },
+              { score: 1, description: "Mostly or entirely inaccurate" }
             ]
           )
         end
@@ -129,21 +126,21 @@ module Raif
         # This rubric assesses whether the response is useful, relevant, and
         # effectively helps the user accomplish their goals.
         #
-        # @return [ScoringRubric] Pre-configured helpfulness rubric (0-10 scale)
+        # @return [ScoringRubric] Pre-configured helpfulness rubric (1-5 scale)
         #
         # @example
         #   rubric = ScoringRubric.helpfulness
-        #   expect_llm_judge_score(response, scoring_rubric: rubric, min_passing_score: 7)
+        #   expect_llm_judge_score(response, scoring_rubric: rubric, min_passing_score: 4)
         def helpfulness
           new(
             name: :helpfulness,
             description: "Evaluates how well the response addresses user needs",
             levels: [
-              { score_range: (9..10), description: "Extremely helpful, fully addresses the need" },
-              { score_range: (7..8), description: "Very helpful with good coverage" },
-              { score_range: (5..6), description: "Moderately helpful but missing some aspects" },
-              { score_range: (3..4), description: "Somewhat helpful but significant gaps" },
-              { score_range: (0..2), description: "Not helpful or misleading" }
+              { score: 5, description: "Extremely helpful, fully addresses the need" },
+              { score: 4, description: "Very helpful with good coverage" },
+              { score: 3, description: "Moderately helpful but missing some aspects" },
+              { score: 2, description: "Somewhat helpful but significant gaps" },
+              { score: 1, description: "Not helpful or misleading" }
             ]
           )
         end
@@ -153,21 +150,21 @@ module Raif
         # This rubric focuses on how easy content is to understand, whether
         # it's well-organized, and if the language is appropriate for the audience.
         #
-        # @return [ScoringRubric] Pre-configured clarity rubric (0-10 scale)
+        # @return [ScoringRubric] Pre-configured clarity rubric (1-5 scale)
         #
         # @example
         #   rubric = ScoringRubric.clarity
-        #   prompt = rubric.to_prompt
+        #   expect_llm_judge_score(response, scoring_rubric: rubric, min_passing_score: 4)
         def clarity
           new(
             name: :clarity,
             description: "Evaluates clarity and comprehensibility",
             levels: [
-              { score_range: (9..10), description: "Crystal clear and easy to understand" },
-              { score_range: (7..8), description: "Clear with minor ambiguities" },
-              { score_range: (5..6), description: "Generally clear but some confusion" },
-              { score_range: (3..4), description: "Unclear in significant ways" },
-              { score_range: (0..2), description: "Very unclear or incomprehensible" }
+              { score: 5, description: "Crystal clear and easy to understand" },
+              { score: 4, description: "Clear with minor ambiguities" },
+              { score: 3, description: "Generally clear but some confusion" },
+              { score: 2, description: "Unclear in significant ways" },
+              { score: 1, description: "Very unclear or incomprehensible" }
             ]
           )
         end
