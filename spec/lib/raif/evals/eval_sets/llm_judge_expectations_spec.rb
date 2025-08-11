@@ -8,19 +8,17 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
       def self.name
         "TestEvalSet"
       end
+
+      def initialize(output: $stdout)
+        super
+
+        @current_eval = Raif::Evals::Eval.new(description: "test description")
+      end
     end
   end
 
   let(:output) { StringIO.new }
   let(:eval_set) { test_eval_set_class.new(output: output) }
-  let(:creator) { FB.create(:raif_test_user) }
-
-  before do
-    # Provide a real AR creator that also collects expectation results like Raif::Evals::Eval
-    # creator.define_singleton_method(:expectation_results) { @__er ||= [] }
-    # creator.define_singleton_method(:add_expectation_result) { |res| expectation_results << res }
-    eval_set.instance_variable_set(:@current_eval, Raif::Evals::Eval.new(description: "test description"))
-  end
 
   describe "#expect_llm_judge_passes" do
     before do
@@ -34,18 +32,42 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
     end
 
     it "creates an expectation, sets description, and stores judge metadata when available" do
+      expect(Raif::Task.count).to eq(0)
+
       result = eval_set.expect_llm_judge_passes(
         "test output",
         criteria: "Must be polite",
         examples: [],
         strict: false,
-        llm_judge_model_key: :claude,
+        llm_judge_model_key: :raif_test_llm,
         additional_context: "customer service"
       )
 
       expect(result).to be_a(Raif::Evals::ExpectationResult)
+      expect(result.passed?).to eq(true)
       expect(result.description).to eq("LLM judge: Must be polite")
-      expect(result.metadata).to be_a(Hash)
+      expect(result.metadata).to eq({ passes: true, reasoning: "Good reasoning", confidence: 0.9 })
+
+      expect(Raif::Task.count).to eq(1)
+
+      task = Raif::Task.last
+      expect(task.type).to eq("Raif::Evals::LlmJudges::Binary")
+      expect(task.response_format).to eq("json")
+      expect(task.started_at).to be_present
+      expect(task.completed_at).to be_present
+      expect(task.llm_model_key).to eq("raif_test_llm")
+    end
+
+    it "fails if the task fails" do
+      result = eval_set.expect_llm_judge_passes(
+        "test output",
+        criteria: "Must be polite",
+        llm_judge_model_key: :invalid
+      )
+
+      expect(result.passed?).to eq(false)
+      expect(result.failed?).to eq(true)
+      expect(result.error_message).to eq("Llm model key is not included in the list")
     end
 
     it "prints low confidence warning when confidence is low" do
@@ -58,14 +80,9 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
     end
 
     it "prints reasoning when verbose output is enabled" do
-      original = Raif.config.evals_verbose_output
-      Raif.config.evals_verbose_output = true
-      begin
-        eval_set.expect_llm_judge_passes("test output", criteria: "Must be polite")
-        expect(output.string).to include("Good reasoning")
-      ensure
-        Raif.config.evals_verbose_output = original
-      end
+      allow(Raif.config).to receive(:evals_verbose_output).and_return(true)
+      eval_set.expect_llm_judge_passes("test output", criteria: "Must be polite")
+      expect(output.string).to include("Good reasoning")
     end
   end
 

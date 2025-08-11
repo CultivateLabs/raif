@@ -48,7 +48,6 @@ module Raif
             criteria: criteria,
             examples: examples,
             strict_mode: strict,
-            creator: current_eval, # Link to current eval as creator
             llm_model_key: llm_judge_model_key,
             additional_context: additional_context
           )
@@ -72,6 +71,8 @@ module Raif
               reasoning: judge_task.judgment_reasoning,
               confidence: judge_task.judgment_confidence,
             }.compact
+
+            expectation_result.error_message = judge_task.errors.full_messages.join(", ") if judge_task.errors.any?
           end
 
           expectation_result
@@ -131,7 +132,6 @@ module Raif
           judge_task = LlmJudges::Scored.run(
             content_to_judge: output,
             scoring_rubric: scoring_rubric_obj,
-            creator: current_eval,
             llm_model_key: llm_judge_model_key,
             additional_context: additional_context
           )
@@ -210,7 +210,6 @@ module Raif
             over_content: over,
             comparison_criteria: criteria,
             allow_ties: allow_ties,
-            creator: current_eval,
             llm_model_key: llm_judge_model_key,
             additional_context: additional_context
           )
