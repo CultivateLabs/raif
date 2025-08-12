@@ -67,6 +67,7 @@ module Raif
             instance_eval(&eval_definition[:block])
           rescue => e
             output.puts Raif::Utils::Colors.red("  Error in eval block: #{e.message}")
+            output.puts Raif::Utils::Colors.red("  #{e.backtrace.join("\n  ")}")
             @current_eval.add_expectation_result(
               ExpectationResult.new(
                 description: "Eval block execution",
