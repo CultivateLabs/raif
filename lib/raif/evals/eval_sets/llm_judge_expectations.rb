@@ -42,7 +42,8 @@ module Raif
         #   - :passes - Boolean result
         #   - :reasoning - Detailed explanation
         #   - :confidence - Confidence score (0.0-1.0)
-        def expect_llm_judge_passes(content, criteria:, examples: [], strict: false, llm_judge_model_key: nil, additional_context: nil)
+        def expect_llm_judge_passes(content, criteria:, examples: [], strict: false, llm_judge_model_key: nil, additional_context: nil,
+          result_metadata: {})
           judge_task = LlmJudges::Binary.run(
             content_to_judge: content,
             criteria: criteria,
@@ -60,19 +61,21 @@ module Raif
             output.puts "    #{judge_task.judgment_reasoning}"
           end
 
-          expectation_result = expect "LLM judge: #{criteria}" do
+          judge_metadata = {
+            passes: judge_task.passes?,
+            reasoning: judge_task.judgment_reasoning,
+            confidence: judge_task.judgment_confidence,
+          }.compact
+
+          # Merge user metadata with judge metadata
+          combined_metadata = result_metadata.merge(judge_metadata)
+
+          expectation_result = expect "LLM judge: #{criteria}", combined_metadata do
             judge_task.passes?
           end
 
-          # Store judge metadata in expectation result
-          if expectation_result
-            expectation_result.metadata = {
-              passes: judge_task.passes?,
-              reasoning: judge_task.judgment_reasoning,
-              confidence: judge_task.judgment_confidence,
-            }.compact
-
-            expectation_result.error_message = judge_task.errors.full_messages.join(", ") if judge_task.errors.any?
+          if expectation_result && judge_task.errors.any?
+            expectation_result.error_message = judge_task.errors.full_messages.join(", ")
           end
 
           expectation_result
@@ -126,7 +129,7 @@ module Raif
         #   - :score - Numerical score given
         #   - :reasoning - Detailed explanation
         #   - :confidence - Confidence score (0.0-1.0)
-        def expect_llm_judge_score(output, scoring_rubric:, min_passing_score:, llm_judge_model_key: nil, additional_context: nil)
+        def expect_llm_judge_score(output, scoring_rubric:, min_passing_score:, llm_judge_model_key: nil, additional_context: nil, metadata: {})
           scoring_rubric_obj = scoring_rubric
 
           judge_task = LlmJudges::Scored.run(
@@ -142,18 +145,21 @@ module Raif
             output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
           end
 
-          expectation_result = expect "LLM judge score (#{rubric_name}): >= #{min_passing_score}" do
+          judge_metadata = {
+            score: judge_task.judgment_score,
+            reasoning: judge_task.judgment_reasoning,
+            confidence: judge_task.judgment_confidence,
+          }.compact
+
+          # Merge user metadata with judge metadata
+          combined_metadata = metadata.merge(judge_metadata)
+
+          expectation_result = expect "LLM judge score (#{rubric_name}): >= #{min_passing_score}", combined_metadata do
             judge_task.completed? && judge_task.judgment_score && judge_task.judgment_score >= min_passing_score
           end
 
-          if expectation_result
-            expectation_result.metadata = {
-              score: judge_task.judgment_score,
-              reasoning: judge_task.judgment_reasoning,
-              confidence: judge_task.judgment_confidence,
-            }.compact
-
-            expectation_result.error_message = judge_task.errors.full_messages.join(", ") if judge_task.errors.any?
+          if expectation_result && judge_task.errors.any?
+            expectation_result.error_message = judge_task.errors.full_messages.join(", ")
           end
 
           expectation_result
@@ -206,7 +212,8 @@ module Raif
         #   - :winner - Which content won ("A", "B", or "tie")
         #   - :reasoning - Detailed explanation of the choice
         #   - :confidence - Confidence score (0.0-1.0)
-        def expect_llm_judge_prefers(content_to_judge, over:, criteria:, allow_ties: true, llm_judge_model_key: nil, additional_context: nil)
+        def expect_llm_judge_prefers(content_to_judge, over:, criteria:, allow_ties: true, llm_judge_model_key: nil, additional_context: nil,
+          metadata: {})
           judge_task = LlmJudges::Comparative.run(
             content_to_judge: content_to_judge,
             over_content: over,
@@ -221,18 +228,21 @@ module Raif
             output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
           end
 
-          expectation_result = expect "LLM judge prefers A over B: #{criteria}" do
+          judge_metadata = {
+            winner: judge_task.winner,
+            reasoning: judge_task.judgment_reasoning,
+            confidence: judge_task.judgment_confidence,
+          }.compact
+
+          # Merge user metadata with judge metadata
+          combined_metadata = metadata.merge(judge_metadata)
+
+          expectation_result = expect "LLM judge prefers A over B: #{criteria}", combined_metadata do
             judge_task.completed? && judge_task.correct_expected_winner?
           end
 
-          if expectation_result
-            expectation_result.metadata = {
-              winner: judge_task.winner,
-              reasoning: judge_task.judgment_reasoning,
-              confidence: judge_task.judgment_confidence,
-            }.compact
-
-            expectation_result.error_message = judge_task.errors.full_messages.join(", ") if judge_task.errors.any?
+          if expectation_result && judge_task.errors.any?
+            expectation_result.error_message = judge_task.errors.full_messages.join(", ")
           end
 
           expectation_result

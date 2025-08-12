@@ -126,6 +126,41 @@ RSpec.describe Raif::Evals::EvalSet do
       expect(eval.expectation_results.first.error?).to be true
       expect(output.string).to include("✗ this errors (Error: Boom!)")
     end
+
+    context "with metadata" do
+      let(:instance) do
+        output = StringIO.new
+        instance = test_eval_set_class.new(output: output)
+        instance.instance_variable_set(:@current_eval, Raif::Evals::Eval.new(description: "test"))
+        instance
+      end
+
+      it "stores metadata with expectation results" do
+        result = instance.expect "Summary is high quality", overall_score: 4, clarity_score: 5.5 do
+          true
+        end
+
+        expect(result.passed?).to be true
+        expect(result.to_h[:metadata]).to eq(overall_score: 4, clarity_score: 5.5)
+      end
+
+      it "handles metadata with failing expectations" do
+        result = instance.expect "Score too low", score: 2, rationale: "because it's too low" do
+          false
+        end
+
+        expect(result.failed?).to be true
+        expect(result.to_h[:metadata]).to eq(score: 2, rationale: "because it's too low")
+      end
+
+      it "does not include metadata key when no metadata provided" do
+        result = instance.expect "No metadata" do
+          true
+        end
+
+        expect(result.to_h).not_to have_key(:metadata)
+      end
+    end
   end
 
   describe "#expect_tool_invocation" do
