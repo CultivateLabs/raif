@@ -50,6 +50,8 @@ By default, evals are run against your Rails test environment & database. Each e
 
 While Raif makes it intentionally difficult to run your normal test suite using real LLM provider API keys, the nature of evals makes it essential that actual API keys are available. When running evals, Raif will load API keys from your initializer, as described in the [setup docs](../getting_started/setup#initial-setup).
 
+Once your evals have run, a JSON file will be created in `raif_evals/results` with the results of each eval.
+
 # Example Eval Set
 
 Below is an example eval set for the `Raif::Tasks::DocumentSummarization` task created in the [tasks docs](tasks#html-response-format-tasks).
@@ -115,6 +117,50 @@ class Raif::Tasks::DocumentSummarizationTaskEvalSet < Raif::Evals::EvalSet
       task.parsed_response == "Unable to generate summary"
     end
   end
+
+  # Example using metadata with expectations
+  eval "produces high-quality summaries with metadata tracking" do
+    document = Document.create!(
+      title: "Technical Documentation",
+      content: file("documents/technical.html"),
+      creator: @user
+    )
+
+    task = Raif::Tasks::DocumentSummarization.run(
+      creator: @user,
+      document: document,
+    )
+
+    # Track basic metrics with metadata
+    expect "task completes successfully", 
+           result_metadata: { 
+             processing_time_ms: task.processing_time,
+             model_used: task.llm_model_key 
+           } do
+      task.completed?
+    end
+
+    # Use LLM judge with custom metadata
+    expect_llm_judge_score(
+      task.parsed_response,
+      scoring_rubric: Raif::Evals::ScoringRubric.clarity,
+      min_passing_score: 4,
+      result_metadata: {
+        document_id: document.id,
+        document_length: document.content.length,
+        summary_length: task.parsed_response.length,
+        compression_ratio: (document.content.length.to_f / task.parsed_response.length).round(2)
+      }
+    )
+
+    # Compare with baseline
+    baseline = "Generic summary text"
+    expect_llm_judge_prefers(
+      task.parsed_response,
+      over: baseline,
+      criteria: "More informative and specific to the document content"
+    )
+  end
 end
 ```
 
@@ -125,6 +171,35 @@ Each eval is made up of one or more `expect` blocks. Each `expect` block should 
 These are similar to expectations/assertions in a normal test suite. But unlike test suite expectations/assertions, a failure in an `expect` block will not terminate the `eval`. Your evals are expected to run against an actual LLM (costing you API bills), so this allows you to test multiple `expect` blocks via a single API call, even if some of them fail.
 
 All `expect` blocks in an `eval` will be evaluated each time the eval is run.
+
+## Adding Result Metadata to Expectations
+
+You can attach metadata to any `expect` block to capture additional context that will be stored in the evaluation results JSON file. This is useful for tracking scores, metrics, or other relevant information alongside pass/fail results.
+
+```ruby
+expect "Summary is high quality", result_metadata: { overall_score: 4.5, word_count: 250 } do
+  task.overall_score >= 4
+end
+```
+
+The metadata will be included in the results JSON:
+
+```json
+{
+  "expectation_results": [
+    {
+      "description": "Summary is high quality",
+      "status": "passed",
+      "metadata": {
+        "overall_score": 4.5,
+        "word_count": 250
+      }
+    }
+  ]
+}
+```
+
+This is particularly useful when using LLM judges to capture their scores and reasoning alongside your pass/fail criteria.
 
 
 
@@ -294,6 +369,63 @@ expect_llm_judge_passes(
   criteria: "Appropriate for the target audience",
   additional_context: "The user is a beginner programmer with no Ruby experience"
 )
+```
+
+## Adding Custom Metadata to Judge Expectations
+
+All LLM judge expectations support adding custom metadata that will be merged with the judge's automatic metadata (scores, reasoning, confidence) in the results JSON. Use the `result_metadata` parameter:
+
+```ruby
+expect_llm_judge_passes(
+  response,
+  criteria: "Response is professional and helpful",
+  result_metadata: {
+    test_case_id: "CS-001",
+    scenario: "customer_complaint",
+    priority: "high"
+  }
+)
+
+expect_llm_judge_score(
+  output,
+  scoring_rubric: ScoringRubric.clarity,
+  min_passing_score: 4,
+  result_metadata: {
+    document_type: "technical",
+    word_count: output.split.size
+  }
+)
+
+expect_llm_judge_prefers(
+  new_response,
+  over: old_response,
+  criteria: "More concise and clear",
+  result_metadata: {
+    version_comparison: "v2_vs_v1",
+    test_run: 42
+  }
+)
+```
+
+The custom metadata will be combined with the judge's metadata in the results:
+
+```json
+{
+  "expectation_results": [
+    {
+      "description": "LLM judge: Response is professional and helpful",
+      "status": "passed",
+      "metadata": {
+        "test_case_id": "CS-001",
+        "scenario": "customer_complaint",
+        "priority": "high",
+        "passes": true,
+        "reasoning": "The response demonstrates professionalism...",
+        "confidence": 0.92
+      }
+    }
+  ]
+}
 ```
 
 ## Configuring the Judge LLM Model

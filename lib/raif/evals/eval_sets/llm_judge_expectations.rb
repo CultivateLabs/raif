@@ -70,7 +70,7 @@ module Raif
           # Merge user metadata with judge metadata
           combined_metadata = result_metadata.merge(judge_metadata)
 
-          expectation_result = expect "LLM judge: #{criteria}", combined_metadata do
+          expectation_result = expect "LLM judge: #{criteria}", result_metadata: combined_metadata do
             judge_task.passes?
           end
 
@@ -129,7 +129,7 @@ module Raif
         #   - :score - Numerical score given
         #   - :reasoning - Detailed explanation
         #   - :confidence - Confidence score (0.0-1.0)
-        def expect_llm_judge_score(output, scoring_rubric:, min_passing_score:, llm_judge_model_key: nil, additional_context: nil, metadata: {})
+        def expect_llm_judge_score(output, scoring_rubric:, min_passing_score:, llm_judge_model_key: nil, additional_context: nil, result_metadata: {})
           scoring_rubric_obj = scoring_rubric
 
           judge_task = LlmJudges::Scored.run(
@@ -152,9 +152,9 @@ module Raif
           }.compact
 
           # Merge user metadata with judge metadata
-          combined_metadata = metadata.merge(judge_metadata)
+          combined_metadata = result_metadata.merge(judge_metadata)
 
-          expectation_result = expect "LLM judge score (#{rubric_name}): >= #{min_passing_score}", combined_metadata do
+          expectation_result = expect "LLM judge score (#{rubric_name}): >= #{min_passing_score}", result_metadata: combined_metadata do
             judge_task.completed? && judge_task.judgment_score && judge_task.judgment_score >= min_passing_score
           end
 
@@ -213,7 +213,7 @@ module Raif
         #   - :reasoning - Detailed explanation of the choice
         #   - :confidence - Confidence score (0.0-1.0)
         def expect_llm_judge_prefers(content_to_judge, over:, criteria:, allow_ties: true, llm_judge_model_key: nil, additional_context: nil,
-          metadata: {})
+          result_metadata: {})
           judge_task = LlmJudges::Comparative.run(
             content_to_judge: content_to_judge,
             over_content: over,
@@ -235,9 +235,9 @@ module Raif
           }.compact
 
           # Merge user metadata with judge metadata
-          combined_metadata = metadata.merge(judge_metadata)
+          combined_metadata = result_metadata.merge(judge_metadata)
 
-          expectation_result = expect "LLM judge prefers A over B: #{criteria}", combined_metadata do
+          expectation_result = expect "LLM judge prefers A over B: #{criteria}", result_metadata: combined_metadata do
             judge_task.completed? && judge_task.correct_expected_winner?
           end
 

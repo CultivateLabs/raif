@@ -5,18 +5,18 @@ module Raif
     module EvalSets
       module Expectations
 
-        def expect(description, metadata = {}, &block)
+        def expect(description, result_metadata: nil, &block)
           result = begin
             if block.call
               output.puts Raif::Utils::Colors.green("  ✓ #{description}")
-              ExpectationResult.new(description: description, status: :passed, metadata: metadata.presence)
+              ExpectationResult.new(description: description, status: :passed, metadata: result_metadata)
             else
               output.puts Raif::Utils::Colors.red("  ✗ #{description}")
-              ExpectationResult.new(description: description, status: :failed, metadata: metadata.presence)
+              ExpectationResult.new(description: description, status: :failed, metadata: result_metadata)
             end
           rescue => e
             output.puts Raif::Utils::Colors.red("  ✗ #{description} (Error: #{e.message})")
-            ExpectationResult.new(description: description, status: :error, error: e, metadata: metadata.presence)
+            ExpectationResult.new(description: description, status: :error, error: e, metadata: result_metadata)
           end
 
           current_eval.add_expectation_result(result)

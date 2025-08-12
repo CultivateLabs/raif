@@ -136,7 +136,7 @@ RSpec.describe Raif::Evals::EvalSet do
       end
 
       it "stores metadata with expectation results" do
-        result = instance.expect "Summary is high quality", overall_score: 4, clarity_score: 5.5 do
+        result = instance.expect "Summary is high quality", result_metadata: { overall_score: 4, clarity_score: 5.5 } do
           true
         end
 
@@ -145,7 +145,7 @@ RSpec.describe Raif::Evals::EvalSet do
       end
 
       it "handles metadata with failing expectations" do
-        result = instance.expect "Score too low", score: 2, rationale: "because it's too low" do
+        result = instance.expect "Score too low", result_metadata: { score: 2, rationale: "because it's too low" } do
           false
         end
 

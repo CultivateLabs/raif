@@ -216,7 +216,7 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
         "test output",
         scoring_rubric: rubric,
         min_passing_score: 7,
-        metadata: { test_id: "test_123", category: "accuracy" }
+        result_metadata: { test_id: "test_123", category: "accuracy" }
       )
 
       expect(result.metadata).to eq({
@@ -310,7 +310,7 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
         "content A",
         over: "content B",
         criteria: "Which is clearer?",
-        metadata: { comparison_type: "clarity", test_run: 42 }
+        result_metadata: { comparison_type: "clarity", test_run: 42 }
       )
 
       expect(result.metadata).to include({
