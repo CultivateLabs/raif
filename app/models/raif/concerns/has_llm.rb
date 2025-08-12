@@ -10,7 +10,7 @@ module Raif::Concerns::HasLlm
   end
 
   def default_llm_model_key
-    Rails.env.test? ? :raif_test_llm : Raif.config.default_llm_model_key
+    Raif.config.default_llm_model_key
   end
 
   def llm

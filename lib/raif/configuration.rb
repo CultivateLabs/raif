@@ -43,7 +43,6 @@ module Raif
     alias_method :aws_bedrock_titan_embedding_models_enabled=, :bedrock_embedding_models_enabled=
 
     def initialize
-      # Set default config
       @agent_types = Set.new(["Raif::Agents::ReActAgent", "Raif::Agents::NativeToolCallingAgent"])
       @anthropic_api_key = default_disable_llm_api_requests? ? "placeholder-anthropic-api-key" : ENV["ANTHROPIC_API_KEY"]
       @bedrock_models_enabled = false
@@ -60,7 +59,7 @@ module Raif
       @conversations_controller = "Raif::ConversationsController"
       @current_user_method = :current_user
       @default_embedding_model_key = "open_ai_text_embedding_3_small"
-      @default_llm_model_key = ENV["RAIF_DEFAULT_LLM_MODEL_KEY"].presence || "open_ai_gpt_4o"
+      @default_llm_model_key = Rails.env.test? ? :raif_test_llm : (ENV["RAIF_DEFAULT_LLM_MODEL_KEY"].presence || "open_ai_gpt_4o")
       @evals_default_llm_judge_model_key = nil
       @evals_verbose_output = false
       @llm_api_requests_enabled = !default_disable_llm_api_requests?
