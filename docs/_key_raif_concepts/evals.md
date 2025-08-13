@@ -444,7 +444,7 @@ class Raif::Evals::LlmJudges::Summarization < Raif::Evals::LlmJudge
 
   def build_system_prompt
     <<~PROMPT.strip
-      You are an impartial expert judge of summary quality. You'll be provided a original piece of content and its summary. Your job is to evaluate the summary against the original content based on the following criteria, and assign a score from 1 to 5 for each (5 = excellent, 1 = very poor):
+      You are an impartial expert judge of summary quality. You'll be provided an original piece of content and its summary. Your job is to evaluate the summary against the original content based on the following criteria, and assign a score from 1 to 5 for each (5 = excellent, 1 = very poor):
 
       **Coverage (Relevance & Completeness):** Does the summary capture all the important points of the original content?
       - 5 = Excellent Coverage - Nearly all key points and essential details from the content are present in the summary, with no major omissions.
@@ -570,7 +570,7 @@ This approach gives you control over the judge's prompting, response schema, and
 
 # Expecting Tool Calls
 
-In addition to basic `expect` blocks, you can use `expect_tool_invocation` to ensure the LLM invoked a specific tool in its response.
+In addition to basic `expect` blocks, you can use `expect_tool_invocation` to ensure the LLM invoked a specific tool in its response (or `expect_no_tool_invocation` to verify it did not).
 
 ```ruby
 eval "invokes the WikipediaSearch tool" do
@@ -600,4 +600,22 @@ Raif defaults to using `Raif.config.default_llm_model_key` for LLM API calls. Yo
 ```bash
 RAIF_DEFAULT_LLM_MODEL_KEY=anthropic_claude_4_sonnet bundle exec raif evals
 ```
+
+# Verbose Output
+
+When debugging failing evals or wanting to see more details about your test runs, you can enable verbose output to see metadata and LLM judge reasoning:
+
+```ruby
+# In your initializer
+Raif.configure do |config|
+  config.evals_verbose_output = true
+end
+```
+
+When enabled, this will display:
+- Result metadata for each expectation
+- LLM judge reasoning and confidence scores
+- Additional debugging information
+
+This is particularly useful when working with LLM judges to understand why they made certain decisions.
 
