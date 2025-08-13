@@ -77,7 +77,7 @@ module Raif
       temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
 
-      model_completion = Raif::ModelCompletion.new(
+      model_completion = Raif::ModelCompletion.create!(
         messages: format_messages(messages),
         system_prompt: system_prompt,
         response_format: response_format,
