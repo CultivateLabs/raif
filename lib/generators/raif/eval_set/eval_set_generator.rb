@@ -9,16 +9,26 @@ module Raif
 
       argument :name, type: :string, banner: "EvalSetName or Module::EvalSetName"
 
+      class_option :type,
+        type: :string,
+        desc: "Type of eval set (Task, Conversation, or Agent) for organization"
+
       def create_eval_set_file
         @class_path = name.split("::")
         @class_name_without_namespace = @class_path.pop
-        @full_class_name = (@class_path + [@class_name_without_namespace + "EvalSet"]).join("::")
 
-        file_path = if @class_path.any?
-          File.join("raif_evals", "eval_sets", @class_path.map(&:underscore), "#{@class_name_without_namespace.underscore}_eval_set.rb")
-        else
-          File.join("raif_evals", "eval_sets", "#{@class_name_without_namespace.underscore}_eval_set.rb")
-        end
+        # Build the full class name based on the type option
+        namespace_parts = ["Raif", "Evals"]
+        namespace_parts << options[:type].capitalize if options[:type]
+        namespace_parts += @class_path if @class_path.any?
+        @full_class_name = (namespace_parts + [@class_name_without_namespace + "EvalSet"]).join("::")
+
+        # Build the file path based on the type option
+        path_parts = ["raif_evals", "eval_sets"]
+        path_parts << options[:type] if options[:type]
+        path_parts += @class_path.map(&:underscore) if @class_path.any?
+
+        file_path = File.join(*path_parts, "#{@class_name_without_namespace.underscore}_eval_set.rb")
 
         template "eval_set.rb.erb", file_path
       end

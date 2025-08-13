@@ -13,5 +13,14 @@ require "raif/evals/scoring_rubric"
 
 module Raif
   module Evals
+    # Namespace modules for organizing eval sets
+    module Tasks
+    end
+
+    module Conversations
+    end
+
+    module Agents
+    end
   end
 end

@@ -1,4 +1,4 @@
-class <%= task_class_name %>TaskEvalSet < Raif::Evals::EvalSet
+class Raif::Evals::Tasks::<%= task_class_name %>EvalSet < Raif::Evals::EvalSet
   # Setup method runs before each eval
   setup do
     # Common setup code

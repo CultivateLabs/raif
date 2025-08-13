@@ -26,10 +26,14 @@ module Raif
       def create_eval_set
         return if options[:skip_eval_set]
 
-        eval_set_path = if class_path.any?
-          File.join("raif_evals", "eval_sets", class_path, "#{file_name}_agent_eval_set.rb")
+        # Remove 'raif' from class_path if it's the first element (Rails adds it automatically)
+        eval_class_path = class_path.dup
+        eval_class_path.shift if eval_class_path.first == "raif"
+
+        eval_set_path = if eval_class_path.any?
+          File.join("raif_evals", "eval_sets", "agents", eval_class_path, "#{file_name}_eval_set.rb")
         else
-          File.join("raif_evals", "eval_sets", "#{file_name}_agent_eval_set.rb")
+          File.join("raif_evals", "eval_sets", "agents", "#{file_name}_eval_set.rb")
         end
 
         template "agent_eval_set.rb.tt", eval_set_path

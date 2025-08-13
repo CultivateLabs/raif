@@ -60,14 +60,17 @@ module Raif
           relative_path = Pathname.new(file).relative_path_from(Rails.root)
           require Rails.root.join(relative_path)
 
-          class_name = File.basename(file, ".rb").camelize
-          namespace_parts = relative_path.dirname.to_s.split("/")[2..-1]
+          # Extract the path components after raif_evals/eval_sets
+          path_from_eval_sets = Pathname.new(file).relative_path_from(eval_sets_dir)
+          path_parts = path_from_eval_sets.dirname.to_s.split("/")
 
-          full_class_name = if namespace_parts&.any?
-            (namespace_parts.map(&:camelize) + [class_name]).join("::")
-          else
-            class_name
-          end
+          # Remove "." if it's the only element (meaning file is in eval_sets root)
+          path_parts = [] if path_parts == ["."]
+
+          # Build the full class name
+          class_name = File.basename(file, ".rb").camelize
+          namespace_parts = ["Raif", "Evals"] + path_parts.map(&:camelize)
+          full_class_name = (namespace_parts + [class_name]).join("::")
 
           full_class_name.constantize
         end.select { |klass| klass < Raif::Evals::EvalSet }

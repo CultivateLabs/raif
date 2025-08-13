@@ -55,7 +55,7 @@ RSpec.describe Raif::Evals::Run do
       it "discovers eval set files" do
         discovered_file = eval_sets_dir.join("discovered_eval_set.rb")
         File.write(discovered_file, <<~RUBY)
-          class DiscoveredEvalSet < Raif::Evals::EvalSet
+          class Raif::Evals::DiscoveredEvalSet < Raif::Evals::EvalSet
             eval "discovered" do
               expect "found" do
                 true
@@ -65,7 +65,7 @@ RSpec.describe Raif::Evals::Run do
         RUBY
 
         run = described_class.new
-        expect(run.eval_sets.map(&:name)).to include("DiscoveredEvalSet")
+        expect(run.eval_sets.map(&:name)).to include("Raif::Evals::DiscoveredEvalSet")
       ensure
         FileUtils.rm(discovered_file) if File.exist?(discovered_file)
       end
@@ -76,11 +76,15 @@ RSpec.describe Raif::Evals::Run do
         namespaced_file = namespace_dir.join("namespaced_eval_set.rb")
 
         File.write(namespaced_file, <<~RUBY)
-          module MyModule
-            class NamespacedEvalSet < Raif::Evals::EvalSet
-              eval "namespaced" do
-                expect "works" do
-                  true
+          module Raif
+            module Evals
+              module MyModule
+                class NamespacedEvalSet < Raif::Evals::EvalSet
+                  eval "namespaced" do
+                    expect "works" do
+                      true
+                    end
+                  end
                 end
               end
             end
@@ -88,7 +92,7 @@ RSpec.describe Raif::Evals::Run do
         RUBY
 
         run = described_class.new
-        expect(run.eval_sets.map(&:name)).to include("MyModule::NamespacedEvalSet")
+        expect(run.eval_sets.map(&:name)).to include("Raif::Evals::MyModule::NamespacedEvalSet")
       ensure
         FileUtils.rm(namespaced_file)
         FileUtils.rmdir(namespace_dir) if Dir.exist?(namespace_dir) && Dir.empty?(namespace_dir)

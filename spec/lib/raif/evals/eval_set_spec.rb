@@ -181,11 +181,10 @@ RSpec.describe Raif::Evals::EvalSet do
         tool_type: "Raif::TestModelTool"
       )
 
-      eval_set_instance.expect_tool_invocation(tool_invoker, "test_model_tool")
+      result = eval_set_instance.expect_tool_invocation(tool_invoker, "Raif::TestModelTool")
 
-      result = eval_set_instance.current_eval.expectation_results.first
       expect(result.passed?).to be true
-      expect(result.description).to eq("invokes test_model_tool")
+      expect(result.description).to eq("invokes Raif::TestModelTool")
     end
 
     it "fails when tool is not invoked" do
@@ -203,18 +202,14 @@ RSpec.describe Raif::Evals::EvalSet do
         tool_arguments: { "items" => [{ "title" => "test", "description" => "test desc" }] }
       )
 
-      eval_set_instance.expect_tool_invocation(
+      result = eval_set_instance.expect_tool_invocation(
         tool_invoker,
-        "test_model_tool",
+        "Raif::TestModelTool",
         with: { items: [{ "title" => "test", "description" => "test desc" }] }
       )
 
-      result = eval_set_instance.current_eval.expectation_results.first
       expect(result.passed?).to be true
-      expect(result.description).to include("invokes test_model_tool with")
-      expect(result.description).to include("items")
-      expect(result.description).to include("test")
-      expect(result.description).to include("test desc")
+      expect(result.description).to eq("invokes Raif::TestModelTool with {items: [{\"title\" => \"test\", \"description\" => \"test desc\"}]}")
     end
   end
 

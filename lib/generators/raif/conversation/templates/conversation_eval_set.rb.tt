@@ -1,4 +1,4 @@
-class <%= class_name %>ConversationEvalSet < Raif::Evals::EvalSet
+class Raif::Evals::Conversations::<%= class_name %>EvalSet < Raif::Evals::EvalSet
   # Setup method runs before each eval
   setup do
     # Common setup code
@@ -37,7 +37,7 @@ class <%= class_name %>ConversationEvalSet < Raif::Evals::EvalSet
     # first_entry.process_entry!
     
     # Second message references context
-    # second_entry = conversation.entries.create!(
+    # second_entry = @conversation.entries.create!(
     #   user_message: "What's my name?",
     #   creator: @user
     # )
@@ -50,15 +50,15 @@ class <%= class_name %>ConversationEvalSet < Raif::Evals::EvalSet
 
   eval "<%= class_name %> handles tool invocations correctly" do
     # Test if your conversation uses tools
-    # @conversation.update!(available_model_tools: ["Raif::ModelTools::MyExampleWeatherTool"])
-    
+    # @conversation.update!(available_model_tools: [ "Raif::ModelTools::FetchUrl" ])
+
     # entry = @conversation.entries.create!(
-    #   user_message: "What's the weather like?",
+    #   user_message: "What can you tell me about the content of https://en.wikipedia.org/wiki/Moon",
     #   creator: @user
     # )
-    
+
     # entry.process_entry!
-    
-    # expect_tool_invocation(entry, "Raif::ModelTools::MyExampleWeatherTool")
+
+    # expect_tool_invocation(entry, "Raif::ModelTools::FetchUrl", with: { url: "https://en.wikipedia.org/wiki/Moon" })
   end
 end
