@@ -27,6 +27,7 @@ module Raif
 
         def expect_tool_invocation(tool_invoker, tool_type, with: {})
           invocations = tool_invoker.raif_model_tool_invocations.select { |inv| inv.tool_type == tool_type }
+          invoked_tools = tool_invoker.raif_model_tool_invocations.map{|inv| [inv.tool_type, inv.tool_arguments] }.to_h
 
           if with.any?
             invocations = invocations.select do |invocation|
@@ -34,7 +35,8 @@ module Raif
             end
           end
 
-          expect "invokes #{tool_type}#{with.any? ? " with #{with.inspect}" : ""}" do
+          result_metadata = { invoked_tools: invoked_tools }
+          expect "invokes #{tool_type}#{with.any? ? " with #{with.inspect}" : ""}", result_metadata: result_metadata do
             invocations.any?
           end
         end
