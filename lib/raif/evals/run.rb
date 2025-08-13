@@ -9,7 +9,8 @@ module Raif
       attr_reader :eval_sets, :results, :output
 
       def initialize(eval_sets: nil, output: $stdout)
-        @eval_sets = eval_sets || discover_eval_sets
+        @eval_sets = discover_eval_sets
+        @eval_sets = @eval_sets.select{|eval_set| eval_sets.include?(eval_set.name) } if eval_sets&.any?
         @results = {}
         @output = output
       end

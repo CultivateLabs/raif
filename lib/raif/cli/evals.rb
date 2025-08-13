@@ -34,17 +34,7 @@ module Raif
 
         require "raif/evals"
 
-        # Parse eval sets if specified
-        eval_set_classes = if eval_sets.any?
-          eval_sets.map do |class_name|
-            class_name.constantize
-          rescue NameError => e
-            puts "Warning: Could not find eval set class #{class_name}: #{e.message}"
-            nil
-          end.compact
-        end
-
-        run = Raif::Evals::Run.new(eval_sets: eval_set_classes)
+        run = Raif::Evals::Run.new(eval_sets: eval_sets)
         run.execute
       end
     end

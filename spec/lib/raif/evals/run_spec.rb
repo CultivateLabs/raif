@@ -36,9 +36,13 @@ RSpec.describe Raif::Evals::Run do
   end
 
   describe "#initialize" do
-    it "accepts specific eval sets" do
-      run = described_class.new(eval_sets: [TestEvalSet])
-      expect(run.eval_sets).to eq([TestEvalSet])
+    it "accepts specific eval sets by name" do
+      allow_any_instance_of(described_class).to receive(:discover_eval_sets).and_return([TestEvalSet, AnotherEvalSet])
+      run = described_class.new(eval_sets: ["TestEvalSet"])
+      expect(run.eval_sets.map(&:name)).to eq(["TestEvalSet"])
+
+      run = described_class.new(eval_sets: ["TestEvalSet", "AnotherEvalSet"])
+      expect(run.eval_sets.map(&:name)).to eq(["TestEvalSet", "AnotherEvalSet"])
     end
 
     context "with auto-discovery" do
@@ -94,10 +98,11 @@ RSpec.describe Raif::Evals::Run do
 
   describe "#execute" do
     let(:output) { StringIO.new }
-    let(:run) { described_class.new(eval_sets: [TestEvalSet, AnotherEvalSet], output: output) }
+    let(:run) { described_class.new(output: output) }
 
     before do
       allow(Time).to receive(:current).and_return(Time.new(2024, 1, 1, 12, 0, 0))
+      allow_any_instance_of(described_class).to receive(:discover_eval_sets).and_return([TestEvalSet, AnotherEvalSet])
     end
 
     it "runs all eval sets" do
@@ -105,6 +110,52 @@ RSpec.describe Raif::Evals::Run do
       expect(AnotherEvalSet).to receive(:run).with(output: output).and_call_original
 
       run.execute
+    end
+
+    context "when running specific eval sets by name" do
+      it "runs only the specified eval set when given a single name" do
+        run = described_class.new(eval_sets: ["TestEvalSet"], output: output)
+
+        expect(TestEvalSet).to receive(:run).with(output: output).and_call_original
+        expect(AnotherEvalSet).not_to receive(:run)
+
+        run.execute
+
+        expect(run.results.keys).to eq(["TestEvalSet"])
+      end
+
+      it "runs multiple specified eval sets when given multiple names" do
+        run = described_class.new(eval_sets: ["TestEvalSet", "AnotherEvalSet"], output: output)
+
+        expect(TestEvalSet).to receive(:run).with(output: output).and_call_original
+        expect(AnotherEvalSet).to receive(:run).with(output: output).and_call_original
+
+        run.execute
+
+        expect(run.results.keys).to contain_exactly("TestEvalSet", "AnotherEvalSet")
+      end
+
+      it "handles non-existent eval set names gracefully" do
+        run = described_class.new(eval_sets: ["NonExistentEvalSet", "TestEvalSet"], output: output)
+
+        expect(TestEvalSet).to receive(:run).with(output: output).and_call_original
+        expect(AnotherEvalSet).not_to receive(:run)
+
+        run.execute
+
+        expect(run.results.keys).to eq(["TestEvalSet"])
+      end
+
+      it "runs no eval sets when only non-existent names are provided" do
+        run = described_class.new(eval_sets: ["NonExistentEvalSet"], output: output)
+
+        expect(TestEvalSet).not_to receive(:run)
+        expect(AnotherEvalSet).not_to receive(:run)
+
+        run.execute
+
+        expect(run.results).to be_empty
+      end
     end
 
     it "collects results from all eval sets" do
