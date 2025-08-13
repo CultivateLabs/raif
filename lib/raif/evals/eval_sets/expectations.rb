@@ -9,9 +9,11 @@ module Raif
           result = begin
             if block.call
               output.puts Raif::Utils::Colors.green("  ✓ #{description}")
+              output.puts Raif::Utils::Colors.green("    ⎿ #{result_metadata.inspect}") if result_metadata && Raif.config.evals_verbose_output
               ExpectationResult.new(description: description, status: :passed, metadata: result_metadata)
             else
               output.puts Raif::Utils::Colors.red("  ✗ #{description}")
+              output.puts Raif::Utils::Colors.red("    ⎿ #{result_metadata.inspect}") if result_metadata && Raif.config.evals_verbose_output
               ExpectationResult.new(description: description, status: :failed, metadata: result_metadata)
             end
           rescue => e
