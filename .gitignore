@@ -10,3 +10,4 @@
 /.yardoc/
 /doc/
 *.gem
+.erb_lint_cache/

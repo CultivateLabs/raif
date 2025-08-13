@@ -8,6 +8,10 @@ RSpec.describe Raif::Llms::OpenAiCompletions, type: :model do
 
   let(:llm){ Raif.llm(:open_ai_gpt_4o) }
 
+  before do
+    allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
+  end
+
   describe "#chat" do
     context "when the response format is text" do
       it "makes a request to the OpenAI API and processes the response", vcr: { cassette_name: "open_ai_completions/format_text" } do

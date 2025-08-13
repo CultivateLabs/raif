@@ -63,7 +63,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
       broadcast_replace_to raif_conversation
     end
 
-    if raif_model_completion.parsed_response.present? || raif_model_completion.response_tool_calls.present?
+    if raif_model_completion.present? && (raif_model_completion.parsed_response.present? || raif_model_completion.response_tool_calls.present?)
       extract_message_and_invoke_tools!
       create_entry_for_observation! if triggers_observation_to_model?
     else

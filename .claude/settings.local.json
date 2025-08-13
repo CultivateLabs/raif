@@ -1,14 +1,19 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls:*)",
-      "Bash(find:*)",
-      "Bash(mkdir:*)",
-      "Bash(cp:*)",
       "Bash(bin/rails generate migration:*)",
       "Bash(bin/rails:*)",
       "Bash(bundle exec rspec:*)",
-      "Bash(rails:*)"
+      "Bash(bundle exec rspec:*)",
+      "Bash(cp:*)",
+      "Bash(cp:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(rails:*)",
+      "Bash(bin/lint:*)",
+      "Bash(bundle exec rails console:*)",
+      "Bash(RAILS_ENV=test bundle exec rails console)"
     ],
     "deny": []
   }

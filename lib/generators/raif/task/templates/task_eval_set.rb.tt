@@ -1,0 +1,49 @@
+class Raif::Evals::Tasks::<%= task_class_name %>EvalSet < Raif::Evals::EvalSet
+  # Setup method runs before each eval
+  setup do
+    # Common setup code
+  end
+
+  # Teardown runs after each eval
+  teardown do
+    # Cleanup code
+  end
+
+  eval "<%= task_class_name %> produces expected output" do
+    # task = Raif::Tasks::<%= task_class_name %>.run(
+    #   Add your task parameters here that produce the expected output
+    # )
+
+    # The return value of the block determines if the expectation passes or fails
+    # expect "task completes successfully" do
+    #   task.completed?
+    # end
+
+    # expect "contains the word 'hello' in the output" do
+    #   task.parsed_response.include?("hello")
+    # end
+
+    # Add more specific expectations based on your task's behavior
+  end
+
+  eval "properly handles refusals" do
+    # task = Raif::Tasks::<%= task_class_name %>.run(
+    #   Add your task parameters here to trigger a refusal
+    # )
+
+    # expect "returns exactly the text 'I'm sorry, I can't do that.'" do
+    #   task.parsed_response == "I'm sorry, I can't do that."
+    # end
+  end
+
+  eval "<%= task_class_name %> uses appropriate LLM tools" do
+    # Test that the task uses the expected tools if applicable
+    # task = Raif::Tasks::<%= task_class_name %>.run(
+    #   Add parameters that trigger the use of the expected tools
+    # )
+
+    # Example tool invocation expectations (if your task uses tools):
+    # expect_tool_invocation(task, "tool_name", with: { param: "value" })
+    # expect_no_tool_invocation(task, "unwanted_tool")
+  end
+end

@@ -17,6 +17,7 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 require "rspec/rails"
 require "setup/vcr"
 require "setup/capybara"
+require "raif/evals"
 
 ActiveRecord::Migrator.migrations_paths = [File.expand_path("../spec/dummy/db/migrate", __dir__)]
 
@@ -69,4 +70,11 @@ RSpec.configure do |config|
 
   config.include Raif::RspecHelpers
   config.include ActiveJob::TestHelper
+
+  config.before(:each) do
+    # If we're using a VCR cassette, we always want to allow LLM API requests.
+    if VCR.current_cassette.present?
+      allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
+    end
+  end
 end

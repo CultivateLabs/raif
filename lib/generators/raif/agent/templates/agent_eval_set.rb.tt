@@ -1,0 +1,42 @@
+class Raif::Evals::Agents::<%= class_name %>EvalSet < Raif::Evals::EvalSet
+  # Setup method runs before each eval
+  setup do
+    # Common setup code
+    # @user = User.create!(email: "test@example.com")
+  end
+
+  # Teardown runs after each eval
+  teardown do
+    # Cleanup code
+  end
+
+  eval "<%= class_name %> completes task successfully" do
+    # agent = Raif::Agents::<%= class_name %>.create!(
+    #   creator: @user,
+    #   task: "Your specific task here",
+    #   available_model_tools: []  # Add your tools here if needed
+    # )
+    
+    # agent.run!
+    
+    # expect "agent completes successfully" do
+    #   agent.completed?
+    # end
+    
+    # expect "produces expected output" do
+    #   agent.final_answer.include?("expected content")
+    # end
+  end
+
+  eval "<%= class_name %> uses tools correctly" do
+    # agent = Raif::Agents::<%= class_name %>.create!(
+    #   creator: @user,
+    #   task: "A task that requires tool usage",
+    #   available_model_tools: ["expected_tool_name"]
+    # )
+    
+    # agent.run!
+    
+    # expect_tool_invocation(agent, "expected_tool_name")
+  end
+end

@@ -13,7 +13,9 @@ module Raif
 
     llm_temperature 0.7
 
-    belongs_to :creator, polymorphic: true
+    belongs_to :creator, polymorphic: true, optional: true
+
+    validates :creator, presence: true, unless: -> { Raif.config.task_creator_optional }
 
     has_one :raif_model_completion, as: :source, dependent: :destroy, class_name: "Raif::ModelCompletion"
 
@@ -50,14 +52,14 @@ module Raif
     # The primary interface for running a task. It will hit the LLM with the task's prompt and system prompt and return a Raif::Task object.
     # It will also create a new Raif::ModelCompletion record.
     #
-    # @param creator [Object] The creator of the task (polymorphic association)
+    # @param creator [Object, nil] The creator of the task (polymorphic association), optional
     # @param available_model_tools [Array<Class>] Optional array of model tool classes that will be provided to the LLM for it to invoke.
     # @param llm_model_key [Symbol, String] Optional key for the LLM model to use. If blank, Raif.config.default_llm_model_key will be used.
     # @param images [Array] Optional array of Raif::ModelImageInput objects to include with the prompt.
     # @param files [Array] Optional array of Raif::ModelFileInput objects to include with the prompt.
     # @param args [Hash] Additional arguments to pass to the instance of the task that is created.
     # @return [Raif::Task, nil] The task instance that was created and run.
-    def self.run(creator:, available_model_tools: [], llm_model_key: nil, images: [], files: [], **args)
+    def self.run(creator: nil, available_model_tools: [], llm_model_key: nil, images: [], files: [], **args)
       task = new(
         creator: creator,
         llm_model_key: llm_model_key,
@@ -120,19 +122,19 @@ module Raif
 
     # Returns the LLM prompt for the task.
     #
-    # @param creator [Object] The creator of the task (polymorphic association)
+    # @param creator [Object, nil] The creator of the task (polymorphic association), optional
     # @param args [Hash] Additional arguments to pass to the instance of the task that is created.
     # @return [String] The LLM prompt for the task.
-    def self.prompt(creator:, **args)
+    def self.prompt(creator: nil, **args)
       new(creator:, **args).build_prompt
     end
 
     # Returns the LLM system prompt for the task.
     #
-    # @param creator [Object] The creator of the task (polymorphic association)
+    # @param creator [Object, nil] The creator of the task (polymorphic association), optional
     # @param args [Hash] Additional arguments to pass to the instance of the task that is created.
     # @return [String] The LLM system prompt for the task.
-    def self.system_prompt(creator:, **args)
+    def self.system_prompt(creator: nil, **args)
       new(creator:, **args).build_system_prompt
     end
 
@@ -181,7 +183,7 @@ module Raif
     end
 
     def populate_prompts
-      self.requested_language_key ||= creator.preferred_language_key if creator.respond_to?(:preferred_language_key)
+      self.requested_language_key ||= creator&.preferred_language_key if creator&.respond_to?(:preferred_language_key)
       self.prompt = build_prompt
       self.system_prompt = build_system_prompt
     end

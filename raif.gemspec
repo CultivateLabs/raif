@@ -17,8 +17,11 @@ Gem::Specification.new do |spec|
   spec.metadata["source_code_uri"] = "https://github.com/cultivatelabs/raif"
   spec.metadata["changelog_uri"] = "https://github.com/cultivatelabs/raif/blob/main/CHANGELOG.md"
   spec.files = Dir.chdir(File.expand_path(__dir__)) do
-    Dir["{app,config,db,lib,spec/support}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
+    Dir["{app,config,db,lib,spec/support,exe}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
   end
+
+  spec.bindir = "exe"
+  spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
 
   spec.add_dependency "aws-sdk-bedrockruntime"
   spec.add_dependency "event_stream_parser", ">= 1.0"

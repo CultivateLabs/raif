@@ -53,8 +53,7 @@ module Raif
       end
 
       def build_warning_message(uninstalled_migration_names)
-        <<~WARNING
-          \e[33m
+        msg = <<~WARNING
           ⚠️  RAIF MIGRATION WARNING ⚠️
 
           The following Raif migrations have not been run in your application:
@@ -66,8 +65,9 @@ module Raif
             rails raif:install:migrations
             rails db:migrate
 
-          \e[0m
         WARNING
+
+        Raif::Utils::Colors.yellow(msg)
       end
     end
   end

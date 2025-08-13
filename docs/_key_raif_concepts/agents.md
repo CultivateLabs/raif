@@ -60,8 +60,8 @@ module Raif
       # uncomment this callback to populate the available_model_tools attribute with your desired model tools.
       # before_create -> {
       #   self.available_model_tools ||= [
-      #     Raif::ModelTools::WikipediaSearchTool,
-      #     Raif::ModelTools::FetchUrlTool
+      #     Raif::ModelTools::WikipediaSearch,
+      #     Raif::ModelTools::FetchUrl
       #   ]
       # }
 

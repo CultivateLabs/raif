@@ -37,4 +37,8 @@ module Raif
   def self.logger
     @logger ||= Rails.logger
   end
+
+  def self.running_evals?
+    ENV["RAIF_RUNNING_EVALS"] == "true"
+  end
 end

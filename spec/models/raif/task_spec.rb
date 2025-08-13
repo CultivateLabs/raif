@@ -256,4 +256,19 @@ RSpec.describe Raif::Task, type: :model do
       expect(Raif::Task.system_prompt(creator: user)).to eq("You are a helpful assistant. You're talking to #{user.email}. Today's date is #{Date.today.strftime("%B %d, %Y")}.") # rubocop:disable Layout/LineLength
     end
   end
+
+  describe "creator association" do
+    it "is required when Raif.config.task_creator_optional is false" do
+      allow(Raif.config).to receive(:task_creator_optional).and_return(false)
+      task = FB.build(:raif_task, creator: nil)
+      expect(task.valid?).to eq(false)
+      expect(task.errors[:creator]).to include("can't be blank")
+    end
+
+    it "is optional when Raif.config.task_creator_optional is true" do
+      allow(Raif.config).to receive(:task_creator_optional).and_return(true)
+      task = FB.build(:raif_task, creator: nil)
+      expect(task.valid?).to eq(true)
+    end
+  end
 end

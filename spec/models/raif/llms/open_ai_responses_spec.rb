@@ -5,6 +5,10 @@ require "rails_helper"
 RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
   let(:llm){ Raif.llm(:open_ai_responses_gpt_4o) }
 
+  before do
+    allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
+  end
+
   describe "#chat" do
     context "when the response format is text" do
       it "makes a request to the OpenAI Responses API and processes the response", vcr: { cassette_name: "open_ai_responses/format_text" } do
