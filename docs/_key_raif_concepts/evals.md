@@ -9,7 +9,7 @@ description: "Create and run LLM evals to help you iterate, test, and improve yo
 
 # Evals Setup
 
-Raif includes the ability to create and run LLM evals to help you iterate, test, and improve your prompts.
+Raif includes the ability to create and run LLM evals to help you iterate, test, and improve your LLM interactions/prompts.
 
 Evals are automatically set up when you run the install command during [setup](../getting_started/setup#initial-setup). If you need to set up evals manually, you can run:
 ```bash
@@ -38,26 +38,19 @@ This will create `raif_evals/eval_sets/my_example_eval_set.rb`. Each eval set is
   - A description of the eval
   - One or more `expect` blocks that return true or false to indicate if the eval passed or failed
 
-# Running Evals
 
-To run all evals, you can run:
+## Expect Blocks
 
-```bash
-bundle exec raif evals
-```
+Each eval is made up of one or more `expect` blocks. Each `expect` block should return true or false to indicate if the eval passed or failed.
 
-By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
-
-While Raif makes it intentionally difficult to run your normal test suite using real LLM provider API keys, the nature of evals makes it essential that actual API keys are available. When running evals, Raif will load API keys from your initializer, as described in the [setup docs](../getting_started/setup#initial-setup).
-
-Once your evals have run, a JSON file will be created in `raif_evals/results` with the results of each eval.
+These are similar to expectations/assertions in a normal test suite. Unlike test suite expectations/assertions, a failure in an `expect` block will not terminate the `eval`. Your evals are expected to run against an actual LLM (costing you API bills), so this allows you to test multiple `expect` blocks via a single API call, even if some of them fail.
 
 # Example Eval Set
 
 Below is an example eval set for the `Raif::Tasks::DocumentSummarization` task created in the [tasks docs](tasks#html-response-format-tasks).
 
 ```ruby
-class Raif::Tasks::DocumentSummarizationTaskEvalSet < Raif::Evals::EvalSet
+class DocumentSummarizationTaskEvalSet < Raif::Evals::EvalSet
   # Setup method runs before each eval
   setup do
     # Assumes your app has a User model
@@ -66,11 +59,6 @@ class Raif::Tasks::DocumentSummarizationTaskEvalSet < Raif::Evals::EvalSet
       password: "password",
       password_confirmation: "password"
     )
-  end
-
-  # Teardown runs after each eval
-  teardown do
-    # Cleanup code
   end
 
   eval "Raif::Tasks::DocumentSummarization produces expected output" do
@@ -90,14 +78,25 @@ class Raif::Tasks::DocumentSummarizationTaskEvalSet < Raif::Evals::EvalSet
       task.completed?
     end
 
-    expect "summary is between 100 and 1000 words" do
-      task.parsed_response.length.between?(100, 1000)
+    summary_word_count = task.parsed_response.length
+    expect "summary is between 100 and 1000 words", result_metadata: { word_count: summary_word_count } do
+      summary_word_count.between?(100, 1000)
     end
 
     basic_html_tags = %w[p b i div strong]
     expect "contains basic HTML tags in the output" do
       basic_html_tags.any?{ |tag| task.parsed_response.include?("<#{tag}>") }
     end
+
+    # Use LLM to judge the clarity of the summary
+    expect_llm_judge_score(
+      task.parsed_response,
+      scoring_rubric: Raif::Evals::ScoringRubric.clarity,
+      min_passing_score: 4,
+      result_metadata: {
+        compression_ratio: (document.content.length.to_f / summary_word_count).round(2)
+      }
+    )
   end
 
   eval "handles documents that are too short to summarize" do
@@ -117,67 +116,38 @@ class Raif::Tasks::DocumentSummarizationTaskEvalSet < Raif::Evals::EvalSet
       task.parsed_response == "Unable to generate summary"
     end
   end
-
-  # Example using metadata with expectations
-  eval "produces high-quality summaries with metadata tracking" do
-    document = Document.create!(
-      title: "Technical Documentation",
-      content: file("documents/technical.html"),
-      creator: @user
-    )
-
-    task = Raif::Tasks::DocumentSummarization.run(
-      creator: @user,
-      document: document,
-    )
-
-    # Track basic metrics with metadata
-    expect "task completes successfully", 
-           result_metadata: { 
-             processing_time_ms: task.processing_time,
-             model_used: task.llm_model_key 
-           } do
-      task.completed?
-    end
-
-    # Use LLM judge with custom metadata
-    expect_llm_judge_score(
-      task.parsed_response,
-      scoring_rubric: Raif::Evals::ScoringRubric.clarity,
-      min_passing_score: 4,
-      result_metadata: {
-        document_id: document.id,
-        document_length: document.content.length,
-        summary_length: task.parsed_response.length,
-        compression_ratio: (document.content.length.to_f / task.parsed_response.length).round(2)
-      }
-    )
-
-    # Compare with baseline
-    baseline = "Generic summary text"
-    expect_llm_judge_prefers(
-      task.parsed_response,
-      over: baseline,
-      criteria: "More informative and specific to the document content"
-    )
-  end
 end
 ```
 
-# Expect Blocks
+# Running Evals
 
-Each eval is made up of one or more `expect` blocks. Each `expect` block should return true or false to indicate if the eval passed or failed.
+To run all evals, you can run:
 
-These are similar to expectations/assertions in a normal test suite. But unlike test suite expectations/assertions, a failure in an `expect` block will not terminate the `eval`. Your evals are expected to run against an actual LLM (costing you API bills), so this allows you to test multiple `expect` blocks via a single API call, even if some of them fail.
+```bash
+# Run all eval sets
+bundle exec raif evals
 
-All `expect` blocks in an `eval` will be evaluated each time the eval is run.
+# Run a single eval set
+bundle exec raif evals DocumentSummarizationTaskEvalSet
+```
+
+By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
+
+While Raif makes it intentionally difficult to run your normal test suite using real LLM provider API keys, the nature of evals makes it essential that actual API keys are available. When running evals, Raif will load API keys from your initializer, as described in the [setup docs](../getting_started/setup#initial-setup).
+
+Once your evals have run, a JSON file will be created in `raif_evals/results` with the results of each eval.
 
 ## Adding Result Metadata to Expectations
 
-You can attach metadata to any `expect` block to capture additional context that will be stored in the evaluation results JSON file. This is useful for tracking scores, metrics, or other relevant information alongside pass/fail results.
+You can attach metadata to any `expect` block to capture additional context that will be stored in the results JSON file. This is useful for tracking scores, metrics, or other relevant information alongside pass/fail results.
 
 ```ruby
-expect "Summary is high quality", result_metadata: { overall_score: 4.5, word_count: 250 } do
+result_metadata = { 
+  overall_score: task.overall_score, 
+  word_count: summary.length
+}
+
+expect "Summary is high quality", result_metadata: result_metadata do
   task.overall_score >= 4
 end
 ```
@@ -191,7 +161,7 @@ The metadata will be included in the results JSON:
       "description": "Summary is high quality",
       "status": "passed",
       "metadata": {
-        "overall_score": 4.5,
+        "overall_score": 5,
         "word_count": 250
       }
     }
@@ -199,7 +169,7 @@ The metadata will be included in the results JSON:
 }
 ```
 
-This is particularly useful when using LLM judges to capture their scores and reasoning alongside your pass/fail criteria.
+This is particularly useful when using [LLM judges](#llm-as-judge-expectations) to capture their scores and reasoning alongside your pass/fail criteria.
 
 
 
@@ -228,11 +198,19 @@ You can provide examples to guide the judge:
 expect_llm_judge_passes(
   output,
   criteria: "Contains a proper greeting",
+  strict: true,  # Instruct the judge to apply criteria strictly without leniency
   examples: [
-    { content: "Hello! How can I help you today?", passes: true, reasoning: "Friendly greeting present" },
-    { content: "What do you want?", passes: false, reasoning: "No greeting, unprofessional tone" }
-  ],
-  strict: true  # Apply criteria strictly without leniency
+    { 
+      content: "Hello! How can I help you today?", 
+      passes: true, 
+      reasoning: "Friendly greeting present" 
+    },
+    { 
+      content: "What do you want?", 
+      passes: false, 
+      reasoning: "No greeting, unprofessional tone" 
+    }
+  ]
 )
 ```
 
@@ -283,7 +261,7 @@ expect_llm_judge_score(
 )
 ```
 
-Or create rubrics with score ranges for more flexibility:
+Or create rubrics with score ranges:
 
 ```ruby
 rubric = Raif::Evals::ScoringRubric.new(
@@ -383,26 +361,6 @@ expect_llm_judge_passes(
     test_case_id: "CS-001",
     scenario: "customer_complaint",
     priority: "high"
-  }
-)
-
-expect_llm_judge_score(
-  output,
-  scoring_rubric: ScoringRubric.clarity,
-  min_passing_score: 4,
-  result_metadata: {
-    document_type: "technical",
-    word_count: output.split.size
-  }
-)
-
-expect_llm_judge_prefers(
-  new_response,
-  over: old_response,
-  criteria: "More concise and clear",
-  result_metadata: {
-    version_comparison: "v2_vs_v1",
-    test_run: 42
   }
 )
 ```
