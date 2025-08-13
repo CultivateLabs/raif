@@ -64,6 +64,20 @@ RSpec.describe Raif::Llm, type: :model do
         expect(result.prompt_tokens).to be_present
         expect(result.total_tokens).to be_present
       end
+
+      it "persists the model completion even if the LLM API request fails" do
+        allow(Raif.config).to receive(:llm_request_retriable_exceptions).and_return([])
+        allow(test_llm).to receive(:perform_model_completion!).and_raise(Faraday::ConnectionFailed.new("Connection failed"))
+
+        expect do
+          test_llm.chat(messages: messages, system_prompt: system_prompt)
+        end.to raise_error(Faraday::ConnectionFailed).and change(Raif::ModelCompletion, :count).by(1)
+
+        mc = Raif::ModelCompletion.newest_first.first
+        expect(mc.messages).to eq([{ "role" => "user", "content" => [{ "text" => "Hello", "type" => "text" }] }])
+        expect(mc.raw_response).to eq(nil)
+        expect(mc.retry_count).to eq(0)
+      end
     end
 
     context "with invalid response_format" do
@@ -144,20 +158,28 @@ RSpec.describe Raif::Llm, type: :model do
         expect(result).to be_a(Raif::ModelCompletion)
         expect(result.raw_response).to eq("Success after 3 attempts")
         expect(result.retry_count).to eq(2)
+        expect(result).to be_persisted
       end
 
       it "retries the specified number of times and fails if max retries exceeded" do
         llm = retriable_llm_class.new(
-          failures_before_success: 3,
+          failures_before_success: 3, # more than max retries (2) so that this fails before succeeding
           exception_to_raise: retry_exception,
           key: :test_retry_llm,
           api_name: "test_retry_api"
         )
         allow(llm).to receive(:sleep) # Skip sleep delay in tests
 
+        expect(Raif::ModelCompletion.count).to eq(0)
         expect do
           llm.chat(messages: messages)
         end.to raise_error(Faraday::ConnectionFailed)
+
+        expect(Raif::ModelCompletion.count).to eq(1)
+        mc = Raif::ModelCompletion.last
+        expect(mc.messages).to eq([{ "role" => "user", "content" => [{ "text" => "Hello", "type" => "text" }] }])
+        expect(mc.raw_response).to eq(nil)
+        expect(mc.retry_count).to eq(2)
       end
     end
 
