@@ -48,7 +48,7 @@ Lint/RequireRangeParentheses:
   # new in 1.32 
   Enabled: true 
 
-Naming/PredicateName:
+Naming/PredicatePrefix:
   Enabled: false
 
 Style/EmptyHeredoc: 
