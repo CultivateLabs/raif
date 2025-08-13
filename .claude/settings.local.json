@@ -13,8 +13,10 @@
       "Bash(rails:*)",
       "Bash(bin/lint:*)",
       "Bash(bundle exec rails console:*)",
-      "Bash(RAILS_ENV=test bundle exec rails console)"
+      "Bash(RAILS_ENV=test bundle exec rails console)",
+      "Bash(bundle install)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }
