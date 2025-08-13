@@ -86,11 +86,23 @@ module Raif
       end
 
       def file(filename)
-        path = File.join("raif_evals", "files", filename)
-        if File.exist?(path)
-          File.read(path)
+        # Validate filename to prevent directory traversal
+        raise ArgumentError, "Invalid filename: cannot be empty" if filename.nil? || filename.empty?
+        raise ArgumentError, "Invalid filename: cannot contain '..' or absolute paths" if filename.include?("..") || filename.start_with?("/")
+
+        # Ensure we're only accessing files within the raif_evals/files directory
+        base_path = Rails.root.join("raif_evals", "files")
+        full_path = base_path.join(filename)
+
+        # Verify the resolved path is within the expected directory
+        unless full_path.to_s.start_with?(base_path.to_s)
+          raise ArgumentError, "Invalid filename: path traversal detected"
+        end
+
+        if full_path.exist?
+          full_path.read
         else
-          raise "File #{filename} does not exist"
+          raise ArgumentError, "File #{filename} does not exist in raif_evals/files/"
         end
       end
 

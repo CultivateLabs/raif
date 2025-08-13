@@ -250,4 +250,74 @@ RSpec.describe Raif::Evals::EvalSet do
       expect(result.failed?).to be true
     end
   end
+
+  describe "#file" do
+    let(:eval_set_instance) { test_eval_set_class.new(output: output) }
+    let(:test_file_path) { Rails.root.join("raif_evals", "files", "test.txt") }
+
+    before do
+      FileUtils.mkdir_p(Rails.root.join("raif_evals", "files"))
+      File.write(test_file_path, "test content")
+    end
+
+    after do
+      FileUtils.rm(test_file_path)
+    end
+
+    it "reads a valid file" do
+      expect(eval_set_instance.file("test.txt")).to eq("test content")
+    end
+
+    it "handles nested paths" do
+      nested_path = Rails.root.join("raif_evals", "files", "nested", "file.txt")
+      FileUtils.mkdir_p(nested_path.dirname)
+      File.write(nested_path, "nested content")
+
+      expect(eval_set_instance.file("nested/file.txt")).to eq("nested content")
+
+      FileUtils.rm_rf(Rails.root.join("raif_evals", "files", "nested"))
+    end
+
+    it "raises ArgumentError for non-existent files" do
+      expect { eval_set_instance.file("nonexistent.txt") }.to raise_error(
+        ArgumentError,
+        "File nonexistent.txt does not exist in raif_evals/files/"
+      )
+    end
+
+    it "raises ArgumentError for empty filename" do
+      expect { eval_set_instance.file("") }.to raise_error(
+        ArgumentError,
+        "Invalid filename: cannot be empty"
+      )
+    end
+
+    it "raises ArgumentError for nil filename" do
+      expect { eval_set_instance.file(nil) }.to raise_error(
+        ArgumentError,
+        "Invalid filename: cannot be empty"
+      )
+    end
+
+    it "raises ArgumentError for directory traversal attempts with .." do
+      expect { eval_set_instance.file("../../../etc/passwd") }.to raise_error(
+        ArgumentError,
+        "Invalid filename: cannot contain '..' or absolute paths"
+      )
+    end
+
+    it "raises ArgumentError for directory traversal attempts with encoded .." do
+      expect { eval_set_instance.file("..%2F..%2Fetc%2Fpasswd") }.to raise_error(
+        ArgumentError,
+        "Invalid filename: cannot contain '..' or absolute paths"
+      )
+    end
+
+    it "raises ArgumentError for absolute paths" do
+      expect { eval_set_instance.file("/etc/passwd") }.to raise_error(
+        ArgumentError,
+        "Invalid filename: cannot contain '..' or absolute paths"
+      )
+    end
+  end
 end

@@ -129,7 +129,8 @@ module Raif
         #   - :score - Numerical score given
         #   - :reasoning - Detailed explanation
         #   - :confidence - Confidence score (0.0-1.0)
-        def expect_llm_judge_score(output, scoring_rubric:, min_passing_score:, llm_judge_model_key: nil, additional_context: nil, result_metadata: {})
+        def expect_llm_judge_score(output, scoring_rubric:, min_passing_score:, llm_judge_model_key: nil, additional_context: nil,
+          result_metadata: {})
           scoring_rubric_obj = scoring_rubric
 
           judge_task = LlmJudges::Scored.run(
