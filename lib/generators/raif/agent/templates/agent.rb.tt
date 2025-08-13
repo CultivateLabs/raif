@@ -6,9 +6,9 @@ module Raif
       # If you want to always include a certain set of model tools with this agent type,
       # uncomment this callback to populate the available_model_tools attribute with your desired model tools.
       # def populate_default_model_tools
-      #   self.available_model_tools ||= [
-      #     Raif::ModelTools::WikipediaSearchTool,
-      #     Raif::ModelTools::FetchUrlTool
+      #   self.available_model_tools = [
+      #     Raif::ModelTools::WikipediaSearch,
+      #     Raif::ModelTools::FetchUrl
       #   ]
       # end
 
