@@ -410,6 +410,92 @@ expect_llm_judge_passes(
 )
 ```
 
+## Custom LLM Judges
+
+When the built-in judge expectations (`expect_llm_judge_passes`, `expect_llm_judge_score`, `expect_llm_judge_prefers`) are too simplistic for your needs, you can create custom LLM judge subclasses for full control over the prompting and response handling.
+
+Create a custom judge by inheriting from `Raif::Evals::LlmJudge`. `Raif::Evals::LlmJudge` inherits from `Raif::Task`, so you define it like other [tasks](tasks)
+
+You can view an example of a custom judge for judging document summaries [here](https://github.com/CultivateLabs/raif/blob/main/lib/raif/evals/llm_judges/summarization.rb)
+
+```ruby
+class Raif::Evals::LlmJudges::Summarization < Raif::Evals::LlmJudge
+  task_run_arg :original_content # the original content to evaluate the summary against  
+  task_run_arg :summary # the summary to evaluate against the original content
+
+  json_response_schema do
+    object :coverage do
+      string :justification, description: "Justification for the score"
+      number :score, description: "Score from 1 to 5", enum: [1, 2, 3, 4, 5]
+    end
+    
+    object :accuracy do
+      string :justification, description: "Justification for the score" 
+      number :score, description: "Score from 1 to 5", enum: [1, 2, 3, 4, 5]
+    end
+    
+    object :overall do
+      string :justification, description: "Justification for the score"
+      number :score, description: "Score from 1 to 5", enum: [1, 2, 3, 4, 5]
+    end
+  end
+
+  def build_system_prompt
+    # Your custom system prompt defining evaluation criteria
+  end
+
+  def build_prompt
+    # Your custom judge prompt
+  end
+
+  # Convenience methods to access parsed results
+  def overall_score
+    parsed_response["overall"]["score"] if completed?
+  end
+  
+  def overall_justification
+    parsed_response["overall"]["justification"] if completed?
+  end
+end
+```
+
+Then use it directly in your eval sets for additional flexibility:
+
+```ruby
+eval "Summary meets quality standards" do
+  doc = Document.create!(content: "Long article content...")
+  summary_task = Raif::Tasks::Summarizer.run(document: doc)
+  
+  judge_task = Raif::Evals::LlmJudges::Summarization.run(
+    original_content: doc.content,
+    summary: summary_task.parsed_response["summary"]
+  )
+
+  result_metadata = { 
+    score: judge_task.overall_score, 
+    justification: judge_task.overall_justification 
+  }
+  expect "Summary is high quality overall", result_metadata: result_metadata do
+    judge_task.overall_score >= 4
+  end
+
+  [:coverage, :accuracy].each do |score_type|
+    score = judge_task.send("#{score_type}_score")
+    justification = judge_task.send("#{score_type}_justification")
+
+    result_metadata = { 
+      score: score, 
+      justification: justification 
+    }
+    expect "#{score_type.to_s.capitalize} is >= 4", result_metadata: result_metadata do
+      score >= 4
+    end
+  end
+end
+```
+
+This approach gives you complete control over the judge's prompting, response schema, and result processing while still integrating with the eval framework.
+
 # Expecting Tool Calls
 
 In addition to basic `expect` blocks, you can use `expect_tool_invocation` to ensure the LLM invoked a specific tool in its response.
