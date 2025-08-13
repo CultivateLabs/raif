@@ -551,7 +551,7 @@ eval "Summary meets quality standards" do
     judge_task.parsed_response["overall"]["score"] >= 4
   end
 
-  [:coverage, :accuracy, :clarity, :conciseness].each do |score_type|
+  ["coverage", "accuracy", "clarity", "conciseness"].each do |score_type|
     score = judge_task.parsed_response[score_type]["score"]
     justification = judge_task.parsed_response[score_type]["justification"]
 
@@ -559,7 +559,7 @@ eval "Summary meets quality standards" do
       score: score, 
       justification: justification 
     }
-    expect "#{score_type.to_s.capitalize} is >= 4", result_metadata: result_metadata do
+    expect "#{score_type.capitalize} is >= 4", result_metadata: result_metadata do
       score >= 4
     end
   end
