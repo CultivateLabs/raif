@@ -36,7 +36,7 @@ module Raif
           end
 
           result_metadata = { invoked_tools: invoked_tools }
-          expect "invokes #{tool_type}#{with.any? ? " with #{with.inspect}" : ""}", result_metadata: result_metadata do
+          expect "invokes #{tool_type}#{with.any? ? " with #{with.to_json}" : ""}", result_metadata: result_metadata do
             invocations.any?
           end
         end

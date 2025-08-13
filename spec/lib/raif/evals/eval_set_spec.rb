@@ -209,7 +209,7 @@ RSpec.describe Raif::Evals::EvalSet do
       )
 
       expect(result.passed?).to be true
-      expect(result.description).to eq("invokes Raif::TestModelTool with {items: [{\"title\" => \"test\", \"description\" => \"test desc\"}]}")
+      expect(result.description).to eq("invokes Raif::TestModelTool with {\"items\":[{\"title\":\"test\",\"description\":\"test desc\"}]}")
     end
   end
 
