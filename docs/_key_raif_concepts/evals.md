@@ -237,6 +237,8 @@ Raif includes several built-in rubrics:
 - `ScoringRubric.helpfulness` - Evaluates how helpful the response is (1-5)
 - `ScoringRubric.clarity` - Evaluates ease of understanding (1-5)
 
+See the [scoring rubric source](https://github.com/CultivateLabs/raif/blob/main/lib/raif/evals/scoring_rubric.rb) for details.
+
 ### Custom Scoring Rubrics
 
 You can also create custom rubrics:
