@@ -63,7 +63,7 @@ class Raif::Conversation < Raif::ApplicationRecord
       Airbrake.notify(notice)
     end
 
-    entry
+    nil
   end
 
   def process_model_response_message(message:, entry:)
