@@ -26,7 +26,7 @@ RSpec.describe Raif::Generators::EvalSetGenerator, type: :generator do
 
       content = File.read(File.join(tmp_dir, "raif_evals/eval_sets/my_eval_set_eval_set.rb"))
       expect(content).to include("module Raif")
-      expect(content).to include("module EvalSets")
+      expect(content).to include("module Evals")
       expect(content).to include("class MyEvalSetEvalSet < Raif::Evals::EvalSet")
       expect(content).to include("bundle exec raif evals ./raif_evals/eval_sets/my_eval_set_eval_set.rb")
       expect(content).to include("setup do")
@@ -50,7 +50,7 @@ RSpec.describe Raif::Generators::EvalSetGenerator, type: :generator do
 
       content = File.read(File.join(tmp_dir, "raif_evals/eval_sets/admin/analytics/report_eval_set_eval_set.rb"))
       expect(content).to include("module Raif")
-      expect(content).to include("module EvalSets")
+      expect(content).to include("module Evals")
       expect(content).to include("module Admin")
       expect(content).to include("module Analytics")
       expect(content).to include("class ReportEvalSetEvalSet < Raif::Evals::EvalSet")

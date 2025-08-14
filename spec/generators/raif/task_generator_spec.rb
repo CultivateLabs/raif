@@ -47,7 +47,7 @@ RSpec.describe Raif::Generators::TaskGenerator, type: :generator do
 
       content = File.read(File.join(tmp_dir, "raif_evals/eval_sets/tasks/my_task_eval_set.rb"))
       expect(content).to include("module Raif")
-      expect(content).to include("module EvalSets")
+      expect(content).to include("module Evals")
       expect(content).to include("module Tasks")
       expect(content).to include("class MyTaskEvalSet < Raif::Evals::EvalSet")
       expect(content).to include("bundle exec raif evals ./raif_evals/eval_sets/tasks/my_task_eval_set.rb")
@@ -75,7 +75,7 @@ RSpec.describe Raif::Generators::TaskGenerator, type: :generator do
 
       content = File.read(File.join(tmp_dir, "raif_evals/eval_sets/tasks/admin/analytics/user_report_eval_set.rb"))
       expect(content).to include("module Raif")
-      expect(content).to include("module EvalSets")
+      expect(content).to include("module Evals")
       expect(content).to include("module Tasks")
       expect(content).to include("module Admin")
       expect(content).to include("module Analytics")

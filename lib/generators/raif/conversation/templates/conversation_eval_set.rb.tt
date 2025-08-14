@@ -1,4 +1,4 @@
-<% raif_module_namespacing(["EvalSets", "Conversations"]) do -%>
+<% raif_module_namespacing(["Evals", "Conversations"]) do -%>
   # Run this eval set with:
   # bundle exec raif evals ./<%= eval_set_file_path %>
 

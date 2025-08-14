@@ -1,4 +1,4 @@
-<% raif_module_namespacing(["EvalSets", "Agents"]) do -%>
+<% raif_module_namespacing(["Evals", "Agents"]) do -%>
   class <%= class_name.demodulize %>EvalSet < Raif::Evals::EvalSet
     # Run this eval set with:
     # bundle exec raif evals ./<%= eval_set_file_path %>
