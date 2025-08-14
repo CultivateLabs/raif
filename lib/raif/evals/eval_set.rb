@@ -29,7 +29,7 @@ module Raif
         end
 
         def eval(description, &block)
-          evals << { description: description, block: block }
+          evals << { description: description, block: block, definition_line_number: caller_locations(1, 1).first.lineno }
         end
 
         def setup(&block)

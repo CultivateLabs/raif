@@ -118,8 +118,14 @@ To run your evals, you can run:
 # Run all eval sets
 bundle exec raif evals
 
-# Run a single eval set
-bundle exec raif evals Raif::Evals::Tasks::DocumentSummarizationEvalSet
+# Run a specific eval set file
+bundle exec raif evals ./raif_evals/eval_sets/my_eval_set.rb
+
+# Run a specific eval block by line number
+bundle exec raif evals ./raif_evals/eval_sets/my_eval_set.rb:23
+
+# Run multiple files
+bundle exec raif evals ./raif_evals/eval_sets/file1.rb ./raif_evals/eval_sets/file2.rb:15
 ```
 
 By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.

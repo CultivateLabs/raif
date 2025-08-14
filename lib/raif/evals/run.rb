@@ -8,9 +8,13 @@ module Raif
     class Run
       attr_reader :eval_sets, :results, :output
 
-      def initialize(eval_sets: nil, output: $stdout)
-        @eval_sets = discover_eval_sets
-        @eval_sets = @eval_sets.select{|eval_set| eval_sets.include?(eval_set.name) } if eval_sets&.any?
+      def initialize(file_paths: nil, output: $stdout)
+        @eval_sets = if file_paths&.any?
+          load_eval_sets_from_files(file_paths)
+        else
+          discover_eval_sets
+        end
+
         @results = {}
         @output = output
       end
@@ -32,13 +36,28 @@ module Raif
         output.puts ""
         output.puts "=" * 50
 
-        @eval_sets.each do |eval_set_class|
-          output.puts "\nRunning #{eval_set_class.name}"
-          output.puts "-" * 50
+        @eval_sets.each do |eval_set_entry|
+          eval_set_class, file_path, line_number = if eval_set_entry.is_a?(Hash)
+            [eval_set_entry[:class], eval_set_entry[:file_path], eval_set_entry[:line_number]]
+          else
+            [eval_set_entry, nil, nil]
+          end
 
-          eval_results = eval_set_class.run(output: output)
+          if line_number
+            # Running specific eval by line number
+            output.puts "\nRunning #{eval_set_class.name} at line #{line_number}"
+            output.puts "-" * 50
+
+            eval_results = run_eval_at_line(eval_set_class, file_path, line_number)
+          else
+            # Running all evals in the set
+            output.puts "\nRunning #{eval_set_class.name}"
+            output.puts "-" * 50
+
+            eval_results = eval_set_class.run(output: output)
+          end
+
           @results[eval_set_class.name] = eval_results.map(&:to_h)
-
           passed_count = eval_results.count(&:passed?)
           total_count = eval_results.count
 
@@ -51,6 +70,49 @@ module Raif
       end
 
     private
+
+      def load_eval_sets_from_files(file_paths)
+        eval_sets = []
+
+        file_paths.each do |f|
+          file_path = f[:file_path]
+          line_number = f[:line_number]
+
+          # Convert relative path to absolute
+          absolute_path = File.expand_path(file_path)
+
+          unless File.exist?(absolute_path)
+            output.puts Raif::Utils::Colors.red("Error: File not found: #{file_path}")
+            exit 1
+          end
+
+          subclasses_before = Raif::Evals::EvalSet.subclasses
+
+          require absolute_path
+
+          loaded_eval_sets = Raif::Evals::EvalSet.subclasses - subclasses_before
+          eval_set_class = loaded_eval_sets.first
+
+          eval_set_entry = { class: eval_set_class, file_path: absolute_path }
+          eval_set_entry[:line_number] = line_number if line_number
+
+          eval_sets << eval_set_entry
+        end
+
+        eval_sets
+      end
+
+      def run_eval_at_line(eval_set_class, file_path, line_number)
+        target_eval = eval_set_class.evals.find{|e| e[:definition_line_number] == line_number }
+
+        if target_eval.nil?
+          output.puts Raif::Utils::Colors.red("Error: No eval block found at line #{line_number}")
+          return []
+        end
+
+        instance = eval_set_class.new(output: output)
+        [instance.run_eval(target_eval)]
+      end
 
       def discover_eval_sets
         eval_sets_dir = Rails.root.join("raif_evals", "eval_sets")

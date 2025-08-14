@@ -28,12 +28,18 @@ module Raif
       def create_eval_set
         return if options[:skip_eval_set]
 
-        template "agent_eval_set.rb.tt", File.join("raif_evals", "eval_sets", "agents", class_path, "#{file_name}_eval_set.rb")
+        template "agent_eval_set.rb.tt", eval_set_file_path
       end
 
       def show_instructions
         say "\nAgent created!"
         say ""
+      end
+
+    private
+
+      def eval_set_file_path
+        File.join("raif_evals", "eval_sets", "agents", class_path, "#{file_name}_eval_set.rb")
       end
 
     end

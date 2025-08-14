@@ -37,9 +37,8 @@ module Raif
           say "You can create evals with: rails g raif:eval_set ExampleName"
           say ""
           say "Run evals with:"
-          say "  bundle exec raif evals                     # Run all evals in test env"
-          say "  bundle exec raif evals CustomerSupport     # Run specific eval set"
-          say "  bundle exec raif evals -e development      # Force different environment"
+          say "  bundle exec raif evals                                           # Run all evals"
+          say "  bundle exec raif evals ./raif_evals/eval_sets/my_eval_set.rb     # Run specific eval set"
           say ""
         end
       end

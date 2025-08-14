@@ -1,6 +1,6 @@
 <% raif_module_namespacing(["EvalSets", "Tasks"]) do -%>
   # Run this eval set with:
-  # bundle exec raif evals Raif::EvalSets::Tasks::<%= class_name %>EvalSet
+  # bundle exec raif evals ./<%= eval_set_file_path %>
 
   class <%= class_name.demodulize %>EvalSet < Raif::Evals::EvalSet
     # Setup method runs before each eval
