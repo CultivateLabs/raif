@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require_relative "../base_generator"
+
 module Raif
   module Generators
-    class TaskGenerator < Rails::Generators::NamedBase
+    class TaskGenerator < BaseGenerator
       source_root File.expand_path("templates", __dir__)
 
       class_option :response_format,
@@ -44,11 +46,6 @@ module Raif
         say ""
       end
 
-    private
-
-      def task_class_name
-        class_name
-      end
     end
   end
 end

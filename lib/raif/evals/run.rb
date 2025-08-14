@@ -69,7 +69,7 @@ module Raif
 
           # Build the full class name
           class_name = File.basename(file, ".rb").camelize
-          namespace_parts = ["Raif", "Evals"] + path_parts.map(&:camelize)
+          namespace_parts = ["Raif", "EvalSets"] + path_parts.map(&:camelize)
           full_class_name = (namespace_parts + [class_name]).join("::")
 
           full_class_name.constantize
