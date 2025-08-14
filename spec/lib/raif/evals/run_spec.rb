@@ -36,13 +36,44 @@ RSpec.describe Raif::Evals::Run do
   end
 
   describe "#initialize" do
-    it "accepts specific eval sets by name" do
-      allow_any_instance_of(described_class).to receive(:discover_eval_sets).and_return([TestEvalSet, AnotherEvalSet])
-      run = described_class.new(eval_sets: ["TestEvalSet"])
-      expect(run.eval_sets.map(&:name)).to eq(["TestEvalSet"])
+    context "with file specs" do
+      let(:temp_eval_file) { Rails.root.join("tmp", "test_eval_set.rb") }
+      let(:another_temp_eval_file) { Rails.root.join("tmp", "another", "eval_set.rb") }
 
-      run = described_class.new(eval_sets: ["TestEvalSet", "AnotherEvalSet"])
-      expect(run.eval_sets.map(&:name)).to eq(["TestEvalSet", "AnotherEvalSet"])
+      before do
+        FileUtils.mkdir_p Rails.root.join("tmp", "another")
+        File.write(temp_eval_file, <<~RUBY)
+          class TestEvalSetFromFile < Raif::Evals::EvalSet
+            eval "test from file" do
+              expect "passes" do
+                true
+              end
+            end
+          end
+        RUBY
+
+        File.write(another_temp_eval_file, <<~RUBY)
+          module Another
+            class EvalSetFromFile < Raif::Evals::EvalSet
+              eval "another test from file" do
+                expect "also passes" do
+                  true
+                end
+              end
+            end
+          end
+        RUBY
+      end
+
+      after do
+        FileUtils.rm(temp_eval_file) if File.exist?(temp_eval_file)
+        FileUtils.rm(another_temp_eval_file) if File.exist?(another_temp_eval_file)
+      end
+
+      it "includes line numbers when specified" do
+        run = described_class.new(file_paths: [{ file_path: temp_eval_file.to_s, line_number: 10 }])
+        expect(run.eval_sets.first[:line_number]).to eq(10)
+      end
     end
 
     context "with auto-discovery" do
@@ -116,49 +147,56 @@ RSpec.describe Raif::Evals::Run do
       run.execute
     end
 
-    context "when running specific eval sets by name" do
-      it "runs only the specified eval set when given a single name" do
-        run = described_class.new(eval_sets: ["TestEvalSet"], output: output)
+    context "when running specific eval sets from files" do
+      let(:temp_eval_file) { Rails.root.join("tmp", "test_eval_for_execute.rb") }
+      let(:another_temp_eval_file) { Rails.root.join("tmp", "another_eval_for_execute.rb") }
 
-        expect(TestEvalSet).to receive(:run).with(output: output).and_call_original
-        expect(AnotherEvalSet).not_to receive(:run)
+      before do
+        FileUtils.mkdir_p Rails.root.join("tmp")
+        File.write(temp_eval_file, <<~RUBY)
+          class TestEvalForExecute < Raif::Evals::EvalSet
+            eval "first test" do
+              expect "passes" do
+                true
+              end
+            end
+          #{"  "}
+            eval "second test" do
+              expect "also passes" do
+                true
+              end
+            end
+          end
+        RUBY
 
-        run.execute
-
-        expect(run.results.keys).to eq(["TestEvalSet"])
+        File.write(another_temp_eval_file, <<~RUBY)
+          class AnotherEvalForExecute < Raif::Evals::EvalSet
+            eval "another test" do
+              expect "passes too" do
+                true
+              end
+            end
+          end
+        RUBY
       end
 
-      it "runs multiple specified eval sets when given multiple names" do
-        run = described_class.new(eval_sets: ["TestEvalSet", "AnotherEvalSet"], output: output)
-
-        expect(TestEvalSet).to receive(:run).with(output: output).and_call_original
-        expect(AnotherEvalSet).to receive(:run).with(output: output).and_call_original
-
-        run.execute
-
-        expect(run.results.keys).to contain_exactly("TestEvalSet", "AnotherEvalSet")
+      after do
+        FileUtils.rm(temp_eval_file) if File.exist?(temp_eval_file)
+        FileUtils.rm(another_temp_eval_file) if File.exist?(another_temp_eval_file)
       end
 
-      it "handles non-existent eval set names gracefully" do
-        run = described_class.new(eval_sets: ["NonExistentEvalSet", "TestEvalSet"], output: output)
-
-        expect(TestEvalSet).to receive(:run).with(output: output).and_call_original
-        expect(AnotherEvalSet).not_to receive(:run)
-
+      it "runs only the specified eval set when given a single file" do
+        run = described_class.new(file_paths: [{ file_path: temp_eval_file.to_s }], output: output)
         run.execute
 
-        expect(run.results.keys).to eq(["TestEvalSet"])
+        expect(run.results.keys).to eq(["TestEvalForExecute"])
+        expect(run.results["TestEvalForExecute"].size).to eq(2)
       end
 
-      it "runs no eval sets when only non-existent names are provided" do
-        run = described_class.new(eval_sets: ["NonExistentEvalSet"], output: output)
-
-        expect(TestEvalSet).not_to receive(:run)
-        expect(AnotherEvalSet).not_to receive(:run)
-
-        run.execute
-
-        expect(run.results).to be_empty
+      it "handles non-existent file paths with error" do
+        expect do
+          described_class.new(file_paths: [{ file_path: "/non/existent/file.rb" }], output: output)
+        end.to raise_error(SystemExit)
       end
     end
 

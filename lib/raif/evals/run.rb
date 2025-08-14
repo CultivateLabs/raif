@@ -9,14 +9,14 @@ module Raif
       attr_reader :eval_sets, :results, :output
 
       def initialize(file_paths: nil, output: $stdout)
+        @output = output
+        @results = {}
+
         @eval_sets = if file_paths&.any?
           load_eval_sets_from_files(file_paths)
         else
           discover_eval_sets
         end
-
-        @results = {}
-        @output = output
       end
 
       def execute
@@ -131,7 +131,7 @@ module Raif
 
           # Build the full class name
           class_name = File.basename(file, ".rb").camelize
-          namespace_parts = ["Raif", "EvalSets"] + path_parts.map(&:camelize)
+          namespace_parts = ["Raif", "Evals"] + path_parts.map(&:camelize)
           full_class_name = (namespace_parts + [class_name]).join("::")
 
           full_class_name.constantize
