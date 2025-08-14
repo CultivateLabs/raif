@@ -1,36 +1,14 @@
 # frozen_string_literal: true
 
-require "rails/generators"
+require_relative "../base_generator"
 
 module Raif
   module Generators
-    class EvalSetGenerator < Rails::Generators::Base
+    class EvalSetGenerator < BaseGenerator
       source_root File.expand_path("templates", __dir__)
 
-      argument :name, type: :string, banner: "EvalSetName or Module::EvalSetName"
-
-      class_option :type,
-        type: :string,
-        desc: "Type of eval set (Task, Conversation, or Agent) for organization"
-
       def create_eval_set_file
-        @class_path = name.split("::")
-        @class_name_without_namespace = @class_path.pop
-
-        # Build the full class name based on the type option
-        namespace_parts = ["Raif", "Evals"]
-        namespace_parts << options[:type].capitalize if options[:type]
-        namespace_parts += @class_path if @class_path.any?
-        @full_class_name = (namespace_parts + [@class_name_without_namespace + "EvalSet"]).join("::")
-
-        # Build the file path based on the type option
-        path_parts = ["raif_evals", "eval_sets"]
-        path_parts << options[:type] if options[:type]
-        path_parts += @class_path.map(&:underscore) if @class_path.any?
-
-        file_path = File.join(*path_parts, "#{@class_name_without_namespace.underscore}_eval_set.rb")
-
-        template "eval_set.rb.erb", file_path
+        template "eval_set.rb.tt", File.join("raif_evals", "eval_sets", class_path, "#{file_name}_eval_set.rb")
       end
 
       def create_files_directory
@@ -44,7 +22,7 @@ module Raif
 
       def show_instructions
         say "\nEval set created!"
-        say "To run this eval set: bundle exec raif evals #{@full_class_name}"
+        say "To run this eval set: bundle exec raif evals Raif::EvalSets::#{class_name}EvalSet"
         say "To run all eval sets: bundle exec raif evals"
         say ""
       end

@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require_relative "../base_generator"
+
 module Raif
   module Generators
-    class ConversationGenerator < Rails::Generators::NamedBase
+    class ConversationGenerator < BaseGenerator
       source_root File.expand_path("templates", __dir__)
 
       desc "Creates a new conversation type in the app/models/raif/conversations directory"
@@ -23,7 +25,7 @@ module Raif
       end
 
       def create_conversation_file
-        template "conversation.rb.tt", File.join("app/models/raif/conversations", "#{file_name}.rb")
+        template "conversation.rb.tt", File.join("app/models/raif/conversations", class_path, "#{file_name}.rb")
       end
 
       def create_directory

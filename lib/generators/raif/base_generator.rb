@@ -5,7 +5,7 @@ module Raif
   private
 
     def raif_module_namespacing(intermediate_modules = [], &block)
-      content = capture(&block)
+      content = capture(&block).rstrip
 
       modules_names = intermediate_modules + class_path.map(&:camelize)
       modules_names.reverse.each do |module_name|
