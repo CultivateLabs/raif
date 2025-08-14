@@ -1,64 +1,92 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "rails/generators"
 require "generators/raif/eval_set/eval_set_generator"
 
-RSpec.describe Raif::Generators::EvalSetGenerator do
-  # Since we're an engine, we'll test the generator manually
-  # without relying on generator test helpers
-
-  let(:generator) { described_class.new(["CustomerSupport"]) }
-  let(:test_dir) { Rails.root.join("tmp", "generator_test") }
+RSpec.describe Raif::Generators::EvalSetGenerator, type: :generator do
+  let(:tmp_dir) { Rails.root.join("tmp", "generator_test") }
 
   before do
-    FileUtils.rm_rf(test_dir)
-    FileUtils.mkdir_p(test_dir)
-    allow(generator).to receive(:destination_root).and_return(test_dir)
+    FileUtils.rm_rf(tmp_dir)
+    FileUtils.mkdir_p(tmp_dir)
   end
 
   after do
-    FileUtils.rm_rf(test_dir)
+    FileUtils.rm_rf(tmp_dir)
   end
 
-  describe "template rendering" do
-    it "generates correct content for simple eval set" do
-      generator = described_class.new(["CustomerSupport"])
-      allow(generator).to receive(:destination_root).and_return(test_dir)
-
-      # Manually set up the instance variables the template needs
-      generator.instance_variable_set(:@class_path, [])
-      generator.instance_variable_set(:@class_name_without_namespace, "CustomerSupport")
-      generator.instance_variable_set(:@full_class_name, "CustomerSupportEvalSet")
-
-      # Read and render the template
-      template_path = File.expand_path("../../../lib/generators/raif/eval_set/templates/eval_set.rb.erb", __dir__)
-      template = ERB.new(File.read(template_path))
-      result = template.result(generator.instance_eval { binding })
-
-      expect(result).to include("class CustomerSupportEvalSet < Raif::Evals::EvalSet")
-      expect(result).to include("setup do")
-      expect(result).to include("teardown do")
-      expect(result).to include('eval "description of your eval" do')
+  describe "with default options" do
+    before do
+      run_generator ["my_eval_set"]
     end
 
-    it "generates correct content for namespaced eval set" do
-      generator = described_class.new(["MyModule::CustomerSupport"])
-      allow(generator).to receive(:destination_root).and_return(test_dir)
+    it "creates the eval set file with correct structure" do
+      expect(File).to exist(File.join(tmp_dir, "raif_evals/eval_sets/my_eval_set_eval_set.rb"))
 
-      # Manually set up the instance variables
-      generator.instance_variable_set(:@class_path, ["MyModule"])
-      generator.instance_variable_set(:@class_name_without_namespace, "CustomerSupport")
-      generator.instance_variable_set(:@full_class_name, "MyModule::CustomerSupportEvalSet")
-
-      # Read and render the template
-      template_path = File.expand_path("../../../lib/generators/raif/eval_set/templates/eval_set.rb.erb", __dir__)
-      template = ERB.new(File.read(template_path))
-      result = template.result(generator.instance_eval { binding })
-
-      expect(result).to include("class MyModule::CustomerSupportEvalSet < Raif::Evals::EvalSet")
-      expect(result).to include("setup do")
-      expect(result).to include("teardown do")
-      expect(result).to include('eval "description of your eval" do')
+      content = File.read(File.join(tmp_dir, "raif_evals/eval_sets/my_eval_set_eval_set.rb"))
+      expect(content).to include("module Raif")
+      expect(content).to include("module EvalSets")
+      expect(content).to include("class MyEvalSetEvalSet < Raif::Evals::EvalSet")
+      expect(content).to include("bundle exec raif evals ./raif_evals/eval_sets/my_eval_set_eval_set.rb")
+      expect(content).to include("setup do")
+      expect(content).to include("teardown do")
+      expect(content).to include("eval \"description of your eval\" do")
+      expect(content).to include("# Your eval code here")
     end
+
+    it "displays instructions for running eval sets" do
+      expect { run_generator ["another_eval_set"] }.to output(/Eval set created!/).to_stdout
+    end
+  end
+
+  describe "with nested module names" do
+    before do
+      run_generator ["admin/analytics/report_eval_set"]
+    end
+
+    it "creates eval set file with proper nested module structure" do
+      expect(File).to exist(File.join(tmp_dir, "raif_evals/eval_sets/admin/analytics/report_eval_set_eval_set.rb"))
+
+      content = File.read(File.join(tmp_dir, "raif_evals/eval_sets/admin/analytics/report_eval_set_eval_set.rb"))
+      expect(content).to include("module Raif")
+      expect(content).to include("module EvalSets")
+      expect(content).to include("module Admin")
+      expect(content).to include("module Analytics")
+      expect(content).to include("class ReportEvalSetEvalSet < Raif::Evals::EvalSet")
+      expect(content).to include("bundle exec raif evals ./raif_evals/eval_sets/admin/analytics/report_eval_set_eval_set.rb")
+    end
+  end
+
+  describe "eval_set_file_path method" do
+    it "generates correct path for simple eval set name" do
+      generator = described_class.new(["my_eval_set"])
+      expect(generator.send(:eval_set_file_path)).to eq(
+        "raif_evals/eval_sets/my_eval_set_eval_set.rb"
+      )
+    end
+
+    it "generates correct path for nested eval set name" do
+      generator = described_class.new(["admin/analytics/report_eval_set"])
+      expect(generator.send(:eval_set_file_path)).to eq(
+        "raif_evals/eval_sets/admin/analytics/report_eval_set_eval_set.rb"
+      )
+    end
+  end
+
+  describe "multiple runs" do
+    it "creates multiple eval set files without conflicts" do
+      run_generator ["first_eval_set"]
+      run_generator ["second_eval_set"]
+
+      expect(File).to exist(File.join(tmp_dir, "raif_evals/eval_sets/first_eval_set_eval_set.rb"))
+      expect(File).to exist(File.join(tmp_dir, "raif_evals/eval_sets/second_eval_set_eval_set.rb"))
+    end
+  end
+
+private
+
+  def run_generator(args = [], config = {})
+    described_class.start(args, config.merge(destination_root: tmp_dir))
   end
 end
