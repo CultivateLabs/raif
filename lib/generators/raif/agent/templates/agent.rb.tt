@@ -1,28 +1,24 @@
-# frozen_string_literal: true
+<% raif_module_namespacing(["Agents"]) do -%>
+  class <%= class_name.demodulize %> < Raif::ApplicationAgent
+    # If you want to always include a certain set of model tools with this agent type,
+    # uncomment this callback to populate the available_model_tools attribute with your desired model tools.
+    # def populate_default_model_tools
+    #   self.available_model_tools = [
+    #     Raif::ModelTools::WikipediaSearch,
+    #     Raif::ModelTools::FetchUrl
+    #   ]
+    # end
 
-module Raif
-  module Agents
-    class <%= class_name %> < Raif::ApplicationAgent
-      # If you want to always include a certain set of model tools with this agent type,
-      # uncomment this callback to populate the available_model_tools attribute with your desired model tools.
-      # def populate_default_model_tools
-      #   self.available_model_tools = [
-      #     Raif::ModelTools::WikipediaSearch,
-      #     Raif::ModelTools::FetchUrl
-      #   ]
-      # end
+    # Enter your agent's system prompt here. Alternatively, you can change your agent's superclass
+    # to an existing agent types (like Raif::Agents::ReActAgent) to utilize an existing system prompt.
+    def build_system_prompt
+      # TODO: Implement your system prompt here
+    end
 
-      # Enter your agent's system prompt here. Alternatively, you can change your agent's superclass
-      # to an existing agent types (like Raif::Agents::ReActAgent) to utilize an existing system prompt.
-      def build_system_prompt
-        # TODO: Implement your system prompt here
-      end
-
-      # Each iteration of the agent loop will generate a new Raif::ModelCompletion record and
-      # then call this method with it as an argument.
-      def process_iteration_model_completion(model_completion)
-        # TODO: Implement your iteration processing here
-      end
+    # Each iteration of the agent loop will generate a new Raif::ModelCompletion record and
+    # then call this method with it as an argument.
+    def process_iteration_model_completion(model_completion)
+      # TODO: Implement your iteration processing here
     end
   end
-end
+<% end -%>

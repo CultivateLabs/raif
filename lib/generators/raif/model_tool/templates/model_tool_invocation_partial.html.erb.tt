@@ -1,4 +1,4 @@
-<%# 
+<%%# 
 This partial is used to render a model tool invocation to the user in the conversation interface.
 If you don't want the tool invocation to be displayed to the user, you can override the `renderable?` method in your model tool class to return false
 %>
