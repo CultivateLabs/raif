@@ -17,6 +17,7 @@ Raif is built by [Cultivate Labs](https://www.cultivatelabs.com) and is used to 
 - [Conversations](https://docs.raif.ai/key_raif_concepts/conversations)
 - [Agents](https://docs.raif.ai/key_raif_concepts/agents)
 - [Model Tools](https://docs.raif.ai/key_raif_concepts/model_tools)
+- [Evals](https://docs.raif.ai/key_raif_concepts/evals)
 - [Images/Files/PDF's](https://docs.raif.ai/learn_more/images_files_pdfs)
 - [Embedding Models](https://docs.raif.ai/learn_more/embedding_models)
 - [Web Admin](https://docs.raif.ai/learn_more/web_admin)
@@ -36,11 +37,11 @@ View the [chatting with the LLM docs](https://docs.raif.ai/getting_started/chatt
 
 # Key Raif Concepts
 
-[Tasks](https://docs.raif.ai/key_raif_concepts/tasks)
-[Conversations](https://docs.raif.ai/key_raif_concepts/conversations)
-[Agents](https://docs.raif.ai/key_raif_concepts/agents)
-[Model Tools](https://docs.raif.ai/key_raif_concepts/model_tools)
-
+- [Tasks](https://docs.raif.ai/key_raif_concepts/tasks)
+- [Conversations](https://docs.raif.ai/key_raif_concepts/conversations)
+- [Agents](https://docs.raif.ai/key_raif_concepts/agents)
+- [Model Tools](https://docs.raif.ai/key_raif_concepts/model_tools)
+- [Evals](https://docs.raif.ai/key_raif_concepts/evals)
 
 # Images/Files/PDF's
 
