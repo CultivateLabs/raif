@@ -11,10 +11,8 @@ module Raif
         ENV["RAILS_ENV"] ||= "test"
         ENV["RAIF_RUNNING_EVALS"] = "true"
 
-        eval_sets = []
-
         OptionParser.new do |opts|
-          opts.banner = "Usage: raif evals [options] [EVAL_SETS]"
+          opts.banner = "Usage: raif evals [options] [FILE_PATHS]"
 
           opts.on("-e", "--environment ENV", "Rails environment (default: test)") do |env|
             ENV["RAILS_ENV"] = env
@@ -26,15 +24,22 @@ module Raif
           end
         end.parse!(args)
 
-        # Remaining arguments are eval set names
-        eval_sets = args if args.any?
+        # Parse file paths with optional line numbers
+        file_paths = args.map do |arg|
+          if arg.include?(":")
+            file_path, line_number = arg.split(":", 2)
+            { file_path: file_path, line_number: line_number.to_i }
+          else
+            { file_path: arg, line_number: nil }
+          end
+        end if args.any?
 
         # Find and load Rails application
         load_rails_application
 
         require "raif/evals"
 
-        run = Raif::Evals::Run.new(eval_sets: eval_sets)
+        run = Raif::Evals::Run.new(file_paths: file_paths)
         run.execute
       end
     end

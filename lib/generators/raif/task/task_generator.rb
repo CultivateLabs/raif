@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require_relative "../base_generator"
+
 module Raif
   module Generators
-    class TaskGenerator < Rails::Generators::NamedBase
+    class TaskGenerator < BaseGenerator
       source_root File.expand_path("templates", __dir__)
 
       class_option :response_format,
@@ -26,17 +28,7 @@ module Raif
       def create_eval_set
         return if options[:skip_eval_set]
 
-        # Remove 'raif' from class_path if it's the first element (Rails adds it automatically)
-        eval_class_path = class_path.dup
-        eval_class_path.shift if eval_class_path.first == "raif"
-
-        eval_set_path = if eval_class_path.any?
-          File.join("raif_evals", "eval_sets", "tasks", eval_class_path, "#{file_name}_eval_set.rb")
-        else
-          File.join("raif_evals", "eval_sets", "tasks", "#{file_name}_eval_set.rb")
-        end
-
-        template "task_eval_set.rb.tt", eval_set_path
+        template "task_eval_set.rb.tt", eval_set_file_path
       end
 
       def show_instructions
@@ -46,9 +38,10 @@ module Raif
 
     private
 
-      def task_class_name
-        class_name
+      def eval_set_file_path
+        File.join("raif_evals", "eval_sets", "tasks", class_path, "#{file_name}_eval_set.rb")
       end
+
     end
   end
 end
