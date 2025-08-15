@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require_relative "../base_generator"
+
 module Raif
   module Generators
-    class ConversationGenerator < Rails::Generators::NamedBase
+    class ConversationGenerator < BaseGenerator
       source_root File.expand_path("templates", __dir__)
 
       desc "Creates a new conversation type in the app/models/raif/conversations directory"
@@ -23,7 +25,7 @@ module Raif
       end
 
       def create_conversation_file
-        template "conversation.rb.tt", File.join("app/models/raif/conversations", "#{file_name}.rb")
+        template "conversation.rb.tt", File.join("app/models/raif/conversations", class_path, "#{file_name}.rb")
       end
 
       def create_directory
@@ -33,17 +35,7 @@ module Raif
       def create_eval_set
         return if options[:skip_eval_set]
 
-        # Remove 'raif' from class_path if it's the first element (Rails adds it automatically)
-        eval_class_path = class_path.dup
-        eval_class_path.shift if eval_class_path.first == "raif"
-
-        eval_set_path = if eval_class_path.any?
-          File.join("raif_evals", "eval_sets", "conversations", eval_class_path, "#{file_name}_eval_set.rb")
-        else
-          File.join("raif_evals", "eval_sets", "conversations", "#{file_name}_eval_set.rb")
-        end
-
-        template "conversation_eval_set.rb.tt", eval_set_path
+        template "conversation_eval_set.rb.tt", eval_set_file_path
       end
 
       def success_message
@@ -52,6 +44,12 @@ module Raif
         say "  app/models/raif/conversations/#{file_name}.rb\n\n"
         say "\nDon't forget to add it to the config.conversation_types in your Raif configuration"
         say "For example: config.conversation_types += ['Raif::Conversations::#{class_name}']\n\n"
+      end
+
+    private
+
+      def eval_set_file_path
+        File.join("raif_evals", "eval_sets", "conversations", class_path, "#{file_name}_eval_set.rb")
       end
     end
   end

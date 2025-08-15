@@ -1,63 +1,59 @@
-# frozen_string_literal: true
+<% raif_module_namespacing(["Tasks"]) do -%>
+  class <%= class_name.demodulize %> < Raif::ApplicationTask
+    # Set the response format for the task. Options are :html, :text, or :json.
+    llm_response_format :<%= options[:response_format] %>
 
-module Raif
-  module Tasks
-    class <%= task_class_name %> < Raif::ApplicationTask
-      # Set the response format for the task. Options are :html, :text, or :json.
-      llm_response_format :<%= options[:response_format] %>
+    # Set the temperature for the task
+    # llm_temperature 0.7
 
-      # Set the temperature for the task
-      # llm_temperature 0.7
+    # Optional: Set the allowed tags for the task. Only relevant if response_format is :html.
+    # Defaults to Rails::HTML5::SafeListSanitizer.allowed_tags
+    # llm_response_allowed_tags %w[p b i div strong]
 
-      # Optional: Set the allowed tags for the task. Only relevant if response_format is :html.
-      # Defaults to Rails::HTML5::SafeListSanitizer.allowed_tags
-      # llm_response_allowed_tags %w[p b i div strong]
+    # Optional: Set the allowed attributes for the task. Only relevant if response_format is :html.
+    # Defaults to Rails::HTML5::SafeListSanitizer.allowed_attributes
+    # llm_response_allowed_attributes %w[style]
 
-      # Optional: Set the allowed attributes for the task. Only relevant if response_format is :html.
-      # Defaults to Rails::HTML5::SafeListSanitizer.allowed_attributes
-      # llm_response_allowed_attributes %w[style]
+    # Define any attributes that are needed for the task.
+    # You can then pass them when running the task and they will be available in build_prompt:
+    # Raif::Tasks::<%= class_name %>.run(your_attribute: "some value")
+    # task_run_arg :your_attribute
+    <%- if options[:response_format] == "json" -%>
 
-      # Define any attributes that are needed for the task.
-      # You can then pass them when running the task and they will be available in build_prompt:
-      # Raif::Tasks::<%= task_class_name %>.run(your_attribute: "some value")
-      # attr_accessor :your_attribute
-
-      <%- if options[:response_format] == "json" -%>
-      # Define a JSON schema that the model's response should adhere to
+    # Define a JSON schema that the model's response should adhere to
+    #
+    # All attributes will be required and additionalProperties will be set to false.
+    json_response_schema do
+      # string :title, description: "The title of the operation", minLength: 3
       #
-      # All attributes will be required and additionalProperties will be set to false.
-      json_response_schema do
-        # string :title, description: "The title of the operation", minLength: 3
-        #
-        # object :widget, description: "A widget's description" do
-        #   boolean :is_red, description: "Whether the widget is red"
-        #   integer :rating, description: "A rating of the widget from 1 to 10", minimum: 1, maximum: 10
-        #   array :tags, description: "Associated tags" do
-        #     items type: "string"
-        #   end
-        # end
-        #
-        # array :products, description: "List of products" do
-        #   object do
-        #     integer :id, description: "Product identifier"
-        #     string :name, description: "Product name"
-        #     number :price, description: "Product price", minimum: 0
-        #   end
-        # end
-      end
-      <%- end -%>
-
-      def build_prompt
-        # Implement the LLM prompt for this task.
-        raise NotImplementedError, "Implement #build_prompt in #{self.class.name}"
-      end
-
-      # Optional: Override build_system_prompt if you need custom system instructions.
-      # The default implementation, which you'll get if you call super, will use Raif.config.task_system_prompt_intro 
-      # and append the system_prompt_language_preference if the task's requested_language_key is set.
-      # def build_system_prompt
-      #   super + "\nAdditional system instructions..."
+      # object :widget, description: "A widget's description" do
+      #   boolean :is_red, description: "Whether the widget is red"
+      #   integer :rating, description: "A rating of the widget from 1 to 10", minimum: 1, maximum: 10
+      #   array :tags, description: "Associated tags" do
+      #     items type: "string"
+      #   end
+      # end
+      #
+      # array :products, description: "List of products" do
+      #   object do
+      #     integer :id, description: "Product identifier"
+      #     string :name, description: "Product name"
+      #     number :price, description: "Product price", minimum: 0
+      #   end
       # end
     end
+    <%- end -%>
+
+    def build_prompt
+      # Implement the LLM prompt for this task.
+      raise NotImplementedError, "Implement #build_prompt in #{self.class.name}"
+    end
+
+    # Optional: Override build_system_prompt if you need custom system instructions.
+    # The default implementation, which you'll get if you call super, will use Raif.config.task_system_prompt_intro 
+    # and append the system_prompt_language_preference if the task's requested_language_key is set.
+    # def build_system_prompt
+    #   super + "\nAdditional system instructions..."
+    # end
   end
-end
+<% end -%>

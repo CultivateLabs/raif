@@ -1,0 +1,21 @@
+<% raif_module_namespacing(["Evals"]) do -%>
+  class <%= class_name.demodulize %>EvalSet < Raif::Evals::EvalSet
+    # Run this eval set with:
+    # bundle exec raif evals ./<%= eval_set_file_path %>
+
+    # Setup method runs before each eval
+    setup do
+      # Common setup code
+    end
+
+    # Teardown runs after each eval
+    teardown do
+      # Cleanup code
+    end
+
+    eval "description of your eval" do
+      # Your eval code here
+      # expect_tool_invocation, expect_no_tool_invocation, expect, etc.
+    end
+  end
+<% end -%>
