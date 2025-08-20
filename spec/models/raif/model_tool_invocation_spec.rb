@@ -1,5 +1,24 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: raif_model_tool_invocations
+#
+#  id             :bigint           not null, primary key
+#  completed_at   :datetime
+#  failed_at      :datetime
+#  result         :jsonb            not null
+#  source_type    :string           not null
+#  tool_arguments :jsonb            not null
+#  tool_type      :string           not null
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  source_id      :bigint           not null
+#
+# Indexes
+#
+#  index_raif_model_tool_invocations_on_source  (source_type,source_id)
+#
 require "rails_helper"
 
 RSpec.describe Raif::ModelToolInvocation, type: :model do
