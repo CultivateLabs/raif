@@ -12,7 +12,7 @@
 title: Raif Documentation
 description: "Ruby AI Framework - A Rails engine for adding AI-powered features to Rails applications"
 baseurl: "/raif" # the subpath of your site, e.g. /blog
-url: "https://cultivatelabs.github.io" # the base hostname & protocol for your site
+url: "https://docs.raif.ai" # the base hostname & protocol for your site
 
 # Logo
 logo: "/assets/images/raif-logo-white.svg"
