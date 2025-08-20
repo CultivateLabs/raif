@@ -1,5 +1,42 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: raif_model_completions
+#
+#  id                        :bigint           not null, primary key
+#  available_model_tools     :jsonb            not null
+#  citations                 :jsonb
+#  completion_tokens         :integer
+#  llm_model_key             :string           not null
+#  max_completion_tokens     :integer
+#  messages                  :jsonb            not null
+#  model_api_name            :string           not null
+#  output_token_cost         :decimal(10, 6)
+#  prompt_token_cost         :decimal(10, 6)
+#  prompt_tokens             :integer
+#  raw_response              :text
+#  response_array            :jsonb
+#  response_format           :integer          default("text"), not null
+#  response_format_parameter :string
+#  response_tool_calls       :jsonb
+#  retry_count               :integer          default(0), not null
+#  source_type               :string
+#  stream_response           :boolean          default(FALSE), not null
+#  system_prompt             :text
+#  temperature               :decimal(5, 3)
+#  total_cost                :decimal(10, 6)
+#  total_tokens              :integer
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  response_id               :string
+#  source_id                 :bigint
+#
+# Indexes
+#
+#  index_raif_model_completions_on_created_at  (created_at)
+#  index_raif_model_completions_on_source      (source_type,source_id)
+#
 class Raif::ModelCompletion < Raif::ApplicationRecord
   include Raif::Concerns::LlmResponseParsing
   include Raif::Concerns::HasAvailableModelTools

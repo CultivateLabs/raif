@@ -1,5 +1,32 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: raif_conversation_entries
+#
+#  id                     :bigint           not null, primary key
+#  completed_at           :datetime
+#  creator_type           :string           not null
+#  failed_at              :datetime
+#  model_response_message :text
+#  raw_response           :text
+#  started_at             :datetime
+#  user_message           :text
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  creator_id             :bigint           not null
+#  raif_conversation_id   :bigint           not null
+#
+# Indexes
+#
+#  index_raif_conversation_entries_on_created_at            (created_at)
+#  index_raif_conversation_entries_on_creator               (creator_type,creator_id)
+#  index_raif_conversation_entries_on_raif_conversation_id  (raif_conversation_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (raif_conversation_id => raif_conversations.id)
+#
 require "rails_helper"
 
 RSpec.describe Raif::ConversationEntry, type: :model do
