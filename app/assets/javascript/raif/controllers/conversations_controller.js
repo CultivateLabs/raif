@@ -6,6 +6,6 @@ export default class extends Controller {
   }
 
   scrollToBottom() {
-    this.element.scrollTo({ top: this.element.scrollHeight, behavior: "smooth" });
+    this.element.scrollTo({ top: this.element.scrollHeight });
   }
 }
