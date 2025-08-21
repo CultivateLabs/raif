@@ -1,4 +1,9 @@
-<h1 class="my-4"><%= t("raif.admin.common.tasks") %></h1>
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1 class="mb-0"><%= t("raif.admin.common.tasks") %></h1>
+  <%= link_to raif.admin_stats_tasks_path, class: "btn btn-outline-primary" do %>
+    <%= t("raif.admin.common.stats") %> &raquo;
+  <% end %>
+</div>
 
 <div class="row">
   <div class="col-12">

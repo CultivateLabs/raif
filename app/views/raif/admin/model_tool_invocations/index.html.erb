@@ -1,7 +1,28 @@
-<h1 class="my-4"><%= t("raif.admin.common.model_tool_invocations") %></h1>
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1 class="mb-0"><%= t("raif.admin.common.model_tool_invocations") %></h1>
+  <%= link_to raif.admin_stats_model_tool_invocations_path, class: "btn btn-outline-primary" do %>
+    <%= t("raif.admin.common.stats") %> &raquo;
+  <% end %>
+</div>
 
 <div class="row">
   <div class="col-12">
+    <%= form_tag raif.admin_model_tool_invocations_path, method: :get, class: "mb-4" do %>
+      <div class="row align-items-end">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="tool_types"><%= t("raif.admin.common.tool_type") %></label>
+            <%= select_tag :tool_types,
+                  options_for_select([[t("raif.admin.common.all"), "all"]] + @tool_types.map{|type| [type, type] }, @selected_type),
+                  { class: "form-select" } %>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <%= submit_tag t("raif.admin.common.filter"), class: "btn btn-primary" %>
+        </div>
+      </div>
+    <% end %>
+
     <% if @model_tool_invocations.any? %>
       <div class="table-responsive">
         <table class="table table-striped table-hover">

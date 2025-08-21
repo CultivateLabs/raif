@@ -77,6 +77,66 @@ RSpec.describe "Admin::ModelToolInvocations", type: :feature do
       visit raif.admin_model_tool_invocations_path
       expect(page).to have_content(I18n.t("raif.admin.common.no_model_tool_invocations"))
     end
+
+    describe "tool type filtering" do
+      let!(:wikipedia_tool_invocation) do
+        Raif::ModelToolInvocation.create!(
+          source: task,
+          tool_type: "Raif::ModelTools::WikipediaSearch",
+          tool_arguments: { "query": "Ruby programming" }
+        )
+      end
+
+      let!(:fetch_url_tool_invocation) do
+        Raif::ModelToolInvocation.create!(
+          source: conversation_entry,
+          tool_type: "Raif::ModelTools::FetchUrl",
+          tool_arguments: { "url": "https://example.com" }
+        )
+      end
+
+      it "filters by specific tool type" do
+        visit raif.admin_model_tool_invocations_path
+
+        expect(page).to have_select("tool_types", with_options: [
+          I18n.t("raif.admin.common.all"),
+          "Raif::TestModelTool",
+          "Raif::ModelTools::WikipediaSearch",
+          "Raif::ModelTools::FetchUrl"
+        ])
+
+        select "Raif::ModelTools::WikipediaSearch", from: "tool_types"
+        click_button I18n.t("raif.admin.common.filter")
+
+        expect(page).to have_css("tr.raif-model-tool-invocation", count: 1)
+        expect(page).to have_select("tool_types", selected: "Raif::ModelTools::WikipediaSearch")
+
+        within "table" do
+          expect(page).to have_content("WikipediaSearch")
+          expect(page).not_to have_content("FetchUrl")
+          expect(page).not_to have_content("TestModelTool")
+        end
+
+        # Reset to show all invocations
+        select I18n.t("raif.admin.common.all"), from: "tool_types"
+        click_button I18n.t("raif.admin.common.filter")
+        expect(page).to have_css("tr.raif-model-tool-invocation", count: 6)
+      end
+
+      it "handles URL parameters correctly" do
+        visit raif.admin_model_tool_invocations_path(tool_types: "Raif::ModelTools::WikipediaSearch")
+
+        expect(page).to have_select("tool_types", selected: "Raif::ModelTools::WikipediaSearch")
+        expect(page).to have_css("tr.raif-model-tool-invocation", count: 1)
+      end
+
+      it "ignores invalid tool type parameters" do
+        visit raif.admin_model_tool_invocations_path(tool_types: "InvalidToolType")
+
+        expect(page).to have_select("tool_types", selected: I18n.t("raif.admin.common.all"))
+        expect(page).to have_css("tr.raif-model-tool-invocation", count: 6)
+      end
+    end
   end
 
   describe "show page" do
