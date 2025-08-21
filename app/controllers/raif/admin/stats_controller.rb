@@ -18,6 +18,7 @@ module Raif
         @conversation_count = Raif::Conversation.where(created_at: @time_range).count
         @conversation_entry_count = Raif::ConversationEntry.where(created_at: @time_range).count
         @agent_count = Raif::Agent.where(created_at: @time_range).count
+        @model_tool_invocation_count = Raif::ModelToolInvocation.where(created_at: @time_range).count
       end
     end
   end
