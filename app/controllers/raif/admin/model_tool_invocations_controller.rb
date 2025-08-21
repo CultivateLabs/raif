@@ -6,7 +6,13 @@ module Raif
       include Pagy::Backend
 
       def index
-        @pagy, @model_tool_invocations = pagy(Raif::ModelToolInvocation.order(created_at: :desc))
+        @tool_types = Raif::ModelToolInvocation.distinct.pluck(:tool_type)
+        @selected_type = params[:tool_types].present? && @tool_types.include?(params[:tool_types]) ? params[:tool_types] : "all"
+
+        model_tool_invocations = Raif::ModelToolInvocation.newest_first
+        model_tool_invocations = model_tool_invocations.where(tool_type: @selected_type) if @selected_type.present? && @selected_type != "all"
+
+        @pagy, @model_tool_invocations = pagy(model_tool_invocations)
       end
 
       def show

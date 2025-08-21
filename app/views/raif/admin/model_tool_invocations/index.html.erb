@@ -2,6 +2,22 @@
 
 <div class="row">
   <div class="col-12">
+    <%= form_tag raif.admin_model_tool_invocations_path, method: :get, class: "mb-4" do %>
+      <div class="row align-items-end">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="tool_types"><%= t("raif.admin.common.tool_type") %></label>
+            <%= select_tag :tool_types,
+                  options_for_select([[t("raif.admin.common.all"), "all"]] + @tool_types.map{|type| [type, type] }, @selected_type),
+                  { class: "form-select" } %>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <%= submit_tag t("raif.admin.common.filter"), class: "btn btn-primary" %>
+        </div>
+      </div>
+    <% end %>
+
     <% if @model_tool_invocations.any? %>
       <div class="table-responsive">
         <table class="table table-striped table-hover">
