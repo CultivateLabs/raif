@@ -10,14 +10,16 @@ module Raif
 
           @task_count = Raif::Task.where(created_at: @time_range).count
 
-          # Get task counts by type
-          @task_counts_by_type = Raif::Task.where(created_at: @time_range).group(:type).count
-
-          # Get costs by task type
-          @task_costs_by_type = Raif::Task.joins(:raif_model_completion)
+          @task_stats_by_type = Raif::Task.joins(:raif_model_completion)
             .where(created_at: @time_range)
             .group(:type)
-            .sum("raif_model_completions.total_cost")
+            .pluck(
+              "raif_tasks.type",
+              "COUNT(raif_tasks.id)",
+              "SUM(raif_model_completions.prompt_token_cost)",
+              "SUM(raif_model_completions.output_token_cost)",
+              "SUM(raif_model_completions.total_cost)"
+            ).index_by(&:shift)
         end
       end
     end

@@ -28,16 +28,20 @@
     <thead class="table-light">
       <tr>
         <th><%= t("raif.admin.common.type") %></th>
-        <th><%= t("raif.admin.common.count") %></th>
-        <th><%= t("raif.admin.common.est_cost") %></th>
+        <th class="text-end"><%= t("raif.admin.common.count") %></th>
+        <th class="text-end"><%= t("raif.admin.common.input_token_cost") %></th>
+        <th class="text-end"><%= t("raif.admin.common.output_token_cost") %></th>
+        <th class="text-end"><%= t("raif.admin.common.total_cost") %></th>
       </tr>
     </thead>
     <tbody>
-      <% @task_counts_by_type.each do |type, count| %>
+      <% @task_stats_by_type.each do |type, (count, total_cost, input_cost, output_cost)| %>
         <tr>
           <td><%= type %></td>
-          <td><%= number_with_delimiter(count) %></td>
-          <td><%= number_to_currency(@task_costs_by_type[type] || 0, precision: 6) %></td>
+          <td class="text-end"><%= number_with_delimiter(count) %></td>
+          <td class="text-end"><%= number_to_currency(input_cost, precision: 2) %></td>
+          <td class="text-end"><%= number_to_currency(output_cost, precision: 2) %></td>
+          <td class="text-end"><%= number_to_currency(total_cost, precision: 2) %></td>
         </tr>
       <% end %>
     </tbody>
