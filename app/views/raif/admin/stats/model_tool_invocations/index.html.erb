@@ -1,0 +1,43 @@
+<%= link_to raif.admin_stats_path do %>
+  &laquo; <%= t("raif.admin.stats.model_tool_invocations.back_to_stats") %>
+<% end %>
+
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1 class="mb-0"><%= t("raif.admin.stats.model_tool_invocations.title") %></h1>
+
+  <div class="period-filter">
+    <%= form_tag raif.admin_stats_model_tool_invocations_path, method: :get, id: "period_filter_form", class: "d-flex align-items-center" do %>
+      <%= select_tag :period,
+            options_for_select(
+              [
+                [t("raif.admin.common.period_day"), "day"],
+                [t("raif.admin.common.period_week"), "week"],
+                [t("raif.admin.common.period_month"), "month"],
+                [t("raif.admin.common.period_all"), "all"]
+              ],
+              @selected_period
+            ),
+            class: "form-select form-select-sm me-2" %>
+      <%= submit_tag t("raif.admin.common.update"), class: "btn btn-sm btn-primary" %>
+    <% end %>
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead class="table-light">
+      <tr>
+        <th><%= t("raif.admin.common.tool_type") %></th>
+        <th class="text-end"><%= t("raif.admin.common.count") %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @model_tool_invocation_stats_by_type.each do |tool_type, count| %>
+        <tr>
+          <td><%= tool_type %></td>
+          <td class="text-end"><%= number_with_delimiter(count) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

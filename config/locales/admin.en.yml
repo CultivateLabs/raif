@@ -104,6 +104,9 @@ en:
           back_to_model_tool_invocations: Back to Model Tool Invocations
           title: 'Model Tool Invocation #%{id}'
       stats:
+        model_tool_invocations:
+          back_to_stats: Back to Stats
+          title: Model Tool Invocation Stats
         tasks:
           back_to_stats: Back to Stats
           title: Task Stats

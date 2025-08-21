@@ -17,6 +17,7 @@ Raif::Engine.routes.draw do
 
     namespace :stats do
       resources :tasks, only: [:index]
+      resources :model_tool_invocations, only: [:index]
     end
 
     resources :tasks, only: [:index, :show]
