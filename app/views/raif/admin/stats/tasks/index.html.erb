@@ -35,13 +35,13 @@
       </tr>
     </thead>
     <tbody>
-      <% @task_stats_by_type.each do |type, (count, input_cost, output_cost, total_cost)| %>
+      <% @task_stats_by_type.each do |task_stat| %>
         <tr>
-          <td><%= type %></td>
-          <td class="text-end"><%= number_with_delimiter(count) %></td>
-          <td class="text-end"><%= number_to_currency(input_cost, precision: 2) %></td>
-          <td class="text-end"><%= number_to_currency(output_cost, precision: 2) %></td>
-          <td class="text-end"><%= number_to_currency(total_cost, precision: 2) %></td>
+          <td><%= task_stat.type %></td>
+          <td class="text-end"><%= number_with_delimiter(task_stat.count) %></td>
+          <td class="text-end"><%= number_to_currency(task_stat.input_cost, precision: 2) %></td>
+          <td class="text-end"><%= number_to_currency(task_stat.output_cost, precision: 2) %></td>
+          <td class="text-end"><%= number_to_currency(task_stat.total_cost, precision: 2) %></td>
         </tr>
       <% end %>
     </tbody>

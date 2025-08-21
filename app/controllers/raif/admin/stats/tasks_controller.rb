@@ -19,7 +19,9 @@ module Raif
               "SUM(raif_model_completions.prompt_token_cost)",
               "SUM(raif_model_completions.output_token_cost)",
               "SUM(raif_model_completions.total_cost)"
-            ).index_by(&:shift)
+            ).map do |type, count, input_cost, output_cost, total_cost|
+              Raif::Admin::TaskStat.new(type, count, input_cost, output_cost, total_cost)
+            end
         end
       end
     end
