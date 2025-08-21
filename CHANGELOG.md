@@ -1,3 +1,7 @@
+## v1.3.1 (Unreleased)
+
+- Improvements to the web admin interface. Added display of input/output token cost estimates. Added model tool invocation stats and filtering. [#230](https://github.com/CultivateLabs/raif/pull/230)
+
 ## v1.3
 
 - Adds support for evals. See [evals docs](https://docs.raif.ai/key_raif_concepts/evals) for more information. [#215](https://github.com/CultivateLabs/raif/pull/215)
