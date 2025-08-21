@@ -35,7 +35,7 @@
       </tr>
     </thead>
     <tbody>
-      <% @task_stats_by_type.each do |type, (count, total_cost, input_cost, output_cost)| %>
+      <% @task_stats_by_type.each do |type, (count, input_cost, output_cost, total_cost)| %>
         <tr>
           <td><%= type %></td>
           <td class="text-end"><%= number_with_delimiter(count) %></td>

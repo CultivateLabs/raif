@@ -18,8 +18,8 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
         llm_model_key: "anthropic_claude_3_7_sonnet",
         model_api_name: "claude-3-7-sonnet-latest",
         source: task1,
-        prompt_tokens: 100,
-        completion_tokens: 50,
+        prompt_tokens: 1000,
+        completion_tokens: 500,
         created_at: 12.hours.ago
       )
     end
@@ -30,8 +30,20 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
         llm_model_key: "open_ai_gpt_4o",
         model_api_name: "gpt-4o",
         source: task2,
-        prompt_tokens: 200,
-        completion_tokens: 100,
+        prompt_tokens: 2000,
+        completion_tokens: 1000,
+        created_at: 12.hours.ago
+      )
+    end
+
+    let!(:model_completion3) do
+      FB.create(
+        :raif_model_completion,
+        llm_model_key: "open_ai_gpt_4o",
+        model_api_name: "gpt-4o",
+        source: task3,
+        prompt_tokens: 3000,
+        completion_tokens: 1500,
         created_at: 12.hours.ago
       )
     end
@@ -44,8 +56,8 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
         llm_model_key: "open_ai_gpt_4o_mini",
         model_api_name: "gpt-4o-mini",
         source: old_task,
-        prompt_tokens: 300,
-        completion_tokens: 150,
+        prompt_tokens: 3000,
+        completion_tokens: 1500,
         created_at: 2.days.ago
       )
     end
@@ -64,7 +76,9 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
       within("table thead") do
         expect(page).to have_content(I18n.t("raif.admin.common.type"))
         expect(page).to have_content(I18n.t("raif.admin.common.count"))
-        expect(page).to have_content(I18n.t("raif.admin.common.est_cost"))
+        expect(page).to have_content(I18n.t("raif.admin.common.total_cost"))
+        expect(page).to have_content(I18n.t("raif.admin.common.input_token_cost"))
+        expect(page).to have_content(I18n.t("raif.admin.common.output_token_cost"))
       end
 
       # For day period, we should only see tasks from the last 24 hours
@@ -77,7 +91,7 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
         expect(task_count).to eq("3") # We have 3 tasks of this type in the last 24 hours
 
         # Check that cost is displayed
-        expect(page).to have_content("$0.002550")
+        expect(page).to have_content("$0.02 $0.03 $0.05")
       end
 
       # Change period to "all"
