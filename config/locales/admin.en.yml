@@ -25,6 +25,7 @@ en:
         entries_count: Entries Count
         entry: Entry
         est_cost: est. cost
+        est_costs: est. costs
         failed: Failed
         failed_at: Failed At
         filter: Filter
@@ -32,6 +33,8 @@ en:
         id: ID
         in_progress: In Progress
         initial_task: Initial Task
+        input: Input
+        input_token_cost: Input Token Cost
         invalid_json: Invalid JSON
         iterations: Iterations
         language: Language
@@ -48,6 +51,8 @@ en:
         no_model_tool_invocations: No model tool invocations found.
         no_tasks: No tasks found.
         no_tool_calls: No tool calls
+        output: Output
+        output_token_cost: Output Token Cost
         pending: Pending
         period_all: All time
         period_day: Past 24 hours
@@ -77,6 +82,7 @@ en:
         tool_invocations: Tool Invocations
         tool_name: Tool Name
         tool_type: Tool Type
+        total: Total
         total_cost: Total Cost
         total_tokens: Total Tokens
         type: Type
