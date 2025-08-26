@@ -151,4 +151,40 @@ RSpec.describe "Conversation interface", type: :feature do
     expect(entry.user_message).to eq("Can you please write me a song in the style of the Beatles?")
     expect(entry.model_response_message).to eq("<p><strong>Title: \"Sunshine in the Rain\"</strong></p><p><em>Verse 1:</em></p><p>Woke up this morning, sky was grey,</p><p>But I felt a tune that chased away,</p><p>All the clouds that hung so low,</p><p>Like a secret only I could know.</p><p><em>Chorus:</em></p><p>Sunshine in the rain, dancing in my mind,</p><p>Every little moment, love’s the tie that binds,</p><p>Hand in hand we’ll find, through the storm and pain,</p><p>There’s a light that shines, sunshine in the rain.</p><p><em>Verse 2:</em></p><p>Whispered words in melodies,</p><p>Floating on a gentle breeze,</p><p>Time stands still and hearts align,</p><p>In this song, you're forever mine.</p><p><em>Chorus:</em></p><p>Sunshine in the rain, dancing in my mind,</p><p>Every little moment, love’s the tie that binds,</p><p>Hand in hand we’ll find, through the storm and pain,</p><p>There’s a light that shines, sunshine in the rain.</p><p><em>Bridge:</em></p><p>Oh, the world keeps turning, seasons come and go,</p><p>But in your eyes, I see a glow,</p><p>That keeps me warm, through cold and grey,</p><p>Our song will never fade away.</p><p><em>Chorus:</em></p><p>Sunshine in the rain, dancing in my mind,</p><p>Every little moment, love’s the tie that binds,</p><p>Hand in hand we’ll find, through the storm and pain,</p><p>There’s a light that shines, sunshine in the rain.</p>") # rubocop:disable Layout/LineLength
   end
+
+  it "displays conversations index" do
+    user = FB.create(:raif_test_user)
+    conversation1 = FB.create(:raif_conversation, creator: user, created_at: 2.days.ago)
+    conversation2 = FB.create(:raif_conversation, creator: user, created_at: 1.day.ago)
+    FB.create(:raif_conversation_entry, raif_conversation: conversation1)
+    FB.create(:raif_conversation_entry, raif_conversation: conversation1)
+    FB.create(:raif_conversation_entry, raif_conversation: conversation2)
+
+    allow_any_instance_of(Raif::ApplicationController).to receive(:raif_current_user).and_return(user)
+
+    visit raif.conversations_path
+
+    expect(page).to have_content("Past Conversations")
+    expect(page).to have_content("Started")
+    expect(page).to have_content("Entries")
+    expect(page).to have_content("Actions")
+    expect(page).to have_content("2 entries")
+    expect(page).to have_content("1 entry")
+    expect(page).to have_selector("a", text: "View", count: 2)
+
+    first("a", text: "View").click
+
+    expect(page).to have_content("Hello, how can I help you today?")
+  end
+
+  it "shows empty state when no conversations exist" do
+    user = FB.create(:raif_test_user)
+    allow_any_instance_of(Raif::ApplicationController).to receive(:raif_current_user).and_return(user)
+
+    visit raif.conversations_path
+
+    expect(page).to have_content("Past Conversations")
+    expect(page).to have_content("No conversations found.")
+    expect(page).not_to have_selector("table")
+  end
 end
