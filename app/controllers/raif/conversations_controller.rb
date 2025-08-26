@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
 class Raif::ConversationsController < Raif::ApplicationController
-  before_action :validate_conversation_type
+  before_action :validate_conversation_type, unless: ->{ params[:action] == "index" && params[:conversation_type].blank? }
+
+  def index
+    @conversations = conversations_scope
+  end
 
   def show
     @conversations = conversations_scope
@@ -26,7 +30,11 @@ private
   end
 
   def conversations_scope
-    raif_conversation_type.newest_first.where(creator: raif_current_user)
+    if params[:conversation_type].present?
+      raif_conversation_type
+    else
+      Raif::Conversation
+    end.newest_first.where(creator: raif_current_user)
   end
 
   def conversation_type_param
