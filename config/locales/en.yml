@@ -23,7 +23,6 @@ en:
         no_conversations: No conversations found.
         table:
           actions: Actions
-          entries: Entries
           started: Started
           view: View
         title: Past Conversations

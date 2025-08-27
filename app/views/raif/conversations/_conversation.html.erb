@@ -2,7 +2,6 @@
 
 <tr>
   <td class="ps-2"><%= conversation.created_at.strftime("%B %d, %Y") %></td>
-  <td><%= pluralize(conversation.entries.count, "entry") %></td>
   <td>
     <%= link_to t("raif.conversations.index.table.view"),
           raif.conversation_path(conversation),

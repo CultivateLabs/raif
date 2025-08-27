@@ -166,10 +166,7 @@ RSpec.describe "Conversation interface", type: :feature do
 
     expect(page).to have_content("Past Conversations")
     expect(page).to have_content("Started")
-    expect(page).to have_content("Entries")
     expect(page).to have_content("Actions")
-    expect(page).to have_content("2 entries")
-    expect(page).to have_content("1 entry")
     expect(page).to have_selector("a", text: "View", count: 2)
 
     first("a", text: "View").click
