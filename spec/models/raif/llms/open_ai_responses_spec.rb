@@ -264,7 +264,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
             # empty block to trigger streaming
           end
         end.to raise_error(Raif::Errors::StreamingError) do |error|
-          expect(error.message).to eq("Something went wrong")
+          expect(error.message).to start_with("[error] Something went wrong (code=ERR_SOMETHING, event=")
           expect(error.type).to eq("error")
           expect(error.code).to eq("ERR_SOMETHING")
           expect(error.event).to eq({
