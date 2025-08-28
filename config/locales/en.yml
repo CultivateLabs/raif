@@ -18,6 +18,14 @@ en:
       type_your_message: Type your message...
     conversation:
       initial_chat_message: Hello, how can I help you today?
+    conversations:
+      index:
+        no_conversations: No conversations found.
+        table:
+          actions: Actions
+          started: Started
+          view: View
+        title: Past Conversations
     embedding_model_names:
       bedrock_titan_embed_text_v2: AWS Bedrock Titan Text Embeddings v2
       open_ai_text_embedding_3_large: OpenAI Text Embedding 3 Large
