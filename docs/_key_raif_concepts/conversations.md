@@ -79,6 +79,10 @@ class Raif::Conversations::CustomerSupport < Raif::Conversation
     ]
   }
 
+  before_prompt_model_for_entry_response do |entry|
+    # Any processing you want to do just before the model is prompted for a response to an entry
+  end
+
   def system_prompt_intro
     <<~PROMPT
       You are a helpful assistant who specializes in customer support. You're working with a customer who is experiencing an issue with your product.

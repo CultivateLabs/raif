@@ -33,6 +33,7 @@ module Raif
         output.puts "\nStarting Raif Eval Run"
         output.puts ""
         output.puts "Raif.config.default_llm_model_key: #{Raif.config.default_llm_model_key}"
+        output.puts "Raif.config.evals_default_llm_judge_model_key: #{Raif.config.evals_default_llm_judge_model_key}"
         output.puts ""
         output.puts "=" * 50
 

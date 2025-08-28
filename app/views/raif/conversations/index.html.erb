@@ -1,0 +1,23 @@
+<div class="conversation-history p-4">
+  <h2><%= t("raif.conversations.index.title") %></h2>
+
+  <% if @conversations.any? %>
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th><%= t("raif.conversations.index.table.started") %></th>
+            <th><%= t("raif.conversations.index.table.actions") %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <%= render collection: @conversations, partial: "raif/conversations/conversation" %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="text-center py-4">
+      <p class="text-muted"><%= t("raif.conversations.index.no_conversations") %></p>
+    </div>
+  <% end %>
+</div>
