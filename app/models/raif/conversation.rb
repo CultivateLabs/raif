@@ -31,6 +31,26 @@ class Raif::Conversation < Raif::ApplicationRecord
 
   belongs_to :creator, polymorphic: true
 
+  class << self
+    def before_prompt_model_for_entry_response(&block)
+      @before_prompt_model_for_entry_response_blocks ||= []
+      @before_prompt_model_for_entry_response_blocks << block if block
+    end
+
+    def before_prompt_model_for_entry_response_blocks
+      blocks = []
+
+      # Collect blocks from ancestors (in reverse order so parent blocks run first)
+      ancestors.reverse_each do |klass|
+        if klass.instance_variable_defined?(:@before_prompt_model_for_entry_response_blocks)
+          blocks.concat(klass.instance_variable_get(:@before_prompt_model_for_entry_response_blocks))
+        end
+      end
+
+      blocks
+    end
+  end
+
   has_many :entries, class_name: "Raif::ConversationEntry", dependent: :destroy, foreign_key: :raif_conversation_id, inverse_of: :raif_conversation
 
   validates :type, inclusion: { in: ->{ Raif.config.conversation_types } }
@@ -62,7 +82,12 @@ class Raif::Conversation < Raif::ApplicationRecord
   end
 
   def prompt_model_for_entry_response(entry:, &block)
-    update(system_prompt: build_system_prompt)
+    self.class.before_prompt_model_for_entry_response_blocks.each do |callback_block|
+      instance_exec(entry, &callback_block)
+    end
+
+    self.system_prompt = build_system_prompt
+    save!
 
     llm.chat(
       messages: llm_messages,
