@@ -365,7 +365,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
           ) do # empty block to trigger streaming
           end
         end.to raise_error(Raif::Errors::StreamingError) do |error|
-          expect(error.message).to eq("Anthropic's API is temporarily overloaded. Please try again in a few minutes.")
+          expect(error.message).to eq("[overloaded_error] Anthropic's API is temporarily overloaded. Please try again in a few minutes. (code=, event={\"type\" => \"error\", \"error\" => {\"type\" => \"overloaded_error\", \"message\" => \"Anthropic's API is temporarily overloaded. Please try again in a few minutes.\"}})") # rubocop:disable Layout/LineLength
           expect(error.type).to eq("overloaded_error")
           expect(error.event).to eq({
             "type" => "error",
