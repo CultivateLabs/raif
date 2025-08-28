@@ -8,6 +8,12 @@
     # uncomment this callback to populate the available_model_tools attribute with your desired model tools.
     # before_create -> { self.available_model_tools = ["Raif::ModelTools::Example"] }
 
+    # Use this callback to run custom logic before prompting the model for an entry response.
+    # The block receives the entry as an argument, and `self` is the conversation instance.
+    # before_prompt_model_for_entry_response do |entry|
+    #   # Custom logic here
+    # end
+
     # Override the methods below to customize the system prompt for this conversation type.
     # def system_prompt_intro
     #   Raif.config.conversation_system_prompt_intro
