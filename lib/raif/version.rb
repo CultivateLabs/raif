@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Raif
-  VERSION = "1.3.1.pre"
+  VERSION = "1.4.0.pre"
 end
