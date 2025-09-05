@@ -1,7 +1,8 @@
-## v1.3.1 (Unreleased)
+## v1.4.0 (Unreleased)
 
 - Improvements to the web admin interface. Added display of input/output token cost estimates. Added model tool invocation stats and filtering. [#230](https://github.com/CultivateLabs/raif/pull/230)
 - Added `before_prompt_model_for_entry_response` callback to `Raif::Conversation` subclasses. [#233](https://github.com/CultivateLabs/raif/pull/233)
+- Added `generating_entry_response` flag to `Raif::Conversation` to track when a conversation is generating an entry response. [#241](https://github.com/CultivateLabs/raif/pull/241)
 
 ## v1.3
 

@@ -9,6 +9,7 @@
 #  available_user_tools       :jsonb            not null
 #  conversation_entries_count :integer          default(0), not null
 #  creator_type               :string           not null
+#  generating_entry_response  :boolean          default(FALSE), not null
 #  llm_model_key              :string           not null
 #  requested_language_key     :string
 #  response_format            :integer          default("text"), not null
@@ -87,9 +88,10 @@ class Raif::Conversation < Raif::ApplicationRecord
     end
 
     self.system_prompt = build_system_prompt
+    self.generating_entry_response = true
     save!
 
-    llm.chat(
+    model_completion = llm.chat(
       messages: llm_messages,
       source: entry,
       response_format: response_format.to_sym,
@@ -97,7 +99,15 @@ class Raif::Conversation < Raif::ApplicationRecord
       available_model_tools: available_model_tools,
       &block
     )
+
+    self.generating_entry_response = false
+    save!
+
+    model_completion
   rescue StandardError => e
+    self.generating_entry_response = false
+    save!
+
     Rails.logger.error("Error processing conversation entry ##{entry.id}. #{e.message}")
     Rails.logger.error(e.backtrace.join("\n"))
 

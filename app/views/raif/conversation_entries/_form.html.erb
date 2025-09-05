@@ -1,5 +1,8 @@
+<%# locals: (conversation:, conversation_entry:) %>
+
 <%= form_with model: conversation_entry,
       url: raif.conversation_entries_path(conversation),
+      id: dom_id(conversation, "entry_form"),
       local: true do |f| %>
 
   <% if conversation_entry.raif_user_tool_invocation %>

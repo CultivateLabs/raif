@@ -13,12 +13,11 @@ RSpec.describe Raif::ConversationEntryJob, type: :job do
   describe "#perform" do
     it "processes the conversation entry" do
       expect(conversation_entry).to receive(:process_entry!).and_return(conversation_entry)
-      expect(conversation_entry).to receive(:broadcast_replace_to).with(conversation)
 
-      expect(Turbo::StreamsChannel).to receive(:broadcast_action_to).with(
+      expect(Turbo::StreamsChannel).to receive(:broadcast_render_to).with(
         conversation,
-        action: :raif_scroll_to_bottom,
-        target: dom_id(conversation, :entries)
+        partial: "raif/conversations/entry_processed",
+        locals: { conversation: conversation, conversation_entry: conversation_entry }
       )
 
       described_class.new.perform(conversation_entry: conversation_entry)
