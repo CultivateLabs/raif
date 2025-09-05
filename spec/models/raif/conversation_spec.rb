@@ -9,6 +9,7 @@
 #  available_user_tools       :jsonb            not null
 #  conversation_entries_count :integer          default(0), not null
 #  creator_type               :string           not null
+#  generating_entry_response  :boolean          default(FALSE), not null
 #  llm_model_key              :string           not null
 #  requested_language_key     :string
 #  response_format            :integer          default("text"), not null
@@ -148,6 +149,38 @@ RSpec.describe Raif::Conversation, type: :model do
 
       entry.reload
       expect(entry.failed_at).to be_present
+    end
+
+    it "manages generating_entry_response flag during successful completion" do
+      conversation = FB.create(:raif_conversation, :with_entries, entries_count: 1, creator: creator)
+
+      expect(conversation.generating_entry_response).to eq(false)
+
+      stub_raif_conversation(conversation) do |_messages|
+        expect(conversation.reload.generating_entry_response).to eq(true)
+        "Hello user"
+      end
+
+      conversation.prompt_model_for_entry_response(entry: conversation.entries.first)
+
+      expect(conversation.reload.generating_entry_response).to eq(false)
+    end
+
+    it "resets generating_entry_response flag on error" do
+      conversation = FB.create(:raif_conversation, :with_entries, entries_count: 1, creator: creator)
+
+      expect(conversation.generating_entry_response).to eq(false)
+
+      stub_raif_conversation(conversation) do |_messages|
+        expect(conversation.reload.generating_entry_response).to eq(true)
+        raise StandardError, "Test error"
+      end
+
+      entry = conversation.entries.first
+      conversation.prompt_model_for_entry_response(entry: entry)
+
+      expect(conversation.reload.generating_entry_response).to eq(false)
+      expect(entry.reload.failed_at).to be_present
     end
   end
 

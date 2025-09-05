@@ -45,7 +45,7 @@ RSpec.describe "Conversation interface", type: :feature do
 
   it "supports streaming conversations", js: true, vcr: { cassette_name: "open_ai_responses/streaming_conversation" } do
     allow_any_instance_of(Raif::Conversation).to receive(:default_llm_model_key).and_return(:open_ai_responses_gpt_4_1_mini)
-    expect_any_instance_of(Raif::ConversationEntry).to receive(:broadcast_replace_to).with(Raif::Conversation).exactly(16).times.and_call_original
+    expect(Turbo::StreamsChannel).to receive(:broadcast_render_to).exactly(1).times.and_call_original
 
     visit chat_path
     expect(page).to have_content("Hello, how can I help you today?")

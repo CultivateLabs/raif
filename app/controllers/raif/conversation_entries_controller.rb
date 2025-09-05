@@ -25,6 +25,7 @@ class Raif::ConversationEntriesController < Raif::ApplicationController
     @conversation_entry.creator = current_user
 
     if @conversation_entry.save
+      @conversation.update_columns(generating_entry_response: true)
       Raif::ConversationEntryJob.perform_later(conversation_entry: @conversation_entry)
     end
   end
