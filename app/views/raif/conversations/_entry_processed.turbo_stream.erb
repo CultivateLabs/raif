@@ -1,0 +1,12 @@
+<%# locals: (conversation:, conversation_entry:) %>
+
+<%# Update the conversation entry now that it's been processed & has a model response %>
+<%= turbo_stream.replace conversation_entry do %>
+  <%= render conversation_entry %>
+<% end %>
+
+<%= turbo_stream.replace dom_id(conversation, "entry_form") do %>
+  <%= render "raif/conversation_entries/form", conversation: conversation, conversation_entry: Raif::ConversationEntry.new %>
+<% end %>
+
+<%= turbo_stream.action :raif_scroll_to_bottom, ActionView::RecordIdentifier.dom_id(conversation, :entries) %>

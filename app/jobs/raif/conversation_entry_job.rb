@@ -15,13 +15,10 @@ module Raif
     def perform(conversation_entry:)
       conversation = conversation_entry.raif_conversation
       conversation_entry.process_entry!
-      conversation_entry.broadcast_replace_to conversation
 
-      Turbo::StreamsChannel.broadcast_action_to(
-        conversation,
-        action: :raif_scroll_to_bottom,
-        target: ActionView::RecordIdentifier.dom_id(conversation, :entries)
-      )
+      Turbo::StreamsChannel.broadcast_render_to conversation,
+        partial: "raif/conversations/entry_processed",
+        locals: { conversation: conversation, conversation_entry: conversation_entry }
     rescue StandardError => e
       logger.error "Error processing conversation entry: #{e.message}"
       logger.error e.backtrace.join("\n")
