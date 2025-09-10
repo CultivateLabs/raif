@@ -10,6 +10,13 @@ Raif.configure do |config|
   # Whether OpenAI embedding models are enabled.
   # config.open_ai_embedding_models_enabled = ENV["OPENAI_API_KEY"].present?
 
+  # The base URL for OpenAI API requests.
+  # Set this if you want to use the OpenAI adapter with a different provider (e.g. for using Azure instead of OpenAI)
+  # config.open_ai_base_url = "https://api.openai.com/v1"
+
+  # When set, this will be included as an api-version parameter in any OpenAI API requests (e.g. for using Azure instead of OpenAI)
+  # config.open_ai_api_version = nil
+
   # Your Anthropic API key. Defaults to ENV["ANTHROPIC_API_KEY"]
   # config.anthropic_api_key = ENV["ANTHROPIC_API_KEY"]
 
