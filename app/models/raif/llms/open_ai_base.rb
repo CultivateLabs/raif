@@ -28,11 +28,16 @@ class Raif::Llms::OpenAiBase < Raif::Llm
 private
 
   def connection
-    @connection ||= Faraday.new(url: "https://api.openai.com/v1") do |f|
-      f.headers["Authorization"] = "Bearer #{Raif.config.open_ai_api_key}"
-      f.request :json
-      f.response :json
-      f.response :raise_error
+    @connection ||= begin
+      conn = Faraday.new(url: Raif.config.open_ai_base_url) do |f|
+        f.headers["Authorization"] = "Bearer #{Raif.config.open_ai_api_key}"
+        f.request :json
+        f.response :json
+        f.response :raise_error
+      end
+
+      conn.params["api-version"] = Raif.config.open_ai_api_version if Raif.config.open_ai_api_version.present?
+      conn
     end
   end
 
