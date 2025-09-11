@@ -14,6 +14,7 @@
 #  raw_response           :text
 #  requested_language_key :string
 #  response_format        :integer          default("text"), not null
+#  source_type            :string
 #  started_at             :datetime
 #  system_prompt          :text
 #  task_run_args          :jsonb
@@ -21,6 +22,7 @@
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #  creator_id             :bigint
+#  source_id              :bigint
 #
 # Indexes
 #
@@ -28,6 +30,7 @@
 #  index_raif_tasks_on_created_at             (created_at)
 #  index_raif_tasks_on_creator                (creator_type,creator_id)
 #  index_raif_tasks_on_failed_at              (failed_at)
+#  index_raif_tasks_on_source                 (source_type,source_id)
 #  index_raif_tasks_on_started_at             (started_at)
 #  index_raif_tasks_on_type                   (type)
 #  index_raif_tasks_on_type_and_completed_at  (type,completed_at)
@@ -48,6 +51,7 @@ module Raif
     llm_temperature 0.7
 
     belongs_to :creator, polymorphic: true, optional: true
+    belongs_to :source, polymorphic: true, optional: true
 
     validates :creator, presence: true, unless: -> { Raif.config.task_creator_optional }
 

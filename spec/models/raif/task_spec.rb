@@ -14,6 +14,7 @@
 #  raw_response           :text
 #  requested_language_key :string
 #  response_format        :integer          default("text"), not null
+#  source_type            :string
 #  started_at             :datetime
 #  system_prompt          :text
 #  task_run_args          :jsonb
@@ -21,6 +22,7 @@
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #  creator_id             :bigint
+#  source_id              :bigint
 #
 # Indexes
 #
@@ -28,6 +30,7 @@
 #  index_raif_tasks_on_created_at             (created_at)
 #  index_raif_tasks_on_creator                (creator_type,creator_id)
 #  index_raif_tasks_on_failed_at              (failed_at)
+#  index_raif_tasks_on_source                 (source_type,source_id)
 #  index_raif_tasks_on_started_at             (started_at)
 #  index_raif_tasks_on_type                   (type)
 #  index_raif_tasks_on_type_and_completed_at  (type,completed_at)
@@ -55,10 +58,20 @@ RSpec.describe Raif::Task, type: :model do
 
   describe ".run" do
     let(:user) { FB.create(:raif_test_user) }
+
     context "for a task requesting a text response" do
       before do
         stub_raif_task(Raif::TestTask) do |_messages|
           "Why is a pirate's favorite letter 'R'? Because, if you think about it, 'R' is the only letter that makes sense."
+        end
+      end
+
+      context "when a source is provided" do
+        it "runs the task" do
+          task = Raif::TestTask.run(creator: user, source: user)
+          expect(task).to be_persisted
+          expect(task.source).to eq(user)
+          expect(task.creator).to eq(user)
         end
       end
 
@@ -67,6 +80,7 @@ RSpec.describe Raif::Task, type: :model do
           task = Raif::TestTask.run(creator: user)
           expect(task).to be_persisted
           expect(task.creator).to eq(user)
+          expect(task.source).to eq(nil)
           expect(task.started_at).to be_present
           expect(task.completed_at).to be_present
           expect(task.prompt).to eq("Tell me a joke")
@@ -88,6 +102,7 @@ RSpec.describe Raif::Task, type: :model do
           task = Raif::TestTask.run(creator: user, requested_language_key: "es")
           expect(task).to be_persisted
           expect(task.creator).to eq(user)
+          expect(task.source).to eq(nil)
           expect(task.started_at).to be_present
           expect(task.completed_at).to be_present
           expect(task.prompt).to eq("Tell me a joke")
@@ -110,6 +125,7 @@ RSpec.describe Raif::Task, type: :model do
           task = Raif::TestTask.run(creator: user)
           expect(task).to be_persisted
           expect(task.creator).to eq(user)
+          expect(task.source).to eq(nil)
           expect(task.started_at).to be_present
           expect(task.completed_at).to be_present
           expect(task.prompt).to eq("Tell me a joke")

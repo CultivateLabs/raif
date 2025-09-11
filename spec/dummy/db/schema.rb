@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_04_194456) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_11_125234) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -168,10 +168,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_04_194456) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "task_run_args"
+    t.string "source_type"
+    t.bigint "source_id"
     t.index ["completed_at"], name: "index_raif_tasks_on_completed_at"
     t.index ["created_at"], name: "index_raif_tasks_on_created_at"
     t.index ["creator_type", "creator_id"], name: "index_raif_tasks_on_creator"
     t.index ["failed_at"], name: "index_raif_tasks_on_failed_at"
+    t.index ["source_type", "source_id"], name: "index_raif_tasks_on_source"
     t.index ["started_at"], name: "index_raif_tasks_on_started_at"
     t.index ["type", "completed_at"], name: "index_raif_tasks_on_type_and_completed_at"
     t.index ["type", "failed_at"], name: "index_raif_tasks_on_type_and_failed_at"
