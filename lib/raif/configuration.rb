@@ -107,7 +107,9 @@ module Raif
           "Raif.config.default_llm_model_key was set to #{default_llm_model_key}, but must be one of: #{Raif.available_llm_keys.join(", ")}"
       end
 
-      if Raif.embedding_model_registry.present? && !Raif.available_embedding_model_keys.include?(default_embedding_model_key.to_sym)
+      if default_embedding_model_key.present? &&
+          Raif.embedding_model_registry.present? &&
+          !Raif.available_embedding_model_keys.include?(default_embedding_model_key.to_sym)
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.default_embedding_model_key was set to #{default_embedding_model_key}, but must be one of: #{Raif.available_embedding_model_keys.join(", ")}" # rubocop:disable Layout/LineLength
       end
