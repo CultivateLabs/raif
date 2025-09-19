@@ -49,22 +49,44 @@ Raif.configure do |config|
 
   # The default LLM model to use. Defaults to "open_ai_gpt_4o"
   # Available keys:
-  #   open_ai_gpt_4_1
-  #   open_ai_gpt_4_1_mini
-  #   open_ai_gpt_4_1_nano
   #   open_ai_gpt_4o_mini
   #   open_ai_gpt_4o
   #   open_ai_gpt_3_5_turbo
+  #   open_ai_gpt_4_1
+  #   open_ai_gpt_4_1_mini
+  #   open_ai_gpt_4_1_nano
+  #   open_ai_o1
+  #   open_ai_o1_mini
+  #   open_ai_o3
+  #   open_ai_o3_mini
+  #   open_ai_o4_mini
+  #   open_ai_gpt_5
+  #   open_ai_gpt_5_mini
+  #   open_ai_gpt_5_nano
+  #   open_ai_responses_gpt_4o_mini
+  #   open_ai_responses_gpt_4o
+  #   open_ai_responses_gpt_3_5_turbo
   #   open_ai_responses_gpt_4_1
   #   open_ai_responses_gpt_4_1_mini
   #   open_ai_responses_gpt_4_1_nano
-  #   open_ai_responses_gpt_4o_mini
-  #   open_ai_responses_gpt_4o
-  #   open_ai_gpt_3_5_turbo
+  #   open_ai_responses_o1
+  #   open_ai_responses_o1_mini
+  #   open_ai_responses_o3
+  #   open_ai_responses_o3_mini
+  #   open_ai_responses_o4_mini
+  #   open_ai_responses_gpt_5
+  #   open_ai_responses_gpt_5_mini
+  #   open_ai_responses_gpt_5_nano
+  #   open_ai_responses_o1_pro
+  #   open_ai_responses_o3_pro
+  #   anthropic_claude_4_sonnet
+  #   anthropic_claude_4_opus
   #   anthropic_claude_3_7_sonnet
   #   anthropic_claude_3_5_sonnet
   #   anthropic_claude_3_5_haiku
   #   anthropic_claude_3_opus
+  #   bedrock_claude_4_sonnet
+  #   bedrock_claude_4_opus
   #   bedrock_claude_3_5_sonnet
   #   bedrock_claude_3_7_sonnet
   #   bedrock_claude_3_5_haiku
@@ -75,8 +97,12 @@ Raif.configure do |config|
   #   open_router_claude_3_7_sonnet
   #   open_router_llama_3_3_70b_instruct
   #   open_router_llama_3_1_8b_instruct
+  #   open_router_llama_4_maverick
+  #   open_router_llama_4_scout
   #   open_router_gemini_2_0_flash
   #   open_router_deepseek_chat_v3
+  #   open_router_open_ai_gpt_oss_120b
+  #   open_router_open_ai_gpt_oss_20b
   #
   # config.default_llm_model_key = "open_ai_gpt_4o"
 
