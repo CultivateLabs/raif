@@ -133,7 +133,6 @@ module Raif
       update_columns(started_at: Time.current) if started_at.nil?
 
       populate_prompts unless skip_prompt_population
-      messages = [{ "role" => "user", "content" => message_content }]
 
       mc = llm.chat(
         messages: messages,
@@ -156,6 +155,10 @@ module Raif
     def re_run
       update_columns(started_at: Time.current)
       run(skip_prompt_population: true)
+    end
+
+    def messages
+      [{ "role" => "user", "content" => message_content }]
     end
 
     # Returns the LLM prompt for the task.
