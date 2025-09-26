@@ -87,6 +87,7 @@ Raif.configure do |config|
   #   anthropic_claude_3_opus
   #   bedrock_claude_4_sonnet
   #   bedrock_claude_4_opus
+  #   bedrock_claude_4_1_opus
   #   bedrock_claude_3_5_sonnet
   #   bedrock_claude_3_7_sonnet
   #   bedrock_claude_3_5_haiku
@@ -95,12 +96,15 @@ Raif.configure do |config|
   #   bedrock_amazon_nova_lite
   #   bedrock_amazon_nova_pro
   #   open_router_claude_3_7_sonnet
-  #   open_router_llama_3_3_70b_instruct
+  #   open_router_deepseek_chat_v3
+  #   open_router_deepseek_v3_1
+  #   open_router_gemini_2_0_flash
+  #   open_router_gemini_2_5_pro
+  #   open_router_grok_4
   #   open_router_llama_3_1_8b_instruct
+  #   open_router_llama_3_3_70b_instruct
   #   open_router_llama_4_maverick
   #   open_router_llama_4_scout
-  #   open_router_gemini_2_0_flash
-  #   open_router_deepseek_chat_v3
   #   open_router_open_ai_gpt_oss_120b
   #   open_router_open_ai_gpt_oss_20b
   #

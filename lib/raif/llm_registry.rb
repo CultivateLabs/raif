@@ -250,6 +250,13 @@ module Raif
           max_completion_tokens: 8192
         },
         {
+          key: :bedrock_claude_4_1_opus,
+          api_name: "anthropic.claude-opus-4-20250514-v1:0",
+          input_token_cost: 0.015 / 1000,
+          output_token_cost: 0.075 / 1000,
+          max_completion_tokens: 32_000
+        },
+        {
           key: :bedrock_claude_3_5_sonnet,
           api_name: "anthropic.claude-3-5-sonnet-20241022-v2:0",
           input_token_cost: 0.003 / 1000,
@@ -353,6 +360,24 @@ module Raif
           api_name: "gpt-oss-20b",
           input_token_cost: 0.05 / 1_000_000,
           output_token_cost: 0.2 / 1_000_000,
+        },
+        {
+          key: :open_router_grok_4,
+          api_name: "x-ai/grok-4",
+          input_token_cost: 3.0 / 1_000_000,
+          output_token_cost: 15.0 / 1_000_000,
+        },
+        {
+          key: :open_router_gemini_2_5_pro,
+          api_name: "google/gemini-2.5-pro",
+          input_token_cost: 1.25 / 1_000_000,
+          output_token_cost: 10.0 / 1_000_000,
+        },
+        {
+          key: :open_router_deepseek_v3_1,
+          api_name: "deepseek/deepseek-chat-v3.1",
+          input_token_cost: 0.25 / 1_000_000,
+          output_token_cost: 1.0 / 1_000_000,
         }
       ]
     }
