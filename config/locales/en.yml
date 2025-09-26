@@ -68,6 +68,7 @@ en:
       bedrock_claude_3_5_sonnet: Anthropic Claude 3.5 Sonnet (via AWS Bedrock)
       bedrock_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via AWS Bedrock)
       bedrock_claude_3_opus: Anthropic Claude 3 Opus (via AWS Bedrock)
+      bedrock_claude_4_1_opus: Claude 4.1 Opus (via AWS Bedrock)
       bedrock_claude_4_opus: Anthropic Claude 4 Opus (via AWS Bedrock)
       bedrock_claude_4_sonnet: Anthropic Claude 4 Sonnet (via AWS Bedrock)
       open_ai_gpt_3_5_turbo: OpenAI GPT-3.5 Turbo
@@ -102,7 +103,10 @@ en:
       open_ai_responses_o4_mini: OpenAI o4 Mini (Responses API)
       open_router_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via OpenRouter)
       open_router_deepseek_chat_v3: DeepSeek Chat v3 (via OpenRouter)
+      open_router_deepseek_v3_1: DeepSeek v3.1 (via OpenRouter)
       open_router_gemini_2_0_flash: Google Gemini 2.0 Flash (via OpenRouter)
+      open_router_gemini_2_5_pro: Gemini 2.5 Pro (via OpenRouter)
+      open_router_grok_4: Grok 4 (via OpenRouter)
       open_router_llama_3_1_8b_instruct: Meta Llama 3.1 8B Instruct (via OpenRouter)
       open_router_llama_3_3_70b_instruct: Meta Llama 3.3 70B Instruct (via OpenRouter)
       open_router_llama_4_maverick: Meta Llama 4 Maverick (via OpenRouter)
