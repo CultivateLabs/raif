@@ -59,6 +59,8 @@ en:
       anthropic_claude_3_5_sonnet: Anthropic Claude 3.5 Sonnet
       anthropic_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet
       anthropic_claude_3_opus: Anthropic Claude 3 Opus
+      anthropic_claude_4_1_opus: Anthropic Claude 4.1 Opus
+      anthropic_claude_4_5_sonnet: Anthropic Claude 4.5 Sonnet
       anthropic_claude_4_opus: Anthropic Claude 4 Opus
       anthropic_claude_4_sonnet: Anthropic Claude 4 Sonnet
       bedrock_amazon_nova_lite: Amazon Nova Lite (via AWS Bedrock)
@@ -69,6 +71,7 @@ en:
       bedrock_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via AWS Bedrock)
       bedrock_claude_3_opus: Anthropic Claude 3 Opus (via AWS Bedrock)
       bedrock_claude_4_1_opus: Claude 4.1 Opus (via AWS Bedrock)
+      bedrock_claude_4_5_sonnet: Anthropic Claude 4.5 Sonnet (via AWS Bedrock)
       bedrock_claude_4_opus: Anthropic Claude 4 Opus (via AWS Bedrock)
       bedrock_claude_4_sonnet: Anthropic Claude 4 Sonnet (via AWS Bedrock)
       open_ai_gpt_3_5_turbo: OpenAI GPT-3.5 Turbo

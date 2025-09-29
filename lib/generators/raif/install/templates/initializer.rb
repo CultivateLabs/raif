@@ -80,12 +80,15 @@ Raif.configure do |config|
   #   open_ai_responses_o1_pro
   #   open_ai_responses_o3_pro
   #   anthropic_claude_4_sonnet
+  #   anthropic_claude_4_5_sonnet
   #   anthropic_claude_4_opus
+  #   anthropic_claude_4_1_opus
   #   anthropic_claude_3_7_sonnet
   #   anthropic_claude_3_5_sonnet
   #   anthropic_claude_3_5_haiku
   #   anthropic_claude_3_opus
   #   bedrock_claude_4_sonnet
+  #   bedrock_claude_4_5_sonnet
   #   bedrock_claude_4_opus
   #   bedrock_claude_4_1_opus
   #   bedrock_claude_3_5_sonnet

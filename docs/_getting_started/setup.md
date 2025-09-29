@@ -122,7 +122,9 @@ Currently supported Anthropic models:
 - `anthropic_claude_3_7_sonnet`
 - `anthropic_claude_3_opus`
 - `anthropic_claude_4_opus`
+- `anthropic_claude_4_1_opus`
 - `anthropic_claude_4_sonnet`
+- `anthropic_claude_4_5_sonnet`
 
 ## AWS Bedrock
 
@@ -142,7 +144,9 @@ Currently supported Bedrock models:
 - `bedrock_claude_3_7_sonnet`
 - `bedrock_claude_3_opus`
 - `bedrock_claude_4_opus`
+- `bedrock_claude_4_1_opus`
 - `bedrock_claude_4_sonnet`
+- `bedrock_claude_4_5_sonnet`
 - `bedrock_amazon_nova_lite`
 - `bedrock_amazon_nova_micro`
 - `bedrock_amazon_nova_pro`
