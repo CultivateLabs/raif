@@ -23,7 +23,7 @@ module Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
       # Check properties count (max 100 total)
       validate_properties_count(schema, errors)
 
-      # Check nesting depth (max 5 levels)
+      # Check nesting depth (max 10 levels)
       validate_nesting_depth(schema, errors)
 
       # Check for unsupported anyOf at root level
@@ -118,8 +118,8 @@ private
   def validate_nesting_depth(schema, errors, depth = 1)
     return unless schema.is_a?(Hash)
 
-    if depth > 5
-      errors << "Schema exceeds maximum nesting depth of 5 levels"
+    if depth > 10
+      errors << "Schema exceeds maximum nesting depth of 10 levels"
       return
     end
 
