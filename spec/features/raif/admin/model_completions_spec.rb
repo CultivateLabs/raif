@@ -124,6 +124,7 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
         model_api_name: "gpt-4o-mini",
         response_format: "text",
         raw_response: "This is a test response",
+        retry_count: 2,
         prompt_tokens: 2500,
         completion_tokens: 7500,
         total_tokens: 10000,
@@ -148,6 +149,10 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
 
       # Check timestamps
       expect(page).to have_content(text_completion.created_at.rfc822)
+
+      # Check retry count
+      expect(page).to have_content(I18n.t("raif.admin.common.retry_count"))
+      expect(page).to have_content("2")
 
       # Check token counts
       expect(page).to have_content("2,500 (est. cost: $0.000375)") # prompt_tokens

@@ -106,10 +106,12 @@ RSpec.describe "Admin::Tasks", type: :feature do
 
         # Check model_completion section exists
         expect(page).to have_content(I18n.t("raif.admin.common.model_completion"))
+        expect(page).to have_content(I18n.t("raif.admin.common.retry_count"))
 
         # Check model_completion details
         expect(page).to have_link("##{model_completion.id}", href: raif.admin_model_completion_path(model_completion))
         expect(page).to have_content(model_completion.created_at.rfc822)
+        expect(page).to have_content(model_completion.retry_count)
         expect(page).to have_content("1,000") # prompt_tokens
         expect(page).to have_content("20") # completion_tokens
         expect(page).to have_content("1,020") # total_tokens
