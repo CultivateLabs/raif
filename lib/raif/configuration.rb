@@ -70,6 +70,8 @@ module Raif
         Faraday::ConnectionFailed,
         Faraday::TimeoutError,
         Faraday::ServerError,
+        Net::ReadTimeout,
+        Net::OpenTimeout,
       ]
       @model_superclass = "ApplicationRecord"
       @open_ai_api_key = default_disable_llm_api_requests? ? "placeholder-open-ai-api-key" : ENV["OPENAI_API_KEY"]

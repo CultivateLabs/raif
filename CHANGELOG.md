@@ -5,6 +5,9 @@
 - Added `generating_entry_response` flag to `Raif::Conversation` to track when a conversation is generating an entry response. [#241](https://github.com/CultivateLabs/raif/pull/241)
 - Added support for using other OpenAI API providers (e.g. Azure) via `Raif.config.open_ai_base_url` and `Raif.config.open_ai_api_version`. [#245](https://github.com/CultivateLabs/raif/pull/245)
 - Added an optional `source` association to `Raif::Task` for tracking the source of a task. [#246](https://github.com/CultivateLabs/raif/pull/246)
+- Update schema depth validation to match OpenAI's docs [#260](https://github.com/CultivateLabs/raif/pull/260)
+- Add Sonnet 4.5 and Opus 4.1 [#258](https://github.com/CultivateLabs/raif/pull/258)
+- Add Net::ReadTimeout and Net::OpenTimeout to retriable exceptions [#262](https://github.com/CultivateLabs/raif/pull/262)
 
 ## v1.3
 
