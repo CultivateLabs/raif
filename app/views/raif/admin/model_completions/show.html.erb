@@ -33,6 +33,10 @@
       <div class="col-md-9"><%= @model_completion.created_at.rfc822 %></div>
     </div>
     <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.retry_count") %>:</strong></div>
+      <div class="col-md-9"><%= @model_completion.retry_count %></div>
+    </div>
+    <div class="row mb-3">
       <div class="col-md-3"><strong><%= t("raif.admin.common.prompt_tokens") %>:</strong></div>
       <div class="col-md-9">
         <% if @model_completion.prompt_tokens %>
