@@ -11,12 +11,6 @@ module Raif
 
     private
 
-      SENSITIVE_KEYS = [
-        :anthropic_api_key,
-        :open_ai_api_key,
-        :open_router_api_key
-      ].freeze
-
       def build_config_settings
         [
           { key: "agent_types", value: format_array(@config.agent_types.to_a) },
