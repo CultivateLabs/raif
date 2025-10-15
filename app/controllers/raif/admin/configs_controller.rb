@@ -37,6 +37,7 @@ module Raif
           { key: "model_superclass", value: @config.model_superclass },
           { key: "open_ai_api_key", value: mask_sensitive_value(@config.open_ai_api_key) },
           { key: "open_ai_api_version", value: @config.open_ai_api_version },
+          { key: "open_ai_auth_header_style", value: @config.open_ai_auth_header_style },
           { key: "open_ai_base_url", value: @config.open_ai_base_url },
           { key: "open_ai_embedding_models_enabled", value: @config.open_ai_embedding_models_enabled },
           { key: "open_ai_models_enabled", value: @config.open_ai_models_enabled },

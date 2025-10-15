@@ -86,7 +86,7 @@
         <h5 class="mb-0"><%= t("raif.admin.config.show.registered_embedding_models") %></h5>
       </div>
       <div class="card-body">
-        <% if Raif.embedding_model_registry.any? %>
+        <% if Raif.embedding_model_registry.present? %>
           <table class="table table-sm table-hover mb-0">
             <thead>
               <tr>
