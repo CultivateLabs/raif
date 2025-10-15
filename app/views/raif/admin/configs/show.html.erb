@@ -17,7 +17,7 @@
           <tbody>
             <% @config_settings.each do |item| %>
               <tr>
-                <td class="text-monospace"><%= item[:key] %></td>
+                <td class="font-monospace"><%= item[:key] %></td>
                 <td>
                   <% if item[:value].is_a?(TrueClass) || item[:value].is_a?(FalseClass) %>
                     <span class="badge <%= item[:value] ? "bg-success" : "bg-secondary" %>">
