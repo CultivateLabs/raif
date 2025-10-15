@@ -8,6 +8,7 @@
 - Update schema depth validation to match OpenAI's docs [#260](https://github.com/CultivateLabs/raif/pull/260)
 - Add Sonnet 4.5 and Opus 4.1 [#258](https://github.com/CultivateLabs/raif/pull/258)
 - Add Net::ReadTimeout and Net::OpenTimeout to retriable exceptions [#262](https://github.com/CultivateLabs/raif/pull/262)
+- Add support for Azure OpenAI's API key authentication header style. [#263](https://github.com/CultivateLabs/raif/pull/263)
 
 ## v1.3
 
