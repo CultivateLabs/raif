@@ -16,6 +16,7 @@ en:
         completed: Completed
         completed_at: Completed At
         completion_tokens: Completion Tokens
+        config: Config
         conversation_entries: Conversation Entries
         conversation_history: Conversation History
         conversations: Conversations
@@ -90,8 +91,8 @@ en:
         type: Type
         update: Update
         user_message: User Message
-      configurations:
-        index:
+      config:
+        show:
           default: default
           key: Key
           no_embedding_models_registered: No embedding models registered

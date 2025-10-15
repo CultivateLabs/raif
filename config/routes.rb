@@ -25,6 +25,6 @@ Raif::Engine.routes.draw do
     resources :model_completions, only: [:index, :show]
     resources :agents, only: [:index, :show]
     resources :model_tool_invocations, only: [:index, :show]
-    resources :configurations, only: [:index]
+    resource :config, only: [:show]
   end
 end

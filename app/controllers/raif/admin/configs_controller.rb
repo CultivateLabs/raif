@@ -2,9 +2,9 @@
 
 module Raif
   module Admin
-    class ConfigurationsController < Raif::Admin::ApplicationController
+    class ConfigsController < Raif::Admin::ApplicationController
 
-      def index
+      def show
         @config = Raif.config
         @config_settings = build_config_settings
       end

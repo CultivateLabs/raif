@@ -14,7 +14,9 @@
       "Bash(bin/lint:*)",
       "Bash(bundle exec rails console:*)",
       "Bash(RAILS_ENV=test bundle exec rails console)",
-      "Bash(bundle install)"
+      "Bash(bundle install)",
+      "Bash(bundle exec i18n-tasks:*)",
+      "Bash(bundle exec rails runner:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

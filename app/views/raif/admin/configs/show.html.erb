@@ -1,4 +1,4 @@
-<h1 class="my-4"><%= t("raif.admin.configurations.index.title") %></h1>
+<h1 class="my-4"><%= t("raif.admin.config.show.title") %></h1>
 
 <div class="row">
   <div class="col-12">
@@ -11,8 +11,8 @@
           <table class="table table-sm table-hover mb-0">
             <thead>
               <tr>
-                <th style="width: 40%"><%= t("raif.admin.configurations.index.setting") %></th>
-                <th style="width: 60%"><%= t("raif.admin.configurations.index.value") %></th>
+                <th style="width: 40%"><%= t("raif.admin.config.show.setting") %></th>
+                <th style="width: 60%"><%= t("raif.admin.config.show.value") %></th>
               </tr>
             </thead>
             <tbody>
@@ -31,7 +31,7 @@
                     <% elsif item[:value].present? %>
                       <code><%= item[:value] %></code>
                     <% else %>
-                      <span class="text-muted fst-italic"><%= t("raif.admin.configurations.index.not_set") %></span>
+                      <span class="text-muted fst-italic"><%= t("raif.admin.config.show.not_set") %></span>
                     <% end %>
                   </td>
                 </tr>
@@ -48,34 +48,32 @@
   <div class="col-12">
     <div class="card">
       <div class="card-header bg-light">
-        <h5 class="mb-0"><%= t("raif.admin.configurations.index.registered_llms") %></h5>
+        <h5 class="mb-0"><%= t("raif.admin.config.show.registered_llms") %></h5>
       </div>
       <div class="card-body">
         <% if Raif.llm_registry.any? %>
           <table class="table table-sm table-hover mb-0">
             <thead>
               <tr>
-                <th><%= t("raif.admin.configurations.index.key") %></th>
-                <th><%= t("raif.admin.common.class") %></th>
+                <th><%= t("raif.admin.config.show.key") %></th>
               </tr>
             </thead>
             <tbody>
-              <% Raif.llm_registry.each do |key, llm_class| %>
+              <% Raif.llm_registry.each do |key, _llm_config| %>
                 <tr>
                   <td>
                     <code><%= key %></code>
                     <% if key.to_s == @config.default_llm_model_key.to_s %>
-                      <span class="badge bg-primary ms-2"><%= t("raif.admin.configurations.index.default") %></span>
+                      <span class="badge bg-primary ms-2"><%= t("raif.admin.config.show.default") %></span>
                     <% end %>
                   </td>
-                  <td class="text-muted"><%= llm_class.name %></td>
                 </tr>
               <% end %>
             </tbody>
           </table>
         <% else %>
           <div class="alert alert-warning mb-0">
-            <%= t("raif.admin.configurations.index.no_llms_registered") %>
+            <%= t("raif.admin.config.show.no_llms_registered") %>
           </div>
         <% end %>
       </div>
@@ -87,34 +85,32 @@
   <div class="col-12">
     <div class="card">
       <div class="card-header bg-light">
-        <h5 class="mb-0"><%= t("raif.admin.configurations.index.registered_embedding_models") %></h5>
+        <h5 class="mb-0"><%= t("raif.admin.config.show.registered_embedding_models") %></h5>
       </div>
       <div class="card-body">
         <% if Raif.embedding_model_registry.any? %>
           <table class="table table-sm table-hover mb-0">
             <thead>
               <tr>
-                <th><%= t("raif.admin.configurations.index.key") %></th>
-                <th><%= t("raif.admin.common.class") %></th>
+                <th><%= t("raif.admin.config.show.key") %></th>
               </tr>
             </thead>
             <tbody>
-              <% Raif.embedding_model_registry.each do |key, model_class| %>
+              <% Raif.embedding_model_registry.each do |key, _model_config| %>
                 <tr>
                   <td>
                     <code><%= key %></code>
                     <% if key.to_s == @config.default_embedding_model_key.to_s %>
-                      <span class="badge bg-primary ms-2"><%= t("raif.admin.configurations.index.default") %></span>
+                      <span class="badge bg-primary ms-2"><%= t("raif.admin.config.show.default") %></span>
                     <% end %>
                   </td>
-                  <td class="text-muted"><%= model_class.name %></td>
                 </tr>
               <% end %>
             </tbody>
           </table>
         <% else %>
           <div class="alert alert-info mb-0">
-            <%= t("raif.admin.configurations.index.no_embedding_models_registered") %>
+            <%= t("raif.admin.config.show.no_embedding_models_registered") %>
           </div>
         <% end %>
       </div>
