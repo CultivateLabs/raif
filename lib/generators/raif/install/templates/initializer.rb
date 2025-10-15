@@ -17,6 +17,11 @@ Raif.configure do |config|
   # When set, this will be included as an api-version parameter in any OpenAI API requests (e.g. for using Azure instead of OpenAI)
   # config.open_ai_api_version = nil
 
+  # The authentication header style for OpenAI API requests. Defaults to :bearer
+  # Use :bearer for standard OpenAI API (Authorization: Bearer <token>)
+  # Use :api_key for Azure OpenAI API (api-key: <token>)
+  # config.open_ai_auth_header_style = :bearer
+
   # Your Anthropic API key. Defaults to ENV["ANTHROPIC_API_KEY"]
   # config.anthropic_api_key = ENV["ANTHROPIC_API_KEY"]
 

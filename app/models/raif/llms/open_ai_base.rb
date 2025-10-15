@@ -30,7 +30,16 @@ private
   def connection
     @connection ||= begin
       conn = Faraday.new(url: Raif.config.open_ai_base_url) do |f|
-        f.headers["Authorization"] = "Bearer #{Raif.config.open_ai_api_key}"
+        case Raif.config.open_ai_auth_header_style
+        when :bearer
+          f.headers["Authorization"] = "Bearer #{Raif.config.open_ai_api_key}"
+        when :api_key
+          f.headers["api-key"] = Raif.config.open_ai_api_key
+        else
+          raise Raif::Errors::InvalidConfigError,
+            "Raif.config.open_ai_auth_header_style must be either :bearer or :api_key"
+        end
+
         f.request :json
         f.response :json
         f.response :raise_error

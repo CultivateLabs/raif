@@ -25,10 +25,11 @@ module Raif
       :llm_request_retriable_exceptions,
       :model_superclass,
       :open_ai_api_key,
+      :open_ai_api_version,
+      :open_ai_auth_header_style,
+      :open_ai_base_url,
       :open_ai_embedding_models_enabled,
       :open_ai_models_enabled,
-      :open_ai_base_url,
-      :open_ai_api_version,
       :open_router_api_key,
       :open_router_models_enabled,
       :open_router_app_name,
@@ -75,10 +76,11 @@ module Raif
       ]
       @model_superclass = "ApplicationRecord"
       @open_ai_api_key = default_disable_llm_api_requests? ? "placeholder-open-ai-api-key" : ENV["OPENAI_API_KEY"]
+      @open_ai_api_version = nil
+      @open_ai_auth_header_style = :bearer
+      @open_ai_base_url = "https://api.openai.com/v1"
       @open_ai_embedding_models_enabled = ENV["OPENAI_API_KEY"].present?
       @open_ai_models_enabled = ENV["OPENAI_API_KEY"].present?
-      @open_ai_base_url = "https://api.openai.com/v1"
-      @open_ai_api_version = nil
       open_router_api_key = ENV["OPEN_ROUTER_API_KEY"].presence || ENV["OPENROUTER_API_KEY"]
       @open_router_api_key = default_disable_llm_api_requests? ? "placeholder-open-router-api-key" : open_router_api_key
       @open_router_models_enabled = @open_router_api_key.present?
@@ -133,6 +135,11 @@ module Raif
       if open_ai_models_enabled && open_ai_api_key.blank?
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.open_ai_api_key is required when Raif.config.open_ai_models_enabled is true. Set it via Raif.config.open_ai_api_key or ENV[\"OPENAI_API_KEY\"]" # rubocop:disable Layout/LineLength
+      end
+
+      if open_ai_models_enabled && ![:bearer, :api_key].include?(open_ai_auth_header_style)
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.open_ai_auth_header_style must be either :bearer or :api_key"
       end
 
       if open_ai_embedding_models_enabled && open_ai_api_key.blank?
