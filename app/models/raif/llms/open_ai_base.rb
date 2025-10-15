@@ -37,6 +37,7 @@ private
       end
 
       conn.params["api-version"] = Raif.config.open_ai_api_version if Raif.config.open_ai_api_version.present?
+      debugger
       conn
     end
   end

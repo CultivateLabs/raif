@@ -12,6 +12,7 @@ en:
         arguments: Arguments
         at: at
         citations: Citations
+        class: Class
         completed: Completed
         completed_at: Completed At
         completion_tokens: Completion Tokens
@@ -89,6 +90,18 @@ en:
         type: Type
         update: Update
         user_message: User Message
+      configurations:
+        index:
+          default: default
+          key: Key
+          no_embedding_models_registered: No embedding models registered
+          no_llms_registered: No LLMs registered
+          not_set: Not set
+          registered_embedding_models: Registered Embedding Models
+          registered_llms: Registered LLMs
+          setting: Setting
+          title: Raif Configuration
+          value: Value
       conversations:
         show:
           back_to_conversations: Back to Conversations
