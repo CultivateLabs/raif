@@ -12,7 +12,6 @@ en:
         arguments: Arguments
         at: at
         citations: Citations
-        class: Class
         completed: Completed
         completed_at: Completed At
         completion_tokens: Completion Tokens
