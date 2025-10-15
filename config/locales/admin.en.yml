@@ -93,6 +93,7 @@ en:
         user_message: User Message
       config:
         show:
+          configuration_settings: Configuration Settings
           default: default
           key: Key
           no_embedding_models_registered: No embedding models registered

@@ -2,45 +2,43 @@
 
 <div class="row">
   <div class="col-12">
-    <% @config_settings.each do |section| %>
-      <div class="card mb-4">
-        <div class="card-header bg-light">
-          <h5 class="mb-0"><%= section[:category] %></h5>
-        </div>
-        <div class="card-body">
-          <table class="table table-sm table-hover mb-0">
-            <thead>
-              <tr>
-                <th style="width: 40%"><%= t("raif.admin.config.show.setting") %></th>
-                <th style="width: 60%"><%= t("raif.admin.config.show.value") %></th>
-              </tr>
-            </thead>
-            <tbody>
-              <% section[:items].each do |item| %>
-                <tr>
-                  <td class="text-monospace"><%= item[:key] %></td>
-                  <td>
-                    <% if item[:value].is_a?(TrueClass) || item[:value].is_a?(FalseClass) %>
-                      <span class="badge <%= item[:value] ? "bg-success" : "bg-secondary" %>">
-                        <%= item[:value] %>
-                      </span>
-                    <% elsif item[:value].to_s.include?('*') %>
-                      <code class="text-muted"><%= item[:value] %></code>
-                    <% elsif item[:value].is_a?(String) && item[:value].length > 80 %>
-                      <small class="text-muted"><%= item[:value] %></small>
-                    <% elsif item[:value].present? %>
-                      <code><%= item[:value] %></code>
-                    <% else %>
-                      <span class="text-muted fst-italic"><%= t("raif.admin.config.show.not_set") %></span>
-                    <% end %>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0"><%= t("raif.admin.config.show.configuration_settings") %></h5>
       </div>
-    <% end %>
+      <div class="card-body">
+        <table class="table table-sm table-hover mb-0">
+          <thead>
+            <tr>
+              <th style="width: 40%"><%= t("raif.admin.config.show.setting") %></th>
+              <th style="width: 60%"><%= t("raif.admin.config.show.value") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @config_settings.each do |item| %>
+              <tr>
+                <td class="text-monospace"><%= item[:key] %></td>
+                <td>
+                  <% if item[:value].is_a?(TrueClass) || item[:value].is_a?(FalseClass) %>
+                    <span class="badge <%= item[:value] ? "bg-success" : "bg-secondary" %>">
+                      <%= item[:value] %>
+                    </span>
+                  <% elsif item[:value].to_s.include?("*") %>
+                    <code class="text-muted"><%= item[:value] %></code>
+                  <% elsif item[:value].is_a?(String) && item[:value].length > 80 %>
+                    <small class="text-muted"><%= item[:value] %></small>
+                  <% elsif item[:value].present? %>
+                    <code><%= item[:value] %></code>
+                  <% else %>
+                    <span class="text-muted fst-italic"><%= t("raif.admin.config.show.not_set") %></span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
