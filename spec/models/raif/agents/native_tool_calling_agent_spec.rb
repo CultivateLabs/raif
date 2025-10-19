@@ -106,12 +106,12 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           { "role" => "assistant", "content" => "I need to search Wikipedia." },
           {
             "role" => "assistant",
-            "content" => "<action>{\n  \"name\": \"wikipedia_search\",\n  \"arguments\": {\n    \"query\": \"capital of France\"\n  }\n}</action>"
+            "content" => "<action>\n{\n  \"name\": \"wikipedia_search\",\n  \"arguments\": {\n    \"query\": \"capital of France\"\n  }\n}\n</action>"
           },
           {
             "role" => "assistant",
             "content" =>
-            "<observation>{\n  \"results\": [\n    {\n      \"title\": \"List of capitals of France\",\n      \"snippet\": \"This is a chronological list <span class=\\\"searchmatch\\\">of</span> capitals <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span>. The <span class=\\\"searchmatch\\\">capital</span> <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span> has been Paris since its liberation in 1944. Tournai (before 486), current-day\",\n      \"page_id\": 169335,\n      \"url\": \"https://en.wikipedia.org/wiki/List_of_capitals_of_France\"\n    },\n    {\n      \"title\": \"Capital punishment in France\",\n      \"snippet\": \"<span class=\\\"searchmatch\\\">Capital</span> punishment in <span class=\\\"searchmatch\\\">France</span> (<span class=\\\"searchmatch\\\">French</span>: peine de mort en <span class=\\\"searchmatch\\\">France</span>) is banned by Article 66-1 <span class=\\\"searchmatch\\\">of</span> the Constitution <span class=\\\"searchmatch\\\">of</span> the <span class=\\\"searchmatch\\\">French</span> Republic, voted as a constitutional\",\n      \"page_id\": 2861364,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital_punishment_in_France\"\n    },\n    {\n      \"title\": \"Capital city\",\n      \"snippet\": \"seat <span class=\\\"searchmatch\\\">of</span> the government. A <span class=\\\"searchmatch\\\">capital</span> is typically a city that physically encompasses the government&#039;s offices and meeting places; the status as <span class=\\\"searchmatch\\\">capital</span> is\",\n      \"page_id\": 181337,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital_city\"\n    },\n    {\n      \"title\": \"Capital\",\n      \"snippet\": \"Piketty, 2013 <span class=\\\"searchmatch\\\">Capital</span>: The Eruption <span class=\\\"searchmatch\\\">of</span> Delhi, a 2014 book by Rana Dasgupta <span class=\\\"searchmatch\\\">Capital</span> (<span class=\\\"searchmatch\\\">French</span> magazine), a <span class=\\\"searchmatch\\\">French</span>-language magazine <span class=\\\"searchmatch\\\">Capital</span> (German magazine)\",\n      \"page_id\": 5187,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital\"\n    },\n    {\n      \"title\": \"Paris\",\n      \"snippet\": \"Paris (<span class=\\\"searchmatch\\\">French</span> pronunciation: [paʁi] ) is the <span class=\\\"searchmatch\\\">capital</span> and largest city <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span>. With an estimated population <span class=\\\"searchmatch\\\">of</span> 2,048,472 residents in January 2025 in\",\n      \"page_id\": 22989,\n      \"url\": \"https://en.wikipedia.org/wiki/Paris\"\n    }\n  ]\n}</observation>" # rubocop:disable Layout/LineLength
+            "<observation>\n{\n  \"results\": [\n    {\n      \"title\": \"List of capitals of France\",\n      \"snippet\": \"This is a chronological list <span class=\\\"searchmatch\\\">of</span> capitals <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span>. The <span class=\\\"searchmatch\\\">capital</span> <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span> has been Paris since its liberation in 1944. Tournai (before 486), current-day\",\n      \"page_id\": 169335,\n      \"url\": \"https://en.wikipedia.org/wiki/List_of_capitals_of_France\"\n    },\n    {\n      \"title\": \"Capital punishment in France\",\n      \"snippet\": \"<span class=\\\"searchmatch\\\">Capital</span> punishment in <span class=\\\"searchmatch\\\">France</span> (<span class=\\\"searchmatch\\\">French</span>: peine de mort en <span class=\\\"searchmatch\\\">France</span>) is banned by Article 66-1 <span class=\\\"searchmatch\\\">of</span> the Constitution <span class=\\\"searchmatch\\\">of</span> the <span class=\\\"searchmatch\\\">French</span> Republic, voted as a constitutional\",\n      \"page_id\": 2861364,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital_punishment_in_France\"\n    },\n    {\n      \"title\": \"Capital city\",\n      \"snippet\": \"seat <span class=\\\"searchmatch\\\">of</span> the government. A <span class=\\\"searchmatch\\\">capital</span> is typically a city that physically encompasses the government&#039;s offices and meeting places; the status as <span class=\\\"searchmatch\\\">capital</span> is\",\n      \"page_id\": 181337,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital_city\"\n    },\n    {\n      \"title\": \"Capital\",\n      \"snippet\": \"Piketty, 2013 <span class=\\\"searchmatch\\\">Capital</span>: The Eruption <span class=\\\"searchmatch\\\">of</span> Delhi, a 2014 book by Rana Dasgupta <span class=\\\"searchmatch\\\">Capital</span> (<span class=\\\"searchmatch\\\">French</span> magazine), a <span class=\\\"searchmatch\\\">French</span>-language magazine <span class=\\\"searchmatch\\\">Capital</span> (German magazine)\",\n      \"page_id\": 5187,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital\"\n    },\n    {\n      \"title\": \"Paris\",\n      \"snippet\": \"Paris (<span class=\\\"searchmatch\\\">French</span> pronunciation: [paʁi] ) is the <span class=\\\"searchmatch\\\">capital</span> and largest city <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span>. With an estimated population <span class=\\\"searchmatch\\\">of</span> 2,048,472 residents in January 2025 in\",\n      \"page_id\": 22989,\n      \"url\": \"https://en.wikipedia.org/wiki/Paris\"\n    }\n  ]\n}\n</observation>" # rubocop:disable Layout/LineLength
           },
           { "role" => "assistant", "content" => "Based on the search results, I can now answer." },
           { "role" => "assistant", "content" => "<answer>Paris</answer>" }
@@ -179,7 +179,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         { "role" => "assistant", "content" => "I'll try to use a non-existent tool." },
         {
           "role" => "assistant",
-          "content" => "<action>{\n  \"name\": \"unavailable_tool\",\n  \"arguments\": {\n    \"query\": \"capital of France\"\n  }\n}</action>"
+          "content" => "<action>\n{\n  \"name\": \"unavailable_tool\",\n  \"arguments\": {\n    \"query\": \"capital of France\"\n  }\n}\n</action>"
         },
         {
           "role" => "assistant",
@@ -209,7 +209,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         { "role" => "assistant", "content" => "I'll try to use Wikipedia search with wrong arguments." },
         {
           "role" => "assistant",
-          "content" => "<action>{\n  \"name\": \"wikipedia_search\",\n  \"arguments\": {\n    \"search_term\": \"jingle bells\"\n  }\n}</action>"
+          "content" => "<action>\n{\n  \"name\": \"wikipedia_search\",\n  \"arguments\": {\n    \"search_term\": \"jingle bells\"\n  }\n}\n</action>"
         },
         {
           "role" => "assistant",
@@ -288,6 +288,69 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
 
       expect(agent).not_to be_valid
       expect(agent.errors[:base]).to include("Raif::Agent#llm_model_key must use an LLM that supports native tool use")
+    end
+  end
+
+  describe "final answer tool" do
+    it "adds the final answer tool to the available model tools" do
+      agent = described_class.create!(
+        creator: creator,
+        task: "What is the capital of France?",
+        available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::FetchUrl]
+      )
+
+      expect(agent.available_model_tools_map["agent_final_answer"]).to eq(Raif::ModelTools::AgentFinalAnswer)
+    end
+
+    it "doesn't add a final answer tool to the available model tools one is already defined" do
+      custom_tool_class = Class.new(Raif::ModelTool) do
+        # Force the tool_name to collide with the built-in final answer tool
+        def self.tool_name
+          "agent_final_answer"
+        end
+
+        # Define minimal required class methods for a model tool
+        def self.tool_description
+          "Custom final answer tool"
+        end
+
+        def self.example_model_invocation
+          { "name" => tool_name, "arguments" => { "final_answer" => "Example" } }
+        end
+
+        def self.tool_arguments_schema
+          {
+            "type" => "object",
+            "additionalProperties" => false,
+            "properties" => { "final_answer" => { "type" => "string" } },
+            "required" => ["final_answer"]
+          }
+        end
+
+        def self.process_invocation(tool_invocation)
+          tool_invocation.update!(result: { "final_answer" => tool_invocation.tool_arguments["final_answer"] })
+          tool_invocation.result
+        end
+
+        def self.observation_for_invocation(tool_invocation)
+          tool_invocation.result&.fetch("final_answer", "")
+        end
+      end
+
+      stub_const("CustomFinalAnswerTool", custom_tool_class)
+
+      custom_agent = described_class.create!(
+        creator: creator,
+        task: "What is the capital of France?",
+        available_model_tools: [Raif::ModelTools::WikipediaSearch, CustomFinalAnswerTool]
+      )
+
+      # The custom tool with name "agent_final_answer" should be used, not the built-in one
+      expect(custom_agent.available_model_tools_map["agent_final_answer"]).to eq(CustomFinalAnswerTool)
+
+      # Ensure the built-in tool was NOT auto-added
+      tool_class_names = custom_agent.available_model_tools.map { |t| t.is_a?(String) ? t : t.name }
+      expect(tool_class_names).to_not include("Raif::ModelTools::AgentFinalAnswer")
     end
   end
 end

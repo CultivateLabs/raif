@@ -12,7 +12,10 @@ module Raif
       }
 
       before_validation -> {
-        available_model_tools << "Raif::ModelTools::AgentFinalAnswer" unless available_model_tools.include?("Raif::ModelTools::AgentFinalAnswer")
+        # If there is no final answer tool added, add it
+        unless available_model_tools_map.key?("agent_final_answer")
+          available_model_tools << "Raif::ModelTools::AgentFinalAnswer"
+        end
       }
 
       def build_system_prompt
@@ -93,7 +96,7 @@ module Raif
         # Add the tool call to conversation history
         add_conversation_history_entry({
           role: "assistant",
-          content: "<action>#{JSON.pretty_generate(tool_call)}</action>"
+          content: "<action>\n#{JSON.pretty_generate(tool_call)}\n</action>"
         })
 
         # Find the tool class and process it
@@ -122,7 +125,7 @@ module Raif
 
         add_conversation_history_entry({
           role: "assistant",
-          content: "<observation>#{observation}</observation>"
+          content: "<observation>\n#{observation}\n</observation>"
         })
       end
 

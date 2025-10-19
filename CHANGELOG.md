@@ -10,6 +10,7 @@
 - Add Net::ReadTimeout and Net::OpenTimeout to retriable exceptions [#262](https://github.com/CultivateLabs/raif/pull/262)
 - Add support for Azure OpenAI's API key authentication header style. [#263](https://github.com/CultivateLabs/raif/pull/263)
 - Add admin page for viewing current configuration. [#264](https://github.com/CultivateLabs/raif/pull/264)
+- Make it so developer can define their own, custom agent final answer tool (e.g. if you want a custom schema for the response). [##266](https://github.com/CultivateLabs/raif/pull/#266)
 
 ## v1.3
 
