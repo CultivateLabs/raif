@@ -1,5 +1,5 @@
 module Raif
-  class ApplicationAgent < Raif::Agent
+  class ApplicationAgent < Raif::Agents::NativeToolCallingAgent
     # Add any shared agent behavior here
   end
 end
