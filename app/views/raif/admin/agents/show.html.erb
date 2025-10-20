@@ -130,7 +130,11 @@
       <div class="conversation-history p-3">
         <% @agent.conversation_history.each_with_index do |message, index| %>
           <%= render partial: "raif/admin/agents/conversation_message",
-                locals: { message: message, message_count: index + 1 } %>
+                locals: {
+                  message: message,
+                  message_count: index + 1,
+                  is_final_answer: message["content"].to_s.strip.start_with?("<answer>")
+                } %>
         <% end %>
       </div>
     </div>

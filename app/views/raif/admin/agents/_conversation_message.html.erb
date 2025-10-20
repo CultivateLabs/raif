@@ -5,6 +5,9 @@
       <% if message[:counter] == 0 && message["role"] == 'user' %>
         (<%= t("raif.admin.common.initial_task") %>)
       <% end %>
+      <% if is_final_answer %>
+        <span class="badge bg-info ms-2"><%= t("raif.admin.common.final_answer") %></span>
+      <% end %>
     </strong>
     <span class="badge bg-secondary">#<%= message_count %></span>
   </div>
