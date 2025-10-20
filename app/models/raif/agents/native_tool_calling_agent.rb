@@ -144,8 +144,8 @@ module Raif
         observation = tool_klass.observation_for_invocation(tool_invocation)
 
         if tool_name == "agent_final_answer"
-          self.final_answer = tool_klass.process_invocation(tool_invocation)
-          add_conversation_history_entry({ role: "assistant", content: "<answer>#{final_answer}</answer>" })
+          self.final_answer = observation
+          add_conversation_history_entry({ role: "assistant", content: "<answer>\n#{final_answer}\n</answer>" })
         else
           add_conversation_history_entry({
             role: "assistant",
