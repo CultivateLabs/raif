@@ -60,10 +60,10 @@ RSpec.describe "Raif::Task task_run_args", type: :model do
         count: 42
       )
 
-      expect(task.task_run_args["conversation"]).to eq(conversation.to_global_id.to_s)
-      expect(task.task_run_args["user"]).to eq(user.to_global_id.to_s)
-      expect(task.task_run_args["options"]).to eq({ "include_summary" => true })
-      expect(task.task_run_args["count"]).to eq(42)
+      expect(task.run_with["conversation"]).to eq(conversation.to_global_id.to_s)
+      expect(task.run_with["user"]).to eq(user.to_global_id.to_s)
+      expect(task.run_with["options"]).to eq({ "include_summary" => true })
+      expect(task.run_with["count"]).to eq(42)
 
       expect(task.conversation).to eq(conversation)
       expect(task.user).to eq(user)
@@ -90,8 +90,8 @@ RSpec.describe "Raif::Task task_run_args", type: :model do
       )
 
       expect(task).to be_persisted
-      expect(task.task_run_args.keys).to include("conversation")
-      expect(task.task_run_args.keys).not_to include("unpersisted_arg")
+      expect(task.run_with.keys).to include("conversation")
+      expect(task.run_with.keys).not_to include("unpersisted_arg")
     end
   end
 

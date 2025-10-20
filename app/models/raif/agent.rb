@@ -16,6 +16,7 @@
 #  llm_model_key          :string           not null
 #  max_iterations         :integer          default(10), not null
 #  requested_language_key :string
+#  run_with               :jsonb
 #  source_type            :string
 #  started_at             :datetime
 #  system_prompt          :text
@@ -39,6 +40,7 @@ module Raif
     include Raif::Concerns::HasAvailableModelTools
     include Raif::Concerns::InvokesModelTools
     include Raif::Concerns::AgentInferenceStats
+    include Raif::Concerns::RunWith
 
     belongs_to :creator, polymorphic: true
     belongs_to :source, polymorphic: true, optional: true
@@ -47,6 +49,7 @@ module Raif
 
     after_initialize -> { self.available_model_tools ||= [] }
     after_initialize -> { self.conversation_history ||= [] }
+    after_initialize -> { self.run_with ||= {} }
 
     boolean_timestamp :started_at
     boolean_timestamp :completed_at

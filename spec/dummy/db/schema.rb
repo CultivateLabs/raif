@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_20_005853) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_20_011405) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -70,6 +70,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_20_005853) do
     t.datetime "updated_at", null: false
     t.string "source_type"
     t.bigint "source_id"
+    t.jsonb "run_with"
     t.index ["created_at"], name: "index_raif_agents_on_created_at"
     t.index ["creator_type", "creator_id"], name: "index_raif_agents_on_creator"
     t.index ["source_type", "source_id"], name: "index_raif_agents_on_source"
@@ -170,7 +171,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_20_005853) do
     t.string "llm_model_key", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.jsonb "task_run_args"
+    t.jsonb "run_with"
     t.string "source_type"
     t.bigint "source_id"
     t.index ["completed_at"], name: "index_raif_tasks_on_completed_at"

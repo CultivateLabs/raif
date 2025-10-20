@@ -16,6 +16,7 @@
 #  llm_model_key          :string           not null
 #  max_iterations         :integer          default(10), not null
 #  requested_language_key :string
+#  run_with               :jsonb
 #  source_type            :string
 #  started_at             :datetime
 #  system_prompt          :text
