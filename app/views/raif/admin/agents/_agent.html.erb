@@ -1,5 +1,6 @@
 <tr id="<%= dom_id(agent) %>" class="raif-agent">
   <td><%= link_to "##{agent.id}", raif.admin_agent_path(agent) %></td>
+  <td><small class="text-muted"><%= agent.type.demodulize %></small></td>
   <td><small class="text-muted"><%= agent.created_at.rfc822 %></small></td>
   <td><small class="text-muted"><%= truncate(agent.task, length: 100) %></small></td>
   <td>
@@ -14,5 +15,12 @@
     <% end %>
   </td>
   <td><%= agent.iteration_count %> / <%= agent.max_iterations %></td>
+  <td>
+    <% if agent.total_cost && agent.total_cost > 0 %>
+      <small><%= "$" %><%= number_with_precision(agent.total_cost, precision: 6) %></small>
+    <% else %>
+      -
+    <% end %>
+  </td>
   <td><small class="text-muted"><%= truncate(agent.final_answer, length: 100) if agent.final_answer %></small></td>
 </tr>

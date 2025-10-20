@@ -35,6 +35,7 @@ module Raif
     include Raif::Concerns::HasRequestedLanguage
     include Raif::Concerns::HasAvailableModelTools
     include Raif::Concerns::InvokesModelTools
+    include Raif::Concerns::AgentInferenceStats
 
     belongs_to :creator, polymorphic: true
 

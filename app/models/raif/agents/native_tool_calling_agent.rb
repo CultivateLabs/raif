@@ -80,24 +80,11 @@ module Raif
         tool_name = tool_call["name"]
         tool_arguments = tool_call["arguments"]
 
-        # Add assistant's response to conversation history (without the actual tool calls)
-        # add_conversation_history_entry({
-        #   role: "assistant",
-        #   content: "<thought>I need to use the #{tool_name} tool to help with this task.</thought>"
-        # })
-
-        # Check if we have a final answer. If yes, we're done.
-        if tool_name == "agent_final_answer"
-          self.final_answer = tool_arguments["final_answer"]
-          add_conversation_history_entry({ role: "assistant", content: "<answer>#{final_answer}</answer>" })
-          return
-        end
-
         # Add the tool call to conversation history
         add_conversation_history_entry({
           role: "assistant",
           content: "<action>\n#{JSON.pretty_generate(tool_call)}\n</action>"
-        })
+        }) unless tool_name == "agent_final_answer"
 
         # Find the tool class and process it
         tool_klass = available_model_tools_map[tool_name]
@@ -123,10 +110,15 @@ module Raif
         tool_invocation = tool_klass.invoke_tool(tool_arguments: tool_arguments, source: self)
         observation = tool_klass.observation_for_invocation(tool_invocation)
 
-        add_conversation_history_entry({
-          role: "assistant",
-          content: "<observation>\n#{observation}\n</observation>"
-        })
+        if tool_name == "agent_final_answer"
+          self.final_answer = tool_klass.process_invocation(tool_invocation)
+          add_conversation_history_entry({ role: "assistant", content: "<answer>#{final_answer}</answer>" })
+        else
+          add_conversation_history_entry({
+            role: "assistant",
+            content: "<observation>\n#{observation}\n</observation>"
+          })
+        end
       end
 
       def ensure_llm_supports_native_tool_use

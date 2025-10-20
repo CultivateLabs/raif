@@ -117,7 +117,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           { "role" => "assistant", "content" => "<answer>Paris</answer>" }
         ])
 
-        expect(agent.raif_model_tool_invocations.length).to eq(1)
+        expect(agent.raif_model_tool_invocations.length).to eq(2)
         mti = agent.raif_model_tool_invocations.first
         expect(mti.tool_name).to eq("wikipedia_search")
         expect(mti.tool_type).to eq("Raif::ModelTools::WikipediaSearch")
@@ -157,6 +157,12 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
             }
           ]
         })
+
+        mti2 = agent.raif_model_tool_invocations.second
+        expect(mti2.tool_name).to eq("agent_final_answer")
+        expect(mti2.tool_type).to eq("Raif::ModelTools::AgentFinalAnswer")
+        expect(mti2.tool_arguments).to eq({ "final_answer" => "Paris" })
+        expect(mti2.result).to eq({ "final_answer" => "Paris" })
       end
     end
 

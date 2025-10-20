@@ -50,6 +50,45 @@
         <div class="col-md-9"><%= @agent.requested_language_key %></div>
       </div>
     <% end %>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.prompt_tokens") %>:</strong></div>
+      <div class="col-md-9">
+        <% if @agent.total_prompt_tokens > 0 %>
+          <%= number_with_delimiter(@agent.total_prompt_tokens) %>
+          <% if @agent.total_prompt_token_cost > 0 %>
+            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(@agent.total_prompt_token_cost, precision: 6) %>)</small>
+          <% end %>
+        <% else %>
+          -
+        <% end %>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.completion_tokens") %>:</strong></div>
+      <div class="col-md-9">
+        <% if @agent.total_completion_tokens > 0 %>
+          <%= number_with_delimiter(@agent.total_completion_tokens) %>
+          <% if @agent.total_output_token_cost > 0 %>
+            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(@agent.total_output_token_cost, precision: 6) %>)</small>
+          <% end %>
+        <% else %>
+          -
+        <% end %>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.total_tokens") %>:</strong></div>
+      <div class="col-md-9">
+        <% if @agent.total_tokens_sum > 0 %>
+          <%= number_with_delimiter(@agent.total_tokens_sum) %>
+          <% if @agent.total_cost > 0 %>
+            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(@agent.total_cost, precision: 6) %>)</small>
+          <% end %>
+        <% else %>
+          -
+        <% end %>
+      </div>
+    </div>
   </div>
 </div>
 
