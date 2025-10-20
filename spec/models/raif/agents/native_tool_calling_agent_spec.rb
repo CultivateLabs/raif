@@ -1,5 +1,37 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: raif_agents
+#
+#  id                     :bigint           not null, primary key
+#  available_model_tools  :jsonb            not null
+#  completed_at           :datetime
+#  conversation_history   :jsonb            not null
+#  creator_type           :string           not null
+#  failed_at              :datetime
+#  failure_reason         :text
+#  final_answer           :text
+#  iteration_count        :integer          default(0), not null
+#  llm_model_key          :string           not null
+#  max_iterations         :integer          default(10), not null
+#  requested_language_key :string
+#  source_type            :string
+#  started_at             :datetime
+#  system_prompt          :text
+#  task                   :text
+#  type                   :string           not null
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  creator_id             :bigint           not null
+#  source_id              :bigint
+#
+# Indexes
+#
+#  index_raif_agents_on_created_at  (created_at)
+#  index_raif_agents_on_creator     (creator_type,creator_id)
+#  index_raif_agents_on_source      (source_type,source_id)
+#
 require "rails_helper"
 
 RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
@@ -21,6 +53,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
     let(:agent) do
       described_class.new(
         creator: creator,
+        source: creator,
         task: "What is the capital of France?",
         max_iterations: 3,
         available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::FetchUrl],
@@ -49,6 +82,8 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(agent.started_at).to be_present
       expect(agent.completed_at).to be_present
       expect(agent.failed_at).to be_nil
+      expect(agent.creator).to eq(creator)
+      expect(agent.source).to eq(creator)
 
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
@@ -118,7 +153,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         ])
 
         expect(agent.raif_model_tool_invocations.length).to eq(2)
-        mti = agent.raif_model_tool_invocations.first
+        mti = agent.raif_model_tool_invocations.oldest_first.first
         expect(mti.tool_name).to eq("wikipedia_search")
         expect(mti.tool_type).to eq("Raif::ModelTools::WikipediaSearch")
         expect(mti.tool_arguments).to eq({ "query" => "capital of France" })
@@ -158,7 +193,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           ]
         })
 
-        mti2 = agent.raif_model_tool_invocations.second
+        mti2 = agent.raif_model_tool_invocations.oldest_first.second
         expect(mti2.tool_name).to eq("agent_final_answer")
         expect(mti2.tool_type).to eq("Raif::ModelTools::AgentFinalAnswer")
         expect(mti2.tool_arguments).to eq({ "final_answer" => "Paris" })

@@ -16,6 +16,7 @@
 #  llm_model_key          :string           not null
 #  max_iterations         :integer          default(10), not null
 #  requested_language_key :string
+#  source_type            :string
 #  started_at             :datetime
 #  system_prompt          :text
 #  task                   :text
@@ -23,11 +24,13 @@
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #  creator_id             :bigint           not null
+#  source_id              :bigint
 #
 # Indexes
 #
 #  index_raif_agents_on_created_at  (created_at)
 #  index_raif_agents_on_creator     (creator_type,creator_id)
+#  index_raif_agents_on_source      (source_type,source_id)
 #
 module Raif
   class Agent < ApplicationRecord
@@ -38,6 +41,7 @@ module Raif
     include Raif::Concerns::AgentInferenceStats
 
     belongs_to :creator, polymorphic: true
+    belongs_to :source, polymorphic: true, optional: true
 
     has_many :raif_model_completions, as: :source, dependent: :destroy, class_name: "Raif::ModelCompletion"
 
