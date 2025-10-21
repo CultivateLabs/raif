@@ -8,6 +8,9 @@ module Raif::Concerns::RunWith
 
     # Backward compatibility alias
     class_attribute :_task_run_args, instance_writer: false, default: []
+
+    # Automatically serialize run_with args before validation on create
+    before_validation :serialize_run_with_to_column, on: :create
   end
 
   class_methods do
@@ -71,5 +74,27 @@ module Raif::Concerns::RunWith
 
     # Backward compatibility alias
     alias_method :serialize_task_run_args, :serialize_run_with
+  end
+
+private
+
+  # Automatically called before validation on create to serialize run_with args
+  # Collects all declared run_with arguments from instance variables and serializes them
+  # to the run_with JSON column
+  def serialize_run_with_to_column
+    args = {}
+
+    # Collect all run_with args that were set via instance variables
+    self.class._run_with_args.each do |arg_name|
+      if instance_variable_defined?("@#{arg_name}")
+        args[arg_name] = instance_variable_get("@#{arg_name}")
+      end
+    end
+
+    # Merge serialized args into run_with hash if any args were set
+    if args.any?
+      self.run_with ||= {}
+      self.run_with = self.run_with.merge(self.class.serialize_run_with(args))
+    end
   end
 end

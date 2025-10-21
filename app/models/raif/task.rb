@@ -105,7 +105,6 @@ module Raif
         started_at: Time.current,
         images: images,
         files: files,
-        run_with: serialize_run_with(args),
         **args
       )
 

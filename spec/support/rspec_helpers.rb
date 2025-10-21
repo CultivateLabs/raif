@@ -3,11 +3,11 @@
 module Raif
   module RspecHelpers
 
-    def stubbed_llm(llm_model_key, &block)
+    def stubbed_llm(llm_model_key, source_instance, &block)
       test_llm = Raif.llm(llm_model_key.to_sym)
 
       allow(test_llm).to receive(:perform_model_completion!) do |model_completion|
-        result = block.call(model_completion.messages, model_completion)
+        result = block.call(model_completion.messages, model_completion, source_instance)
         model_completion.raw_response = result if result.is_a?(String)
         model_completion.completion_tokens = rand(100..2000)
         model_completion.prompt_tokens = rand(100..2000)
@@ -24,10 +24,10 @@ module Raif
       allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
 
       if task.is_a?(Raif::Task)
-        allow(task).to receive(:llm){ stubbed_llm(task.llm_model_key, &block) }
+        allow(task).to receive(:llm){ stubbed_llm(task.llm_model_key, task, &block) }
       else
         allow_any_instance_of(task).to receive(:llm) do |task_instance|
-          stubbed_llm(task_instance.llm_model_key, &block)
+          stubbed_llm(task_instance.llm_model_key, task_instance, &block)
         end
       end
     end
@@ -36,10 +36,10 @@ module Raif
       allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
 
       if conversation.is_a?(Raif::Conversation)
-        allow(conversation).to receive(:llm){ stubbed_llm(conversation.llm_model_key, &block) }
+        allow(conversation).to receive(:llm){ stubbed_llm(conversation.llm_model_key, conversation, &block) }
       else
         allow_any_instance_of(conversation).to receive(:llm) do |conversation_instance|
-          stubbed_llm(conversation_instance.llm_model_key, &block)
+          stubbed_llm(conversation_instance.llm_model_key, conversation_instance, &block)
         end
       end
     end
@@ -48,10 +48,10 @@ module Raif
       allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
 
       if agent.is_a?(Raif::Agent)
-        allow(agent).to receive(:llm){ stubbed_llm(agent.llm_model_key, &block) }
+        allow(agent).to receive(:llm){ stubbed_llm(agent.llm_model_key, agent, &block) }
       else
         allow_any_instance_of(agent).to receive(:llm) do |agent_instance|
-          stubbed_llm(agent_instance.llm_model_key, &block)
+          stubbed_llm(agent_instance.llm_model_key, agent_instance, &block)
         end
       end
     end
