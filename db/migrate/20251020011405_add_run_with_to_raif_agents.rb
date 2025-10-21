@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddRunWithToRaifAgents < ActiveRecord::Migration[8.0]
+class AddRunWithToRaifAgents < ActiveRecord::Migration[7.1]
   def change
     json_column_type = if connection.adapter_name.downcase.include?("postgresql")
       :jsonb
