@@ -9,8 +9,8 @@ module Raif
       # Default to JSON response format for structured output
       llm_response_format :json
 
-      task_run_arg :content_to_judge # the content to judge
-      task_run_arg :additional_context # additional context to be provided to the judge
+      run_with :content_to_judge # the content to judge
+      run_with :additional_context # additional context to be provided to the judge
 
       def default_llm_model_key
         Raif.config.evals_default_llm_judge_model_key || super

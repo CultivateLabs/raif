@@ -4,9 +4,9 @@ module Raif
   module Evals
     module LlmJudges
       class Binary < Raif::Evals::LlmJudge
-        task_run_arg :criteria
-        task_run_arg :examples
-        task_run_arg :strict_mode
+        run_with :criteria
+        run_with :examples
+        run_with :strict_mode
 
         json_response_schema do
           boolean :passes, description: "Whether the content passes the criteria"

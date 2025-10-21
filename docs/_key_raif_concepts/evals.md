@@ -416,10 +416,10 @@ You can view an example of a custom judge for judging document summaries [here](
 ```ruby
 class Raif::Evals::LlmJudges::Summarization < Raif::Evals::LlmJudge
   # the original content to evaluate the summary against
-  task_run_arg :original_content
+  run_with :original_content
 
   # the summary to evaluate against the original content
-  task_run_arg :summary
+  run_with :summary
 
   json_response_schema do
     object :coverage do

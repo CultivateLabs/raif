@@ -4,8 +4,8 @@ module Raif
   module Evals
     module LlmJudges
       class Summarization < Raif::Evals::LlmJudge
-        task_run_arg :original_content # the original content to evaluate the summary against
-        task_run_arg :summary # the summary to evaluate against the original content
+        run_with :original_content # the original content to evaluate the summary against
+        run_with :summary # the summary to evaluate against the original content
 
         json_response_schema do
           object :coverage do
