@@ -1,5 +1,38 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: raif_agents
+#
+#  id                     :bigint           not null, primary key
+#  available_model_tools  :jsonb            not null
+#  completed_at           :datetime
+#  conversation_history   :jsonb            not null
+#  creator_type           :string           not null
+#  failed_at              :datetime
+#  failure_reason         :text
+#  final_answer           :text
+#  iteration_count        :integer          default(0), not null
+#  llm_model_key          :string           not null
+#  max_iterations         :integer          default(10), not null
+#  requested_language_key :string
+#  run_with               :jsonb
+#  source_type            :string
+#  started_at             :datetime
+#  system_prompt          :text
+#  task                   :text
+#  type                   :string           not null
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  creator_id             :bigint           not null
+#  source_id              :bigint
+#
+# Indexes
+#
+#  index_raif_agents_on_created_at  (created_at)
+#  index_raif_agents_on_creator     (creator_type,creator_id)
+#  index_raif_agents_on_source      (source_type,source_id)
+#
 require "rails_helper"
 
 RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
@@ -21,6 +54,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
     let(:agent) do
       described_class.new(
         creator: creator,
+        source: creator,
         task: "What is the capital of France?",
         max_iterations: 3,
         available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::FetchUrl],
@@ -49,11 +83,13 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(agent.started_at).to be_present
       expect(agent.completed_at).to be_present
       expect(agent.failed_at).to be_nil
+      expect(agent.creator).to eq(creator)
+      expect(agent.source).to eq(creator)
 
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
         { "role" => "assistant", "content" => "I know this." },
-        { "role" => "assistant", "content" => "<answer>Paris</answer>" }
+        { "role" => "assistant", "content" => "<answer>\nParis\n</answer>" }
       ])
 
       expect(agent.final_answer).to eq("Paris")
@@ -114,11 +150,11 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
             "<observation>\n{\n  \"results\": [\n    {\n      \"title\": \"List of capitals of France\",\n      \"snippet\": \"This is a chronological list <span class=\\\"searchmatch\\\">of</span> capitals <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span>. The <span class=\\\"searchmatch\\\">capital</span> <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span> has been Paris since its liberation in 1944. Tournai (before 486), current-day\",\n      \"page_id\": 169335,\n      \"url\": \"https://en.wikipedia.org/wiki/List_of_capitals_of_France\"\n    },\n    {\n      \"title\": \"Capital punishment in France\",\n      \"snippet\": \"<span class=\\\"searchmatch\\\">Capital</span> punishment in <span class=\\\"searchmatch\\\">France</span> (<span class=\\\"searchmatch\\\">French</span>: peine de mort en <span class=\\\"searchmatch\\\">France</span>) is banned by Article 66-1 <span class=\\\"searchmatch\\\">of</span> the Constitution <span class=\\\"searchmatch\\\">of</span> the <span class=\\\"searchmatch\\\">French</span> Republic, voted as a constitutional\",\n      \"page_id\": 2861364,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital_punishment_in_France\"\n    },\n    {\n      \"title\": \"Capital city\",\n      \"snippet\": \"seat <span class=\\\"searchmatch\\\">of</span> the government. A <span class=\\\"searchmatch\\\">capital</span> is typically a city that physically encompasses the government&#039;s offices and meeting places; the status as <span class=\\\"searchmatch\\\">capital</span> is\",\n      \"page_id\": 181337,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital_city\"\n    },\n    {\n      \"title\": \"Capital\",\n      \"snippet\": \"Piketty, 2013 <span class=\\\"searchmatch\\\">Capital</span>: The Eruption <span class=\\\"searchmatch\\\">of</span> Delhi, a 2014 book by Rana Dasgupta <span class=\\\"searchmatch\\\">Capital</span> (<span class=\\\"searchmatch\\\">French</span> magazine), a <span class=\\\"searchmatch\\\">French</span>-language magazine <span class=\\\"searchmatch\\\">Capital</span> (German magazine)\",\n      \"page_id\": 5187,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital\"\n    },\n    {\n      \"title\": \"Paris\",\n      \"snippet\": \"Paris (<span class=\\\"searchmatch\\\">French</span> pronunciation: [paʁi] ) is the <span class=\\\"searchmatch\\\">capital</span> and largest city <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span>. With an estimated population <span class=\\\"searchmatch\\\">of</span> 2,048,472 residents in January 2025 in\",\n      \"page_id\": 22989,\n      \"url\": \"https://en.wikipedia.org/wiki/Paris\"\n    }\n  ]\n}\n</observation>" # rubocop:disable Layout/LineLength
           },
           { "role" => "assistant", "content" => "Based on the search results, I can now answer." },
-          { "role" => "assistant", "content" => "<answer>Paris</answer>" }
+          { "role" => "assistant", "content" => "<answer>\nParis\n</answer>" }
         ])
 
-        expect(agent.raif_model_tool_invocations.length).to eq(1)
-        mti = agent.raif_model_tool_invocations.first
+        expect(agent.raif_model_tool_invocations.length).to eq(2)
+        mti = agent.raif_model_tool_invocations.oldest_first.first
         expect(mti.tool_name).to eq("wikipedia_search")
         expect(mti.tool_type).to eq("Raif::ModelTools::WikipediaSearch")
         expect(mti.tool_arguments).to eq({ "query" => "capital of France" })
@@ -157,6 +193,12 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
             }
           ]
         })
+
+        mti2 = agent.raif_model_tool_invocations.oldest_first.second
+        expect(mti2.tool_name).to eq("agent_final_answer")
+        expect(mti2.tool_type).to eq("Raif::ModelTools::AgentFinalAnswer")
+        expect(mti2.tool_arguments).to eq({ "final_answer" => "Paris" })
+        expect(mti2.result).to eq({ "final_answer" => "Paris" })
       end
     end
 

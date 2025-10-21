@@ -2,14 +2,14 @@
 
 require "rails_helper"
 
-RSpec.describe "Raif::Task task_run_args", type: :model do
-  # Create a test task class with task_run_args
+RSpec.describe "Raif::Task run_with", type: :model do
+  # Create a test task class with run_with
   before do
     stub_const("Raif::TaskRunArgsTestTask", Class.new(Raif::Task) do
-      task_run_arg :conversation
-      task_run_arg :user
-      task_run_arg :options
-      task_run_arg :count
+      run_with :conversation
+      run_with :user
+      run_with :options
+      run_with :count
 
       attr_accessor :unpersisted_arg
 
@@ -28,9 +28,9 @@ RSpec.describe "Raif::Task task_run_args", type: :model do
   let(:user) { FB.create(:raif_test_user) }
   let(:conversation) { FB.create(:raif_conversation, creator: user) }
 
-  describe ".task_run_arg" do
-    it "adds the argument to _task_run_args" do
-      expect(test_task_class._task_run_args).to include(:conversation, :user, :options, :count)
+  describe ".run_with" do
+    it "adds the argument to _run_with_args" do
+      expect(test_task_class._run_with_args).to include(:conversation, :user, :options, :count)
     end
 
     it "defines getter and setter methods" do
@@ -46,7 +46,7 @@ RSpec.describe "Raif::Task task_run_args", type: :model do
     end
   end
 
-  describe ".run with task_run_args" do
+  describe ".run with run_with" do
     it "serializes ActiveRecord objects to GIDs" do
       stub_raif_task(test_task_class) do |_messages|
         "Test response"
@@ -60,10 +60,10 @@ RSpec.describe "Raif::Task task_run_args", type: :model do
         count: 42
       )
 
-      expect(task.task_run_args["conversation"]).to eq(conversation.to_global_id.to_s)
-      expect(task.task_run_args["user"]).to eq(user.to_global_id.to_s)
-      expect(task.task_run_args["options"]).to eq({ "include_summary" => true })
-      expect(task.task_run_args["count"]).to eq(42)
+      expect(task.run_with["conversation"]).to eq(conversation.to_global_id.to_s)
+      expect(task.run_with["user"]).to eq(user.to_global_id.to_s)
+      expect(task.run_with["options"]).to eq({ "include_summary" => true })
+      expect(task.run_with["count"]).to eq(42)
 
       expect(task.conversation).to eq(conversation)
       expect(task.user).to eq(user)
@@ -78,7 +78,7 @@ RSpec.describe "Raif::Task task_run_args", type: :model do
       expect(t2.count).to eq(42)
     end
 
-    it "only serializes declared task_run_args" do
+    it "only serializes declared run_with" do
       stub_raif_task(test_task_class) do |_messages|
         "Test response"
       end
@@ -90,12 +90,12 @@ RSpec.describe "Raif::Task task_run_args", type: :model do
       )
 
       expect(task).to be_persisted
-      expect(task.task_run_args.keys).to include("conversation")
-      expect(task.task_run_args.keys).not_to include("unpersisted_arg")
+      expect(task.run_with.keys).to include("conversation")
+      expect(task.run_with.keys).not_to include("unpersisted_arg")
     end
   end
 
-  describe "accessing task_run_args after reload" do
+  describe "accessing run_with after reload" do
     let(:task) do
       stub_raif_task(test_task_class) do |_messages|
         "Test response"
@@ -138,11 +138,11 @@ RSpec.describe "Raif::Task task_run_args", type: :model do
     end
   end
 
-  describe "using task_run_args in prompts" do
-    it "can access task_run_args in build_prompt" do
+  describe "using run_with in prompts" do
+    it "can access run_with in build_prompt" do
       stub_const("Raif::TaskPromptTestTask", Class.new(Raif::Task) do
-        task_run_arg :title
-        task_run_arg :document
+        run_with :title
+        run_with :document
 
         attr_accessor :unpersisted_arg
 
@@ -174,15 +174,15 @@ RSpec.describe "Raif::Task task_run_args", type: :model do
   end
 
   describe "inheritance" do
-    it "inherits task_run_args from parent class" do
+    it "inherits run_with from parent class" do
       parent_class = Class.new(Raif::Task) do
-        task_run_arg :parent_arg
-        task_run_arg :parent_arg2
+        run_with :parent_arg
+        run_with :parent_arg2
       end
 
       child_class = Class.new(parent_class) do
-        task_run_arg :child_arg
-        task_run_arg :child_arg2
+        run_with :child_arg
+        run_with :child_arg2
 
         def build_prompt
           "Test"
@@ -193,22 +193,22 @@ RSpec.describe "Raif::Task task_run_args", type: :model do
         end
       end
 
-      expect(child_class._task_run_args).to include(:parent_arg, :parent_arg2, :child_arg, :child_arg2)
+      expect(child_class._run_with_args).to include(:parent_arg, :parent_arg2, :child_arg, :child_arg2)
     end
 
     it "does not contaminate sibling classes" do
       stub_const("TaskA", Class.new(Raif::Task) do
-        task_run_arg :arg_a
+        run_with :arg_a
       end)
 
       stub_const("TaskB", Class.new(Raif::Task) do
-        task_run_arg :arg_b
-        task_run_arg :arg_c
+        run_with :arg_b
+        run_with :arg_c
       end)
 
-      expect(TaskA._task_run_args).to eq([:arg_a])
-      expect(TaskB._task_run_args).to eq([:arg_b, :arg_c])
-      expect(Raif::Task._task_run_args).to eq([])
+      expect(TaskA._run_with_args).to eq([:arg_a])
+      expect(TaskB._run_with_args).to eq([:arg_b, :arg_c])
+      expect(Raif::Task._run_with_args).to eq([])
     end
   end
 end

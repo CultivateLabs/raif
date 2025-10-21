@@ -4,7 +4,7 @@ module Raif
   module Evals
     module LlmJudges
       class Scored < Raif::Evals::LlmJudge
-        task_run_arg :scoring_rubric # the scoring rubric to use when evaluating the content
+        run_with :scoring_rubric # the scoring rubric to use when evaluating the content
 
         json_response_schema do
           number :score, description: "Numerical score based on the rubric"

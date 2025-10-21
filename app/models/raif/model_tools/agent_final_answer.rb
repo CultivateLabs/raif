@@ -30,7 +30,7 @@ class Raif::ModelTools::AgentFinalAnswer < Raif::ModelTool
         }
       )
 
-      tool_invocation.result
+      tool_invocation.tool_arguments["final_answer"]
     end
   end
 

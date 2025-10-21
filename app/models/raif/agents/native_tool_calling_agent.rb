@@ -1,5 +1,38 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: raif_agents
+#
+#  id                     :bigint           not null, primary key
+#  available_model_tools  :jsonb            not null
+#  completed_at           :datetime
+#  conversation_history   :jsonb            not null
+#  creator_type           :string           not null
+#  failed_at              :datetime
+#  failure_reason         :text
+#  final_answer           :text
+#  iteration_count        :integer          default(0), not null
+#  llm_model_key          :string           not null
+#  max_iterations         :integer          default(10), not null
+#  requested_language_key :string
+#  run_with               :jsonb
+#  source_type            :string
+#  started_at             :datetime
+#  system_prompt          :text
+#  task                   :text
+#  type                   :string           not null
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  creator_id             :bigint           not null
+#  source_id              :bigint
+#
+# Indexes
+#
+#  index_raif_agents_on_created_at  (created_at)
+#  index_raif_agents_on_creator     (creator_type,creator_id)
+#  index_raif_agents_on_source      (source_type,source_id)
+#
 module Raif
   module Agents
     class NativeToolCallingAgent < Raif::Agent
@@ -80,24 +113,11 @@ module Raif
         tool_name = tool_call["name"]
         tool_arguments = tool_call["arguments"]
 
-        # Add assistant's response to conversation history (without the actual tool calls)
-        # add_conversation_history_entry({
-        #   role: "assistant",
-        #   content: "<thought>I need to use the #{tool_name} tool to help with this task.</thought>"
-        # })
-
-        # Check if we have a final answer. If yes, we're done.
-        if tool_name == "agent_final_answer"
-          self.final_answer = tool_arguments["final_answer"]
-          add_conversation_history_entry({ role: "assistant", content: "<answer>#{final_answer}</answer>" })
-          return
-        end
-
         # Add the tool call to conversation history
         add_conversation_history_entry({
           role: "assistant",
           content: "<action>\n#{JSON.pretty_generate(tool_call)}\n</action>"
-        })
+        }) unless tool_name == "agent_final_answer"
 
         # Find the tool class and process it
         tool_klass = available_model_tools_map[tool_name]
@@ -123,10 +143,15 @@ module Raif
         tool_invocation = tool_klass.invoke_tool(tool_arguments: tool_arguments, source: self)
         observation = tool_klass.observation_for_invocation(tool_invocation)
 
-        add_conversation_history_entry({
-          role: "assistant",
-          content: "<observation>\n#{observation}\n</observation>"
-        })
+        if tool_name == "agent_final_answer"
+          self.final_answer = observation
+          add_conversation_history_entry({ role: "assistant", content: "<answer>\n#{final_answer}\n</answer>" })
+        else
+          add_conversation_history_entry({
+            role: "assistant",
+            content: "<observation>\n#{observation}\n</observation>"
+          })
+        end
       end
 
       def ensure_llm_supports_native_tool_use
