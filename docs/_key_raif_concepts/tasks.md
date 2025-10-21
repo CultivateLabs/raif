@@ -33,10 +33,10 @@ class Raif::Tasks::DocumentSummarization < Raif::ApplicationTask
   llm_response_allowed_tags %w[p b i div strong] # optional, defaults to Rails::HTML5::SafeListSanitizer.allowed_tags
   llm_response_allowed_attributes %w[style] # optional, defaults to Rails::HTML5::SafeListSanitizer.allowed_attributes
 
-  # task_run_arg defines arguments for your task
+  # run_with defines arguments for your task
   # e.g. Raif::Tasks::DocumentSummarization.run(document: document, creator: user)
   # They can then be used by your task to build the prompt, system prompt, etc.
-  task_run_arg :document
+  run_with :document
   
   def build_system_prompt
     sp = "You are an assistant with expertise in summarizing detailed articles into clear and concise language."
@@ -91,7 +91,7 @@ module Raif
     class WebSearchQueryGeneration < Raif::ApplicationTask
       llm_response_format :json
 
-      task_run_arg :topic
+      run_with :topic
 
       json_response_schema do
         array :queries do

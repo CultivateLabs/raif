@@ -99,15 +99,42 @@
     </div>
     <div class="row mb-3">
       <div class="col-md-3"><strong><%= t("raif.admin.common.prompt_tokens") %>:</strong></div>
-      <div class="col-md-9"><%= @task.raif_model_completion.prompt_tokens ? number_with_delimiter(@task.raif_model_completion.prompt_tokens) : "-" %></div>
+      <div class="col-md-9">
+        <% if @task.raif_model_completion.prompt_tokens %>
+          <%= number_with_delimiter(@task.raif_model_completion.prompt_tokens) %>
+          <% if @task.raif_model_completion.prompt_token_cost %>
+            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(@task.raif_model_completion.prompt_token_cost, precision: 6) %>)</small>
+          <% end %>
+        <% else %>
+          -
+        <% end %>
+      </div>
     </div>
     <div class="row mb-3">
       <div class="col-md-3"><strong><%= t("raif.admin.common.completion_tokens") %>:</strong></div>
-      <div class="col-md-9"><%= @task.raif_model_completion.completion_tokens ? number_with_delimiter(@task.raif_model_completion.completion_tokens) : "-" %></div>
+      <div class="col-md-9">
+        <% if @task.raif_model_completion.completion_tokens %>
+          <%= number_with_delimiter(@task.raif_model_completion.completion_tokens) %>
+          <% if @task.raif_model_completion.output_token_cost %>
+            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(@task.raif_model_completion.output_token_cost, precision: 6) %>)</small>
+          <% end %>
+        <% else %>
+          -
+        <% end %>
+      </div>
     </div>
     <div class="row mb-3">
       <div class="col-md-3"><strong><%= t("raif.admin.common.total_tokens") %>:</strong></div>
-      <div class="col-md-9"><%= @task.raif_model_completion.total_tokens ? number_with_delimiter(@task.raif_model_completion.total_tokens) : "-" %></div>
+      <div class="col-md-9">
+        <% if @task.raif_model_completion.total_tokens %>
+          <%= number_with_delimiter(@task.raif_model_completion.total_tokens) %>
+          <% if @task.raif_model_completion.total_cost %>
+            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(@task.raif_model_completion.total_cost, precision: 6) %>)</small>
+          <% end %>
+        <% else %>
+          -
+        <% end %>
+      </div>
     </div>
   </div>
 </div>

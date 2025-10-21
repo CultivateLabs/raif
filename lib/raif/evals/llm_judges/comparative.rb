@@ -4,9 +4,9 @@ module Raif
   module Evals
     module LlmJudges
       class Comparative < Raif::Evals::LlmJudge
-        task_run_arg :over_content # the content to compare against
-        task_run_arg :comparison_criteria # the criteria to use when comparing content_to_judge to over_content
-        task_run_arg :allow_ties # whether to allow ties in the comparison
+        run_with :over_content # the content to compare against
+        run_with :comparison_criteria # the criteria to use when comparing content_to_judge to over_content
+        run_with :allow_ties # whether to allow ties in the comparison
 
         attr_accessor :content_a, :content_b, :expected_winner
 

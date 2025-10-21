@@ -1,25 +1,32 @@
 # frozen_string_literal: true
 
-module Raif::Concerns::TaskRunArgs
+module Raif::Concerns::RunWith
   extend ActiveSupport::Concern
 
   included do
+    class_attribute :_run_with_args, instance_writer: false, default: []
+
+    # Backward compatibility alias
     class_attribute :_task_run_args, instance_writer: false, default: []
   end
 
   class_methods do
-    # DSL for declaring persistent task arguments that will be serialized to the database
+    # DSL for declaring persistent run arguments that will be serialized to the database
     # @param name [Symbol] The name of the argument
-    def task_run_arg(name)
+    def run_with(name)
       # Ensure each class has its own array copy
+      self._run_with_args = _run_with_args.dup
+      _run_with_args << name.to_sym
+
+      # Keep backward compatibility for _task_run_args class attribute
       self._task_run_args = _task_run_args.dup
       _task_run_args << name.to_sym
 
-      # Define getter that pulls from task_run_args JSON
+      # Define getter that pulls from run_with JSON column
       define_method(name) do
         return instance_variable_get("@#{name}") if instance_variable_defined?("@#{name}")
 
-        value = task_run_args&.dig(name.to_s)
+        value = run_with&.dig(name.to_s)
         return unless value
 
         # Deserialize GID if it's a string starting with gid://
@@ -42,10 +49,13 @@ module Raif::Concerns::TaskRunArgs
       end
     end
 
-    # Transform run args into a hash that can be stored in the task_run_args database column
-    def serialize_task_run_args(args)
+    # Backward compatibility alias
+    alias_method :task_run_arg, :run_with
+
+    # Transform run args into a hash that can be stored in the run_with database column
+    def serialize_run_with(args)
       serialized_args = {}
-      _task_run_args.each do |arg_name|
+      _run_with_args.each do |arg_name|
         next unless args.key?(arg_name)
 
         value = args[arg_name]
@@ -58,5 +68,8 @@ module Raif::Concerns::TaskRunArgs
 
       serialized_args
     end
+
+    # Backward compatibility alias
+    alias_method :serialize_task_run_args, :serialize_run_with
   end
 end

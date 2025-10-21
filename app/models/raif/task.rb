@@ -14,10 +14,10 @@
 #  raw_response           :text
 #  requested_language_key :string
 #  response_format        :integer          default("text"), not null
+#  run_with               :jsonb
 #  source_type            :string
 #  started_at             :datetime
 #  system_prompt          :text
-#  task_run_args          :jsonb
 #  type                   :string           not null
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
@@ -46,7 +46,7 @@ module Raif
     include Raif::Concerns::LlmResponseParsing
     include Raif::Concerns::LlmTemperature
     include Raif::Concerns::JsonSchemaDefinition
-    include Raif::Concerns::TaskRunArgs
+    include Raif::Concerns::RunWith
 
     llm_temperature 0.7
 
@@ -73,7 +73,7 @@ module Raif
     attr_accessor :files, :images
 
     after_initialize -> { self.available_model_tools ||= [] }
-    after_initialize -> { self.task_run_args ||= {} }
+    after_initialize -> { self.run_with ||= {} }
 
     def status
       if completed_at?
@@ -105,7 +105,7 @@ module Raif
         started_at: Time.current,
         images: images,
         files: files,
-        task_run_args: serialize_task_run_args(args),
+        run_with: serialize_run_with(args),
         **args
       )
 

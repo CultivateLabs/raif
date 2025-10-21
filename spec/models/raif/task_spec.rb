@@ -14,10 +14,10 @@
 #  raw_response           :text
 #  requested_language_key :string
 #  response_format        :integer          default("text"), not null
+#  run_with               :jsonb
 #  source_type            :string
 #  started_at             :datetime
 #  system_prompt          :text
-#  task_run_args          :jsonb
 #  type                   :string           not null
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null

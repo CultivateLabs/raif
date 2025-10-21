@@ -10,7 +10,7 @@
     # end
 
     # Enter your agent's system prompt here. Alternatively, you can change your agent's superclass
-    # to an existing agent types (like Raif::Agents::ReActAgent) to utilize an existing system prompt.
+    # to an existing agent types (like Raif::Agents::NativeToolCallingAgent) to utilize an existing system prompt.
     def build_system_prompt
       # TODO: Implement your system prompt here
     end

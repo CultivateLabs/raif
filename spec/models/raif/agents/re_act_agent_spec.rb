@@ -1,5 +1,38 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: raif_agents
+#
+#  id                     :bigint           not null, primary key
+#  available_model_tools  :jsonb            not null
+#  completed_at           :datetime
+#  conversation_history   :jsonb            not null
+#  creator_type           :string           not null
+#  failed_at              :datetime
+#  failure_reason         :text
+#  final_answer           :text
+#  iteration_count        :integer          default(0), not null
+#  llm_model_key          :string           not null
+#  max_iterations         :integer          default(10), not null
+#  requested_language_key :string
+#  run_with               :jsonb
+#  source_type            :string
+#  started_at             :datetime
+#  system_prompt          :text
+#  task                   :text
+#  type                   :string           not null
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  creator_id             :bigint           not null
+#  source_id              :bigint
+#
+# Indexes
+#
+#  index_raif_agents_on_created_at  (created_at)
+#  index_raif_agents_on_creator     (creator_type,creator_id)
+#  index_raif_agents_on_source      (source_type,source_id)
+#
 require "rails_helper"
 
 RSpec.describe Raif::Agents::ReActAgent, type: :model do

@@ -9,11 +9,11 @@ description: "ReAct-style agents that can use tools in loops"
 
 # Agents Overview
 
-Raif also provides `Raif::Agents::ReActAgent`, which implements a ReAct-style agent loop using [tool calls](model_tools):
+Raif also provides `Raif::Agents::NativeToolCallingAgent`, which implements a ReAct-style agent loop using [tool calls](model_tools):
 
 ```ruby
 # Create a new agent
-agent = Raif::Agents::ReActAgent.new(
+agent = Raif::Agents::NativeToolCallingAgent.new(
   task: "Research the history of the Eiffel Tower",
   available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::FetchUrl],
   creator: current_user
@@ -66,7 +66,7 @@ module Raif
       # }
 
       # Enter your agent's system prompt here. Alternatively, you can change your agent's superclass
-      # to an existing agent types (like Raif::Agents::ReActAgent) to utilize an existing system prompt.
+      # to an existing agent types (like Raif::Agents::NativeToolCallingAgent) to utilize an existing system prompt.
       def build_system_prompt
         # TODO: Implement your system prompt here
       end
