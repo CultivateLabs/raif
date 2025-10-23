@@ -92,6 +92,8 @@
   </div>
 </div>
 
+<%= render "raif/admin/model_tools/list", model_tools: @agent.available_model_tools_map %>
+
 <div class="card mb-4">
   <div class="card-header">
     <h5 class="mb-0"><%= t("raif.admin.common.task") %></h5>

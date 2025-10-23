@@ -10,7 +10,9 @@ en:
         agents: Agents
         all: All
         arguments: Arguments
+        arguments_schema: Arguments Schema
         at: at
+        available_tools: Available Tools
         citations: Citations
         completed: Completed
         completed_at: Completed At
@@ -22,6 +24,7 @@ en:
         count: Count
         created_at: Created At
         creator: Creator
+        description: Description
         details: Details
         entries_count: Entries Count
         entry: Entry
@@ -52,6 +55,7 @@ en:
         no_model_tool_invocations: No model tool invocations found.
         no_tasks: No tasks found.
         no_tool_calls: No tool calls
+        none: None
         output: Output
         output_token_cost: Output Token Cost
         pending: Pending

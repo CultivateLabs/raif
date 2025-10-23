@@ -140,6 +140,8 @@
 </div>
 <% end %>
 
+<%= render "raif/admin/model_tools/list", model_tools: @task.available_model_tools_map %>
+
 <div class="card mb-4">
   <div class="card-header">
     <h5 class="mb-0"><%= t("raif.admin.common.system_prompt") %></h5>
