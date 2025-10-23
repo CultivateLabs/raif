@@ -1,0 +1,36 @@
+<div class="accordion-item">
+  <h2 class="accordion-header" id="heading-<%= index %>">
+    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<%= index %>" aria-expanded="false" aria-controls="collapse-<%= index %>">
+      <strong><%= tool_name %></strong>
+    </button>
+  </h2>
+  <div id="collapse-<%= index %>" class="accordion-collapse collapse" aria-labelledby="heading-<%= index %>" data-bs-parent="#modelToolsAccordion">
+    <div class="accordion-body">
+      <div class="row mb-3">
+        <div class="col-md-2"><strong><%= t("raif.admin.common.tool_name") %>:</strong></div>
+        <div class="col-md-10"><code><%= tool_class.tool_name %></code></div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-2"><strong><%= t("raif.admin.common.description") %>:</strong></div>
+        <div class="col-md-10"><%= tool_class.tool_description %></div>
+      </div>
+      <% if tool_class.respond_to?(:tool_arguments_schema) %>
+        <% if tool_class.schema_defined?(:tool_arguments) %>
+          <div class="row mb-3">
+            <div class="col-md-2"><strong><%= t("raif.admin.common.arguments_schema") %>:</strong></div>
+            <div class="col-md-10">
+              <pre class="pre-wrap"><%= JSON.pretty_generate(tool_class.tool_arguments_schema) %></pre>
+            </div>
+          </div>
+        <% else %>
+          <div class="row mb-3">
+            <div class="col-md-2"><strong><%= t("raif.admin.common.arguments_schema") %>:</strong></div>
+            <div class="col-md-10">
+              <em><%= t("raif.admin.common.none") %></em>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</div>

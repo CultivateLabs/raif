@@ -1,0 +1,16 @@
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t("raif.admin.common.available_tools") %></h5>
+  </div>
+  <div class="card-body">
+    <% if model_tools.blank? %>
+      <%= t("raif.admin.common.none") %>
+    <% else %>
+      <div class="accordion" id="modelToolsAccordion">
+        <% model_tools.each_with_index do |(tool_name, tool_class), index| %>
+          <%= render partial: "raif/admin/model_tools/model_tool", locals: { tool_name: tool_name, tool_class: tool_class, index: index } %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
