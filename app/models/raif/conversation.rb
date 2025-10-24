@@ -10,6 +10,7 @@
 #  conversation_entries_count :integer          default(0), not null
 #  creator_type               :string           not null
 #  generating_entry_response  :boolean          default(FALSE), not null
+#  llm_messages_max_length    :integer
 #  llm_model_key              :string           not null
 #  requested_language_key     :string
 #  response_format            :integer          default("text"), not null
@@ -58,6 +59,7 @@ class Raif::Conversation < Raif::ApplicationRecord
 
   after_initialize -> { self.available_model_tools ||= [] }
   after_initialize -> { self.available_user_tools ||= [] }
+  after_initialize -> { self.llm_messages_max_length ||= Raif.config.conversation_llm_messages_max_length_default }
 
   before_validation ->{ self.type ||= "Raif::Conversation" }, on: :create
 
@@ -133,7 +135,11 @@ class Raif::Conversation < Raif::ApplicationRecord
   def llm_messages
     messages = []
 
-    entries.oldest_first.includes(:raif_model_tool_invocations).each do |entry|
+    # Apply max length limit to entries if configured (nil means no limit)
+    included_entries = entries.oldest_first.includes(:raif_model_tool_invocations)
+    included_entries = included_entries.last(llm_messages_max_length) if llm_messages_max_length.present?
+
+    included_entries.each do |entry|
       messages << { "role" => "user", "content" => entry.user_message } unless entry.user_message.blank?
       next unless entry.completed?
 

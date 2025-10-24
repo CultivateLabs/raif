@@ -207,6 +207,41 @@ Raif.configure do |config|
 end
 ```
 
+# Limiting Conversation History {#limiting-conversation-history}
+
+For long-running conversations, the full conversation history can grow quite large, leading to higher API costs, context window limits, and slower responses.
+
+Raif provides `llm_messages_max_length` to limit how many conversation entries are sent to the LLM when processing the next entry. This can help you keep costs predictable and stay within context window limits.
+
+## Global Configuration
+
+Set a default limit for all conversations in your initializer:
+
+```ruby
+Raif.configure do |config|
+  # Limit to the last 50 conversation entries (default)
+  config.conversation_llm_messages_max_length_default = 50
+
+  # Or set to nil to include all entries
+  config.conversation_llm_messages_max_length_default = nil
+end
+```
+
+## Per-Conversation Configuration
+
+Override the limit for specific conversations:
+
+```ruby
+# Limit to last 20 entries for this conversation
+conversation = Raif::Conversation.create(
+  creator: current_user,
+  llm_messages_max_length: 20
+)
+
+# Or remove the limit entirely for this conversation
+conversation.update(llm_messages_max_length: nil)
+```
+
 ---
 
 **Read next:** [Agents](agents)
