@@ -16,33 +16,31 @@ module Raif
 
         tasks = Raif::Task.where(created_at: @time_range)
         @task_count = tasks.count
-        @task_total_cost = Raif::ModelCompletion.where(source_type: "Raif::Task", source_id: tasks.select(:id)).sum(:total_cost)
-        @task_input_token_cost = Raif::ModelCompletion.where(source_type: "Raif::Task", source_id: tasks.select(:id)).sum(:prompt_token_cost)
-        @task_output_token_cost = Raif::ModelCompletion.where(source_type: "Raif::Task", source_id: tasks.select(:id)).sum(:output_token_cost)
+        @task_total_cost = Raif::ModelCompletion.where(source_type: "Raif::Task", created_at: @time_range).sum(:total_cost)
+        @task_input_token_cost = Raif::ModelCompletion.where(source_type: "Raif::Task", created_at: @time_range).sum(:prompt_token_cost)
+        @task_output_token_cost = Raif::ModelCompletion.where(source_type: "Raif::Task", created_at: @time_range).sum(:output_token_cost)
 
-        conversations = Raif::Conversation.where(created_at: @time_range)
-        @conversation_count = conversations.count
-        conversation_entry_ids = Raif::ConversationEntry.where(raif_conversation_id: conversations.select(:id)).select(:id)
-        @conversation_total_cost = Raif::ModelCompletion.where(
-          source_type: "Raif::ConversationEntry",
-          source_id: conversation_entry_ids
-        ).sum(:total_cost)
-        @conversation_input_token_cost = Raif::ModelCompletion.where(
-          source_type: "Raif::ConversationEntry",
-          source_id: conversation_entry_ids
-        ).sum(:prompt_token_cost)
-        @conversation_output_token_cost = Raif::ModelCompletion.where(
-          source_type: "Raif::ConversationEntry",
-          source_id: conversation_entry_ids
-        ).sum(:output_token_cost)
+        @conversation_count = Raif::Conversation.where(created_at: @time_range).count
 
         @conversation_entry_count = Raif::ConversationEntry.where(created_at: @time_range).count
+        @conversation_entry_total_cost = Raif::ModelCompletion.where(
+          source_type: "Raif::ConversationEntry",
+          created_at: @time_range,
+        ).sum(:total_cost)
+        @conversation_entry_input_token_cost = Raif::ModelCompletion.where(
+          source_type: "Raif::ConversationEntry",
+          created_at: @time_range,
+        ).sum(:prompt_token_cost)
+        @conversation_entry_output_token_cost = Raif::ModelCompletion.where(
+          source_type: "Raif::ConversationEntry",
+          created_at: @time_range,
+        ).sum(:output_token_cost)
 
-        agents = Raif::Agent.where(created_at: @time_range)
-        @agent_count = agents.count
-        @agent_total_cost = Raif::ModelCompletion.where(source_type: "Raif::Agent", source_id: agents.select(:id)).sum(:total_cost)
-        @agent_input_token_cost = Raif::ModelCompletion.where(source_type: "Raif::Agent", source_id: agents.select(:id)).sum(:prompt_token_cost)
-        @agent_output_token_cost = Raif::ModelCompletion.where(source_type: "Raif::Agent", source_id: agents.select(:id)).sum(:output_token_cost)
+        @agent_count = Raif::Agent.where(created_at: @time_range).count
+        @agent_total_cost = Raif::ModelCompletion.where(source_type: "Raif::Agent", created_at: @time_range).sum(:total_cost)
+        @agent_input_token_cost = Raif::ModelCompletion.where(source_type: "Raif::Agent", created_at: @time_range).sum(:prompt_token_cost)
+        @agent_output_token_cost = Raif::ModelCompletion.where(source_type: "Raif::Agent", created_at: @time_range).sum(:output_token_cost)
+
         @model_tool_invocation_count = Raif::ModelToolInvocation.where(created_at: @time_range).count
       end
     end
