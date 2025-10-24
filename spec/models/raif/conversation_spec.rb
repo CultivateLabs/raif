@@ -91,7 +91,7 @@ RSpec.describe Raif::Conversation, type: :model do
           ]
         end.flatten
 
-        expect(conversation.llm_messages.length).to eq(6)  # 3 entries × 2 messages per entry
+        expect(conversation.llm_messages.length).to eq(6) # 3 entries × 2 messages per entry
         expect(conversation.llm_messages).to eq(expected_messages)
       end
 
