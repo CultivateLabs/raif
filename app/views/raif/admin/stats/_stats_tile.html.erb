@@ -1,7 +1,7 @@
 <div class="col-md-4 col-lg-4">
   <div class="stats-card p-3 border rounded shadow-sm h-100 d-flex flex-column justify-content-between">
-    <div class="d-flex justify-content-between align-items-start<%= ' mb-2' if local_assigns[:show_costs] %>">
-      <div class="d-flex align-items-center<%= ' mb-2' unless local_assigns[:show_costs] %>">
+    <div class="d-flex justify-content-between align-items-start<%= " mb-2" if local_assigns[:show_costs] %>">
+      <div class="d-flex align-items-center<%= " mb-2" unless local_assigns[:show_costs] %>">
         <span class="stats-icon bg-<%= icon_color %>-subtle text-<%= icon_color %> rounded p-2 me-3">
           <%= yield %>
         </span>

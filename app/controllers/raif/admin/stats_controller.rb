@@ -23,9 +23,18 @@ module Raif
         conversations = Raif::Conversation.where(created_at: @time_range)
         @conversation_count = conversations.count
         conversation_entry_ids = Raif::ConversationEntry.where(raif_conversation_id: conversations.select(:id)).select(:id)
-        @conversation_total_cost = Raif::ModelCompletion.where(source_type: "Raif::ConversationEntry", source_id: conversation_entry_ids).sum(:total_cost)
-        @conversation_input_token_cost = Raif::ModelCompletion.where(source_type: "Raif::ConversationEntry", source_id: conversation_entry_ids).sum(:prompt_token_cost)
-        @conversation_output_token_cost = Raif::ModelCompletion.where(source_type: "Raif::ConversationEntry", source_id: conversation_entry_ids).sum(:output_token_cost)
+        @conversation_total_cost = Raif::ModelCompletion.where(
+          source_type: "Raif::ConversationEntry",
+          source_id: conversation_entry_ids
+        ).sum(:total_cost)
+        @conversation_input_token_cost = Raif::ModelCompletion.where(
+          source_type: "Raif::ConversationEntry",
+          source_id: conversation_entry_ids
+        ).sum(:prompt_token_cost)
+        @conversation_output_token_cost = Raif::ModelCompletion.where(
+          source_type: "Raif::ConversationEntry",
+          source_id: conversation_entry_ids
+        ).sum(:output_token_cost)
 
         @conversation_entry_count = Raif::ConversationEntry.where(created_at: @time_range).count
 
