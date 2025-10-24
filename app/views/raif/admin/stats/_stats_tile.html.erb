@@ -1,0 +1,34 @@
+<div class="col-md-4 col-lg-4">
+  <div class="stats-card p-3 border rounded shadow-sm h-100 d-flex flex-column justify-content-between">
+    <div class="d-flex justify-content-between align-items-start<%= ' mb-2' if local_assigns[:show_costs] %>">
+      <div class="d-flex align-items-center<%= ' mb-2' unless local_assigns[:show_costs] %>">
+        <span class="stats-icon bg-<%= icon_color %>-subtle text-<%= icon_color %> rounded p-2 me-3">
+          <%= yield %>
+        </span>
+        <h6 class="mb-0 text-muted"><%= title %></h6>
+      </div>
+
+      <% if local_assigns[:details_link] %>
+        <div class="text-end">
+          <h3 class="fw-bold mb-0"><%= number_with_delimiter(count) %></h3>
+          <%= link_to details_link do %>
+            <small><%= t("raif.admin.common.details") %> &raquo;</small>
+          <% end %>
+        </div>
+      <% else %>
+        <h3 class="fw-bold mb-0"><%= number_with_delimiter(count) %></h3>
+      <% end %>
+    </div>
+
+    <% if local_assigns[:show_costs] %>
+      <div class="d-flex justify-content-between align-items-end text-muted">
+        <div>
+          <div><small><%= t("raif.admin.common.est_costs") %></small></div>
+          <div><small><%= t("raif.admin.common.input").downcase %>: <%= number_to_currency(input_cost, precision: 2) %></small></div>
+        </div>
+        <div><small><%= t("raif.admin.common.output").downcase %>: <%= number_to_currency(output_cost, precision: 2) %></small></div>
+        <div><strong><small><%= t("raif.admin.common.total").downcase %>: <%= number_to_currency(total_cost, precision: 2) %></small></strong></div>
+      </div>
+    <% end %>
+  </div>
+</div>
