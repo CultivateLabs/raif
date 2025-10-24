@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddLlmMessagesMaxLengthToRaifConversations < ActiveRecord::Migration[8.0]
+class AddLlmMessagesMaxLengthToRaifConversations < ActiveRecord::Migration[7.1]
   def change
     add_column :raif_conversations, :llm_messages_max_length, :integer
 
