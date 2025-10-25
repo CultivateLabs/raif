@@ -12,6 +12,7 @@ module Raif
       :aws_bedrock_region,
       :bedrock_embedding_models_enabled,
       :conversation_entries_controller,
+      :conversation_llm_messages_max_length_default,
       :conversation_system_prompt_intro,
       :conversation_types,
       :conversations_controller,
@@ -57,6 +58,7 @@ module Raif
       @bedrock_embedding_models_enabled = false
       @task_system_prompt_intro = "You are a helpful assistant."
       @conversation_entries_controller = "Raif::ConversationEntriesController"
+      @conversation_llm_messages_max_length_default = 50
       @conversation_system_prompt_intro = "You are a helpful assistant who is collaborating with a teammate."
       @conversation_types = Set.new(["Raif::Conversation"])
       @conversations_controller = "Raif::ConversationsController"

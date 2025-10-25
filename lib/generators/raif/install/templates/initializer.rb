@@ -163,6 +163,10 @@ Raif.configure do |config|
   # If you want to use a custom controller that inherits from Raif::ConversationEntriesController, you can set it here.
   # config.conversation_entries_controller = "Raif::ConversationEntriesController"
 
+  # The default maximum number of conversation entries to include in LLM messages. Defaults to 50.
+  # Set to nil to include all entries. Each conversation can override this with its own llm_messages_max_length attribute.
+  # config.conversation_llm_messages_max_length_default = 50
+
   # The method to call to get the current user. Defaults to :current_user
   # config.current_user_method = :current_user
 

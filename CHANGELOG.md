@@ -12,6 +12,8 @@
 - Add admin page for viewing current configuration. [#264](https://github.com/CultivateLabs/raif/pull/264)
 - Make it so developer can define their own, custom agent final answer tool (e.g. if you want a custom schema for the response). [##266](https://github.com/CultivateLabs/raif/pull/#266)
 - `task_run_arg` has been renamed to `run_with` and is now supported by `Raif::Agent`. [#269](https://github.com/CultivateLabs/raif/pull/269)
+- Add display of available model tools to the admin interface. [#273](https://github.com/CultivateLabs/raif/pull/273)
+- Added `llm_messages_max_length` to `Raif::Conversation` to limit the number of conversation entries sent to the LLM. Defaults to 50 entries, configurable via `Raif.config.conversation_llm_messages_max_length_default`. [#275](https://github.com/CultivateLabs/raif/pull/275)
 
 ## v1.3
 

@@ -3,6 +3,7 @@
 Raif.configure do |config|
   # config.conversations_controller = "ConversationsController"
   # config.conversation_entries_controller = "ConversationEntriesController"
+  # config.conversation_llm_messages_max_length_default = 50
 
   config.anthropic_api_key = "placeholder"
   config.anthropic_models_enabled = true

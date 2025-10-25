@@ -10,6 +10,7 @@
 #  conversation_entries_count :integer          default(0), not null
 #  creator_type               :string           not null
 #  generating_entry_response  :boolean          default(FALSE), not null
+#  llm_messages_max_length    :integer
 #  llm_model_key              :string           not null
 #  requested_language_key     :string
 #  response_format            :integer          default("text"), not null
@@ -69,6 +70,62 @@ RSpec.describe Raif::Conversation, type: :model do
       ]
 
       expect(conversation.llm_messages).to eq(messages)
+    end
+
+    describe "llm_messages_max_length" do
+      it "defaults to the config value on initialization" do
+        conversation = Raif::Conversation.new(creator: creator)
+        expect(conversation.llm_messages_max_length).to eq(Raif.config.conversation_llm_messages_max_length_default)
+      end
+
+      it "limits entries when llm_messages_max_length is set" do
+        conversation = FB.create(:raif_conversation, :with_entries, entries_count: 5, creator: creator, llm_messages_max_length: 3)
+        expect(conversation.entries.count).to eq(5)
+
+        # Get messages from the last 3 entries (not last 3 message hashes)
+        last_3_entries = conversation.entries.oldest_first.last(3)
+        expected_messages = last_3_entries.map do |entry|
+          [
+            { "role" => "user", "content" => entry.user_message },
+            { "role" => "assistant", "content" => entry.model_response_message }
+          ]
+        end.flatten
+
+        expect(conversation.llm_messages.length).to eq(6) # 3 entries × 2 messages per entry
+        expect(conversation.llm_messages).to eq(expected_messages)
+      end
+
+      it "returns all messages when llm_messages_max_length is nil" do
+        conversation = FB.create(:raif_conversation, :with_entries, entries_count: 5, creator: creator, llm_messages_max_length: nil)
+        expect(conversation.entries.count).to eq(5)
+
+        all_messages = conversation.entries.oldest_first.map do |entry|
+          [
+            { "role" => "user", "content" => entry.user_message },
+            { "role" => "assistant", "content" => entry.model_response_message }
+          ]
+        end.flatten
+
+        expect(all_messages.length).to eq(10)
+        expect(conversation.llm_messages.length).to eq(10)
+        expect(conversation.llm_messages).to eq(all_messages)
+      end
+
+      it "returns all messages when llm_messages_max_length is greater than total entries" do
+        conversation = FB.create(:raif_conversation, :with_entries, entries_count: 2, creator: creator, llm_messages_max_length: 100)
+        expect(conversation.entries.count).to eq(2)
+
+        all_messages = conversation.entries.oldest_first.map do |entry|
+          [
+            { "role" => "user", "content" => entry.user_message },
+            { "role" => "assistant", "content" => entry.model_response_message }
+          ]
+        end.flatten
+
+        expect(all_messages.length).to eq(4)
+        expect(conversation.llm_messages.length).to eq(4)
+        expect(conversation.llm_messages).to eq(all_messages)
+      end
     end
   end
 
