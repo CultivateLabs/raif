@@ -64,7 +64,7 @@ module Raif
 
         source = value.source_location
         if source
-          "Proc defined at #{source[0]}:#{source[1]}"
+          "Lambda/Proc defined at #{source[0]}:#{source[1]}"
         else
           "Lambda/Proc (source unavailable)"
         end
@@ -72,6 +72,7 @@ module Raif
 
       def truncate_text(text, length)
         return "Not set" if text.blank?
+        return format_proc(text) if text.respond_to?(:call)
 
         text.length > length ? "#{text[0...length]}..." : text
       end
