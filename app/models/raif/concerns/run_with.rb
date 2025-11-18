@@ -14,6 +14,21 @@ module Raif::Concerns::RunWith
   end
 
   class_methods do
+    # Scope for querying records by run_with arguments
+    # @param args [Hash] Key-value pairs to match in the run_with column
+    # @example
+    #   Task.having_run_with(document: doc)
+    #   Task.having_run_with(user: user, options: { foo: "bar" })
+    def having_run_with(**args)
+      return all if args.empty?
+
+      # Serialize args the same way we do for storage (handles GID conversion)
+      serialized = serialize_run_with(args)
+
+      # Use JSONB containment operator to check if run_with contains all specified key-value pairs
+      where("run_with @> ?", serialized.to_json)
+    end
+
     # DSL for declaring persistent run arguments that will be serialized to the database
     # @param name [Symbol] The name of the argument
     def run_with(name)
