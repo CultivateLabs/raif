@@ -211,4 +211,95 @@ RSpec.describe "Raif::Task run_with", type: :model do
       expect(Raif::Task._run_with_args).to eq([])
     end
   end
+
+  describe ".having_run_with" do
+    let(:user1) { FB.create(:raif_test_user) }
+    let(:user2) { FB.create(:raif_test_user) }
+    let(:conversation1) { FB.create(:raif_conversation, creator: user1) }
+    let(:conversation2) { FB.create(:raif_conversation, creator: user2) }
+
+    let!(:task1) do
+      stub_raif_task(test_task_class) { "Response 1" }
+      test_task_class.run(
+        creator: user1,
+        conversation: conversation1,
+        user: user1,
+        options: { include_summary: true },
+        count: 42
+      )
+    end
+
+    let!(:task2) do
+      stub_raif_task(test_task_class) { "Response 2" }
+      test_task_class.run(
+        creator: user2,
+        conversation: conversation2,
+        user: user2,
+        options: { include_summary: false },
+        count: 99
+      )
+    end
+
+    let!(:task3) do
+      stub_raif_task(test_task_class) { "Response 3" }
+      test_task_class.run(
+        creator: user1,
+        conversation: conversation1,
+        user: user1,
+        options: { include_summary: true },
+        count: 42
+      )
+    end
+
+    it "returns all records when no arguments provided" do
+      results = test_task_class.having_run_with
+      expect(results).to match_array([task1, task2, task3])
+    end
+
+    it "queries by ActiveRecord object (serialized as GID)" do
+      results = test_task_class.having_run_with(user: user1)
+      expect(results).to match_array([task1, task3])
+    end
+
+    it "queries by primitive values" do
+      results = test_task_class.having_run_with(count: 42)
+      expect(results).to match_array([task1, task3])
+    end
+
+    it "queries by hash values" do
+      results = test_task_class.having_run_with(options: { include_summary: true })
+      expect(results).to match_array([task1, task3])
+    end
+
+    it "queries by multiple arguments (AND logic)" do
+      results = test_task_class.having_run_with(
+        user: user1,
+        count: 42
+      )
+      expect(results).to match_array([task1, task3])
+    end
+
+    it "queries by all declared arguments" do
+      results = test_task_class.having_run_with(
+        conversation: conversation1,
+        user: user1,
+        options: { include_summary: true },
+        count: 42
+      )
+      expect(results).to match_array([task1, task3])
+    end
+
+    it "returns empty when no matches found" do
+      results = test_task_class.having_run_with(count: 999)
+      expect(results).to be_empty
+    end
+
+    it "is chainable with other scopes" do
+      results = test_task_class
+        .having_run_with(user: user1)
+        .where(id: task1.id)
+
+      expect(results).to eq([task1])
+    end
+  end
 end
