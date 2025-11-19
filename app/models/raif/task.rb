@@ -63,8 +63,6 @@ module Raif
 
     normalizes :prompt, :system_prompt, with: ->(text){ text&.strip }
 
-    delegate :json_response_schema, to: :class
-
     scope :completed, -> { where.not(completed_at: nil) }
     scope :failed, -> { where.not(failed_at: nil) }
     scope :in_progress, -> { where.not(started_at: nil).where(completed_at: nil, failed_at: nil) }
@@ -184,6 +182,13 @@ module Raif
       elsif schema_defined?(:json_response)
         schema_for(:json_response)
       end
+    end
+
+    # Instance method to get the JSON response schema
+    # For instance-dependent schemas, builds the schema with this instance as context
+    # For class-level schemas, returns the class-level schema
+    def json_response_schema
+      schema_for_instance(:json_response)
     end
 
     def build_prompt

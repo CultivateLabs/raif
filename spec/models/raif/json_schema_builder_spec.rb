@@ -143,4 +143,98 @@ RSpec.describe Raif::JsonSchemaBuilder do
       })
     end
   end
+
+  describe "#build_with_instance" do
+    let(:test_object) do
+      obj = Object.new
+      obj.instance_eval do
+        def include_email?
+          true
+        end
+
+        def detail_level
+          "detailed"
+        end
+
+        def tags
+          ["ruby", "rails"]
+        end
+      end
+      obj
+    end
+
+    it "builds schema with access to instance methods" do
+      builder.build_with_instance(test_object) do |instance|
+        string "name", description: "User name"
+
+        if instance.include_email?
+          string "email", description: "User email"
+        end
+      end
+
+      schema = builder.to_schema
+
+      expect(schema[:properties]).to have_key("name")
+      expect(schema[:properties]).to have_key("email")
+      expect(schema[:required]).to eq(["name", "email"])
+    end
+
+    it "conditionally includes fields based on instance state" do
+      simple_object = Object.new
+      simple_object.instance_eval do
+        def include_email?
+          false
+        end
+      end
+
+      builder.build_with_instance(simple_object) do |instance|
+        string "name", description: "User name"
+
+        if instance.include_email?
+          string "email", description: "User email"
+        end
+      end
+
+      schema = builder.to_schema
+
+      expect(schema[:properties]).to have_key("name")
+      expect(schema[:properties]).not_to have_key("email")
+      expect(schema[:required]).to eq(["name"])
+    end
+
+    it "supports complex conditional logic" do
+      builder.build_with_instance(test_object) do |instance|
+        string "name", description: "User name"
+
+        if instance.detail_level == "detailed"
+          object "profile", description: "User profile" do
+            string "bio", description: "Biography"
+            array "interests", description: "Interests" do
+              items type: "string"
+            end
+          end
+        end
+      end
+
+      schema = builder.to_schema
+
+      expect(schema[:properties]).to have_key("name")
+      expect(schema[:properties]).to have_key("profile")
+      expect(schema[:properties]["profile"][:properties]).to have_key("bio")
+      expect(schema[:properties]["profile"][:properties]).to have_key("interests")
+    end
+
+    it "can use instance data in field definitions" do
+      builder.build_with_instance(test_object) do |instance|
+        string "name", description: "User name"
+        array "tags", description: "User tags (default: #{instance.tags.join(", ")})" do
+          items type: "string"
+        end
+      end
+
+      schema = builder.to_schema
+
+      expect(schema[:properties]["tags"][:description]).to eq("User tags (default: ruby, rails)")
+    end
+  end
 end
