@@ -25,6 +25,9 @@ module Raif::Concerns::RunWith
       # Serialize args the same way we do for storage (handles GID conversion)
       serialized = serialize_run_with(args)
 
+      # Avoid matching all records if args didn't match declared run_with arguments
+      return none if args.any? && serialized.empty?
+
       # Use database-specific JSON containment query
       case connection.adapter_name.downcase
       when "postgresql"
