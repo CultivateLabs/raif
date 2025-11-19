@@ -205,13 +205,14 @@ GEM
       reline
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
-    i18n-tasks (1.0.15)
+    i18n-tasks (1.1.0)
       activesupport (>= 4.0.2)
       ast (>= 2.1.0)
       erubi
-      highline (>= 2.0.0)
+      highline (>= 3.0.0)
       i18n
       parser (>= 3.2.2.1)
+      prism
       rails-i18n
       rainbow (>= 2.2.2, < 4.0)
       ruby-progressbar (~> 1.8, >= 1.8.1)
@@ -250,7 +251,7 @@ GEM
     matrix (0.4.3)
     method_source (1.1.0)
     mini_mime (1.1.5)
-    minitest (5.26.1)
+    minitest (5.26.2)
     mysql2 (0.5.7)
       bigdecimal
     nenv (0.3.0)
