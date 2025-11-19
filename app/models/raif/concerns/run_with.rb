@@ -25,8 +25,17 @@ module Raif::Concerns::RunWith
       # Serialize args the same way we do for storage (handles GID conversion)
       serialized = serialize_run_with(args)
 
-      # Use JSONB containment operator to check if run_with contains all specified key-value pairs
-      where("run_with @> ?", serialized.to_json)
+      # Use database-specific JSON containment query
+      case connection.adapter_name.downcase
+      when "postgresql"
+        # PostgreSQL: Use JSONB containment operator
+        where("run_with @> ?", serialized.to_json)
+      when "mysql2", "trilogy"
+        # MySQL: Use JSON_CONTAINS function
+        where("JSON_CONTAINS(run_with, ?)", serialized.to_json)
+      else
+        raise "Unsupported database: #{connection.adapter_name}"
+      end
     end
 
     # DSL for declaring persistent run arguments that will be serialized to the database
