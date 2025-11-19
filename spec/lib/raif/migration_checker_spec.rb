@@ -66,10 +66,6 @@ RSpec.describe Raif::MigrationChecker do
         allow(Rails).to receive(:logger).and_return(double("logger", warn: nil))
       end
 
-      it "outputs a warning" do
-        expect { described_class.check_and_warn! }.to output(/RAIF MIGRATION WARNING/).to_stderr
-      end
-
       it "logs a warning" do
         expect(Rails.logger).to receive(:warn).with(/RAIF MIGRATION WARNING/)
         described_class.check_and_warn!

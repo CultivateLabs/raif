@@ -42,6 +42,34 @@ module Raif
   def self.default_llms
     open_ai_models = [
       {
+        key: :open_ai_gpt_5_1,
+        api_name: "gpt-5.1",
+        input_token_cost: 1.25 / 1_000_000,
+        output_token_cost: 10.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_gpt_5,
+        api_name: "gpt-5",
+        input_token_cost: 1.25 / 1_000_000,
+        output_token_cost: 10.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_gpt_5_mini,
+        api_name: "gpt-5-mini",
+        input_token_cost: 0.25 / 1_000_000,
+        output_token_cost: 2.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_gpt_5_nano,
+        api_name: "gpt-5-nano",
+        input_token_cost: 0.05 / 1_000_000,
+        output_token_cost: 0.4 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
         key: :open_ai_gpt_4o_mini,
         api_name: "gpt-4o-mini",
         input_token_cost: 0.15 / 1_000_000,
@@ -113,27 +141,6 @@ module Raif
         output_token_cost: 4.4 / 1_000_000,
         model_provider_settings: { supports_temperature: false },
       },
-      {
-        key: :open_ai_gpt_5,
-        api_name: "gpt-5",
-        input_token_cost: 1.25 / 1_000_000,
-        output_token_cost: 10.0 / 1_000_000,
-        model_provider_settings: { supports_temperature: false },
-      },
-      {
-        key: :open_ai_gpt_5_mini,
-        api_name: "gpt-5-mini",
-        input_token_cost: 0.25 / 1_000_000,
-        output_token_cost: 2.0 / 1_000_000,
-        model_provider_settings: { supports_temperature: false },
-      },
-      {
-        key: :open_ai_gpt_5_nano,
-        api_name: "gpt-5-nano",
-        input_token_cost: 0.05 / 1_000_000,
-        output_token_cost: 0.4 / 1_000_000,
-        model_provider_settings: { supports_temperature: false },
-      }
     ]
 
     open_ai_responses_models = open_ai_models.dup.map.with_index do |model, _index|
@@ -391,6 +398,18 @@ module Raif
           output_token_cost: 0.4 / 1_000_000,
         },
         {
+          key: :open_router_gemini_2_5_flash,
+          api_name: "google/gemini-2.5-flash",
+          input_token_cost: 0.3 / 1_000_000,
+          output_token_cost: 2.5 / 1_000_000,
+        },
+        {
+          key: :open_router_gemini_2_5_pro,
+          api_name: "google/gemini-2.5-pro",
+          input_token_cost: 1.25 / 1_000_000,
+          output_token_cost: 10.0 / 1_000_000,
+        },
+        {
           key: :open_router_deepseek_chat_v3,
           api_name: "deepseek/deepseek-chat-v3-0324",
           input_token_cost: 0.27 / 1_000_000,
@@ -413,12 +432,6 @@ module Raif
           api_name: "x-ai/grok-4",
           input_token_cost: 3.0 / 1_000_000,
           output_token_cost: 15.0 / 1_000_000,
-        },
-        {
-          key: :open_router_gemini_2_5_pro,
-          api_name: "google/gemini-2.5-pro",
-          input_token_cost: 1.25 / 1_000_000,
-          output_token_cost: 10.0 / 1_000_000,
         },
         {
           key: :open_router_deepseek_v3_1,
