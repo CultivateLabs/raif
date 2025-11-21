@@ -368,6 +368,42 @@ module Raif
           output_token_cost: 15.0 / 1_000_000,
         },
         {
+          key: :open_router_deepseek_chat_v3,
+          api_name: "deepseek/deepseek-chat-v3-0324",
+          input_token_cost: 0.27 / 1_000_000,
+          output_token_cost: 1.1 / 1_000_000,
+        },
+        {
+          key: :open_router_deepseek_v3_1,
+          api_name: "deepseek/deepseek-chat-v3.1",
+          input_token_cost: 0.25 / 1_000_000,
+          output_token_cost: 1.0 / 1_000_000,
+        },
+        {
+          key: :open_router_gemini_2_0_flash,
+          api_name: "google/gemini-2.0-flash-001",
+          input_token_cost: 0.1 / 1_000_000,
+          output_token_cost: 0.4 / 1_000_000,
+        },
+        {
+          key: :open_router_gemini_2_5_flash,
+          api_name: "google/gemini-2.5-flash",
+          input_token_cost: 0.3 / 1_000_000,
+          output_token_cost: 2.5 / 1_000_000,
+        },
+        {
+          key: :open_router_gemini_2_5_pro,
+          api_name: "google/gemini-2.5-pro",
+          input_token_cost: 1.25 / 1_000_000,
+          output_token_cost: 10.0 / 1_000_000,
+        },
+        {
+          key: :open_router_grok_4,
+          api_name: "x-ai/grok-4",
+          input_token_cost: 3.0 / 1_000_000,
+          output_token_cost: 15.0 / 1_000_000,
+        },
+        {
           key: :open_router_llama_3_3_70b_instruct,
           api_name: "meta-llama/llama-3.3-70b-instruct",
           input_token_cost: 0.10 / 1_000_000,
@@ -392,30 +428,6 @@ module Raif
           output_token_cost: 0.30 / 1_000_000,
         },
         {
-          key: :open_router_gemini_2_0_flash,
-          api_name: "google/gemini-2.0-flash-001",
-          input_token_cost: 0.1 / 1_000_000,
-          output_token_cost: 0.4 / 1_000_000,
-        },
-        {
-          key: :open_router_gemini_2_5_flash,
-          api_name: "google/gemini-2.5-flash",
-          input_token_cost: 0.3 / 1_000_000,
-          output_token_cost: 2.5 / 1_000_000,
-        },
-        {
-          key: :open_router_gemini_2_5_pro,
-          api_name: "google/gemini-2.5-pro",
-          input_token_cost: 1.25 / 1_000_000,
-          output_token_cost: 10.0 / 1_000_000,
-        },
-        {
-          key: :open_router_deepseek_chat_v3,
-          api_name: "deepseek/deepseek-chat-v3-0324",
-          input_token_cost: 0.27 / 1_000_000,
-          output_token_cost: 1.1 / 1_000_000,
-        },
-        {
           key: :open_router_open_ai_gpt_oss_120b,
           api_name: "gpt-oss-120b",
           input_token_cost: 0.15 / 1_000_000,
@@ -427,18 +439,6 @@ module Raif
           input_token_cost: 0.05 / 1_000_000,
           output_token_cost: 0.2 / 1_000_000,
         },
-        {
-          key: :open_router_grok_4,
-          api_name: "x-ai/grok-4",
-          input_token_cost: 3.0 / 1_000_000,
-          output_token_cost: 15.0 / 1_000_000,
-        },
-        {
-          key: :open_router_deepseek_v3_1,
-          api_name: "deepseek/deepseek-chat-v3.1",
-          input_token_cost: 0.25 / 1_000_000,
-          output_token_cost: 1.0 / 1_000_000,
-        }
       ]
     }
   end
