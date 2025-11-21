@@ -398,10 +398,22 @@ module Raif
           output_token_cost: 10.0 / 1_000_000,
         },
         {
+          key: :open_router_gemini_3_pro_preview,
+          api_name: "google/gemini-3-pro-preview",
+          input_token_cost: 2.0 / 1_000_000,
+          output_token_cost: 12.0 / 1_000_000,
+        },
+        {
           key: :open_router_grok_4,
           api_name: "x-ai/grok-4",
           input_token_cost: 3.0 / 1_000_000,
           output_token_cost: 15.0 / 1_000_000,
+        },
+        {
+          key: :open_router_kimi_k2_thinking,
+          api_name: "moonshotai/kimi-k2-thinking",
+          input_token_cost: 0.45 / 1_000_000,
+          output_token_cost: 2.35 / 1_000_000,
         },
         {
           key: :open_router_llama_3_3_70b_instruct,
@@ -426,6 +438,12 @@ module Raif
           api_name: "meta-llama/llama-4-scout",
           input_token_cost: 0.08 / 1_000_000,
           output_token_cost: 0.30 / 1_000_000,
+        },
+        {
+          key: :open_router_minimax_m2,
+          api_name: "minimax/minimax-m2",
+          input_token_cost: 0.255 / 1_000_000,
+          output_token_cost: 1.02 / 1_000_000,
         },
         {
           key: :open_router_open_ai_gpt_oss_120b,
