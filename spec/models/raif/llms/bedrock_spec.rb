@@ -78,6 +78,7 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         ])
 
         expect(model_completion.response_tool_calls).to eq([{
+          "id" => "tooluse_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com" }
         }])
@@ -167,6 +168,7 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
 
         expect(model_completion.response_tool_calls).to eq([{
+          "id" => "tooluse_JI4D_oKCRq6GPOIBN_z-_A",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com" }
         }])

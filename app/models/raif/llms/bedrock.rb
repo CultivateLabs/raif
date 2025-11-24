@@ -135,6 +135,7 @@ private
 
     tool_uses.map do |content|
       {
+        "id" => content.tool_use.tool_use_id,
         "name" => content.tool_use.name,
         "arguments" => content.tool_use.input
       }

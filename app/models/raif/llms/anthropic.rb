@@ -104,8 +104,9 @@ private
 
     tool_uses.map do |tool_use|
       {
+        "id" => tool_use["id"],
         "name" => tool_use["name"],
-        "arguments" => tool_use["input"]
+        "arguments" => tool_use["input"],
       }
     end
   end

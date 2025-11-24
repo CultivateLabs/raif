@@ -46,6 +46,9 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   validates :llm_model_key, presence: true, inclusion: { in: ->{ Raif.available_llm_keys.map(&:to_s) } }
   validates :model_api_name, presence: true
 
+  # Scope to find completions that have response tool calls
+  scope :with_response_tool_calls, -> { where_json_not_blank(:response_tool_calls) }
+
   delegate :json_response_schema, to: :source, allow_nil: true
 
   before_save :set_total_tokens

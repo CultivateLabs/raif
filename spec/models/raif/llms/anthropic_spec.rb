@@ -83,6 +83,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect(model_completion.raw_response).to eq(expected_json)
         expect(model_completion.response_tool_calls).to eq([
           {
+            "id" => "toolu_abc123",
             "name" => "json_response",
             "arguments" => {
               "joke" => "Why don't scientists trust atoms?",
@@ -198,6 +199,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
 
         expect(model_completion.response_tool_calls).to eq([
           {
+            "id" => "toolu_abc123",
             "name" => "fetch_url",
             "arguments" => { "url" => "https://www.wsj.com" }
           }
@@ -342,6 +344,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
 
         expect(model_completion.response_tool_calls).to eq([{
+          "id" => "toolu_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com" }
         }])

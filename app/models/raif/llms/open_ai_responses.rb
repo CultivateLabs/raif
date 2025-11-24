@@ -35,6 +35,7 @@ private
       next unless output_item["type"] == "function_call"
 
       tool_calls << {
+        "id" => output_item["call_id"],
         "name" => output_item["name"],
         "arguments" => JSON.parse(output_item["arguments"])
       }
