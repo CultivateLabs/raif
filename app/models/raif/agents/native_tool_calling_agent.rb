@@ -64,7 +64,7 @@ module Raif
           6. Provide a final answer to the user's request.
 
           For your final answer:
-          - Use the agent_final_answer tool/function with your complete answer as the "final_answer" parameter.
+          - You **MUST** use the agent_final_answer tool/function to provide your final answer.
           - Your answer should be comprehensive and directly address the user's request.
 
           Guidelines
@@ -94,6 +94,7 @@ module Raif
             role: "user",
             content: "Error: Previous message contained no tool call. Make a tool call at each step. Available tools: #{available_model_tools_map.keys.join(", ")}" # rubocop:disable Layout/LineLength
           })
+
           return
         end
 

@@ -14,8 +14,7 @@ http_interactions:
         Observe the results of the tool/function call.\n4. Use the results to update
         your thought process.\n5. Repeat steps 1-4 until the task is complete.\n6.
         Provide a final answer to the user''s request.\n\nFor your final answer:\n-
-        Use the agent_final_answer tool/function with your complete answer as the
-        \"final_answer\" parameter.\n- Your answer should be comprehensive and directly
+        You **MUST** use the agent_final_answer tool/function to provide your final answer.\n- Your answer should be comprehensive and directly
         address the user''s request.\n\nGuidelines\n- Always think step by step\n-
         Be concise in your reasoning but thorough in your analysis\n- If a tool returns
         an error, try to understand why and adjust your approach\n- If you''re unsure
@@ -103,7 +102,7 @@ http_interactions:
           },
           "error": null,
           "incomplete_details": null,
-          "instructions": "You are an AI agent that follows the ReAct (Reasoning + Acting) framework to complete tasks step by step using tool/function calls.\n\nAt each step, you must:\n1. Think about what to do next.\n2. Choose and invoke exactly one tool/function call based on that thought.\n3. Observe the results of the tool/function call.\n4. Use the results to update your thought process.\n5. Repeat steps 1-4 until the task is complete.\n6. Provide a final answer to the user's request.\n\nFor your final answer:\n- Use the agent_final_answer tool/function with your complete answer as the \"final_answer\" parameter.\n- Your answer should be comprehensive and directly address the user's request.\n\nGuidelines\n- Always think step by step\n- Be concise in your reasoning but thorough in your analysis\n- If a tool returns an error, try to understand why and adjust your approach\n- If you're unsure about something, explain your uncertainty, but do not make things up\n- Always provide a final answer that directly addresses the user's request\n\nRemember: Your goal is to be helpful, accurate, and efficient in solving the user's request.",
+          "instructions": "You are an AI agent that follows the ReAct (Reasoning + Acting) framework to complete tasks step by step using tool/function calls.\n\nAt each step, you must:\n1. Think about what to do next.\n2. Choose and invoke exactly one tool/function call based on that thought.\n3. Observe the results of the tool/function call.\n4. Use the results to update your thought process.\n5. Repeat steps 1-4 until the task is complete.\n6. Provide a final answer to the user's request.\n\nFor your final answer:\n- You **MUST** use the agent_final_answer tool/function to provide your final answer.\n- Your answer should be comprehensive and directly address the user's request.\n\nGuidelines\n- Always think step by step\n- Be concise in your reasoning but thorough in your analysis\n- If a tool returns an error, try to understand why and adjust your approach\n- If you're unsure about something, explain your uncertainty, but do not make things up\n- Always provide a final answer that directly addresses the user's request\n\nRemember: Your goal is to be helpful, accurate, and efficient in solving the user's request.",
           "max_output_tokens": null,
           "max_tool_calls": null,
           "model": "gpt-4.1-mini-2025-04-14",
@@ -349,8 +348,7 @@ http_interactions:
         call based on that thought.\n3. Observe the results of the tool/function call.\n4.
         Use the results to update your thought process.\n5. Repeat steps 1-4 until
         the task is complete.\n6. Provide a final answer to the user''s request.\n\nFor
-        your final answer:\n- Use the agent_final_answer tool/function with your complete
-        answer as the \"final_answer\" parameter.\n- Your answer should be comprehensive
+        your final answer:\n- You **MUST** use the agent_final_answer tool/function to provide your final answer.\n- Your answer should be comprehensive
         and directly address the user''s request.\n\nGuidelines\n- Always think step
         by step\n- Be concise in your reasoning but thorough in your analysis\n- If
         a tool returns an error, try to understand why and adjust your approach\n-
@@ -438,7 +436,7 @@ http_interactions:
           },
           "error": null,
           "incomplete_details": null,
-          "instructions": "You are an AI agent that follows the ReAct (Reasoning + Acting) framework to complete tasks step by step using tool/function calls.\n\nAt each step, you must:\n1. Think about what to do next.\n2. Choose and invoke exactly one tool/function call based on that thought.\n3. Observe the results of the tool/function call.\n4. Use the results to update your thought process.\n5. Repeat steps 1-4 until the task is complete.\n6. Provide a final answer to the user's request.\n\nFor your final answer:\n- Use the agent_final_answer tool/function with your complete answer as the \"final_answer\" parameter.\n- Your answer should be comprehensive and directly address the user's request.\n\nGuidelines\n- Always think step by step\n- Be concise in your reasoning but thorough in your analysis\n- If a tool returns an error, try to understand why and adjust your approach\n- If you're unsure about something, explain your uncertainty, but do not make things up\n- Always provide a final answer that directly addresses the user's request\n\nRemember: Your goal is to be helpful, accurate, and efficient in solving the user's request.",
+          "instructions": "You are an AI agent that follows the ReAct (Reasoning + Acting) framework to complete tasks step by step using tool/function calls.\n\nAt each step, you must:\n1. Think about what to do next.\n2. Choose and invoke exactly one tool/function call based on that thought.\n3. Observe the results of the tool/function call.\n4. Use the results to update your thought process.\n5. Repeat steps 1-4 until the task is complete.\n6. Provide a final answer to the user's request.\n\nFor your final answer:\n- You **MUST** use the agent_final_answer tool/function to provide your final answer.\n- Your answer should be comprehensive and directly address the user's request.\n\nGuidelines\n- Always think step by step\n- Be concise in your reasoning but thorough in your analysis\n- If a tool returns an error, try to understand why and adjust your approach\n- If you're unsure about something, explain your uncertainty, but do not make things up\n- Always provide a final answer that directly addresses the user's request\n\nRemember: Your goal is to be helpful, accurate, and efficient in solving the user's request.",
           "max_output_tokens": null,
           "max_tool_calls": null,
           "model": "gpt-4.1-mini-2025-04-14",
@@ -2179,8 +2177,7 @@ http_interactions:
         call based on that thought.\n3. Observe the results of the tool/function call.\n4.
         Use the results to update your thought process.\n5. Repeat steps 1-4 until
         the task is complete.\n6. Provide a final answer to the user''s request.\n\nFor
-        your final answer:\n- Use the agent_final_answer tool/function with your complete
-        answer as the \"final_answer\" parameter.\n- Your answer should be comprehensive
+        your final answer:\n- You **MUST** use the agent_final_answer tool/function to provide your final answer.\n- Your answer should be comprehensive
         and directly address the user''s request.\n\nGuidelines\n- Always think step
         by step\n- Be concise in your reasoning but thorough in your analysis\n- If
         a tool returns an error, try to understand why and adjust your approach\n-
@@ -2268,7 +2265,7 @@ http_interactions:
           },
           "error": null,
           "incomplete_details": null,
-          "instructions": "You are an AI agent that follows the ReAct (Reasoning + Acting) framework to complete tasks step by step using tool/function calls.\n\nAt each step, you must:\n1. Think about what to do next.\n2. Choose and invoke exactly one tool/function call based on that thought.\n3. Observe the results of the tool/function call.\n4. Use the results to update your thought process.\n5. Repeat steps 1-4 until the task is complete.\n6. Provide a final answer to the user's request.\n\nFor your final answer:\n- Use the agent_final_answer tool/function with your complete answer as the \"final_answer\" parameter.\n- Your answer should be comprehensive and directly address the user's request.\n\nGuidelines\n- Always think step by step\n- Be concise in your reasoning but thorough in your analysis\n- If a tool returns an error, try to understand why and adjust your approach\n- If you're unsure about something, explain your uncertainty, but do not make things up\n- Always provide a final answer that directly addresses the user's request\n\nRemember: Your goal is to be helpful, accurate, and efficient in solving the user's request.",
+          "instructions": "You are an AI agent that follows the ReAct (Reasoning + Acting) framework to complete tasks step by step using tool/function calls.\n\nAt each step, you must:\n1. Think about what to do next.\n2. Choose and invoke exactly one tool/function call based on that thought.\n3. Observe the results of the tool/function call.\n4. Use the results to update your thought process.\n5. Repeat steps 1-4 until the task is complete.\n6. Provide a final answer to the user's request.\n\nFor your final answer:\n- You **MUST** use the agent_final_answer tool/function to provide your final answer.\n- Your answer should be comprehensive and directly address the user's request.\n\nGuidelines\n- Always think step by step\n- Be concise in your reasoning but thorough in your analysis\n- If a tool returns an error, try to understand why and adjust your approach\n- If you're unsure about something, explain your uncertainty, but do not make things up\n- Always provide a final answer that directly addresses the user's request\n\nRemember: Your goal is to be helpful, accurate, and efficient in solving the user's request.",
           "max_output_tokens": null,
           "max_tool_calls": null,
           "model": "gpt-4.1-mini-2025-04-14",
