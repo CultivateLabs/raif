@@ -18,7 +18,6 @@ module Raif
           select_columns << "SUM(raif_model_completions.prompt_token_cost)"
           select_columns << "SUM(raif_model_completions.output_token_cost)"
           select_columns << "SUM(raif_model_completions.total_cost)"
-          select_columns.compact!
 
           @task_stats_by_type = Raif::Task.joins(:raif_model_completion)
             .where(created_at: @time_range)
