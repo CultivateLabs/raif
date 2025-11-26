@@ -67,4 +67,40 @@ module Raif::Concerns::Llms::Bedrock::MessageFormatting
       "text/markdown" => "md"
     }[content_type]
   end
+
+  def format_tool_call_message(tool_call)
+    content_array = []
+    # content_array << format_string_message(tool_call["assistant_message"]) if tool_call["assistant_message"].present?
+
+    content_array << {
+      "tool_use" => {
+        "tool_use_id" => tool_call["provider_tool_call_id"],
+        "name" => tool_call["name"],
+        "input" => tool_call["arguments"]
+      }
+    }
+
+    {
+      "role" => "assistant",
+      "content" => content_array
+    }
+  end
+
+  def format_tool_call_result_message(tool_call_result)
+    tool_result_content = if tool_call_result["result"].is_a?(String)
+      { "text" => tool_call_result["result"] }
+    else
+      { "json" => tool_call_result["result"] }
+    end
+
+    {
+      "role" => "user",
+      "content" => [{
+        "tool_result" => {
+          "tool_use_id" => tool_call_result["provider_tool_call_id"],
+          "content" => [tool_result_content]
+        }
+      }]
+    }
+  end
 end
