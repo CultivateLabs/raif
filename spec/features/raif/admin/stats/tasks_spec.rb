@@ -6,10 +6,10 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
   let(:creator) { FB.create(:raif_test_user) }
 
   describe "index page" do
-    # Create tasks of different types
-    let!(:task1) { FB.create(:raif_test_task, creator: creator, created_at: 12.hours.ago) }
-    let!(:task2) { FB.create(:raif_test_task, :completed, creator: creator, created_at: 12.hours.ago) }
-    let!(:task3) { FB.create(:raif_test_task, creator: creator, created_at: 12.hours.ago) }
+    # Create tasks of different types with explicit llm_model_key values
+    let!(:task1) { FB.create(:raif_test_task, creator: creator, llm_model_key: "anthropic_claude_3_7_sonnet", created_at: 12.hours.ago) }
+    let!(:task2) { FB.create(:raif_test_task, :completed, creator: creator, llm_model_key: "open_ai_gpt_4o", created_at: 12.hours.ago) }
+    let!(:task3) { FB.create(:raif_test_task, creator: creator, llm_model_key: "open_ai_gpt_4o", created_at: 12.hours.ago) }
 
     # Create model completions for tasks to test cost calculations
     let!(:model_completion1) do
@@ -49,7 +49,7 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
     end
 
     # Create older task of a different type
-    let!(:old_task) { FB.create(:raif_test_task, :failed, creator: creator, created_at: 2.days.ago) }
+    let!(:old_task) { FB.create(:raif_test_task, :failed, creator: creator, llm_model_key: "open_ai_gpt_4o_mini", created_at: 2.days.ago) }
     let!(:old_model_completion) do
       FB.create(
         :raif_model_completion,
@@ -103,6 +103,43 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
         # If old task is same type, the count should increase by 1
         task_count = page.find("td", text: task1.type).sibling("td", match: :first).text
         expect(task_count).to eq("4") # 3 recent + 1 old
+      end
+    end
+
+    it "shows model breakdown when checkbox is checked" do
+      visit raif.admin_stats_tasks_path(show_model_breakdown: "1")
+
+      # Model column should be visible
+      within("table thead") do
+        expect(page).to have_content(I18n.t("raif.admin.common.model"))
+      end
+
+      # Should show separate rows for each model
+      within("table tbody") do
+        expect(page).to have_content("anthropic_claude_3_7_sonnet")
+        expect(page).to have_content("open_ai_gpt_4o")
+      end
+
+      # Without model breakdown, model column should not be visible
+      visit raif.admin_stats_tasks_path
+
+      within("table thead") do
+        expect(page).not_to have_content(I18n.t("raif.admin.common.model"))
+      end
+    end
+
+    it "preserves period selection when toggling model breakdown" do
+      visit raif.admin_stats_tasks_path(period: "all", show_model_breakdown: "1")
+
+      # Verify period is set to "all"
+      expect(page).to have_select("period", selected: I18n.t("raif.admin.common.period_all"))
+
+      # Checkbox should be checked
+      expect(page).to have_checked_field(I18n.t("raif.admin.stats.tasks.show_model_breakdown"))
+
+      # Should see all models including the older one
+      within("table tbody") do
+        expect(page).to have_content("open_ai_gpt_4o_mini")
       end
     end
   end
