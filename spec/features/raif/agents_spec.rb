@@ -50,7 +50,7 @@ RSpec.describe "Agent features", type: :feature do
     expect(page).to have_content("assistant: <answer>Jimmy Buffett was born on December 25, 1946.</answer>")
 
     ai = Raif::Agent.last
-    expect(ai.type).to eq("Raif::Agents::ReActAgent")
+    expect(ai.type).to eq("Raif::Agents::NativeToolCallingAgent")
     expect(ai.task).to eq("What is Jimmy Buffet's birthday?")
     expect(ai.started_at).to be_present
     expect(ai.completed_at).to be_present

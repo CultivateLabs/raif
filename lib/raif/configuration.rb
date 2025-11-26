@@ -47,7 +47,7 @@ module Raif
     alias_method :aws_bedrock_titan_embedding_models_enabled=, :bedrock_embedding_models_enabled=
 
     def initialize
-      @agent_types = Set.new(["Raif::Agents::ReActAgent", "Raif::Agents::NativeToolCallingAgent"])
+      @agent_types = Set.new(["Raif::Agents::NativeToolCallingAgent"])
       @anthropic_api_key = default_disable_llm_api_requests? ? "placeholder-anthropic-api-key" : ENV["ANTHROPIC_API_KEY"]
       @bedrock_models_enabled = false
       @anthropic_models_enabled = ENV["ANTHROPIC_API_KEY"].present?
