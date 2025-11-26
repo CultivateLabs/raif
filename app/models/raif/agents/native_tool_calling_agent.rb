@@ -85,71 +85,63 @@ module Raif
       end
 
       def process_iteration_model_completion(model_completion)
-        if model_completion.parsed_response.present?
-          add_conversation_history_entry({
-            role: "assistant",
-            content: model_completion.parsed_response
-          })
-        end
+        assistant_response_message = model_completion.parsed_response if model_completion.parsed_response.present?
 
+        # The model made no tool call in this completion. Tell it to make a tool call.
         if model_completion.response_tool_calls.blank?
+          add_conversation_history_entry({ role: "assistant", content: assistant_response_message }) if assistant_response_message.present?
           add_conversation_history_entry({
-            role: "assistant",
-            content: "<observation>Error: No tool call found. I need to make a tool call at each step. Available tools: #{available_model_tools_map.keys.join(", ")}</observation>" # rubocop:disable Layout/LineLength
+            role: "user",
+            content: "Error: Previous message contained no tool call. Make a tool call at each step. Available tools: #{available_model_tools_map.keys.join(", ")}" # rubocop:disable Layout/LineLength
           })
           return
         end
 
         tool_call = model_completion.response_tool_calls.first
 
-        unless tool_call["name"] && tool_call["arguments"]
-          add_conversation_history_entry({
-            role: "assistant",
-            content: "<observation>Error: Invalid action specified. Please provide a valid action, formatted as a JSON object with 'tool' and 'arguments' keys.</observation>" # rubocop:disable Layout/LineLength
-          })
-          return
-        end
+        # Add the tool call to history
+        add_conversation_history_entry(tool_call.merge({
+          "type" => "tool_call",
+          "assistant_message" => assistant_response_message
+        }))
 
         tool_name = tool_call["name"]
         tool_arguments = tool_call["arguments"]
-
-        # Add the tool call to conversation history
-        add_conversation_history_entry({
-          role: "assistant",
-          content: "<action>\n#{JSON.pretty_generate(tool_call)}\n</action>"
-        }) unless tool_name == "agent_final_answer"
-
-        # Find the tool class and process it
         tool_klass = available_model_tools_map[tool_name]
 
         # The model tried to use a tool that doesn't exist
-        unless tool_klass
+        if tool_klass.blank?
           add_conversation_history_entry({
-            role: "assistant",
-            content: "<observation>Error: Tool '#{tool_name}' not found. Available tools: #{available_model_tools_map.keys.join(", ")}</observation>"
+            role: "user",
+            content: "Error: Tool '#{tool_name}' is not a valid tool. Available tools: #{available_model_tools_map.keys.join(", ")}"
           })
           return
         end
 
+        # Make sure the tool arguments match the tool's schema
         unless JSON::Validator.validate(tool_klass.tool_arguments_schema, tool_arguments)
           add_conversation_history_entry({
-            role: "assistant",
-            content: "<observation>Error: Invalid tool arguments. Please provide valid arguments for the tool '#{tool_name}'. Tool arguments schema: #{tool_klass.tool_arguments_schema.to_json}</observation>" # rubocop:disable Layout/LineLength
+            role: "user",
+            content: "Error: Invalid tool arguments for the tool '#{tool_name}'. Tool arguments schema: #{tool_klass.tool_arguments_schema.to_json}"
           })
           return
         end
 
-        # Process the tool and add observation to history
-        tool_invocation = tool_klass.invoke_tool(tool_arguments: tool_arguments, source: self)
-        observation = tool_klass.observation_for_invocation(tool_invocation)
+        # Process the tool invocation and add observation/result to history
+        tool_invocation = tool_klass.invoke_tool(
+          provider_tool_call_id: tool_call["provider_tool_call_id"],
+          tool_arguments: tool_arguments,
+          source: self
+        )
+        # observation = tool_klass.observation_for_invocation(tool_invocation)
 
         if tool_name == "agent_final_answer"
-          self.final_answer = observation
-          add_conversation_history_entry({ role: "assistant", content: "<answer>\n#{final_answer}\n</answer>" })
+          self.final_answer = tool_invocation.result
         else
           add_conversation_history_entry({
-            role: "assistant",
-            content: "<observation>\n#{observation}\n</observation>"
+            "type" => "tool_call_result",
+            "provider_tool_call_id" => tool_call["provider_tool_call_id"],
+            "result" => tool_invocation.result
           })
         end
       end

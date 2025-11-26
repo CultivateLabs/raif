@@ -48,4 +48,32 @@ module Raif::Concerns::Llms::Anthropic::MessageFormatting
       raise Raif::Errors::InvalidModelFileInputError, "Invalid model file input source type: #{file_input.source_type}"
     end
   end
+
+  def format_tool_call_message(tool_call)
+    content_array = []
+    content_array << format_string_message(tool_call["assistant_message"]) if tool_call["assistant_message"].present?
+
+    content_array << {
+      "type" => "tool_use",
+      "id" => tool_call["provider_tool_call_id"],
+      "name" => tool_call["name"],
+      "input" => tool_call["arguments"]
+    }
+
+    {
+      "role" => "assistant",
+      "content" => content_array
+    }
+  end
+
+  def format_tool_call_result_message(tool_call_result)
+    {
+      "role" => "user",
+      "content" => [{
+        "type" => "tool_result",
+        "tool_use_id" => tool_call_result["provider_tool_call_id"],
+        "content" => tool_call_result["result"].is_a?(String) ? tool_call_result["result"] : JSON.generate(tool_call_result["result"])
+      }]
+    }
+  end
 end

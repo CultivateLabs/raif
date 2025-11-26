@@ -51,80 +51,181 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
   end
 
   describe "#run!" do
+    let(:task) { "What is the capital of France?" }
+    let(:llm_model_key) { "open_ai_responses_gpt_4_1" }
+
     let(:agent) do
       described_class.new(
         creator: creator,
         source: creator,
-        task: "What is the capital of France?",
+        task: task,
         max_iterations: 3,
         available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::FetchUrl],
-        llm_model_key: "open_ai_gpt_4o"
+        llm_model_key: llm_model_key
       )
     end
 
-    it "runs the agent" do
-      stub_raif_agent(agent) do |_messages, model_completion|
-        model_completion.response_tool_calls = [
+    context "with OpenAI Responses" do
+      let(:task) { "Tell me some interesting facts from the James Webb Space Telescope's Wikipedia page" }
+      let(:llm_model_key) { "open_ai_responses_gpt_4_1_mini" }
+
+      it "processes multiple iterations until finding an answer",
+        vcr: { cassette_name: "native_tool_calling_agent/open_ai_responses" } do
+        expect(agent.started_at).to be_nil
+        expect(agent.completed_at).to be_nil
+        expect(agent.failed_at).to be_nil
+
+        agent.run!
+
+        expect(agent.started_at).to be_present
+        expect(agent.completed_at).to be_present
+        expect(agent.failed_at).to be_nil
+
+        final_answer = "Here are some interesting facts about the James Webb Space Telescope (JWST) from its Wikipedia page:\n\n1. JWST is the largest space telescope ever launched, designed primarily for infrared astronomy, enabling it to see objects too old, distant, or faint for previous telescopes like Hubble.\n\n2. It has a 6.5-meter diameter primary mirror made of 18 hexagonal segments, about 2.7 times larger than Hubble's mirror, providing about six times the collecting area.\n\n3. JWST observes primarily in the infrared spectrum (0.6 to 28.5 micrometers), which allows it to see through cosmic dust and detect cooler objects like planets and distant galaxies.\n\n4. The telescope operates at extremely cold temperatures below 50 K (-223°C) to prevent infrared radiation from the telescope itself from interfering with observations. It uses a large five-layer sunshield to block heat from the Sun, Earth, and Moon.\n\n5. JWST was launched on December 25, 2021, on an Ariane 5 rocket from French Guiana and is positioned near the Sun-Earth L2 point, about 1.5 million kilometers from Earth.\n\n6. The telescope's sunshield is roughly the size of a tennis court when deployed and has a sun protection factor (SPF) of 1,000,000.\n\n7. JWST's mission goals include observing the first stars and galaxies formed after the Big Bang, studying exoplanet atmospheres, and exploring planetary systems and the origins of life.\n\n8. JWST's instruments include the Near Infrared Camera (NIRCam), Near Infrared Spectrograph (NIRSpec), Mid-Infrared Instrument (MIRI), and Fine Guidance Sensor (FGS) with a Near Infrared Imager and Slitless Spectrograph (NIRISS).\n\n9. The telescope underwent a complex deployment and mirror alignment process after launch, with its mirrors being aligned to an accuracy of 50 nanometers.\n\n10. Early scientific results include imaging very distant galaxies from just a few hundred million years after the Big Bang, detecting water in exoplanet atmospheres, and observing star-forming regions and distant galaxy clusters.\n\n11. JWST's total project cost was about $10 billion, with international collaboration involving NASA, ESA, and the Canadian Space Agency.\n\nThese facts highlight JWST's advanced technology, ambitious scientific goals, and its significant role in expanding our understanding of the universe." # rubocop:disable Layout/LineLength
+        expect(agent.final_answer).to eq(final_answer)
+
+        jwst_page_content = File.read("spec/fixtures/files/jwst_page_content.md")
+
+        expect(agent.conversation_history).to eq([
           {
+            "role" => "user",
+            "content" => "Tell me some interesting facts from the James Webb Space Telescope's Wikipedia page"
+          },
+          {
+            "provider_tool_call_id" => "call_abc123",
+            "name" => "wikipedia_search",
+            "arguments" => { "query" => "James Webb Space Telescope" },
+            "type" => "tool_call",
+            "assistant_message" => nil
+          },
+          {
+            "type" => "tool_call_result",
+            "provider_tool_call_id" => "call_abc123",
+            "result" => {
+              "results" => [
+                {
+                  "title" => "James Webb Space Telescope",
+                  "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\"searchmatch\">telescope</span> in <span class=\"searchmatch\">space</span>, and is equipped",
+                  "page_id" => 434221,
+                  "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope"
+                },
+                {
+                  "title" => "Timeline of the James Webb Space Telescope",
+                  "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century <span class=\"searchmatch\">space</span> observatory that was launched on 25 December 2021. It is intended to be the",
+                  "page_id" => 52380879,
+                  "url" => "https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope"
+                },
+                {
+                  "title" => "James Webb Space Telescope sunshield",
+                  "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from",
+                  "page_id" => 52495051,
+                  "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield"
+                },
+                {
+                  "title" => "Space telescope",
+                  "snippet" =>
+                  "A <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> (also known as <span class=\"searchmatch\">space</span> observatory) is a <span class=\"searchmatch\">telescope</span> in outer <span class=\"searchmatch\">space</span> used to observe astronomical objects. Suggested by Lyman Spitzer in",
+                  "page_id" => 29006,
+                  "url" => "https://en.wikipedia.org/wiki/Space_telescope"
+                },
+                {
+                  "title" => "James E. Webb",
+                  "snippet" =>
+                  "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in",
+                  "page_id" => 525237,
+                  "url" => "https://en.wikipedia.org/wiki/James_E._Webb"
+                }
+              ]
+            }
+          },
+          {
+            "provider_tool_call_id" => "call_abc123",
+            "name" => "fetch_url",
+            "arguments" => { "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope" },
+            "type" => "tool_call",
+            "assistant_message" => nil
+          },
+          {
+            "type" => "tool_call_result",
+            "provider_tool_call_id" => "call_abc123",
+            "result" => {
+              "status" => 200,
+              "content" => jwst_page_content
+            }
+          },
+          {
+            "provider_tool_call_id" => "call_abc123",
             "name" => "agent_final_answer",
-            "arguments" => { "final_answer" => "Paris" }
+            "arguments" => {
+              "final_answer" => "Here are some interesting facts about the James Webb Space Telescope (JWST) from its Wikipedia page:\n\n1. JWST is the largest space telescope ever launched, designed primarily for infrared astronomy, enabling it to see objects too old, distant, or faint for previous telescopes like Hubble.\n\n2. It has a 6.5-meter diameter primary mirror made of 18 hexagonal segments, about 2.7 times larger than Hubble's mirror, providing about six times the collecting area.\n\n3. JWST observes primarily in the infrared spectrum (0.6 to 28.5 micrometers), which allows it to see through cosmic dust and detect cooler objects like planets and distant galaxies.\n\n4. The telescope operates at extremely cold temperatures below 50 K (-223°C) to prevent infrared radiation from the telescope itself from interfering with observations. It uses a large five-layer sunshield to block heat from the Sun, Earth, and Moon.\n\n5. JWST was launched on December 25, 2021, on an Ariane 5 rocket from French Guiana and is positioned near the Sun-Earth L2 point, about 1.5 million kilometers from Earth.\n\n6. The telescope's sunshield is roughly the size of a tennis court when deployed and has a sun protection factor (SPF) of 1,000,000.\n\n7. JWST's mission goals include observing the first stars and galaxies formed after the Big Bang, studying exoplanet atmospheres, and exploring planetary systems and the origins of life.\n\n8. JWST's instruments include the Near Infrared Camera (NIRCam), Near Infrared Spectrograph (NIRSpec), Mid-Infrared Instrument (MIRI), and Fine Guidance Sensor (FGS) with a Near Infrared Imager and Slitless Spectrograph (NIRISS).\n\n9. The telescope underwent a complex deployment and mirror alignment process after launch, with its mirrors being aligned to an accuracy of 50 nanometers.\n\n10. Early scientific results include imaging very distant galaxies from just a few hundred million years after the Big Bang, detecting water in exoplanet atmospheres, and observing star-forming regions and distant galaxy clusters.\n\n11. JWST's total project cost was about $10 billion, with international collaboration involving NASA, ESA, and the Canadian Space Agency.\n\nThese facts highlight JWST's advanced technology, ambitious scientific goals, and its significant role in expanding our understanding of the universe."
+            },
+            "type" => "tool_call",
+            "assistant_message" => nil
           }
-        ]
+        ])
 
-        "I know this."
+        expect(agent.raif_model_tool_invocations.length).to eq(3)
+        mti = agent.raif_model_tool_invocations.oldest_first.first
+        expect(mti.tool_name).to eq("wikipedia_search")
+        expect(mti.tool_type).to eq("Raif::ModelTools::WikipediaSearch")
+        expect(mti.tool_arguments).to eq({ "query" => "James Webb Space Telescope" })
+
+        expect(mti.result).to eq({
+          "results" => [
+            {
+              "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope",
+              "title" => "James Webb Space Telescope",
+              "page_id" => 434221,
+              "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\"searchmatch\">telescope</span> in <span class=\"searchmatch\">space</span>, and is equipped"
+            },
+            {
+              "url" => "https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope",
+              "title" => "Timeline of the James Webb Space Telescope",
+              "page_id" => 52380879,
+              "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century <span class=\"searchmatch\">space</span> observatory that was launched on 25 December 2021. It is intended to be the"
+            },
+            {
+              "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield",
+              "title" => "James Webb Space Telescope sunshield",
+              "page_id" => 52495051,
+              "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from"
+            },
+            {
+              "url" => "https://en.wikipedia.org/wiki/Space_telescope",
+              "title" => "Space telescope",
+              "page_id" => 29006,
+              "snippet" => "A <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> (also known as <span class=\"searchmatch\">space</span> observatory) is a <span class=\"searchmatch\">telescope</span> in outer <span class=\"searchmatch\">space</span> used to observe astronomical objects. Suggested by Lyman Spitzer in"
+            },
+            {
+              "url" => "https://en.wikipedia.org/wiki/James_E._Webb",
+              "title" => "James E. Webb",
+              "page_id" => 525237,
+              "snippet" => "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in"
+            }
+          ]
+        })
+
+        mti2 = agent.raif_model_tool_invocations.oldest_first.second
+        expect(mti2.tool_name).to eq("fetch_url")
+        expect(mti2.tool_type).to eq("Raif::ModelTools::FetchUrl")
+        expect(mti2.tool_arguments).to eq({ "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope" })
+        expect(mti2.result).to eq({ "status" => 200, "content" => jwst_page_content })
+
+        mti3 = agent.raif_model_tool_invocations.oldest_first.last
+        expect(mti3.tool_name).to eq("agent_final_answer")
+        expect(mti3.tool_type).to eq("Raif::ModelTools::AgentFinalAnswer")
+        expect(mti3.tool_arguments).to eq({ "final_answer" => final_answer })
+        expect(mti3.result).to eq(final_answer)
       end
-
-      expect(agent.started_at).to be_nil
-      expect(agent.completed_at).to be_nil
-      expect(agent.failed_at).to be_nil
-
-      agent.run!
-
-      expect(agent.started_at).to be_present
-      expect(agent.completed_at).to be_present
-      expect(agent.failed_at).to be_nil
-      expect(agent.creator).to eq(creator)
-      expect(agent.source).to eq(creator)
-
-      expect(agent.conversation_history).to eq([
-        { "role" => "user", "content" => "What is the capital of France?" },
-        { "role" => "assistant", "content" => "I know this." },
-        { "role" => "assistant", "content" => "<answer>\nParis\n</answer>" }
-      ])
-
-      expect(agent.final_answer).to eq("Paris")
     end
 
-    context "with multiple iterations" do
-      before do
-        stub_request(:get, "https://en.wikipedia.org/w/api.php?action=query&format=json&list=search&srlimit=5&srprop=snippet&srsearch=capital%20of%20France")
-          .to_return(status: 200, body: "{\"batchcomplete\":\"\",\"continue\":{\"sroffset\":5,\"continue\":\"-||\"},\"query\":{\"searchinfo\":{\"totalhits\":93901},\"search\":[{\"ns\":0,\"title\":\"List of capitals of France\",\"pageid\":169335,\"snippet\":\"This is a chronological list <span class=\\\"searchmatch\\\">of</span> capitals <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span>. The <span class=\\\"searchmatch\\\">capital</span> <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span> has been Paris since its liberation in 1944. Tournai (before 486), current-day\"},{\"ns\":0,\"title\":\"Capital punishment in France\",\"pageid\":2861364,\"snippet\":\"<span class=\\\"searchmatch\\\">Capital</span> punishment in <span class=\\\"searchmatch\\\">France</span> (<span class=\\\"searchmatch\\\">French</span>: peine de mort en <span class=\\\"searchmatch\\\">France</span>) is banned by Article 66-1 <span class=\\\"searchmatch\\\">of</span> the Constitution <span class=\\\"searchmatch\\\">of</span> the <span class=\\\"searchmatch\\\">French</span> Republic, voted as a constitutional\"},{\"ns\":0,\"title\":\"Capital city\",\"pageid\":181337,\"snippet\":\"seat <span class=\\\"searchmatch\\\">of</span> the government. A <span class=\\\"searchmatch\\\">capital</span> is typically a city that physically encompasses the government&#039;s offices and meeting places; the status as <span class=\\\"searchmatch\\\">capital</span> is\"},{\"ns\":0,\"title\":\"Capital\",\"pageid\":5187,\"snippet\":\"Piketty, 2013 <span class=\\\"searchmatch\\\">Capital</span>: The Eruption <span class=\\\"searchmatch\\\">of</span> Delhi, a 2014 book by Rana Dasgupta <span class=\\\"searchmatch\\\">Capital</span> (<span class=\\\"searchmatch\\\">French</span> magazine), a <span class=\\\"searchmatch\\\">French</span>-language magazine <span class=\\\"searchmatch\\\">Capital</span> (German magazine)\"},{\"ns\":0,\"title\":\"Paris\",\"pageid\":22989,\"snippet\":\"Paris (<span class=\\\"searchmatch\\\">French</span> pronunciation: [pa\\u0281i] ) is the <span class=\\\"searchmatch\\\">capital</span> and largest city <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span>. With an estimated population <span class=\\\"searchmatch\\\">of</span> 2,048,472 residents in January 2025 in\"}]}}") # rubocop:disable Layout/LineLength
-      end
+    context "with Anthropic API" do
+      let(:task) { "Tell me some interesting facts from the James Webb Space Telescope's Wikipedia page" }
+      let(:llm_model_key) { "anthropic_claude_4_5_haiku" }
 
-      it "processes multiple iterations until finding an answer" do
-        i = 0
-        stub_raif_agent(agent) do |_messages, model_completion|
-          i += 1
-          if i == 1
-            model_completion.response_tool_calls = [
-              {
-                "name" => "wikipedia_search",
-                "arguments" => { "query" => "capital of France" }
-              }
-            ]
-
-            "I need to search Wikipedia."
-          else
-            model_completion.response_tool_calls = [
-              {
-                "name" => "agent_final_answer",
-                "arguments" => { "final_answer" => "Paris" }
-              }
-            ]
-
-            "Based on the search results, I can now answer."
-          end
-        end
+      it "processes multiple iterations until finding an answer",
+        vcr: { cassette_name: "native_tool_calling_agent/anthropic" } do
+        allow(Raif.config).to receive(:anthropic_api_key).and_return(ENV["ANTHROPIC_API_KEY"])
 
         expect(agent.started_at).to be_nil
         expect(agent.completed_at).to be_nil
@@ -135,70 +236,148 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         expect(agent.started_at).to be_present
         expect(agent.completed_at).to be_present
         expect(agent.failed_at).to be_nil
-        expect(agent.final_answer).to eq("Paris")
+
+        final_answer = "Here are some fascinating facts from the James Webb Space Telescope Wikipedia page:\n\n## Size and Power\n- **JWST is the largest telescope in space** with a 6.5-meter (21-foot) diameter mirror made of 18 hexagonal gold-coated beryllium segments\n- Its mirror is **2.7 times larger than the Hubble Space Telescope**, giving it a collecting area about 6 times greater than Hubble's\n- The telescope weighs about 6,500 kg (14,300 lbs), roughly **half the mass of Hubble**\n\n## Temperature and Protection\n- JWST must be kept **below 50 K (-223°C; -370°F)** to prevent its own infrared radiation from interfering with observations\n- It has a **five-layer sunshield** that's as thin as human hair, with an effective sun protection factor (SPF) of **1,000,000** - compared to sunscreen with SPF 8-50!\n- The sunshield had to be folded **12 times** to fit inside the Ariane 5 rocket\n\n## Location\n- JWST orbits near the **Sun-Earth L2 (Lagrange Point 2)**, approximately **1.5 million kilometers (930,000 miles)** from Earth\n- It's about **4 times farther from Earth than the Moon** (which is ~400,000 km away)\n- It operates in a halo orbit that takes about **6 months** to complete\n\n## Cost and Development\n- The project cost approximately **$10 billion** - it started in 1996 with an estimated budget of just $1 billion\n- The original launch date was planned for **2007**, but faced massive delays and cost overruns\n- **344 single-point failures** were identified - tasks with no alternative means of recovery if unsuccessful\n\n## Scientific Capabilities\n- JWST can detect objects **up to 100 times fainter than Hubble** can\n- It observes wavelengths from **0.6 to 28.5 micrometers** (visible red light through mid-infrared)\n- It can observe objects from **13.1 billion years ago** - viewing the universe as it was shortly after the Big Bang\n\n## Launch and Deployment\n- Launched on **December 25, 2021** on an Ariane 5 rocket from French Guiana\n- The deployment process took about **13 days** with nearly all actions commanded from ground control\n- Reached its destination at L2 on **January 24, 2022**\n- Began full scientific operations on **July 11, 2022**\n\n## Notable Discoveries\n- Detected **unexpectedly large and luminous early galaxies** that formed just 235-280 million years after the Big Bang\n- Identified the **most distant known galaxy** (GN-z14) seen just 290 million years after the Big Bang in May 2024\n- First images showed water vapor in an exoplanet's atmosphere 1,120 light-years away\n\n## International Collaboration\n- Over **258 companies, government agencies, and academic institutions** from 15 countries participated in the project\n- **142 from the United States, 104 from 12 European countries, and 12 from Canada**\n- Named after **James E. Webb**, NASA administrator from 1961-1968 during the Apollo program\n\n" # rubocop:disable Layout/LineLength
+        expect(agent.final_answer).to eq(final_answer)
+
+        jwst_page_content = File.read("spec/fixtures/files/jwst_page_content.md")
 
         expect(agent.conversation_history).to eq([
-          { "role" => "user", "content" => "What is the capital of France?" },
-          { "role" => "assistant", "content" => "I need to search Wikipedia." },
+          { "role" => "user", "content" => "Tell me some interesting facts from the James Webb Space Telescope's Wikipedia page" },
           {
-            "role" => "assistant",
-            "content" => "<action>\n{\n  \"name\": \"wikipedia_search\",\n  \"arguments\": {\n    \"query\": \"capital of France\"\n  }\n}\n</action>"
+            "provider_tool_call_id" => "toolu_abc123",
+            "name" => "wikipedia_search",
+            "arguments" => { "query" => "James Webb Space Telescope" },
+            "type" => "tool_call",
+            "assistant_message" => "I'll search for the James Webb Space Telescope Wikipedia page and find some interesting facts for you."
           },
           {
-            "role" => "assistant",
-            "content" =>
-            "<observation>\n{\n  \"results\": [\n    {\n      \"title\": \"List of capitals of France\",\n      \"snippet\": \"This is a chronological list <span class=\\\"searchmatch\\\">of</span> capitals <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span>. The <span class=\\\"searchmatch\\\">capital</span> <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span> has been Paris since its liberation in 1944. Tournai (before 486), current-day\",\n      \"page_id\": 169335,\n      \"url\": \"https://en.wikipedia.org/wiki/List_of_capitals_of_France\"\n    },\n    {\n      \"title\": \"Capital punishment in France\",\n      \"snippet\": \"<span class=\\\"searchmatch\\\">Capital</span> punishment in <span class=\\\"searchmatch\\\">France</span> (<span class=\\\"searchmatch\\\">French</span>: peine de mort en <span class=\\\"searchmatch\\\">France</span>) is banned by Article 66-1 <span class=\\\"searchmatch\\\">of</span> the Constitution <span class=\\\"searchmatch\\\">of</span> the <span class=\\\"searchmatch\\\">French</span> Republic, voted as a constitutional\",\n      \"page_id\": 2861364,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital_punishment_in_France\"\n    },\n    {\n      \"title\": \"Capital city\",\n      \"snippet\": \"seat <span class=\\\"searchmatch\\\">of</span> the government. A <span class=\\\"searchmatch\\\">capital</span> is typically a city that physically encompasses the government&#039;s offices and meeting places; the status as <span class=\\\"searchmatch\\\">capital</span> is\",\n      \"page_id\": 181337,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital_city\"\n    },\n    {\n      \"title\": \"Capital\",\n      \"snippet\": \"Piketty, 2013 <span class=\\\"searchmatch\\\">Capital</span>: The Eruption <span class=\\\"searchmatch\\\">of</span> Delhi, a 2014 book by Rana Dasgupta <span class=\\\"searchmatch\\\">Capital</span> (<span class=\\\"searchmatch\\\">French</span> magazine), a <span class=\\\"searchmatch\\\">French</span>-language magazine <span class=\\\"searchmatch\\\">Capital</span> (German magazine)\",\n      \"page_id\": 5187,\n      \"url\": \"https://en.wikipedia.org/wiki/Capital\"\n    },\n    {\n      \"title\": \"Paris\",\n      \"snippet\": \"Paris (<span class=\\\"searchmatch\\\">French</span> pronunciation: [paʁi] ) is the <span class=\\\"searchmatch\\\">capital</span> and largest city <span class=\\\"searchmatch\\\">of</span> <span class=\\\"searchmatch\\\">France</span>. With an estimated population <span class=\\\"searchmatch\\\">of</span> 2,048,472 residents in January 2025 in\",\n      \"page_id\": 22989,\n      \"url\": \"https://en.wikipedia.org/wiki/Paris\"\n    }\n  ]\n}\n</observation>" # rubocop:disable Layout/LineLength
+            "type" => "tool_call_result",
+            "provider_tool_call_id" => "toolu_abc123",
+            "result" =>
+            {
+              "results" =>
+                  [
+                    {
+                      "title" => "James Webb Space Telescope",
+                      "snippet" =>
+                                                                             "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\"searchmatch\">telescope</span> in <span class=\"searchmatch\">space</span>, and is equipped",
+                      "page_id" => 434221,
+                      "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope"
+                    },
+                    {
+                      "title" => "Timeline of the James Webb Space Telescope",
+                      "snippet" =>
+                      "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century <span class=\"searchmatch\">space</span> observatory that was launched on 25 December 2021. It is intended to be the",
+                      "page_id" => 52380879,
+                      "url" => "https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope"
+                    },
+                    {
+                      "title" => "James Webb Space Telescope sunshield",
+                      "snippet" =>
+                      "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from",
+                      "page_id" => 52495051,
+                      "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield"
+                    },
+                    {
+                      "title" => "Space telescope",
+                      "snippet" =>
+                      "A <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> (also known as <span class=\"searchmatch\">space</span> observatory) is a <span class=\"searchmatch\">telescope</span> in outer <span class=\"searchmatch\">space</span> used to observe astronomical objects. Suggested by Lyman Spitzer in",
+                      "page_id" => 29006,
+                      "url" => "https://en.wikipedia.org/wiki/Space_telescope"
+                    },
+                    {
+                      "title" => "James E. Webb",
+                      "snippet" =>
+                      "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in",
+                      "page_id" => 525237,
+                      "url" => "https://en.wikipedia.org/wiki/James_E._Webb"
+                    }
+                  ]
+            }
           },
-          { "role" => "assistant", "content" => "Based on the search results, I can now answer." },
-          { "role" => "assistant", "content" => "<answer>\nParis\n</answer>" }
+          {
+            "provider_tool_call_id" => "toolu_abc123",
+            "name" => "fetch_url",
+            "arguments" => { "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope" },
+            "type" => "tool_call",
+            "assistant_message" => "Now let me fetch the full Wikipedia page for the James Webb Space Telescope:"
+          },
+          {
+            "type" => "tool_call_result",
+            "provider_tool_call_id" => "toolu_abc123",
+            "result" =>
+            {
+              "status" => 200,
+              "content" => jwst_page_content
+            },
+          },
+          {
+            "provider_tool_call_id" => "toolu_abc123",
+            "name" => "agent_final_answer",
+            "arguments" =>
+            {
+              "final_answer" =>
+                  "Here are some fascinating facts from the James Webb Space Telescope Wikipedia page:\n\n## Size and Power\n- **JWST is the largest telescope in space** with a 6.5-meter (21-foot) diameter mirror made of 18 hexagonal gold-coated beryllium segments\n- Its mirror is **2.7 times larger than the Hubble Space Telescope**, giving it a collecting area about 6 times greater than Hubble's\n- The telescope weighs about 6,500 kg (14,300 lbs), roughly **half the mass of Hubble**\n\n## Temperature and Protection\n- JWST must be kept **below 50 K (-223°C; -370°F)** to prevent its own infrared radiation from interfering with observations\n- It has a **five-layer sunshield** that's as thin as human hair, with an effective sun protection factor (SPF) of **1,000,000** - compared to sunscreen with SPF 8-50!\n- The sunshield had to be folded **12 times** to fit inside the Ariane 5 rocket\n\n## Location\n- JWST orbits near the **Sun-Earth L2 (Lagrange Point 2)**, approximately **1.5 million kilometers (930,000 miles)** from Earth\n- It's about **4 times farther from Earth than the Moon** (which is ~400,000 km away)\n- It operates in a halo orbit that takes about **6 months** to complete\n\n## Cost and Development\n- The project cost approximately **$10 billion** - it started in 1996 with an estimated budget of just $1 billion\n- The original launch date was planned for **2007**, but faced massive delays and cost overruns\n- **344 single-point failures** were identified - tasks with no alternative means of recovery if unsuccessful\n\n## Scientific Capabilities\n- JWST can detect objects **up to 100 times fainter than Hubble** can\n- It observes wavelengths from **0.6 to 28.5 micrometers** (visible red light through mid-infrared)\n- It can observe objects from **13.1 billion years ago** - viewing the universe as it was shortly after the Big Bang\n\n## Launch and Deployment\n- Launched on **December 25, 2021** on an Ariane 5 rocket from French Guiana\n- The deployment process took about **13 days** with nearly all actions commanded from ground control\n- Reached its destination at L2 on **January 24, 2022**\n- Began full scientific operations on **July 11, 2022**\n\n## Notable Discoveries\n- Detected **unexpectedly large and luminous early galaxies** that formed just 235-280 million years after the Big Bang\n- Identified the **most distant known galaxy** (GN-z14) seen just 290 million years after the Big Bang in May 2024\n- First images showed water vapor in an exoplanet's atmosphere 1,120 light-years away\n\n## International Collaboration\n- Over **258 companies, government agencies, and academic institutions** from 15 countries participated in the project\n- **142 from the United States, 104 from 12 European countries, and 12 from Canada**\n- Named after **James E. Webb**, NASA administrator from 1961-1968 during the Apollo program\n\n"
+            },
+            "type" => "tool_call",
+            "assistant_message" =>
+            "Perfect! I now have the full Wikipedia page content for the James Webb Space Telescope. Let me extract some interesting facts and compile them for you."
+          }
         ])
 
-        expect(agent.raif_model_tool_invocations.length).to eq(2)
+        expect(agent.raif_model_tool_invocations.length).to eq(3)
         mti = agent.raif_model_tool_invocations.oldest_first.first
         expect(mti.tool_name).to eq("wikipedia_search")
         expect(mti.tool_type).to eq("Raif::ModelTools::WikipediaSearch")
-        expect(mti.tool_arguments).to eq({ "query" => "capital of France" })
+        expect(mti.tool_arguments).to eq({ "query" => "James Webb Space Telescope" })
 
         expect(mti.result).to eq({
           "results" => [
             {
-              "url" => "https://en.wikipedia.org/wiki/List_of_capitals_of_France",
-              "title" => "List of capitals of France",
-              "page_id" => 169335,
-              "snippet" => "This is a chronological list <span class=\"searchmatch\">of</span> capitals <span class=\"searchmatch\">of</span> <span class=\"searchmatch\">France</span>. The <span class=\"searchmatch\">capital</span> <span class=\"searchmatch\">of</span> <span class=\"searchmatch\">France</span> has been Paris since its liberation in 1944. Tournai (before 486), current-day" # rubocop:disable Layout/LineLength
+              "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope",
+              "title" => "James Webb Space Telescope",
+              "page_id" => 434221,
+              "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\"searchmatch\">telescope</span> in <span class=\"searchmatch\">space</span>, and is equipped"
             },
             {
-              "url" => "https://en.wikipedia.org/wiki/Capital_punishment_in_France",
-              "title" => "Capital punishment in France",
-              "page_id" => 2861364,
-              "snippet" => "<span class=\"searchmatch\">Capital</span> punishment in <span class=\"searchmatch\">France</span> (<span class=\"searchmatch\">French</span>: peine de mort en <span class=\"searchmatch\">France</span>) is banned by Article 66-1 <span class=\"searchmatch\">of</span> the Constitution <span class=\"searchmatch\">of</span> the <span class=\"searchmatch\">French</span> Republic, voted as a constitutional" # rubocop:disable Layout/LineLength
+              "url" => "https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope",
+              "title" => "Timeline of the James Webb Space Telescope",
+              "page_id" => 52380879,
+              "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century <span class=\"searchmatch\">space</span> observatory that was launched on 25 December 2021. It is intended to be the"
             },
             {
-              "url" => "https://en.wikipedia.org/wiki/Capital_city",
-              "title" => "Capital city",
-              "page_id" => 181337,
-              "snippet" => "seat <span class=\"searchmatch\">of</span> the government. A <span class=\"searchmatch\">capital</span> is typically a city that physically encompasses the government&#039;s offices and meeting places; the status as <span class=\"searchmatch\">capital</span> is" # rubocop:disable Layout/LineLength
+              "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield",
+              "title" => "James Webb Space Telescope sunshield",
+              "page_id" => 52495051,
+              "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from"
             },
             {
-              "url" => "https://en.wikipedia.org/wiki/Capital",
-              "title" => "Capital",
-              "page_id" => 5187,
-              "snippet" => "Piketty, 2013 <span class=\"searchmatch\">Capital</span>: The Eruption <span class=\"searchmatch\">of</span> Delhi, a 2014 book by Rana Dasgupta <span class=\"searchmatch\">Capital</span> (<span class=\"searchmatch\">French</span> magazine), a <span class=\"searchmatch\">French</span>-language magazine <span class=\"searchmatch\">Capital</span> (German magazine)" # rubocop:disable Layout/LineLength
+              "url" => "https://en.wikipedia.org/wiki/Space_telescope",
+              "title" => "Space telescope",
+              "page_id" => 29006,
+              "snippet" => "A <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> (also known as <span class=\"searchmatch\">space</span> observatory) is a <span class=\"searchmatch\">telescope</span> in outer <span class=\"searchmatch\">space</span> used to observe astronomical objects. Suggested by Lyman Spitzer in"
             },
             {
-              "url" => "https://en.wikipedia.org/wiki/Paris",
-              "title" => "Paris",
-              "page_id" => 22989,
-              "snippet" => "Paris (<span class=\"searchmatch\">French</span> pronunciation: [paʁi] ) is the <span class=\"searchmatch\">capital</span> and largest city <span class=\"searchmatch\">of</span> <span class=\"searchmatch\">France</span>. With an estimated population <span class=\"searchmatch\">of</span> 2,048,472 residents in January 2025 in" # rubocop:disable Layout/LineLength
+              "url" => "https://en.wikipedia.org/wiki/James_E._Webb",
+              "title" => "James E. Webb",
+              "page_id" => 525237,
+              "snippet" => "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in"
             }
           ]
         })
 
         mti2 = agent.raif_model_tool_invocations.oldest_first.second
-        expect(mti2.tool_name).to eq("agent_final_answer")
-        expect(mti2.tool_type).to eq("Raif::ModelTools::AgentFinalAnswer")
-        expect(mti2.tool_arguments).to eq({ "final_answer" => "Paris" })
-        expect(mti2.result).to eq({ "final_answer" => "Paris" })
+        expect(mti2.tool_name).to eq("fetch_url")
+        expect(mti2.tool_type).to eq("Raif::ModelTools::FetchUrl")
+        expect(mti2.tool_arguments).to eq({ "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope" })
+        expect(mti2.result).to eq({ "status" => 200, "content" => jwst_page_content })
+
+        mti3 = agent.raif_model_tool_invocations.oldest_first.last
+        expect(mti3.tool_name).to eq("agent_final_answer")
+        expect(mti3.tool_type).to eq("Raif::ModelTools::AgentFinalAnswer")
+        expect(mti3.tool_arguments).to eq({ "final_answer" => final_answer })
+        expect(mti3.result).to eq(final_answer)
       end
     end
 
@@ -218,15 +397,15 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
 
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
-        { "role" => "assistant", "content" => "I'll try to use a non-existent tool." },
         {
-          "role" => "assistant",
-          "content" => "<action>\n{\n  \"name\": \"unavailable_tool\",\n  \"arguments\": {\n    \"query\": \"capital of France\"\n  }\n}\n</action>"
+          "name" => "unavailable_tool",
+          "arguments" => { "query" => "capital of France" },
+          "type" => "tool_call",
+          "assistant_message" => "I'll try to use a non-existent tool."
         },
         {
-          "role" => "assistant",
-          "content" =>
-          "<observation>Error: Tool 'unavailable_tool' not found. Available tools: wikipedia_search, fetch_url, agent_final_answer</observation>"
+          "role" => "user",
+          "content" => "Error: Tool 'unavailable_tool' is not a valid tool. Available tools: wikipedia_search, fetch_url, agent_final_answer"
         }
       ])
     end
@@ -248,15 +427,16 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
 
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
-        { "role" => "assistant", "content" => "I'll try to use Wikipedia search with wrong arguments." },
         {
-          "role" => "assistant",
-          "content" => "<action>\n{\n  \"name\": \"wikipedia_search\",\n  \"arguments\": {\n    \"search_term\": \"jingle bells\"\n  }\n}\n</action>"
+          "name" => "wikipedia_search",
+          "arguments" => { "search_term" => "jingle bells" },
+          "type" => "tool_call",
+          "assistant_message" => "I'll try to use Wikipedia search with wrong arguments."
         },
         {
-          "role" => "assistant",
+          "role" => "user",
           "content" =>
-          "<observation>Error: Invalid tool arguments. Please provide valid arguments for the tool 'wikipedia_search'. Tool arguments schema: {\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"The query to search Wikipedia for\"}},\"required\":[\"query\"]}</observation>" # rubocop:disable Layout/LineLength
+          "Error: Invalid tool arguments for the tool 'wikipedia_search'. Tool arguments schema: {\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"The query to search Wikipedia for\"}},\"required\":[\"query\"]}" # rubocop:disable Layout/LineLength
         }
       ])
     end
@@ -273,11 +453,13 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
 
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
-        { "role" => "assistant", "content" => "Maybe I'll just jabber instead of using a tool" },
         {
           "role" => "assistant",
-          "content" =>
-          "<observation>Error: No tool call found. I need to make a tool call at each step. Available tools: wikipedia_search, fetch_url, agent_final_answer</observation>" # rubocop:disable Layout/LineLength
+          "content" => "Maybe I'll just jabber instead of using a tool"
+        },
+        {
+          "role" => "user",
+          "content" => "Error: Previous message contained no tool call. Make a tool call at each step. Available tools: wikipedia_search, fetch_url, agent_final_answer" # rubocop:disable Layout/LineLength
         }
       ])
     end
