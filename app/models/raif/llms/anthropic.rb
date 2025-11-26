@@ -3,6 +3,7 @@
 class Raif::Llms::Anthropic < Raif::Llm
   include Raif::Concerns::Llms::Anthropic::MessageFormatting
   include Raif::Concerns::Llms::Anthropic::ToolFormatting
+  include Raif::Concerns::Llms::Anthropic::ResponseToolCalls
 
   def perform_model_completion!(model_completion, &block)
     params = build_request_parameters(model_completion)
@@ -89,25 +90,6 @@ private
       JSON.generate(tool_response["input"])
     else
       extract_text_response(resp)
-    end
-  end
-
-  def extract_response_tool_calls(resp)
-    return if resp&.dig("content").nil?
-
-    # Find any tool_use content blocks
-    tool_uses = resp&.dig("content")&.select do |content|
-      content["type"] == "tool_use"
-    end
-
-    return if tool_uses.blank?
-
-    tool_uses.map do |tool_use|
-      {
-        "id" => tool_use["id"],
-        "name" => tool_use["name"],
-        "arguments" => tool_use["input"],
-      }
     end
   end
 

@@ -127,7 +127,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
         }])
 
         expect(model_completion.response_tool_calls).to eq([{
-          "id" => "call_abc123",
+          "provider_tool_call_id" => "call_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com" }
         }])
@@ -246,7 +246,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
         }])
 
         expect(model_completion.response_tool_calls).to eq([{
-          "id" => "call_abc123",
+          "provider_tool_call_id" => "call_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com" }
         }])

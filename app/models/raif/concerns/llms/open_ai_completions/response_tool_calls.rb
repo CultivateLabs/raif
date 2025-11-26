@@ -9,7 +9,7 @@ module Raif::Concerns::Llms::OpenAiCompletions::ResponseToolCalls
 
     tool_calls.map do |tool_call|
       {
-        "id" => tool_call["id"],
+        "provider_tool_call_id" => tool_call["id"],
         "name" => tool_call["function"]["name"],
         "arguments" => JSON.parse(tool_call["function"]["arguments"])
       }

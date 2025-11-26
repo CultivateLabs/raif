@@ -92,7 +92,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
 
           expect(model_completion.raw_response).to eq("{\"joke\": \"Why don't scientists trust atoms?\", \"answer\": \"Because they make up everything.\"}") # rubocop:disable Layout/LineLength
           expect(model_completion.response_tool_calls).to eq([{
-            "id" => "chatcmpl-abc123-9807d1c0536c4e46903bc13b4a820170",
+            "provider_tool_call_id" => "chatcmpl-abc123-9807d1c0536c4e46903bc13b4a820170",
             "name" => "json_response",
             "arguments" => {
               "joke" => "Why don't scientists trust atoms?",
@@ -148,7 +148,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
 
           expect(model_completion.raw_response).to eq("{\"answer\":\"What do you call a fish with no eyes? Fsh.\",\"joke\":\"Why did the scarecrow win an award? Because he was outstanding in his field!\"}") # rubocop:disable Layout/LineLength
           expect(model_completion.response_tool_calls).to eq([{
-            "id" => "fc_abc123-444c-4c46-8e42-838348740c0b",
+            "provider_tool_call_id" => "fc_abc123-444c-4c46-8e42-838348740c0b",
             "name" => "json_response",
             "arguments" => {
               "joke" => "Why did the scarecrow win an award? Because he was outstanding in his field!",
@@ -222,7 +222,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         }])
 
         expect(model_completion.response_tool_calls).to eq([{
-          "id" => "call_abc123",
+          "provider_tool_call_id" => "call_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com" }
         }])
@@ -344,7 +344,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         }])
 
         expect(model_completion.response_tool_calls).to eq([{
-          "id" => "call_abc123",
+          "provider_tool_call_id" => "call_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com/" }
         }])

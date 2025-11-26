@@ -83,7 +83,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect(model_completion.raw_response).to eq(expected_json)
         expect(model_completion.response_tool_calls).to eq([
           {
-            "id" => "toolu_abc123",
+            "provider_tool_call_id" => "toolu_abc123",
             "name" => "json_response",
             "arguments" => {
               "joke" => "Why don't scientists trust atoms?",
@@ -124,12 +124,14 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         })
 
         expect(model_completion.raw_response).to eq(expected_json)
-        expect(model_completion.response_tool_calls).to include(
-          hash_including(
-            "name" => "json_response",
-            "arguments" => hash_including("joke" => "What do you call a fish wearing a crown?")
-          )
-        )
+        expect(model_completion.response_tool_calls).to eq([{
+          "provider_tool_call_id" => "toolu_abc123",
+          "name" => "json_response",
+          "arguments" => {
+            "joke" => "What do you call a fish wearing a crown?",
+            "answer" => "King Neptune!"
+          }
+        }])
       end
     end
 
@@ -199,7 +201,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
 
         expect(model_completion.response_tool_calls).to eq([
           {
-            "id" => "toolu_abc123",
+            "provider_tool_call_id" => "toolu_abc123",
             "name" => "fetch_url",
             "arguments" => { "url" => "https://www.wsj.com" }
           }
@@ -344,7 +346,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::FetchUrl"])
 
         expect(model_completion.response_tool_calls).to eq([{
-          "id" => "toolu_abc123",
+          "provider_tool_call_id" => "toolu_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com" }
         }])

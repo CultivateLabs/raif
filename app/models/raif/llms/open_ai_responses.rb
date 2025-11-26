@@ -3,6 +3,7 @@
 class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
   include Raif::Concerns::Llms::OpenAiResponses::MessageFormatting
   include Raif::Concerns::Llms::OpenAiResponses::ToolFormatting
+  include Raif::Concerns::Llms::OpenAiResponses::ResponseToolCalls
 
 private
 
@@ -25,23 +26,6 @@ private
       prompt_tokens: response_json.dig("usage", "input_tokens"),
       total_tokens: response_json.dig("usage", "total_tokens")
     )
-  end
-
-  def extract_response_tool_calls(resp)
-    return if resp["output"].blank?
-
-    tool_calls = []
-    resp["output"].each do |output_item|
-      next unless output_item["type"] == "function_call"
-
-      tool_calls << {
-        "id" => output_item["call_id"],
-        "name" => output_item["name"],
-        "arguments" => JSON.parse(output_item["arguments"])
-      }
-    end
-
-    tool_calls.any? ? tool_calls : nil
   end
 
   def extract_raw_response(resp)
