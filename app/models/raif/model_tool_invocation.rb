@@ -4,16 +4,17 @@
 #
 # Table name: raif_model_tool_invocations
 #
-#  id             :bigint           not null, primary key
-#  completed_at   :datetime
-#  failed_at      :datetime
-#  result         :jsonb            not null
-#  source_type    :string           not null
-#  tool_arguments :jsonb            not null
-#  tool_type      :string           not null
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  source_id      :bigint           not null
+#  id                    :bigint           not null, primary key
+#  completed_at          :datetime
+#  failed_at             :datetime
+#  result                :jsonb            not null
+#  source_type           :string           not null
+#  tool_arguments        :jsonb            not null
+#  tool_type             :string           not null
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  provider_tool_call_id :string
+#  source_id             :bigint           not null
 #
 # Indexes
 #
