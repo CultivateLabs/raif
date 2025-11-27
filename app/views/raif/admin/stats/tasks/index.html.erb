@@ -7,6 +7,10 @@
 
   <div class="period-filter">
     <%= form_tag raif.admin_stats_tasks_path, method: :get, id: "period_filter_form", class: "d-flex align-items-center" do %>
+      <div class="form-check me-4 text-nowrap">
+        <%= check_box_tag :show_model_breakdown, "1", @show_model_breakdown, class: "form-check-input", id: "show_model_breakdown" %>
+        <%= label_tag :show_model_breakdown, t("raif.admin.stats.tasks.show_model_breakdown"), class: "form-check-label" %>
+      </div>
       <%= select_tag :period,
             options_for_select(
               [
@@ -28,6 +32,9 @@
     <thead class="table-light">
       <tr>
         <th><%= t("raif.admin.common.type") %></th>
+        <% if @show_model_breakdown %>
+          <th><%= t("raif.admin.common.model") %></th>
+        <% end %>
         <th class="text-end"><%= t("raif.admin.common.count") %></th>
         <th class="text-end"><%= t("raif.admin.common.input_token_cost") %></th>
         <th class="text-end"><%= t("raif.admin.common.output_token_cost") %></th>
@@ -38,6 +45,9 @@
       <% @task_stats_by_type.each do |task_stat| %>
         <tr>
           <td><%= task_stat.type %></td>
+          <% if @show_model_breakdown %>
+            <td><%= task_stat.llm_model_key %></td>
+          <% end %>
           <td class="text-end"><%= number_with_delimiter(task_stat.count) %></td>
           <td class="text-end"><%= number_to_currency(task_stat.input_cost, precision: 2) %></td>
           <td class="text-end"><%= number_to_currency(task_stat.output_cost, precision: 2) %></td>
