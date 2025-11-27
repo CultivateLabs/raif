@@ -70,7 +70,7 @@ module Raif::Concerns::Llms::Bedrock::MessageFormatting
 
   def format_tool_call_message(tool_call)
     content_array = []
-    # content_array << format_string_message(tool_call["assistant_message"]) if tool_call["assistant_message"].present?
+    content_array << format_string_message(tool_call["assistant_message"]) if tool_call["assistant_message"].present?
 
     content_array << {
       "tool_use" => {

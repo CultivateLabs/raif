@@ -134,7 +134,6 @@ module Raif
           tool_arguments: tool_arguments,
           source: self
         )
-        # observation = tool_klass.observation_for_invocation(tool_invocation)
 
         if tool_name == "agent_final_answer"
           self.final_answer = tool_invocation.result
