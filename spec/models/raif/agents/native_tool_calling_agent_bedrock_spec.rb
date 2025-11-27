@@ -106,36 +106,31 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
                   [
                     {
                       "title" => "James Webb Space Telescope",
-                      "snippet" =>
-                                                                             "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\"searchmatch\">telescope</span> in <span class=\"searchmatch\">space</span>, and is equipped",
+                      "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\"searchmatch\">telescope</span> in <span class=\"searchmatch\">space</span>, and is equipped", # rubocop:disable Layout/LineLength
                       "page_id" => 434221,
                       "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope"
                     },
                     {
                       "title" => "Timeline of the James Webb Space Telescope",
-                      "snippet" =>
-                      "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century <span class=\"searchmatch\">space</span> observatory that was launched on 25 December 2021. It is intended to be the",
+                      "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century <span class=\"searchmatch\">space</span> observatory that was launched on 25 December 2021. It is intended to be the", # rubocop:disable Layout/LineLength
                       "page_id" => 52380879,
                       "url" => "https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope"
                     },
                     {
                       "title" => "James Webb Space Telescope sunshield",
-                      "snippet" =>
-                      "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from",
+                      "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from", # rubocop:disable Layout/LineLength
                       "page_id" => 52495051,
                       "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield"
                     },
                     {
                       "title" => "Space telescope",
-                      "snippet" =>
-                      "and ultraviolet radiation, <span class=\"searchmatch\">telescopes</span> and observatories such as the Chandra X-ray Observatory, the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span>, the XMM-Newton observatory",
+                      "snippet" => "and ultraviolet radiation, <span class=\"searchmatch\">telescopes</span> and observatories such as the Chandra X-ray Observatory, the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span>, the XMM-Newton observatory", # rubocop:disable Layout/LineLength
                       "page_id" => 29006,
                       "url" => "https://en.wikipedia.org/wiki/Space_telescope"
                     },
                     {
                       "title" => "James E. Webb",
-                      "snippet" =>
-                      "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in",
+                      "snippet" => "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in", # rubocop:disable Layout/LineLength
                       "page_id" => 525237,
                       "url" => "https://en.wikipedia.org/wiki/James_E._Webb"
                     }
@@ -164,12 +159,10 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
             "name" => "agent_final_answer",
             "arguments" =>
             {
-              "final_answer" =>
-                  "Here are some interesting facts from the James Webb Space Telescope's Wikipedia page:\n\n**Design & Size:**\n- It's the largest telescope in space with a 6.5-meter (21 ft) diameter mirror made of 18 hexagonal gold-coated beryllium segments\n- The mirror is about 2.7 times larger than Hubble's, giving it about 6 times more collecting area\n- It was designed to fold into a rocket that's only 4.57 meters wide to fit during launch\n\n**Temperature & Protection:**\n- Must be kept extremely cold at below 50 K (-223°C / -370°F) to avoid infrared interference\n- Has a five-layer sunshield with an SPF of 1,000,000 (compared to sunscreen's 8-50), each layer as thin as a human hair\n- Located about 1.5 million kilometers from Earth at the Sun-Earth L2 point\n\n**Launch & Cost:**\n- Launched on Christmas Day 2021 (December 25, 2021) on an Ariane 5 rocket\n- Took about 30 days to reach its destination and nearly a month to deploy all its parts\n- Cost just under $10 billion - a dramatic increase from the initial $1 billion estimate in 1998\n- Project suffered massive delays and cost overruns over its 25+ year development\n\n**Capabilities:**\n- Can detect objects up to 100 times fainter than Hubble\n- Can observe the early universe back to about 180 million years after the Big Bang\n- Unlike Hubble, it observes in infrared (0.6-28.5 micrometers) rather than visible light\n- Cannot be serviced in space - unlike Hubble's successful repair missions\n\n**Early Discoveries:**\n- First images released July 12, 2022, revealed galaxies from just 235-290 million years after the Big Bang\n- Discovered GN-z14, a galaxy seen just 290 million years after the Big Bang (as of May 2024)\n- Successfully observed exoplanet atmospheres and detected water vapor around distant planets\n\n**Operational Details:**\n- Uses a modified version of JavaScript for operations\n- Has 132 small actuation motors to position and adjust optics with 10-nanometer accuracy\n- Orbits the Sun in a halo orbit around the L2 point, taking about 6 months to complete\n- Designed to operate for 10 years but may last up to 20 years due to fuel efficiency\n\n**International Collaboration:**\n- A joint project by NASA, ESA (European Space Agency), and CSA (Canadian Space Agency)\n- Over 258 companies, government agencies, and academic institutions from 15 countries participated in construction"
+              "final_answer" => "Here are some interesting facts from the James Webb Space Telescope's Wikipedia page:\n\n**Design & Size:**\n- It's the largest telescope in space with a 6.5-meter (21 ft) diameter mirror made of 18 hexagonal gold-coated beryllium segments\n- The mirror is about 2.7 times larger than Hubble's, giving it about 6 times more collecting area\n- It was designed to fold into a rocket that's only 4.57 meters wide to fit during launch\n\n**Temperature & Protection:**\n- Must be kept extremely cold at below 50 K (-223°C / -370°F) to avoid infrared interference\n- Has a five-layer sunshield with an SPF of 1,000,000 (compared to sunscreen's 8-50), each layer as thin as a human hair\n- Located about 1.5 million kilometers from Earth at the Sun-Earth L2 point\n\n**Launch & Cost:**\n- Launched on Christmas Day 2021 (December 25, 2021) on an Ariane 5 rocket\n- Took about 30 days to reach its destination and nearly a month to deploy all its parts\n- Cost just under $10 billion - a dramatic increase from the initial $1 billion estimate in 1998\n- Project suffered massive delays and cost overruns over its 25+ year development\n\n**Capabilities:**\n- Can detect objects up to 100 times fainter than Hubble\n- Can observe the early universe back to about 180 million years after the Big Bang\n- Unlike Hubble, it observes in infrared (0.6-28.5 micrometers) rather than visible light\n- Cannot be serviced in space - unlike Hubble's successful repair missions\n\n**Early Discoveries:**\n- First images released July 12, 2022, revealed galaxies from just 235-290 million years after the Big Bang\n- Discovered GN-z14, a galaxy seen just 290 million years after the Big Bang (as of May 2024)\n- Successfully observed exoplanet atmospheres and detected water vapor around distant planets\n\n**Operational Details:**\n- Uses a modified version of JavaScript for operations\n- Has 132 small actuation motors to position and adjust optics with 10-nanometer accuracy\n- Orbits the Sun in a halo orbit around the L2 point, taking about 6 months to complete\n- Designed to operate for 10 years but may last up to 20 years due to fuel efficiency\n\n**International Collaboration:**\n- A joint project by NASA, ESA (European Space Agency), and CSA (Canadian Space Agency)\n- Over 258 companies, government agencies, and academic institutions from 15 countries participated in construction" # rubocop:disable Layout/LineLength
             },
             "type" => "tool_call",
-            "assistant_message" =>
-            "Now I have comprehensive information from the Wikipedia page about the James Webb Space Telescope. Let me compile some interesting facts to share with the user."
+            "assistant_message" => "Now I have comprehensive information from the Wikipedia page about the James Webb Space Telescope. Let me compile some interesting facts to share with the user." # rubocop:disable Layout/LineLength
           }
         ])
 
@@ -185,36 +178,31 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
               "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope",
               "title" => "James Webb Space Telescope",
               "page_id" => 434221,
-              "snippet" =>
-                       "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\"searchmatch\">telescope</span> in <span class=\"searchmatch\">space</span>, and is equipped"
+              "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\"searchmatch\">telescope</span> in <span class=\"searchmatch\">space</span>, and is equipped" # rubocop:disable Layout/LineLength
             },
             {
               "url" => "https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope",
               "title" => "Timeline of the James Webb Space Telescope",
               "page_id" => 52380879,
-              "snippet" =>
-              "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century <span class=\"searchmatch\">space</span> observatory that was launched on 25 December 2021. It is intended to be the"
+              "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century <span class=\"searchmatch\">space</span> observatory that was launched on 25 December 2021. It is intended to be the" # rubocop:disable Layout/LineLength
             },
             {
               "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield",
               "title" => "James Webb Space Telescope sunshield",
               "page_id" => 52495051,
-              "snippet" =>
-              "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from"
+              "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from" # rubocop:disable Layout/LineLength
             },
             {
               "url" => "https://en.wikipedia.org/wiki/Space_telescope",
               "title" => "Space telescope",
               "page_id" => 29006,
-              "snippet" =>
-              "and ultraviolet radiation, <span class=\"searchmatch\">telescopes</span> and observatories such as the Chandra X-ray Observatory, the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span>, the XMM-Newton observatory"
+              "snippet" => "and ultraviolet radiation, <span class=\"searchmatch\">telescopes</span> and observatories such as the Chandra X-ray Observatory, the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span>, the XMM-Newton observatory" # rubocop:disable Layout/LineLength
             },
             {
               "url" => "https://en.wikipedia.org/wiki/James_E._Webb",
               "title" => "James E. Webb",
               "page_id" => 525237,
-              "snippet" =>
-              "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in"
+              "snippet" => "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in" # rubocop:disable Layout/LineLength
             }
           ]
         })
