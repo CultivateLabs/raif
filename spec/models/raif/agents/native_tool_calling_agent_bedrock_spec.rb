@@ -83,13 +83,10 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         expect(agent.completed_at).to be_present
         expect(agent.failed_at).to be_nil
 
-        final_answer = "Here are some fascinating facts from the James Webb Space Telescope's Wikipedia page:\n\n**Size & Specifications:**\n- The JWST is the largest telescope in space, with a mirror diameter of 6.5 meters (21 feet)\n- Its primary mirror is made up of 18 hexagonal segments coated with gold-plated beryllium\n- It weighs about 6,500 kg (14,300 lbs) - roughly half the mass of the Hubble Space Telescope\n- Despite having a mirror 2.7 times larger than Hubble's, it observes in the infrared spectrum with longer wavelengths, so it produces images of comparable resolution\n\n**Temperature & Sunshield:**\n- The telescope must be kept below 50 K (−223 °C) to prevent the telescope's own infrared radiation from overwhelming its instruments\n- Its 5-layer sunshield has an effective SPF of 1,000,000 - compared to suntan lotion with SPF 8-50!\n- The sunshield was designed to fold 12 times to fit inside the rocket's cargo bay\n\n**Location:**\n- Webb orbits near the Sun-Earth L2 (Lagrange point 2), approximately 1.5 million kilometers from Earth\n- This is about 4 times farther than the Moon's orbit\n- It operates in a halo orbit around L2, varying between 250,000 to 832,000 km from the point\n\n**Cost & Development:**\n- The project had enormous cost overruns and delays, with a final cost of about $10 billion\n- Originally planned for 2007 with a $1 billion budget, the launch finally occurred December 25, 2021\n- In 2011, Congress nearly cancelled the project but ultimately supported its completion\n\n**Launch & Deployment:**\n- Launched on December 25, 2021 on an Ariane 5 rocket from French Guiana\n- The 344 \"single point failures\" meant 344 tasks had to succeed flawlessly for the telescope to work\n- Deployment took about 13 days, with the sunshield, mirrors, and other components unfolding after launch\n\n**Scientific Capabilities:**\n- It observes wavelengths from 0.6 to 28.5 micrometers (visible red light through mid-infrared)\n- Can detect objects 100 times fainter than Hubble can\n- Can observe galaxies from z≈20 (about 180 million years after the Big Bang)\n- Carries four main scientific instruments: NIRCam, NIRSpec, MIRI, and FGS/NIRISS\n\n**First Results:**\n- Full science operations began July 11, 2022\n- In May 2024, JWST identified the most distant known galaxy, seen just 290 million years after the Big Bang (redshift 14.32)\n- First full-color images revealed remarkably early and luminous galaxies, challenging current models of galaxy formation\n\n**International Collaboration:**\n- A joint project of NASA, ESA (European Space Agency), and CSA (Canadian Space Agency)\n- Over 15 countries and 258 companies, government agencies, and academic institutions participated in its construction\n\nThe telescope is truly a remarkable feat of engineering and international cooperation!" # rubocop:disable Layout/LineLength
+        final_answer = "Here are some fascinating facts from the James Webb Space Telescope's Wikipedia page:\n\n## Key Specifications\n- **Largest space telescope**: JWST is the largest telescope in space, with a 6.5-meter (21-foot) gold-coated beryllium mirror composed of 18 hexagonal segments\n- **Mirror size comparison**: Although Webb's mirror is 2.7 times larger than Hubble's, it only produces comparable resolution images because it observes in infrared (longer wavelengths)\n- **Temperature**: Must be kept below 50 K (−223 °C; −370 °F) so the telescope's own infrared radiation doesn't overwhelm observations\n\n## The Sunshield\n- **SPF rating**: The sunshield has an effective sun protection factor of 1,000,000 - compared to suntan lotion with SPF 8-50!\n- **Incredibly thin**: Made of five layers, each about as thin as a human hair\n- **Massive when deployed**: Unfolds to 14.162 m × 21.197 m (46.46 ft × 69.54 ft)\n- **Folded 12 times** to fit inside the Ariane 5 rocket's cargo bay\n\n## Location\n- Orbits at the Sun-Earth L2 point, approximately 1.5 million kilometers (930,000 miles) from Earth\n- This is about 4 times farther than the Moon's orbit\n- It maintains a halo orbit to stay relatively stable in relation to the Sun and Earth\n\n## Cost and Development\n- **Massive cost overruns**: Originally budgeted at $1 billion in 1998, the final cost reached just under $10 billion\n- **Development time**: Began in 1996 with numerous delays; launched December 25, 2021\n- **International effort**: 15 countries participated; 258 companies, government agencies, and academic institutions were involved\n\n## Scientific Capabilities\n- Can detect objects up to **100 times fainter** than Hubble can\n- Observes in wavelengths from 0.6–28.5 micrometers (visible red light to mid-infrared)\n- Can see back to z≈20 (about 180 million years after the Big Bang)\n- **132 small actuation motors** position and adjust the optics with 10 nanometer accuracy\n\n## Observations and Achievements\n- **First images released**: July 12, 2022 - just 6 months after launch\n- **Multiple mirror segment strikes**: Has experienced micrometeoroid strikes, averaging once or twice per month, with one significant strike in May 2022\n- **Early galaxies discovered**: Observed galaxies dating to 235-280 million years after the Big Bang - much earlier than previously known\n\n## Naming\n- Named after **James E. Webb**, NASA administrator from 1961-1968 during the Apollo program\n- Originally called \"Next Generation Space Telescope\" before 2002\n\n## Notable Features\n- **No servicing**: Unlike Hubble, Webb cannot be serviced in space - it's too far away\n- **Fuel efficiency**: Originally designed for 10 years but may last 20 years due to fuel savings from precise Ariane 5 launch\n- **Mirror complexity**: Uses a technique called \"dispersed fringe sensing\" to align the 18 mirror segments to within 50 nanometers\n\nThese facts showcase why JWST is considered one of humanity's greatest technological achievements!" # rubocop:disable Layout/LineLength
         expect(agent.final_answer).to eq(final_answer)
 
         jwst_page_content = File.read("spec/fixtures/files/jwst_page_content.md")
-
-        expect(agent.conversation_history[4]["result"]["content"]).to eq(jwst_page_content),
-          find_string_diff(agent.conversation_history[4]["result"]["content"], jwst_page_content)
 
         expect(agent.conversation_history).to eq([
           { "role" => "user", "content" => "Tell me some interesting facts from the James Webb Space Telescope's Wikipedia page" },
@@ -98,46 +95,45 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
             "name" => "wikipedia_search",
             "arguments" => { "query" => "James Webb Space Telescope" },
             "type" => "tool_call",
-            "assistant_message" => "I'll search for information about the James Webb Space Telescope on Wikipedia."
+            "assistant_message" => "I'll fetch the James Webb Space Telescope's Wikipedia page and share some interesting facts with you."
           },
           {
             "type" => "tool_call_result",
             "provider_tool_call_id" => "tooluse_abc123",
             "result" =>
             {
-              "results" =>
-                  [
-                    {
-                      "title" => "James Webb Space Telescope",
-                      "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\"searchmatch\">telescope</span> in <span class=\"searchmatch\">space</span>, and is equipped", # rubocop:disable Layout/LineLength
-                      "page_id" => 434221,
-                      "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope"
-                    },
-                    {
-                      "title" => "Timeline of the James Webb Space Telescope",
-                      "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century <span class=\"searchmatch\">space</span> observatory that was launched on 25 December 2021. It is intended to be the", # rubocop:disable Layout/LineLength
-                      "page_id" => 52380879,
-                      "url" => "https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope"
-                    },
-                    {
-                      "title" => "Space telescope",
-                      "snippet" => "and ultraviolet radiation, <span class=\"searchmatch\">telescopes</span> and observatories such as the Chandra X-ray Observatory, the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span>, the XMM-Newton observatory", # rubocop:disable Layout/LineLength
-                      "page_id" => 29006,
-                      "url" => "https://en.wikipedia.org/wiki/Space_telescope"
-                    },
-                    {
-                      "title" => "James Webb Space Telescope sunshield",
-                      "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from", # rubocop:disable Layout/LineLength
-                      "page_id" => 52495051,
-                      "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield"
-                    },
-                    {
-                      "title" => "James E. Webb",
-                      "snippet" => "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in", # rubocop:disable Layout/LineLength
-                      "page_id" => 525237,
-                      "url" => "https://en.wikipedia.org/wiki/James_E._Webb"
-                    }
-                  ]
+              "results" => [
+                {
+                  "title" => "James Webb Space Telescope",
+                  "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\"searchmatch\">telescope</span> in <span class=\"searchmatch\">space</span>, and is equipped", # rubocop:disable Layout/LineLength
+                  "page_id" => 434221,
+                  "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope"
+                },
+                {
+                  "title" => "Timeline of the James Webb Space Telescope",
+                  "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century <span class=\"searchmatch\">space</span> observatory that was launched on 25 December 2021. It is intended to be the", # rubocop:disable Layout/LineLength
+                  "page_id" => 52380879,
+                  "url" => "https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope"
+                },
+                {
+                  "title" => "James Webb Space Telescope sunshield",
+                  "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from", # rubocop:disable Layout/LineLength
+                  "page_id" => 52495051,
+                  "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield"
+                },
+                {
+                  "title" => "James E. Webb",
+                  "snippet" => "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in", # rubocop:disable Layout/LineLength
+                  "page_id" => 525237,
+                  "url" => "https://en.wikipedia.org/wiki/James_E._Webb"
+                },
+                {
+                  "title" => "Space telescope",
+                  "snippet" => "and ultraviolet radiation, <span class=\"searchmatch\">telescopes</span> and observatories such as the Chandra X-ray Observatory, the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span>, the XMM-Newton observatory", # rubocop:disable Layout/LineLength
+                  "page_id" => 29006,
+                  "url" => "https://en.wikipedia.org/wiki/Space_telescope"
+                }
+              ]
             }
           },
           {
@@ -145,13 +141,12 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
             "name" => "fetch_url",
             "arguments" => { "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope" },
             "type" => "tool_call",
-            "assistant_message" => "Now let me fetch the main James Webb Space Telescope Wikipedia page to get more detailed information:"
+            "assistant_message" => "Now let me fetch the full James Webb Space Telescope Wikipedia page:"
           },
           {
             "type" => "tool_call_result",
             "provider_tool_call_id" => "tooluse_abc123",
-            "result" =>
-            {
+            "result" => {
               "status" => 200,
               "content" => jwst_page_content
             }
@@ -159,11 +154,9 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           {
             "provider_tool_call_id" => "tooluse_abc123",
             "name" => "agent_final_answer",
-            "arguments" => {
-              "final_answer" => "Here are some fascinating facts from the James Webb Space Telescope's Wikipedia page:\n\n**Size & Specifications:**\n- The JWST is the largest telescope in space, with a mirror diameter of 6.5 meters (21 feet)\n- Its primary mirror is made up of 18 hexagonal segments coated with gold-plated beryllium\n- It weighs about 6,500 kg (14,300 lbs) - roughly half the mass of the Hubble Space Telescope\n- Despite having a mirror 2.7 times larger than Hubble's, it observes in the infrared spectrum with longer wavelengths, so it produces images of comparable resolution\n\n**Temperature & Sunshield:**\n- The telescope must be kept below 50 K (−223 °C) to prevent the telescope's own infrared radiation from overwhelming its instruments\n- Its 5-layer sunshield has an effective SPF of 1,000,000 - compared to suntan lotion with SPF 8-50!\n- The sunshield was designed to fold 12 times to fit inside the rocket's cargo bay\n\n**Location:**\n- Webb orbits near the Sun-Earth L2 (Lagrange point 2), approximately 1.5 million kilometers from Earth\n- This is about 4 times farther than the Moon's orbit\n- It operates in a halo orbit around L2, varying between 250,000 to 832,000 km from the point\n\n**Cost & Development:**\n- The project had enormous cost overruns and delays, with a final cost of about $10 billion\n- Originally planned for 2007 with a $1 billion budget, the launch finally occurred December 25, 2021\n- In 2011, Congress nearly cancelled the project but ultimately supported its completion\n\n**Launch & Deployment:**\n- Launched on December 25, 2021 on an Ariane 5 rocket from French Guiana\n- The 344 \"single point failures\" meant 344 tasks had to succeed flawlessly for the telescope to work\n- Deployment took about 13 days, with the sunshield, mirrors, and other components unfolding after launch\n\n**Scientific Capabilities:**\n- It observes wavelengths from 0.6 to 28.5 micrometers (visible red light through mid-infrared)\n- Can detect objects 100 times fainter than Hubble can\n- Can observe galaxies from z≈20 (about 180 million years after the Big Bang)\n- Carries four main scientific instruments: NIRCam, NIRSpec, MIRI, and FGS/NIRISS\n\n**First Results:**\n- Full science operations began July 11, 2022\n- In May 2024, JWST identified the most distant known galaxy, seen just 290 million years after the Big Bang (redshift 14.32)\n- First full-color images revealed remarkably early and luminous galaxies, challenging current models of galaxy formation\n\n**International Collaboration:**\n- A joint project of NASA, ESA (European Space Agency), and CSA (Canadian Space Agency)\n- Over 15 countries and 258 companies, government agencies, and academic institutions participated in its construction\n\nThe telescope is truly a remarkable feat of engineering and international cooperation!" # rubocop:disable Layout/LineLength
-            },
+            "arguments" => { "final_answer" => final_answer },
             "type" => "tool_call",
-            "assistant_message" => "Perfect! I've got the full Wikipedia page on the James Webb Space Telescope. Let me compile some interesting facts from this comprehensive source." # rubocop:disable Layout/LineLength
+            "assistant_message" => "Perfect! I've retrieved the full Wikipedia page for the James Webb Space Telescope. Now let me compile some interesting facts from this comprehensive article." # rubocop:disable Layout/LineLength
           }
         ])
 
@@ -194,16 +187,16 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
               "snippet" => "The <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span> and instrumentation from" # rubocop:disable Layout/LineLength
             },
             {
-              "url" => "https://en.wikipedia.org/wiki/Space_telescope",
-              "title" => "Space telescope",
-              "page_id" => 29006,
-              "snippet" => "and ultraviolet radiation, <span class=\"searchmatch\">telescopes</span> and observatories such as the Chandra X-ray Observatory, the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span>, the XMM-Newton observatory" # rubocop:disable Layout/LineLength
-            },
-            {
               "url" => "https://en.wikipedia.org/wiki/James_E._Webb",
               "title" => "James E. Webb",
               "page_id" => 525237,
               "snippet" => "studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>. <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in" # rubocop:disable Layout/LineLength
+            },
+            {
+              "url" => "https://en.wikipedia.org/wiki/Space_telescope",
+              "title" => "Space telescope",
+              "page_id" => 29006,
+              "snippet" => "and ultraviolet radiation, <span class=\"searchmatch\">telescopes</span> and observatories such as the Chandra X-ray Observatory, the <span class=\"searchmatch\">James</span> <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span> <span class=\"searchmatch\">Telescope</span>, the XMM-Newton observatory" # rubocop:disable Layout/LineLength
             }
           ]
         })

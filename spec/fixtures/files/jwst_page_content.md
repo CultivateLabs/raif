@@ -16,7 +16,7 @@ Rendering of the fully deployed James Webb Space Telescope
 | --- |
 | Mission duration | 
 
-- 3&nbsp;years, 11&nbsp;months, 1&nbsp;day (elapsed)
+- 3&nbsp;years, 11&nbsp;months, 3&nbsp;days (elapsed)
 - 5+1⁄2 years (primary mission)
 - 10 years (planned)
 - 20 years (expected life)
@@ -1478,7 +1478,9 @@ Astronomy& cosmology
 - (2027)
 - (2027)
 - (2028)
+- (2028)
 - (2029)
+- (2030)
 - (2031)
 
  |
@@ -1512,6 +1514,8 @@ Astronomy& cosmology
   - (2022-present)
   - (2028)
   - (2030)
+
+- (2028)
 
  |
 | Telecommunicationsand navigation | 
@@ -1584,7 +1588,7 @@ Technologydemonstrationand education
 - (2015)
 - (2025–present)
 - (2026)
-- (2027)
+- (2028)
 
  |
 | Proposed |
