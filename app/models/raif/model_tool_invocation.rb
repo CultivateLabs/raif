@@ -42,14 +42,24 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
     @tool ||= tool_type.constantize
   end
 
-  def as_llm_message
-    "Invoking tool: #{tool_name} with arguments: #{tool_arguments.to_json}"
+  # Returns tool call in the format expected by LLM message formatting
+  def as_tool_call_message(assistant_message: nil)
+    {
+      "type" => "tool_call",
+      "provider_tool_call_id" => provider_tool_call_id,
+      "name" => tool_name,
+      "arguments" => tool_arguments,
+      "assistant_message" => assistant_message
+    }.compact
   end
 
-  def result_llm_message
-    return unless tool.respond_to?(:observation_for_invocation)
-
-    tool.observation_for_invocation(self)
+  # Returns tool result in the format expected by LLM message formatting
+  def as_tool_call_result_message
+    {
+      "type" => "tool_call_result",
+      "provider_tool_call_id" => provider_tool_call_id,
+      "result" => result
+    }
   end
 
   def to_partial_path
