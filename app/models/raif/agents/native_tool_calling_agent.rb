@@ -89,11 +89,15 @@ module Raif
 
         # The model made no tool call in this completion. Tell it to make a tool call.
         if model_completion.response_tool_calls.blank?
-          add_conversation_history_entry({ role: "assistant", content: assistant_response_message }) if assistant_response_message.present?
-          add_conversation_history_entry({
-            role: "user",
+          if assistant_response_message.present?
+            assistant_message = Raif::Messages::AssistantMessage.new(content: assistant_response_message)
+            add_conversation_history_entry(assistant_message.to_h)
+          end
+
+          error_message = Raif::Messages::UserMessage.new(
             content: "Error: Previous message contained no tool call. Make a tool call at each step. Available tools: #{available_model_tools_map.keys.join(", ")}" # rubocop:disable Layout/LineLength
-          })
+          )
+          add_conversation_history_entry(error_message.to_h)
 
           return
         end
@@ -101,10 +105,13 @@ module Raif
         tool_call = model_completion.response_tool_calls.first
 
         # Add the tool call to history
-        add_conversation_history_entry(tool_call.merge({
-          "type" => "tool_call",
-          "assistant_message" => assistant_response_message
-        }))
+        tool_call_message = Raif::Messages::ToolCall.new(
+          provider_tool_call_id: tool_call["provider_tool_call_id"],
+          name: tool_call["name"],
+          arguments: tool_call["arguments"],
+          assistant_message: assistant_response_message
+        )
+        add_conversation_history_entry(tool_call_message.to_h)
 
         tool_name = tool_call["name"]
         tool_arguments = tool_call["arguments"]
@@ -112,19 +119,19 @@ module Raif
 
         # The model tried to use a tool that doesn't exist
         if tool_klass.blank?
-          add_conversation_history_entry({
-            role: "user",
-            content: "Error: Tool '#{tool_name}' is not a valid tool. Available tools: #{available_model_tools_map.keys.join(", ")}"
-          })
+          error_content = "Error: Tool '#{tool_name}' is not a valid tool. " \
+            "Available tools: #{available_model_tools_map.keys.join(", ")}"
+          error_message = Raif::Messages::UserMessage.new(content: error_content)
+          add_conversation_history_entry(error_message.to_h)
           return
         end
 
         # Make sure the tool arguments match the tool's schema
         unless JSON::Validator.validate(tool_klass.tool_arguments_schema, tool_arguments)
-          add_conversation_history_entry({
-            role: "user",
-            content: "Error: Invalid tool arguments for the tool '#{tool_name}'. Tool arguments schema: #{tool_klass.tool_arguments_schema.to_json}"
-          })
+          error_content = "Error: Invalid tool arguments for the tool '#{tool_name}'. " \
+            "Tool arguments schema: #{tool_klass.tool_arguments_schema.to_json}"
+          error_message = Raif::Messages::UserMessage.new(content: error_content)
+          add_conversation_history_entry(error_message.to_h)
           return
         end
 
@@ -138,11 +145,11 @@ module Raif
         if tool_name == "agent_final_answer"
           self.final_answer = tool_invocation.result
         else
-          add_conversation_history_entry({
-            "type" => "tool_call_result",
-            "provider_tool_call_id" => tool_call["provider_tool_call_id"],
-            "result" => tool_invocation.result
-          })
+          tool_call_result_message = Raif::Messages::ToolCallResult.new(
+            provider_tool_call_id: tool_call["provider_tool_call_id"],
+            result: tool_invocation.result
+          )
+          add_conversation_history_entry(tool_call_result_message.to_h)
         end
       end
 

@@ -106,7 +106,7 @@ module Raif
         Task: #{task}
       DEBUG
 
-      add_conversation_history_entry({ role: "user", content: task })
+      add_conversation_history_entry(Raif::Messages::UserMessage.new(content: task).to_h)
 
       while iteration_count < max_iterations
         update_columns(iteration_count: iteration_count + 1)

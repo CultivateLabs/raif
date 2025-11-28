@@ -80,8 +80,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
             "provider_tool_call_id" => "call_abc123",
             "name" => "wikipedia_search",
             "arguments" => { "query" => "James Webb Space Telescope" },
-            "type" => "tool_call",
-            "assistant_message" => nil
+            "type" => "tool_call"
           },
           {
             "type" => "tool_call_result",
@@ -130,8 +129,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
             "provider_tool_call_id" => "call_abc123",
             "name" => "fetch_url",
             "arguments" => { "url" => "https://en.wikipedia.org/wiki/James_Webb_Space_Telescope" },
-            "type" => "tool_call",
-            "assistant_message" => nil
+            "type" => "tool_call"
           },
           {
             "type" => "tool_call_result",
@@ -147,8 +145,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
             "arguments" => {
               "final_answer" => final_answer
             },
-            "type" => "tool_call",
-            "assistant_message" => nil
+            "type" => "tool_call"
           }
         ])
 

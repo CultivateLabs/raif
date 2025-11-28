@@ -140,7 +140,10 @@ class Raif::Conversation < Raif::ApplicationRecord
     included_entries = included_entries.last(llm_messages_max_length) if llm_messages_max_length.present?
 
     included_entries.each do |entry|
-      messages << { "role" => "user", "content" => entry.user_message } unless entry.user_message.blank?
+      unless entry.user_message.blank?
+        messages << Raif::Messages::UserMessage.new(content: entry.user_message).to_h
+      end
+
       next unless entry.completed?
 
       tool_invocations = entry.raif_model_tool_invocations.to_a
@@ -158,7 +161,7 @@ class Raif::Conversation < Raif::ApplicationRecord
         end
       elsif entry.model_response_message.present?
         # No tool calls, just a regular assistant response
-        messages << { "role" => "assistant", "content" => entry.model_response_message }
+        messages << Raif::Messages::AssistantMessage.new(content: entry.model_response_message).to_h
       end
     end
 

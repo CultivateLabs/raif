@@ -43,23 +43,24 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
   end
 
   # Returns tool call in the format expected by LLM message formatting
+  # @param assistant_message [String, nil] Optional assistant message accompanying the tool call
+  # @return [Hash] Hash representation for JSONB storage and LLM APIs
   def as_tool_call_message(assistant_message: nil)
-    {
-      "type" => "tool_call",
-      "provider_tool_call_id" => provider_tool_call_id,
-      "name" => tool_name,
-      "arguments" => tool_arguments,
-      "assistant_message" => assistant_message
-    }.compact
+    Raif::Messages::ToolCall.new(
+      provider_tool_call_id: provider_tool_call_id,
+      name: tool_name,
+      arguments: tool_arguments,
+      assistant_message: assistant_message
+    ).to_h
   end
 
   # Returns tool result in the format expected by LLM message formatting
+  # @return [Hash] Hash representation for JSONB storage and LLM APIs
   def as_tool_call_result_message
-    {
-      "type" => "tool_call_result",
-      "provider_tool_call_id" => provider_tool_call_id,
-      "result" => result
-    }
+    Raif::Messages::ToolCallResult.new(
+      provider_tool_call_id: provider_tool_call_id,
+      result: result
+    ).to_h
   end
 
   def to_partial_path
