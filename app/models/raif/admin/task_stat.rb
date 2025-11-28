@@ -2,6 +2,6 @@
 
 module Raif
   module Admin
-    TaskStat = Data.define(:type, :count, :input_cost, :output_cost, :total_cost)
+    TaskStat = Data.define(:type, :llm_model_key, :count, :input_cost, :output_cost, :total_cost)
   end
 end

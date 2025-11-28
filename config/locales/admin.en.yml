@@ -130,6 +130,7 @@ en:
           title: Model Tool Invocation Stats
         tasks:
           back_to_stats: Back to Stats
+          show_model_breakdown: Show model breakdown
           title: Task Stats
       tasks:
         show:
