@@ -128,7 +128,7 @@ module Raif
           "type" => "tool_call_result",
           "provider_tool_call_id" => provider_tool_call_id,
           "result" => result
-        }
+        }.compact
       end
 
       # Deserialize from a hash
