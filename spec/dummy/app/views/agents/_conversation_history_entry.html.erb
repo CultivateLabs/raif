@@ -1,3 +1,9 @@
 <div>
-  <%= conversation_history_entry["role"] %>: <%= conversation_history_entry["content"] %>
+  <% if conversation_history_entry["type"] == "tool_call" %>
+    <%= t("dummy.tool_call") %>: <%= conversation_history_entry["name"] %>(<%= conversation_history_entry["arguments"].to_json %>)
+  <% elsif conversation_history_entry["type"] == "tool_call_result" %>
+    <%= t("dummy.tool_result") %>: <%= conversation_history_entry["result"].is_a?(String) ? conversation_history_entry["result"].truncate(200) : conversation_history_entry["result"].to_json.truncate(200) %>
+  <% else %>
+    <%= conversation_history_entry["role"] %>: <%= conversation_history_entry["content"] %>
+  <% end %>
 </div>

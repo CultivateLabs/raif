@@ -28,4 +28,6 @@
 #       enabled: "ON"
 
 en:
-  hello: "Hello world"
+  dummy:
+    tool_call: "tool_call"
+    tool_result: "tool_result"

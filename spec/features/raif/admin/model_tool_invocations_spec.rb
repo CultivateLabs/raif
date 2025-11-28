@@ -7,7 +7,7 @@ RSpec.describe "Admin::ModelToolInvocations", type: :feature do
   let(:task) { FB.create(:raif_test_task, creator: creator) }
   let(:conversation) { FB.create(:raif_test_conversation, creator: creator) }
   let(:conversation_entry) { FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator) }
-  let(:agent) { FB.create(:raif_re_act_agent, creator: creator) }
+  let(:agent) { FB.create(:raif_native_tool_calling_agent, creator: creator) }
 
   describe "index page" do
     let!(:pending_tool_invocation) do

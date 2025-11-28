@@ -5,15 +5,6 @@ require "rails_helper"
 RSpec.describe "Agent features", type: :feature do
   let(:creator) { FB.create(:raif_test_user) }
 
-  let(:model_response_sequence) do
-    [
-      "<thought>I need to find the birthdate of Jimmy Buffett. The best way to do this is by searching for his information on Wikipedia.</thought>\n<action>{\"tool\": \"wikipedia_search\", \"arguments\": {\"query\": \"Jimmy Buffett\"}}</action>", # rubocop:disable Layout/LineLength
-      "<thought>The first search result is directly related to Jimmy Buffett and likely contains his birthdate. I'll fetch the content from that Wikipedia page to find the information.</thought>", # rubocop:disable Layout/LineLength
-      "<action>{\"tool\": \"fetch_url\", \"arguments\": {\"url\": \"https://en.wikipedia.org/wiki/Jimmy_Buffett\"}}</action>",
-      "<thought>The fetched Wikipedia page for Jimmy Buffett confirms his birthdate as December 25, 1946.</thought>\n<answer>Jimmy Buffett was born on December 25, 1946.</answer>" # rubocop:disable Layout/LineLength
-    ]
-  end
-
   let(:wikipedia_page_content){ File.read("#{Raif::Engine.root}/spec/fixtures/files/wikipedia_page_content.html") }
 
   before do
@@ -27,10 +18,36 @@ RSpec.describe "Agent features", type: :feature do
   end
 
   it "runs an agent with tools", js: true do
-    i = 0
-    stub_raif_agent(Raif::Agent) do |_messages|
-      i += 1
-      model_response_sequence[i - 1]
+    iteration = 0
+    stub_raif_agent(Raif::Agent) do |_messages, model_completion|
+      iteration += 1
+
+      case iteration
+      when 1
+        # First iteration: search Wikipedia for Jimmy Buffett
+        model_completion.response_tool_calls = [{
+          "provider_tool_call_id" => "call_1",
+          "name" => "wikipedia_search",
+          "arguments" => { "query" => "Jimmy Buffett" }
+        }]
+        "I need to find the birthdate of Jimmy Buffett. Let me search Wikipedia."
+      when 2
+        # Second iteration: fetch the Wikipedia page
+        model_completion.response_tool_calls = [{
+          "provider_tool_call_id" => "call_2",
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://en.wikipedia.org/wiki/Jimmy_Buffett" }
+        }]
+        "The first search result is for Jimmy Buffett. Let me fetch the Wikipedia page."
+      when 3
+        # Third iteration: provide the final answer
+        model_completion.response_tool_calls = [{
+          "provider_tool_call_id" => "call_3",
+          "name" => "agent_final_answer",
+          "arguments" => { "final_answer" => "Jimmy Buffett was born on December 25, 1946." }
+        }]
+        "Based on the Wikipedia page, I can now provide the answer."
+      end
     end
 
     visit agents_path
@@ -40,30 +57,28 @@ RSpec.describe "Agent features", type: :feature do
 
     # The sequence of messages is broadcast to the page:
     expect(page).to have_content("user: What is Jimmy Buffet's birthday?")
-    expect(page).to have_content("assistant: <thought>I need to find the birthdate of Jimmy Buffett. The best way to do this is by searching")
-    expect(page).to have_content("assistant: <action>{\"tool\": \"wikipedia_search\", \"arguments\": {\"query\": \"Jimmy Buffett\"}}</action>")
-    expect(page).to have_content("assistant: <observation>{ \"results\": [ { \"title\": \"Jimmy Buffett\", \"snippet\": \"Wikiquote Official website")
-    expect(page).to have_content("assistant: <thought>The first search result is directly related to Jimmy Buffett and likely contains his birthdate. I'll fetch the content from that Wikipedia page to find the information.</thought>") # rubocop:disable Layout/LineLength
-    expect(page).to have_content("assistant: <action>{\"tool\": \"fetch_url\", \"arguments\": {\"url\": \"https://en.wikipedia.org/wiki/Jimmy_Buffett\"}}</action>")
-    expect(page).to have_content("assistant: <observation>Result Status: 200 Result Content: # Jimmy Buffett From Wikipedia, the free encyc")
-    expect(page).to have_content("assistant: <thought>The fetched Wikipedia page for Jimmy Buffett confirms his birthdate as December 25, 1946.</thought>") # rubocop:disable Layout/LineLength
-    expect(page).to have_content("assistant: <answer>Jimmy Buffett was born on December 25, 1946.</answer>")
+    expect(page).to have_content("tool_call: wikipedia_search")
+    expect(page).to have_content("tool_result:")
+    expect(page).to have_content("tool_call: fetch_url")
+    expect(page).to have_content("tool_call: agent_final_answer")
 
     ai = Raif::Agent.last
-    expect(ai.type).to eq("Raif::Agents::ReActAgent")
+    expect(ai.type).to eq("Raif::Agents::NativeToolCallingAgent")
     expect(ai.task).to eq("What is Jimmy Buffet's birthday?")
     expect(ai.started_at).to be_present
     expect(ai.completed_at).to be_present
     expect(ai.failed_at).to be_nil
     expect(ai.failure_reason).to be_nil
     expect(ai.final_answer).to eq("Jimmy Buffett was born on December 25, 1946.")
-    expect(ai.available_model_tools).to eq(["Raif::ModelTools::WikipediaSearch", "Raif::ModelTools::FetchUrl"])
-    expect(ai.iteration_count).to eq(4)
+    expect(ai.available_model_tools).to eq(["Raif::ModelTools::WikipediaSearch", "Raif::ModelTools::FetchUrl", "Raif::ModelTools::AgentFinalAnswer"])
+    expect(ai.iteration_count).to eq(3)
 
-    expect(ai.raif_model_tool_invocations.length).to eq(2)
+    expect(ai.raif_model_tool_invocations.length).to eq(3)
+
     mti = ai.raif_model_tool_invocations.find_by(tool_type: "Raif::ModelTools::WikipediaSearch")
     expect(mti.tool_name).to eq("wikipedia_search")
     expect(mti.tool_arguments).to eq({ "query" => "Jimmy Buffett" })
+    expect(mti.provider_tool_call_id).to eq("call_1")
     expect(mti.result).to eq({
       "results" => [
         {
@@ -104,9 +119,14 @@ RSpec.describe "Agent features", type: :feature do
     mti2 = ai.raif_model_tool_invocations.find_by(tool_type: "Raif::ModelTools::FetchUrl")
     expect(mti2.tool_name).to eq("fetch_url")
     expect(mti2.tool_arguments).to eq({ "url" => "https://en.wikipedia.org/wiki/Jimmy_Buffett" })
+    expect(mti2.provider_tool_call_id).to eq("call_2")
     expect(mti2.result["status"]).to eq(200)
-
     # content was converted to markdown
     expect(mti2.result["content"]).to start_with("# Jimmy Buffett\n\nFrom Wikipedia, the free encyclopedia\n\nAmerican singer-songwriter (1946–2023)")
+
+    mti3 = ai.raif_model_tool_invocations.find_by(tool_type: "Raif::ModelTools::AgentFinalAnswer")
+    expect(mti3.tool_name).to eq("agent_final_answer")
+    expect(mti3.tool_arguments).to eq({ "final_answer" => "Jimmy Buffett was born on December 25, 1946." })
+    expect(mti3.provider_tool_call_id).to eq("call_3")
   end
 end

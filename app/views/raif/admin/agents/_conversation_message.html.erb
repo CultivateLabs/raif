@@ -1,9 +1,16 @@
-<div class="message <%= message["role"] %> mb-3">
+<% message_type = message["type"] || message["role"] %>
+<div class="message <%= message_type %> mb-3">
   <div class="message-header d-flex justify-content-between align-items-center mb-2 px-2">
-    <strong class="<%= message["role"] == "user" ? "text-primary" : "text-success" %>">
-      <%= message["role"].capitalize %>
-      <% if message[:counter] == 0 && message["role"] == 'user' %>
-        (<%= t("raif.admin.common.initial_task") %>)
+    <strong class="<%= conversation_message_header_class(message) %>">
+      <% if message_type == "tool_call" %>
+        <%= t("raif.admin.common.tool_call") %>: <%= message["name"] %>
+      <% elsif message_type == "tool_call_result" %>
+        <%= t("raif.admin.common.tool_result") %>
+      <% else %>
+        <%= message["role"]&.capitalize %>
+        <% if message[:counter] == 0 && message["role"] == 'user' %>
+          (<%= t("raif.admin.common.initial_task") %>)
+        <% end %>
       <% end %>
       <% if is_final_answer %>
         <span class="badge bg-info ms-2"><%= t("raif.admin.common.final_answer") %></span>
@@ -13,6 +20,18 @@
   </div>
 
   <div class="message-content px-3 py-2">
-    <code><%= message["content"] %></code>
+    <% if message_type == "tool_call" %>
+      <% if message["assistant_message"].present? %>
+        <div class="mb-2"><code><%= message["assistant_message"] %></code></div>
+      <% end %>
+      <div>
+        <strong><%= t("raif.admin.common.arguments") %>:</strong>
+        <code><%= message["arguments"].to_json %></code>
+      </div>
+    <% elsif message_type == "tool_call_result" %>
+      <code><%= message["result"].is_a?(String) ? message["result"] : JSON.pretty_generate(message["result"]) %></code>
+    <% else %>
+      <code><%= message["content"] %></code>
+    <% end %>
   </div>
 </div>

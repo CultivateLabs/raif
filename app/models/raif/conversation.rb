@@ -140,13 +140,28 @@ class Raif::Conversation < Raif::ApplicationRecord
     included_entries = included_entries.last(llm_messages_max_length) if llm_messages_max_length.present?
 
     included_entries.each do |entry|
-      messages << { "role" => "user", "content" => entry.user_message } unless entry.user_message.blank?
+      unless entry.user_message.blank?
+        messages << Raif::Messages::UserMessage.new(content: entry.user_message).to_h
+      end
+
       next unless entry.completed?
 
-      messages << { "role" => "assistant", "content" => entry.model_response_message } unless entry.model_response_message.blank?
-      entry.raif_model_tool_invocations.each do |tool_invocation|
-        messages << { "role" => "assistant", "content" => tool_invocation.as_llm_message }
-        messages << { "role" => "assistant", "content" => tool_invocation.result_llm_message } if tool_invocation.result_llm_message.present?
+      tool_invocations = entry.raif_model_tool_invocations.to_a
+
+      if tool_invocations.any?
+        # First tool call includes the assistant's message (if any)
+        first_invocation = tool_invocations.shift
+        messages << first_invocation.as_tool_call_message(assistant_message: entry.model_response_message.presence)
+        messages << first_invocation.as_tool_call_result_message
+
+        # Remaining tool calls (if multiple)
+        tool_invocations.each do |tool_invocation|
+          messages << tool_invocation.as_tool_call_message
+          messages << tool_invocation.as_tool_call_result_message
+        end
+      elsif entry.model_response_message.present?
+        # No tool calls, just a regular assistant response
+        messages << Raif::Messages::AssistantMessage.new(content: entry.model_response_message).to_h
       end
     end
 

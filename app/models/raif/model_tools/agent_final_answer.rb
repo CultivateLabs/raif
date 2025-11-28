@@ -20,17 +20,12 @@ class Raif::ModelTools::AgentFinalAnswer < Raif::ModelTool
     def observation_for_invocation(tool_invocation)
       return "No answer provided" unless tool_invocation.result.present?
 
-      tool_invocation.result["final_answer"]
+      tool_invocation.result
     end
 
     def process_invocation(tool_invocation)
-      tool_invocation.update!(
-        result: {
-          final_answer: tool_invocation.tool_arguments["final_answer"]
-        }
-      )
-
-      tool_invocation.tool_arguments["final_answer"]
+      tool_invocation.update!(result: tool_invocation.tool_arguments["final_answer"])
+      tool_invocation.result
     end
   end
 

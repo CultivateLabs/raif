@@ -6,10 +6,6 @@ en:
         errors:
           available_model_tools:
             too_short: must have at least 1 tool in addition to the agent_final_answer tool
-      re_act_agent:
-        errors:
-          available_model_tools:
-            too_short: must have at least 1 tool
     common:
       send: Send
       sources: Sources

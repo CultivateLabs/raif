@@ -9,7 +9,4 @@ FactoryBot.define do
 
   factory :raif_native_tool_calling_agent, parent: :raif_agent, class: "Raif::Agents::NativeToolCallingAgent" do
   end
-
-  factory :raif_re_act_agent, parent: :raif_agent, class: "Raif::Agents::ReActAgent" do
-  end
 end

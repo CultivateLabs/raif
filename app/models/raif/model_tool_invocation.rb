@@ -4,16 +4,17 @@
 #
 # Table name: raif_model_tool_invocations
 #
-#  id             :bigint           not null, primary key
-#  completed_at   :datetime
-#  failed_at      :datetime
-#  result         :jsonb            not null
-#  source_type    :string           not null
-#  tool_arguments :jsonb            not null
-#  tool_type      :string           not null
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  source_id      :bigint           not null
+#  id                    :bigint           not null, primary key
+#  completed_at          :datetime
+#  failed_at             :datetime
+#  result                :jsonb            not null
+#  source_type           :string           not null
+#  tool_arguments        :jsonb            not null
+#  tool_type             :string           not null
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  provider_tool_call_id :string
+#  source_id             :bigint           not null
 #
 # Indexes
 #
@@ -41,14 +42,25 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
     @tool ||= tool_type.constantize
   end
 
-  def as_llm_message
-    "Invoking tool: #{tool_name} with arguments: #{tool_arguments.to_json}"
+  # Returns tool call in the format expected by LLM message formatting
+  # @param assistant_message [String, nil] Optional assistant message accompanying the tool call
+  # @return [Hash] Hash representation for JSONB storage and LLM APIs
+  def as_tool_call_message(assistant_message: nil)
+    Raif::Messages::ToolCall.new(
+      provider_tool_call_id: provider_tool_call_id,
+      name: tool_name,
+      arguments: tool_arguments,
+      assistant_message: assistant_message
+    ).to_h
   end
 
-  def result_llm_message
-    return unless tool.respond_to?(:observation_for_invocation)
-
-    tool.observation_for_invocation(self)
+  # Returns tool result in the format expected by LLM message formatting
+  # @return [Hash] Hash representation for JSONB storage and LLM APIs
+  def as_tool_call_result_message
+    Raif::Messages::ToolCallResult.new(
+      provider_tool_call_id: provider_tool_call_id,
+      result: result
+    ).to_h
   end
 
   def to_partial_path

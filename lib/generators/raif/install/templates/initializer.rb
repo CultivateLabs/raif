@@ -170,7 +170,7 @@ Raif.configure do |config|
   # The method to call to get the current user. Defaults to :current_user
   # config.current_user_method = :current_user
 
-  # The agent types that are available. Defaults to Set.new(["Raif::Agents::ReActAgent", "Raif::Agents::NativeToolCallingAgent"])
+  # The agent types that are available. Defaults to Set.new(["Raif::Agents::NativeToolCallingAgent"])
   # If you want to use custom agent types that inherits from Raif::Agent, you can add them here.
   # config.agent_types += ["MyAgent"]
 

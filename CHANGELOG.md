@@ -1,5 +1,11 @@
 ## v1.4.0 (Unreleased)
 
+- **Breaking Change**: `Raif::Agents::ReActAgent` has been removed in favor of `Raif::Agents::NativeToolCallingAgent`, which provides better tool calling support across all LLM providers. [#304](https://github.com/CultivateLabs/raif/pull/304)
+- Improved tool call handling in agents with provider-specific formatting. Tool calls and their results are now stored in a structured format in conversation history and properly formatted for each LLM provider (OpenAI, Anthropic, Bedrock, OpenRouter). [#304](https://github.com/CultivateLabs/raif/pull/304)
+- Added `provider_tool_call_id` to `Raif::ModelToolInvocation` to track tool calls across different LLM providers. [#304](https://github.com/CultivateLabs/raif/pull/304)
+- Added typed message classes (`Raif::Messages::UserMessage`, `Raif::Messages::AssistantMessage`, `Raif::Messages::ToolCall`, `Raif::Messages::ToolCallResult`) for structured conversation history. [#304](https://github.com/CultivateLabs/raif/pull/304)
+- Agent system prompts are now rebuilt on each iteration to ensure they reflect any changes. [#304](https://github.com/CultivateLabs/raif/pull/304)
+- Admin interface now displays tool calls and tool results with distinct styling in conversation history. [#304](https://github.com/CultivateLabs/raif/pull/304)
 - Improvements to the web admin interface. Added display of input/output token cost estimates. Added model tool invocation stats and filtering. [#230](https://github.com/CultivateLabs/raif/pull/230)
 - Added `before_prompt_model_for_entry_response` callback to `Raif::Conversation` subclasses. [#233](https://github.com/CultivateLabs/raif/pull/233)
 - Added `generating_entry_response` flag to `Raif::Conversation` to track when a conversation is generating an entry response. [#241](https://github.com/CultivateLabs/raif/pull/241)

@@ -4,16 +4,17 @@
 #
 # Table name: raif_model_tool_invocations
 #
-#  id             :bigint           not null, primary key
-#  completed_at   :datetime
-#  failed_at      :datetime
-#  result         :jsonb            not null
-#  source_type    :string           not null
-#  tool_arguments :jsonb            not null
-#  tool_type      :string           not null
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  source_id      :bigint           not null
+#  id                    :bigint           not null, primary key
+#  completed_at          :datetime
+#  failed_at             :datetime
+#  result                :jsonb            not null
+#  source_type           :string           not null
+#  tool_arguments        :jsonb            not null
+#  tool_type             :string           not null
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  provider_tool_call_id :string
+#  source_id             :bigint           not null
 #
 # Indexes
 #
@@ -52,6 +53,80 @@ RSpec.describe Raif::ModelToolInvocation, type: :model do
       invocation.tool_arguments = [{ "title": "foo", "description": "bar" }]
       expect(invocation).not_to be_valid
       expect(invocation.errors[:tool_arguments]).to include("does not match schema")
+    end
+  end
+
+  describe "#as_tool_call_message" do
+    let(:source) { FB.create(:raif_test_task) }
+
+    it "returns the tool call in LLM message format" do
+      invocation = FB.create(
+        :raif_model_tool_invocation,
+        source: source,
+        tool_type: "Raif::TestModelTool",
+        tool_arguments: { "items" => [{ "title" => "foo", "description" => "bar" }] },
+        provider_tool_call_id: "call_123"
+      )
+
+      expected = {
+        "type" => "tool_call",
+        "provider_tool_call_id" => "call_123",
+        "name" => "test_model_tool",
+        "arguments" => { "items" => [{ "title" => "foo", "description" => "bar" }] }
+      }
+
+      expect(invocation.as_tool_call_message).to eq(expected)
+    end
+
+    it "includes assistant_message when provided" do
+      invocation = FB.create(
+        :raif_model_tool_invocation,
+        source: source,
+        tool_type: "Raif::TestModelTool",
+        tool_arguments: { "items" => [{ "title" => "foo", "description" => "bar" }] },
+        provider_tool_call_id: "call_123"
+      )
+
+      result = invocation.as_tool_call_message(assistant_message: "I'll search for that")
+
+      expect(result["assistant_message"]).to eq("I'll search for that")
+    end
+
+    it "excludes nil assistant_message" do
+      invocation = FB.create(
+        :raif_model_tool_invocation,
+        source: source,
+        tool_type: "Raif::TestModelTool",
+        tool_arguments: { "items" => [{ "title" => "foo", "description" => "bar" }] },
+        provider_tool_call_id: "call_123"
+      )
+
+      result = invocation.as_tool_call_message(assistant_message: nil)
+
+      expect(result).not_to have_key("assistant_message")
+    end
+  end
+
+  describe "#as_tool_call_result_message" do
+    let(:source) { FB.create(:raif_test_task) }
+
+    it "returns the tool result in LLM message format" do
+      invocation = FB.create(
+        :raif_model_tool_invocation,
+        source: source,
+        tool_type: "Raif::TestModelTool",
+        tool_arguments: { "items" => [{ "title" => "foo", "description" => "bar" }] },
+        provider_tool_call_id: "call_123",
+        result: { "status" => "success", "data" => "some data" }
+      )
+
+      expected = {
+        "type" => "tool_call_result",
+        "provider_tool_call_id" => "call_123",
+        "result" => { "status" => "success", "data" => "some data" }
+      }
+
+      expect(invocation.as_tool_call_result_message).to eq(expected)
     end
   end
 end

@@ -29,6 +29,22 @@
       }
     }
 
+    &.tool_call {
+      border-left: 3px solid #f59e0b;
+
+      .message-content {
+        background-color: #fffbeb;
+      }
+    }
+
+    &.tool_call_result {
+      border-left: 3px solid rgba(25, 135, 84, 1);
+
+      .message-content {
+        background-color: rgb(232, 255, 244);
+      }
+    }
+
     .message-content {
       border-radius: 4px;
       overflow: hidden;

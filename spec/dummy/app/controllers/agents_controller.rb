@@ -6,7 +6,7 @@ class AgentsController < ApplicationController
   end
 
   def create
-    agent = Raif::Agents::ReActAgent.new(
+    agent = Raif::Agents::NativeToolCallingAgent.new(
       task: params[:task],
       available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::FetchUrl],
       creator: current_user
