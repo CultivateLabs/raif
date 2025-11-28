@@ -13,7 +13,11 @@ module Raif::Concerns::Llms::OpenAiResponses::ResponseToolCalls
       tool_calls << {
         "provider_tool_call_id" => output_item["call_id"],
         "name" => output_item["name"],
-        "arguments" => JSON.parse(output_item["arguments"])
+        "arguments" => begin
+          JSON.parse(output_item["arguments"])
+        rescue JSON::ParserError
+          output_item["arguments"]
+        end
       }
     end
 
