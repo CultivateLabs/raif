@@ -111,6 +111,9 @@ module Raif
       while iteration_count < max_iterations
         update_columns(iteration_count: iteration_count + 1)
 
+        # Update the system prompt on each iteration in case it has changed since the last iteration
+        self.system_prompt = build_system_prompt
+
         model_completion = llm.chat(
           messages: conversation_history,
           source: self,
