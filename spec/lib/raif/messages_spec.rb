@@ -182,15 +182,14 @@ RSpec.describe Raif::Messages do
         })
       end
 
-      it "includes nil provider_tool_call_id (not compacted)" do
+      it "compacts nil values for provider_tool_call_id" do
         message = described_class.new(result: { "status" => "success" })
         result = message.to_h
         expect(result).to eq({
           "type" => "tool_call_result",
-          "provider_tool_call_id" => nil,
           "result" => { "status" => "success" }
         })
-        expect(result).to have_key("provider_tool_call_id")
+        expect(result).to_not have_key("provider_tool_call_id")
       end
     end
 
