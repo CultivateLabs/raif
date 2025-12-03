@@ -87,7 +87,25 @@
     <% @model_completion.messages.each do |message| %>
       <div class="mb-3">
         <strong><%= message["role"].titleize %>:</strong>
-        <pre class="mt-2"><%= message["content"] %></pre>
+        <% if message["content"].present? %>
+          <pre class="mt-2"><%= message["content"] %></pre>
+        <% end %>
+        
+        <% if message["tool_calls"].present? %>
+          <div class="mt-2">
+            <% message["tool_calls"].each do |tool_call| %>
+              <div class="border rounded p-2 mb-2 bg-light">
+                <div><strong><%= t("raif.admin.common.tool_name") %>:</strong> <%= tool_call.dig("function", "name") %></div>
+                <div><strong><%= t("raif.admin.common.arguments") %>:</strong></div>
+                <pre class="mb-0 mt-1"><%= begin
+                  JSON.pretty_generate(JSON.parse(tool_call.dig("function", "arguments")))
+                rescue StandardError
+                  tool_call.dig("function", "arguments")
+                end %></pre>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     <% end %>
   </div>
