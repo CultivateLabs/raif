@@ -17,7 +17,7 @@ RSpec.describe "Admin::Agents", type: :feature do
 
     let!(:raif_agent) do
       FB.create(
-        :raif_re_act_agent,
+        :raif_native_tool_calling_agent,
         creator: creator,
         task: "List the planets in our solar system",
         started_at: 2.minutes.ago,
@@ -28,7 +28,7 @@ RSpec.describe "Admin::Agents", type: :feature do
 
     let!(:completed_agent) do
       FB.create(
-        :raif_re_act_agent,
+        :raif_native_tool_calling_agent,
         creator: creator,
         task: "Calculate 15 * 24",
         started_at: 5.minutes.ago,

@@ -3,6 +3,7 @@
 class Raif::Llms::Anthropic < Raif::Llm
   include Raif::Concerns::Llms::Anthropic::MessageFormatting
   include Raif::Concerns::Llms::Anthropic::ToolFormatting
+  include Raif::Concerns::Llms::Anthropic::ResponseToolCalls
 
   def perform_model_completion!(model_completion, &block)
     params = build_request_parameters(model_completion)
@@ -64,6 +65,11 @@ private
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
       params[:tools] = tools unless tools.blank?
+
+      if model_completion.tool_choice.present?
+        tool_klass = model_completion.tool_choice.constantize
+        params[:tool_choice] = build_forced_tool_choice(tool_klass.tool_name)
+      end
     end
 
     params[:stream] = true if model_completion.stream_response?
@@ -89,24 +95,6 @@ private
       JSON.generate(tool_response["input"])
     else
       extract_text_response(resp)
-    end
-  end
-
-  def extract_response_tool_calls(resp)
-    return if resp&.dig("content").nil?
-
-    # Find any tool_use content blocks
-    tool_uses = resp&.dig("content")&.select do |content|
-      content["type"] == "tool_use"
-    end
-
-    return if tool_uses.blank?
-
-    tool_uses.map do |tool_use|
-      {
-        "name" => tool_use["name"],
-        "arguments" => tool_use["input"]
-      }
     end
   end
 

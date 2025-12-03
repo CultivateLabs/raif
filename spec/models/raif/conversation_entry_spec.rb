@@ -73,6 +73,7 @@ RSpec.describe Raif::ConversationEntry, type: :model do
         conversation.update!(available_model_tools: ["Raif::ModelTools::CurrentTemperatureTestTool"])
 
         tool_calls = [{
+          "provider_tool_call_id" => "abc123",
           "name": "current_temperature_test_tool",
           "arguments": { "zip_code": "12345" }
         }]
@@ -80,7 +81,7 @@ RSpec.describe Raif::ConversationEntry, type: :model do
         stub_raif_conversation(conversation) do |_messages, model_completion|
           model_completion.response_tool_calls = tool_calls
 
-          ""
+          "I'll use the current_temperature_test_tool to get the current temperature in 12345"
         end
       end
 
@@ -91,7 +92,7 @@ RSpec.describe Raif::ConversationEntry, type: :model do
         expect(entry.raif_conversation.entries.count).to eq(2)
 
         expect(entry.reload).to be_completed
-        expect(entry.model_response_message).to eq(nil)
+        expect(entry.model_response_message).to eq("I'll use the current_temperature_test_tool to get the current temperature in 12345")
         expect(entry.raif_model_tool_invocations.count).to eq(1)
 
         mti = entry.raif_model_tool_invocations.first
@@ -104,14 +105,23 @@ RSpec.describe Raif::ConversationEntry, type: :model do
         expect(follow_up_entry.creator).to eq(entry.creator)
 
         llm_messages = conversation.llm_messages
-        expect(llm_messages).to include({
-          "role" => "assistant",
-          "content" => "Invoking tool: current_temperature_test_tool with arguments: {\"zip_code\":\"12345\"}"
-        })
-        expect(llm_messages).to include({
-          "role" => "assistant",
-          "content" => "The current temperature for zip code 12345 is 72 degrees Fahrenheit."
-        })
+
+        # Tool call message in new format (provider_tool_call_id excluded when nil due to .compact)
+        expect(llm_messages).to eq([
+          { "role" => "user", "content" => entry.user_message },
+          {
+            "type" => "tool_call",
+            "provider_tool_call_id" => "abc123",
+            "name" => "current_temperature_test_tool",
+            "arguments" => { "zip_code" => "12345" },
+            "assistant_message" => "I'll use the current_temperature_test_tool to get the current temperature in 12345"
+          },
+          {
+            "type" => "tool_call_result",
+            "provider_tool_call_id" => "abc123",
+            "result" => { "temperature" => 72 }
+          }
+        ])
       end
     end
 

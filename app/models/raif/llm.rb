@@ -49,7 +49,7 @@ module Raif
     end
 
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
-      max_completion_tokens: nil, &block)
+      max_completion_tokens: nil, tool_choice: nil, &block)
       unless response_format.is_a?(Symbol)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid response format: #{response_format}. Must be a symbol (you passed #{response_format.class}) and be one of: #{VALID_RESPONSE_FORMATS.join(", ")}" # rubocop:disable Layout/LineLength
@@ -65,6 +65,11 @@ module Raif
 
       if message.present? && messages.present?
         raise ArgumentError, "Raif::Llm#chat - You must provide either a message: or messages: argument, not both"
+      end
+
+      if tool_choice.present? && !available_model_tools.map(&:to_s).include?(tool_choice.to_s)
+        raise ArgumentError,
+          "Raif::Llm#chat - Invalid tool choice: #{tool_choice} is not included in the available model tools: #{available_model_tools.join(", ")}"
       end
 
       unless Raif.config.llm_api_requests_enabled
@@ -87,6 +92,7 @@ module Raif
         temperature: temperature,
         max_completion_tokens: max_completion_tokens,
         available_model_tools: available_model_tools,
+        tool_choice: tool_choice&.to_s,
         stream_response: block_given?
       )
 
@@ -114,6 +120,14 @@ module Raif
 
     def supports_provider_managed_tool?(tool_klass)
       supported_provider_managed_tools&.include?(tool_klass.to_s)
+    end
+
+    # Build the tool_choice parameter to force a specific tool to be called.
+    # Each provider implements this to return the correct format.
+    # @param tool_name [String] The name of the tool to force
+    # @return [Hash] The tool_choice parameter for the provider's API
+    def build_forced_tool_choice(tool_name)
+      raise NotImplementedError, "#{self.class.name} must implement #build_forced_tool_choice"
     end
 
     def validate_provider_managed_tool_support!(tool)

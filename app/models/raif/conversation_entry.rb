@@ -125,7 +125,11 @@ private
         tool_klass = available_model_tools_map[tool_call["name"]]
         next if tool_klass.nil?
 
-        tool_klass.invoke_tool(tool_arguments: tool_call["arguments"], source: self)
+        tool_klass.invoke_tool(
+          provider_tool_call_id: tool_call["provider_tool_call_id"],
+          tool_arguments: tool_call["arguments"],
+          source: self
+        )
       end
 
       completed!

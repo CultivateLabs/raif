@@ -38,4 +38,26 @@ module Raif::Concerns::Llms::OpenAiCompletions::MessageFormatting
       raise Raif::Errors::InvalidModelFileInputError, "Invalid model image input source type: #{file_input.source_type}"
     end
   end
+
+  def format_tool_call_message(tool_call)
+    {
+      "role" => "assistant",
+      "tool_calls" => [{
+        "id" => tool_call["provider_tool_call_id"],
+        "type" => "function",
+        "function" => {
+          "name" => tool_call["name"],
+          "arguments" => JSON.generate(tool_call["arguments"])
+        }
+      }]
+    }
+  end
+
+  def format_tool_call_result_message(tool_call_result)
+    {
+      "role" => "tool",
+      "tool_call_id" => tool_call_result["provider_tool_call_id"],
+      "content" => tool_call_result["result"].is_a?(String) ? tool_call_result["result"] : JSON.generate(tool_call_result["result"])
+    }
+  end
 end

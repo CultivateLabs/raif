@@ -106,16 +106,23 @@ module Raif
         Task: #{task}
       DEBUG
 
-      add_conversation_history_entry({ role: "user", content: task })
+      add_conversation_history_entry(Raif::Messages::UserMessage.new(content: task).to_h)
 
       while iteration_count < max_iterations
         update_columns(iteration_count: iteration_count + 1)
+
+        # Update the system prompt on each iteration in case it has changed since the last iteration
+        self.system_prompt = build_system_prompt
+
+        # Hook for subclasses to perform actions before the LLM chat (e.g., add warnings)
+        before_iteration_llm_chat
 
         model_completion = llm.chat(
           messages: conversation_history,
           source: self,
           system_prompt: system_prompt,
-          available_model_tools: native_model_tools
+          available_model_tools: native_model_tools,
+          tool_choice: tool_choice_for_iteration
         )
 
         logger.debug <<~DEBUG
@@ -143,6 +150,10 @@ module Raif
       raise
     end
 
+    def final_iteration?
+      iteration_count == max_iterations
+    end
+
   private
 
     def populate_default_model_tools
@@ -155,6 +166,19 @@ module Raif
 
     def native_model_tools
       # no-op by default
+    end
+
+    # Hook for subclasses to perform actions before the LLM chat on each iteration
+    # Override in subclasses to add warnings, context, etc.
+    def before_iteration_llm_chat
+      # no-op by default
+    end
+
+    # Hook for subclasses to specify tool_choice for the current iteration
+    # Override in subclasses to force specific tools (e.g., on final iteration)
+    # @return [Class, nil] A model tool class (e.g., Raif::ModelTools::AgentFinalAnswer), or nil for default behavior
+    def tool_choice_for_iteration
+      nil
     end
 
     def add_conversation_history_entry(entry)

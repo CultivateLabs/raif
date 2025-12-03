@@ -74,8 +74,8 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
 
       context "when using open_router_llama_4_maverick" do
         let(:llm){ Raif.llm(:open_router_llama_4_maverick) }
+
         it "extracts JSON response from json_response tool call", vcr: { cassette_name: "open_router/format_json_with_tool_llama4_maverick" } do
-          allow(Raif.config).to receive(:open_router_api_key).and_return(ENV["OPENROUTER_API_KEY"])
           model_completion = llm.chat(
             messages: [{
               role: "user",
@@ -92,6 +92,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
 
           expect(model_completion.raw_response).to eq("{\"joke\": \"Why don't scientists trust atoms?\", \"answer\": \"Because they make up everything.\"}") # rubocop:disable Layout/LineLength
           expect(model_completion.response_tool_calls).to eq([{
+            "provider_tool_call_id" => "chatcmpl-abc123-9807d1c0536c4e46903bc13b4a820170",
             "name" => "json_response",
             "arguments" => {
               "joke" => "Why don't scientists trust atoms?",
@@ -129,9 +130,8 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
 
       context "when using open_router_open_ai_gpt_oss_20b" do
         let(:llm){ Raif.llm(:open_router_open_ai_gpt_oss_20b) }
-        it "extracts JSON response from json_response tool call", vcr: { cassette_name: "open_router/format_json_with_tool_gpt_oss_20b" } do
-          allow(Raif.config).to receive(:open_router_api_key).and_return(ENV["OPENROUTER_API_KEY"])
 
+        it "extracts JSON response from json_response tool call", vcr: { cassette_name: "open_router/format_json_with_tool_gpt_oss_20b" } do
           model_completion = llm.chat(
             messages: [{
               role: "user",
@@ -148,6 +148,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
 
           expect(model_completion.raw_response).to eq("{\"answer\":\"What do you call a fish with no eyes? Fsh.\",\"joke\":\"Why did the scarecrow win an award? Because he was outstanding in his field!\"}") # rubocop:disable Layout/LineLength
           expect(model_completion.response_tool_calls).to eq([{
+            "provider_tool_call_id" => "fc_abc123-444c-4c46-8e42-838348740c0b",
             "name" => "json_response",
             "arguments" => {
               "joke" => "Why did the scarecrow win an award? Because he was outstanding in his field!",
@@ -221,6 +222,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         }])
 
         expect(model_completion.response_tool_calls).to eq([{
+          "provider_tool_call_id" => "call_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com" }
         }])
@@ -342,6 +344,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         }])
 
         expect(model_completion.response_tool_calls).to eq([{
+          "provider_tool_call_id" => "call_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com/" }
         }])
@@ -537,6 +540,13 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         tool_calls = llm.send(:extract_response_tool_calls, response_json)
         expect(tool_calls).to eq(nil)
       end
+    end
+  end
+
+  describe "#build_forced_tool_choice" do
+    it "returns the correct format for forcing a specific tool" do
+      result = llm.build_forced_tool_choice("agent_final_answer")
+      expect(result).to eq({ "type" => "function", "function" => { "name" => "agent_final_answer" } })
     end
   end
 end

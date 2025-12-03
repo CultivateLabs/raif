@@ -29,6 +29,22 @@ module Raif
           24.hours.ago..Time.current
         end
       end
+
+      helper_method :conversation_message_header_class
+      def conversation_message_header_class(message)
+        message_type = message["type"] || message["role"]
+
+        case message_type
+        when "user"
+          "text-primary"
+        when "tool_call"
+          "text-warning"
+        when "tool_call_result"
+          "text-success"
+        else
+          "text-success"
+        end
+      end
     end
   end
 end
