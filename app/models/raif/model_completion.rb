@@ -25,6 +25,7 @@
 #  stream_response           :boolean          default(FALSE), not null
 #  system_prompt             :text
 #  temperature               :decimal(5, 3)
+#  tool_choice               :string
 #  total_cost                :decimal(10, 6)
 #  total_tokens              :integer
 #  created_at                :datetime         not null

@@ -537,4 +537,11 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       expect { llm.format_messages(messages) }.to raise_error(Raif::Errors::UnsupportedFeatureError)
     end
   end
+
+  describe "#build_forced_tool_choice" do
+    it "returns the correct format for forcing a specific tool" do
+      result = llm.build_forced_tool_choice("agent_final_answer")
+      expect(result).to eq({ tool: { name: "agent_final_answer" } })
+    end
+  end
 end

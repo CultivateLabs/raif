@@ -82,6 +82,10 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
         {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
+        {
           "name" => "unavailable_tool",
           "arguments" => { "query" => "capital of France" },
           "type" => "tool_call",
@@ -112,6 +116,10 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
         {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
+        {
           "name" => "wikipedia_search",
           "arguments" => { "search_term" => "jingle bells" },
           "type" => "tool_call",
@@ -137,6 +145,10 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
 
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
+        {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
         {
           "role" => "assistant",
           "content" => "Maybe I'll just jabber instead of using a tool"

@@ -73,6 +73,11 @@ private
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
       params[:tool_config] = tools unless tools.blank?
+
+      if model_completion.tool_choice.present?
+        tool_klass = model_completion.tool_choice.constantize
+        params[:tool_config][:tool_choice] = build_forced_tool_choice(tool_klass.tool_name)
+      end
     end
 
     params

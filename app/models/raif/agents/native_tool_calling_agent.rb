@@ -84,6 +84,23 @@ module Raif
         available_model_tools
       end
 
+      # Warn the agent that it must provide a final answer on the next iteration
+      def before_iteration_llm_chat
+        return unless final_iteration?
+
+        warning_message = Raif::Messages::UserMessage.new(
+          content: I18n.t("raif.agents.native_tool_calling_agent.final_answer_warning")
+        )
+        add_conversation_history_entry(warning_message.to_h)
+      end
+
+      # On the final iteration, force the agent to use the agent_final_answer tool
+      def tool_choice_for_iteration
+        return unless final_iteration?
+
+        Raif::ModelTools::AgentFinalAnswer
+      end
+
       def process_iteration_model_completion(model_completion)
         assistant_response_message = model_completion.parsed_response if model_completion.parsed_response.present?
 

@@ -996,4 +996,11 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
       end
     end
   end
+
+  describe "#build_forced_tool_choice" do
+    it "returns the correct format for forcing a specific tool" do
+      result = llm.build_forced_tool_choice("agent_final_answer")
+      expect(result).to eq({ "type" => "function", "name" => "agent_final_answer" })
+    end
+  end
 end

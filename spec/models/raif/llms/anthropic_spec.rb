@@ -762,6 +762,13 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     end
   end
 
+  describe "#build_forced_tool_choice" do
+    it "returns the correct format for forcing a specific tool" do
+      result = llm.build_forced_tool_choice("agent_final_answer")
+      expect(result).to eq({ "type" => "tool", "name" => "agent_final_answer" })
+    end
+  end
+
   describe "#extract_citations" do
     context "with citations in response" do
       it "extracts citations from text blocks with citations" do

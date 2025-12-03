@@ -95,6 +95,11 @@ private
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
       parameters[:tools] = tools unless tools.blank?
+
+      if model_completion.tool_choice.present?
+        tool_klass = model_completion.tool_choice.constantize
+        parameters[:tool_choice] = build_forced_tool_choice(tool_klass.tool_name)
+      end
     end
 
     # Add response format if needed. Default will be { "type": "text" }

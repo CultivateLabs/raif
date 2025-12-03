@@ -53,4 +53,8 @@ module Raif::Concerns::Llms::Anthropic::ToolFormatting
         "Invalid provider-managed tool: #{tool.name} for #{key}"
     end
   end
+
+  def build_forced_tool_choice(tool_name)
+    { "type" => "tool", "name" => tool_name }
+  end
 end
