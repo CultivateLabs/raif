@@ -76,8 +76,9 @@ class Raif::ModelTool
       false
     end
 
-    def invoke_tool(tool_arguments:, source:)
+    def invoke_tool(provider_tool_call_id:, tool_arguments:, source:)
       tool_invocation = Raif::ModelToolInvocation.new(
+        provider_tool_call_id: provider_tool_call_id,
         source: source,
         tool_type: name,
         tool_arguments: tool_arguments

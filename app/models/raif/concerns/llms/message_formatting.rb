@@ -5,11 +5,17 @@ module Raif::Concerns::Llms::MessageFormatting
 
   def format_messages(messages)
     messages.map do |message|
-      role = message["role"] || message[:role]
-      {
-        "role" => role,
-        "content" => format_message_content(message["content"] || message[:content], role: role)
-      }
+      if message.is_a?(Hash) && message["type"] == "tool_call"
+        format_tool_call_message(message)
+      elsif message.is_a?(Hash) && message["type"] == "tool_call_result"
+        format_tool_call_result_message(message)
+      else
+        role = message["role"] || message[:role]
+        {
+          "role" => role,
+          "content" => format_message_content(message["content"] || message[:content], role: role)
+        }
+      end
     end
   end
 

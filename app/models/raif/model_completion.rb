@@ -25,6 +25,7 @@
 #  stream_response           :boolean          default(FALSE), not null
 #  system_prompt             :text
 #  temperature               :decimal(5, 3)
+#  tool_choice               :string
 #  total_cost                :decimal(10, 6)
 #  total_tokens              :integer
 #  created_at                :datetime         not null
@@ -45,6 +46,9 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   validates :llm_model_key, presence: true, inclusion: { in: ->{ Raif.available_llm_keys.map(&:to_s) } }
   validates :model_api_name, presence: true
+
+  # Scope to find completions that have response tool calls
+  scope :with_response_tool_calls, -> { where_json_not_blank(:response_tool_calls) }
 
   delegate :json_response_schema, to: :source, allow_nil: true
 

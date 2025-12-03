@@ -136,6 +136,7 @@ RSpec.describe Raif::Llms::OpenAiCompletions, type: :model do
         }])
 
         expect(model_completion.response_tool_calls).to eq([{
+          "provider_tool_call_id" => "call_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com" }
         }])
@@ -237,6 +238,7 @@ RSpec.describe Raif::Llms::OpenAiCompletions, type: :model do
         }])
 
         expect(model_completion.response_tool_calls).to eq([{
+          "provider_tool_call_id" => "call_abc123",
           "name" => "fetch_url",
           "arguments" => { "url" => "https://www.wsj.com" }
         }])
@@ -564,6 +566,13 @@ RSpec.describe Raif::Llms::OpenAiCompletions, type: :model do
           }
         })
       end
+    end
+  end
+
+  describe "#build_forced_tool_choice" do
+    it "returns the correct format for forcing a specific tool" do
+      result = llm.build_forced_tool_choice("agent_final_answer")
+      expect(result).to eq({ "type" => "function", "function" => { "name" => "agent_final_answer" } })
     end
   end
 end

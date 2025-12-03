@@ -3,6 +3,7 @@
 class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::MessageFormatting
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
+  include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
 
   def perform_model_completion!(model_completion, &block)
     if Raif.config.aws_bedrock_model_name_prefix.present?
@@ -72,6 +73,11 @@ private
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
       params[:tool_config] = tools unless tools.blank?
+
+      if model_completion.tool_choice.present?
+        tool_klass = model_completion.tool_choice.constantize
+        params[:tool_config][:tool_choice] = build_forced_tool_choice(tool_klass.tool_name)
+      end
     end
 
     params
@@ -118,26 +124,6 @@ private
       JSON.generate(tool_response.tool_use.input)
     else
       extract_text_response(resp)
-    end
-  end
-
-  def extract_response_tool_calls(resp)
-    # Get the message from the response object
-    message = resp.output.message
-    return if message.content.nil?
-
-    # Find any tool_use blocks in the content array
-    tool_uses = message.content.select do |content|
-      content.respond_to?(:tool_use) && content.tool_use.present?
-    end
-
-    return if tool_uses.blank?
-
-    tool_uses.map do |content|
-      {
-        "name" => content.tool_use.name,
-        "arguments" => content.tool_use.input
-      }
     end
   end
 

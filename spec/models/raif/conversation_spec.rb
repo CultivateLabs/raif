@@ -48,25 +48,51 @@ RSpec.describe Raif::Conversation, type: :model do
 
     it "includes tool invocations" do
       conversation = FB.create(:raif_conversation, creator: creator)
+      # Entry 1: No tool invocations, just user and assistant messages
       entry1 = FB.create(:raif_conversation_entry, :completed, raif_conversation: conversation, creator: creator)
+
+      # Entry 2: Tool invocation with no model_response_message
       entry2 = FB.create(:raif_conversation_entry, :completed, :with_tool_invocation, raif_conversation: conversation, creator: creator)
       entry2.update_columns model_response_message: nil
-      entry2.raif_model_tool_invocations.first.update!(result: { "status": "success" })
-      entry3 = FB.create(:raif_conversation_entry, :completed, :with_tool_invocation, raif_conversation: conversation, creator: creator)
-
       mti = entry2.raif_model_tool_invocations.first
+      mti.update!(result: { "status" => "success" }, provider_tool_call_id: "call_123")
+
+      # Entry 3: Tool invocation with model_response_message (assistant_message)
+      entry3 = FB.create(:raif_conversation_entry, :completed, :with_tool_invocation, raif_conversation: conversation, creator: creator)
       mti2 = entry3.raif_model_tool_invocations.first
-      allow(mti2).to receive(:result_llm_message).and_return(nil)
+      mti2.update!(result: { "status" => "pending" }, provider_tool_call_id: "call_456")
 
       messages = [
+        # Entry 1: regular user/assistant exchange
         { "role" => "user", "content" => entry1.user_message },
         { "role" => "assistant", "content" => entry1.model_response_message },
+        # Entry 2: user message + tool call (no assistant_message) + tool result
         { "role" => "user", "content" => entry2.user_message },
-        { "role" => "assistant", "content" => "Invoking tool: #{mti.tool_name} with arguments: #{mti.tool_arguments.to_json}" },
-        { "role" => "assistant", "content" => "Mock Observation for #{mti.id}. Result was: success" },
+        {
+          "type" => "tool_call",
+          "provider_tool_call_id" => "call_123",
+          "name" => mti.tool_name,
+          "arguments" => mti.tool_arguments
+        },
+        {
+          "type" => "tool_call_result",
+          "provider_tool_call_id" => "call_123",
+          "result" => { "status" => "success" }
+        },
+        # Entry 3: user message + tool call (with assistant_message) + tool result
         { "role" => "user", "content" => entry3.user_message },
-        { "role" => "assistant", "content" => entry3.model_response_message },
-        { "role" => "assistant", "content" => "Invoking tool: #{mti2.tool_name} with arguments: #{mti2.tool_arguments.to_json}" }
+        {
+          "type" => "tool_call",
+          "provider_tool_call_id" => "call_456",
+          "name" => mti2.tool_name,
+          "arguments" => mti2.tool_arguments,
+          "assistant_message" => entry3.model_response_message
+        },
+        {
+          "type" => "tool_call_result",
+          "provider_tool_call_id" => "call_456",
+          "result" => { "status" => "pending" }
+        }
       ]
 
       expect(conversation.llm_messages).to eq(messages)

@@ -135,7 +135,7 @@
                 locals: {
                   message: message,
                   message_count: index + 1,
-                  is_final_answer: message["content"].to_s.strip.start_with?("<answer>")
+                  is_final_answer: message["type"] == "tool_call" && message["name"] == "agent_final_answer"
                 } %>
         <% end %>
       </div>

@@ -16,7 +16,8 @@
       "Bash(RAILS_ENV=test bundle exec rails console)",
       "Bash(bundle install)",
       "Bash(bundle exec i18n-tasks:*)",
-      "Bash(bundle exec rails runner:*)"
+      "Bash(bundle exec rails runner:*)",
+      "Bash(bundle exec rubocop:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
