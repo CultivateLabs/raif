@@ -84,6 +84,10 @@ module Raif
         available_model_tools
       end
 
+      def final_answer_tool
+        available_model_tools_map["agent_final_answer"]
+      end
+
       # Warn the agent that it must provide a final answer on the next iteration
       def before_iteration_llm_chat
         return unless final_iteration?
@@ -98,7 +102,7 @@ module Raif
       def tool_choice_for_iteration
         return unless final_iteration?
 
-        Raif::ModelTools::AgentFinalAnswer
+        final_answer_tool
       end
 
       def process_iteration_model_completion(model_completion)
