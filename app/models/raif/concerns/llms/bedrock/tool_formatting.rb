@@ -34,4 +34,8 @@ module Raif::Concerns::Llms::Bedrock::ToolFormatting
       tools: tools.map{|tool| { tool_spec: tool } }
     }
   end
+
+  def build_forced_tool_choice(tool_name)
+    { tool: { name: tool_name } }
+  end
 end

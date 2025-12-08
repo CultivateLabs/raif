@@ -84,9 +84,11 @@ en:
         task: Task
         tasks: Tasks
         tool_arguments: Tool Arguments
+        tool_call: Tool Call
         tool_calls: Tool Calls
         tool_invocations: Tool Invocations
         tool_name: Tool Name
+        tool_result: Tool Result
         tool_type: Tool Type
         total: Total
         total_cost: Total Cost
@@ -128,6 +130,7 @@ en:
           title: Model Tool Invocation Stats
         tasks:
           back_to_stats: Back to Stats
+          show_model_breakdown: Show model breakdown
           title: Task Stats
       tasks:
         show:

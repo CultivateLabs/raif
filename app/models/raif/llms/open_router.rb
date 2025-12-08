@@ -3,6 +3,7 @@
 class Raif::Llms::OpenRouter < Raif::Llm
   include Raif::Concerns::Llms::OpenAiCompletions::MessageFormatting
   include Raif::Concerns::Llms::OpenAiCompletions::ToolFormatting
+  include Raif::Concerns::Llms::OpenAiCompletions::ResponseToolCalls
   include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
 
   def perform_model_completion!(model_completion, &block)
@@ -85,6 +86,11 @@ private
       end
 
       params[:tools] = tools unless tools.blank?
+
+      if model_completion.tool_choice.present?
+        tool_klass = model_completion.tool_choice.constantize
+        params[:tool_choice] = build_forced_tool_choice(tool_klass.tool_name)
+      end
     end
 
     if model_completion.stream_response?
@@ -119,18 +125,6 @@ private
       tool_response["function"]["arguments"]
     else
       extract_text_response(resp)
-    end
-  end
-
-  def extract_response_tool_calls(resp)
-    tool_calls = resp.dig("choices", 0, "message", "tool_calls")
-    return if tool_calls.blank?
-
-    tool_calls.map do |tool_call|
-      {
-        "name" => tool_call["function"]["name"],
-        "arguments" => JSON.parse(tool_call["function"]["arguments"])
-      }
     end
   end
 end

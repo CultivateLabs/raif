@@ -234,15 +234,13 @@ module Raif
     end
 
     def process_model_tool_invocations
-      return unless response_format_json?
-      return unless parsed_response.is_a?(Hash)
-      return unless parsed_response["tools"].present? && parsed_response["tools"].is_a?(Array)
+      return unless raif_model_completion&.response_tool_calls.present?
 
-      parsed_response["tools"].each do |t|
-        tool_klass = available_model_tools_map[t["name"]]
+      raif_model_completion.response_tool_calls.each do |tool_call|
+        tool_klass = available_model_tools_map[tool_call["name"]]
         next unless tool_klass
 
-        tool_klass.invoke_tool(tool_arguments: t["arguments"], source: self)
+        tool_klass.invoke_tool(provider_tool_call_id: tool_call["provider_tool_call_id"], tool_arguments: tool_call["arguments"], source: self)
       end
     end
 

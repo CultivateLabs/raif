@@ -39,4 +39,8 @@ module Raif::Concerns::Llms::OpenAiResponses::ToolFormatting
         "Invalid provider-managed tool: #{tool.name} for #{key}"
     end
   end
+
+  def build_forced_tool_choice(tool_name)
+    { "type" => "function", "name" => tool_name }
+  end
 end
