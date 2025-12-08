@@ -290,6 +290,80 @@ RSpec.describe Raif::Task, type: :model do
       expect(Raif::TestTask.json_response_schema).to be_nil
       expect(Raif::TestTask.new.json_response_schema).to be_nil
     end
+
+    context "with instance-dependent schemas" do
+      # Define a test task with instance-dependent schema
+      class TestInstanceDependentJsonTask < Raif::Task
+        attr_accessor :include_confidence
+
+        json_response_schema do |task|
+          string "result", description: "The result"
+
+          if task.include_confidence
+            number "confidence", description: "Confidence score", minimum: 0, maximum: 1
+          end
+        end
+
+        def build_prompt
+          "Test prompt"
+        end
+      end
+
+      it "raises error when accessing schema at class level" do
+        expect do
+          TestInstanceDependentJsonTask.json_response_schema
+        end.to raise_error(Raif::Errors::InstanceDependentSchemaError)
+      end
+
+      it "builds schema with instance context for instances" do
+        task = TestInstanceDependentJsonTask.new
+        task.include_confidence = true
+
+        schema = task.json_response_schema
+
+        expect(schema[:properties]).to have_key("result")
+        expect(schema[:properties]).to have_key("confidence")
+        expect(schema[:required]).to eq(["result", "confidence"])
+      end
+
+      it "excludes conditional fields when instance conditions are not met" do
+        task = TestInstanceDependentJsonTask.new
+        task.include_confidence = false
+
+        schema = task.json_response_schema
+
+        expect(schema[:properties]).to have_key("result")
+        expect(schema[:properties]).not_to have_key("confidence")
+        expect(schema[:required]).to eq(["result"])
+      end
+
+      it "builds different schemas for different task instances based on run_with" do
+        class TestRunWithDependentTask < Raif::Task
+          json_response_schema do |task|
+            string "summary", description: "Summary"
+
+            if task.run_with["include_details"]
+              object "details", description: "Detailed information" do
+                string "analysis", description: "Analysis"
+              end
+            end
+          end
+
+          def build_prompt
+            "Test"
+          end
+        end
+
+        task1 = TestRunWithDependentTask.new(run_with: { "include_details" => true })
+        task2 = TestRunWithDependentTask.new(run_with: { "include_details" => false })
+
+        schema1 = task1.json_response_schema
+        schema2 = task2.json_response_schema
+
+        expect(schema1[:properties].keys).to eq(["summary", "details"])
+        expect(schema2[:properties].keys).to eq(["summary"])
+      end
+    end
   end
 
   describe ".system_prompt" do

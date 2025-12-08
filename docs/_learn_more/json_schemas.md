@@ -101,6 +101,38 @@ This schema would expect the LLM to return a JSON object like:
 }
 ```
 
+# Instance-Dependent Schemas
+
+Raif supports defining schemas that vary based on the instance state of a task or model tool. This is useful when you want different schema structures based on configuration, parameters, or other instance attributes.
+
+## Defining an Instance-Dependent Schema
+
+To create an instance-dependent schema, define your schema block with a parameter that represents the instance:
+
+```ruby
+class AnalysisTask < Raif::Task
+  attr_accessor :include_details
+
+  json_response_schema do |task|
+    string :summary, description: "A summary of the analysis"
+
+    # Conditionally include fields based on instance state
+    if task.include_details
+      object :details, description: "Detailed analysis" do
+        string :methodology, description: "The methodology used"
+        array :findings do
+          items type: "string"
+        end
+      end
+    end
+  end
+
+  def build_prompt
+    "Analyze the following content..."
+  end
+end
+```
+
 ---
 
 **Read next:** [Embedding Models](embedding_models)

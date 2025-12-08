@@ -3,7 +3,7 @@
 class Raif::ModelTool
   include Raif::Concerns::JsonSchemaDefinition
 
-  delegate :tool_name, :tool_description, :tool_arguments_schema, :example_model_invocation, to: :class
+  delegate :tool_name, :tool_description, :example_model_invocation, to: :class
 
   class << self
     # The description of the tool that will be provided to the model
@@ -95,6 +95,13 @@ class Raif::ModelTool
       tool_invocation.failed!
       raise e
     end
+  end
+
+  # Instance method to get the tool arguments schema
+  # For instance-dependent schemas, builds the schema with this instance as context
+  # For class-level schemas, returns the class-level schema
+  def tool_arguments_schema
+    schema_for_instance(:tool_arguments)
   end
 
 end
