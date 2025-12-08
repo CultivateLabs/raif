@@ -10,6 +10,20 @@ module Raif
       @items_schema = nil
     end
 
+    # Build schema with instance context for instance-dependent schemas
+    # The block receives the instance as a parameter and has access to the builder methods
+    #
+    # @param instance [Object] The instance to use as context
+    # @param block [Proc] The block to evaluate with instance context
+    # @return [JsonSchemaBuilder] self for chaining
+    def build_with_instance(instance, &block)
+      # Evaluate the block in the context of the builder, passing the instance as parameter
+      # This allows the block to use both builder methods (string, integer, etc.)
+      # and access the instance parameter for conditional logic
+      instance_exec(instance, &block)
+      self
+    end
+
     def string(name, options = {})
       add_property(name, "string", options)
     end
