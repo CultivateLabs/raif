@@ -15,7 +15,7 @@ RSpec.describe Raif::Concerns::JsonSchemaDefinition do
       end
 
       if task.detail_level == "detailed"
-        object "details", description: "Detailed information" do |_t|
+        object "details", description: "Detailed information" do
           string "description", description: "A description"
         end
       end
