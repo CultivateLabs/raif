@@ -7,7 +7,7 @@ PATH
       faraday (>= 2.0)
       json-schema (>= 5.0)
       loofah (>= 2.21)
-      pagy (< 10.0)
+      pagy (< 44.0)
       rails (>= 7.1)
       reverse_markdown (>= 2.0)
       turbo-rails (>= 2.0)
@@ -288,7 +288,9 @@ GEM
       shellany (~> 0.0)
     openssl (3.3.2)
     ostruct (0.6.3)
-    pagy (9.4.0)
+    pagy (43.2.0)
+      json
+      yaml
     parallel (1.27.0)
     parser (3.3.10.0)
       ast (~> 2.4.1)
@@ -446,6 +448,7 @@ GEM
     websocket-extensions (0.1.5)
     xpath (3.2.0)
       nokogiri (~> 1.8)
+    yaml (0.4.0)
     yard (0.9.38)
     zeitwerk (2.7.3)
 
