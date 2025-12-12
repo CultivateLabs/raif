@@ -81,6 +81,7 @@ en:
       open_ai_gpt_4o_mini: OpenAI GPT-4o Mini
       open_ai_gpt_5: OpenAI GPT-5
       open_ai_gpt_5_1: OpenAI GPT-5.1
+      open_ai_gpt_5_2: OpenAI GPT-5.2
       open_ai_gpt_5_mini: OpenAI GPT-5 Mini
       open_ai_gpt_5_nano: OpenAI GPT-5 Nano
       open_ai_o1: OpenAI o1
@@ -96,6 +97,7 @@ en:
       open_ai_responses_gpt_4o_mini: OpenAI GPT-4o Mini (Responses API)
       open_ai_responses_gpt_5: OpenAI GPT-5 (Responses API)
       open_ai_responses_gpt_5_1: OpenAI GPT-5.1 (Responses API)
+      open_ai_responses_gpt_5_2: OpenAI GPT-5.2 (Responses API)
       open_ai_responses_gpt_5_mini: OpenAI GPT-5 Mini (Responses API)
       open_ai_responses_gpt_5_nano: OpenAI GPT-5 Nano (Responses API)
       open_ai_responses_o1: OpenAI o1 (Responses API)
@@ -113,12 +115,15 @@ en:
       open_router_gemini_2_5_pro: Gemini 2.5 Pro (via OpenRouter)
       open_router_gemini_3_pro_preview: Gemini 3 Pro Preview (via OpenRouter)
       open_router_grok_4: Grok 4 (via OpenRouter)
+      open_router_grok_4_1_fast: Grok 4.1 Fast (via OpenRouter)
       open_router_kimi_k2_thinking: Kimi K2 Thinking (via OpenRouter)
       open_router_llama_3_1_8b_instruct: Meta Llama 3.1 8B Instruct (via OpenRouter)
       open_router_llama_3_3_70b_instruct: Meta Llama 3.3 70B Instruct (via OpenRouter)
       open_router_llama_4_maverick: Meta Llama 4 Maverick (via OpenRouter)
       open_router_llama_4_scout: Meta Llama 4 Scout (via OpenRouter)
       open_router_minimax_m2: Minimax M2 (via OpenRouter)
+      open_router_mistral_large_3_2512: Mistral Large 3 (via OpenRouter)
+      open_router_mistral_small_3_2_24b: Mistral Small 3.2 24B (via OpenRouter)
       open_router_open_ai_gpt_oss_120b: OpenAI GPT-OSS 120B (via OpenRouter)
       open_router_open_ai_gpt_oss_20b: OpenAI GPT-OSS 20B (via OpenRouter)
       raif_test_llm: Raif Test LLM
