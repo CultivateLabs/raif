@@ -417,6 +417,12 @@ module Raif
           output_token_cost: 15.0 / 1_000_000,
         },
         {
+          key: :open_router_grok_4_1_fast,
+          api_name: "x-ai/grok-4.1-fast",
+          input_token_cost: 0.2 / 1_000_000,
+          output_token_cost: 0.5 / 1_000_000,
+        },
+        {
           key: :open_router_kimi_k2_thinking,
           api_name: "moonshotai/kimi-k2-thinking",
           input_token_cost: 0.45 / 1_000_000,
@@ -451,6 +457,18 @@ module Raif
           api_name: "minimax/minimax-m2",
           input_token_cost: 0.255 / 1_000_000,
           output_token_cost: 1.02 / 1_000_000,
+        },
+        {
+          key: :open_router_mistral_large_3_2512,
+          api_name: "mistralai/mistral-large-2512",
+          input_token_cost: 0.50 / 1_000_000,
+          output_token_cost: 1.5 / 1_000_000,
+        },
+        {
+          key: :open_router_mistral_small_3_2_24b,
+          api_name: "mistralai/mistral-small-3.2-24b-instruct",
+          input_token_cost: 0.06 / 1_000_000,
+          output_token_cost: 0.18 / 1_000_000,
         },
         {
           key: :open_router_open_ai_gpt_oss_120b,
