@@ -21,6 +21,8 @@ module Raif
       :default_llm_model_key,
       :evals_default_llm_judge_model_key,
       :evals_verbose_output,
+      :google_api_key,
+      :google_models_enabled,
       :llm_api_requests_enabled,
       :llm_request_max_retries,
       :llm_request_retriable_exceptions,
@@ -67,6 +69,9 @@ module Raif
       @default_llm_model_key = default_disable_llm_api_requests? ? :raif_test_llm : (ENV["RAIF_DEFAULT_LLM_MODEL_KEY"].presence || "open_ai_gpt_4o")
       @evals_default_llm_judge_model_key = ENV["RAIF_EVALS_DEFAULT_LLM_JUDGE_MODEL_KEY"].presence
       @evals_verbose_output = false
+      google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
+      @google_api_key = default_disable_llm_api_requests? ? "placeholder-google-api-key" : google_api_key
+      @google_models_enabled = @google_api_key.present?
       @llm_api_requests_enabled = !default_disable_llm_api_requests?
       @llm_request_max_retries = 2
       @llm_request_retriable_exceptions = [
@@ -157,6 +162,11 @@ module Raif
       if open_router_models_enabled && open_router_api_key.blank?
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.open_router_api_key is required when Raif.config.open_router_models_enabled is true. Set it via Raif.config.open_router_api_key or ENV['OPEN_ROUTER_API_KEY']" # rubocop:disable Layout/LineLength
+      end
+
+      if google_models_enabled && google_api_key.blank?
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.google_api_key is required when Raif.config.google_models_enabled is true. Set it via Raif.config.google_api_key or ENV['GOOGLE_API_KEY']" # rubocop:disable Layout/LineLength
       end
     end
 

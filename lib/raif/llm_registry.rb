@@ -482,6 +482,48 @@ module Raif
           input_token_cost: 0.05 / 1_000_000,
           output_token_cost: 0.2 / 1_000_000,
         },
+      ],
+      Raif::Llms::Google => [
+        {
+          key: :google_gemini_3_0_pro,
+          api_name: "gemini-3-pro-preview",
+          input_token_cost: 2.0 / 1_000_000,
+          output_token_cost: 12.0 / 1_000_000,
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
+          key: :google_gemini_3_0_flash,
+          api_name: "gemini-3-flash-preview",
+          input_token_cost: 0.5 / 1_000_000,
+          output_token_cost: 3.0 / 1_000_000,
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
+          key: :google_gemini_2_5_pro,
+          api_name: "gemini-2.5-pro-preview-06-05",
+          input_token_cost: 1.25 / 1_000_000,
+          output_token_cost: 10.0 / 1_000_000,
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
+          key: :google_gemini_2_5_flash,
+          api_name: "gemini-2.5-flash",
+          input_token_cost: 0.3 / 1_000_000,
+          output_token_cost: 2.5 / 1_000_000,
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
       ]
     }
   end
