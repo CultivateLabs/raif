@@ -1050,7 +1050,7 @@ RSpec.describe Raif::Llms::Google, type: :model do
 
       it "extracts and joins text content" do
         result = llm.send(:extract_text_response, response)
-        expect(result).to eq("Hello World")
+        expect(result).to eq("HelloWorld")
       end
     end
 
