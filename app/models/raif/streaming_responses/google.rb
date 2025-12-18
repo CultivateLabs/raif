@@ -44,7 +44,11 @@ private
         delta = part["text"]
         accumulate_text_part(part, index)
       else
-        # For non-text parts (e.g., functionCall), just store directly
+        # For non-text parts (e.g., functionCall), just store directly.
+        # Note: This works because we don't enable streamFunctionCallArguments in the API request.
+        # Without that opt-in flag, function calls arrive complete in a single chunk.
+        # If streaming function call arguments is enabled in the future (Gemini 3+ models),
+        # this would need to accumulate partialArgs similar to how we accumulate text.
         @response_json["candidates"][0]["content"]["parts"][index] = part
       end
     end
