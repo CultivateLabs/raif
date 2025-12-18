@@ -1,0 +1,86 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+    body:
+      encoding: UTF-8
+      string: '{"contents":[{"role":"user","parts":[{"text":"Hello"}]},{"role":"model","parts":[{"text":"Hello!
+        How can I assist you today?"}]},{"role":"user","parts":[{"text":"Can you tell
+        me a joke? Respond in json."}]}],"system_instruction":{"parts":[{"text":"You
+        are a helpful assistant who specializes in telling jokes. Your response should
+        be a properly formatted JSON object containing a single `joke` key. Do not
+        include any other text in your response outside the JSON object."}]},"generationConfig":{"temperature":0.7}}'
+    headers:
+      X-Goog-Api-Key:
+      - "<GOOGLE_API_KEY>"
+      User-Agent:
+      - Faraday v2.14.0
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Content-Type:
+      - application/json; charset=UTF-8
+      Vary:
+      - Origin
+      - Referer
+      - X-Origin
+      Date:
+      - Thu, 18 Dec 2025 18:01:13 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      X-Xss-Protection:
+      - '0'
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Content-Type-Options:
+      - nosniff
+      Server-Timing:
+      - gfet4t7; dur=1020
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: ASCII-8BIT
+      string: |
+        {
+          "candidates": [
+            {
+              "content": {
+                "parts": [
+                  {
+                    "text": "```json\n{\n  \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}\n```"
+                  }
+                ],
+                "role": "model"
+              },
+              "finishReason": "STOP",
+              "index": 0
+            }
+          ],
+          "usageMetadata": {
+            "promptTokenCount": 66,
+            "candidatesTokenCount": 28,
+            "totalTokenCount": 138,
+            "promptTokensDetails": [
+              {
+                "modality": "TEXT",
+                "tokenCount": 66
+              }
+            ],
+            "thoughtsTokenCount": 44
+          },
+          "modelVersion": "gemini-2.5-flash",
+          "responseId": "<GOOGLE_RESPONSE_ID>"
+        }
+  recorded_at: Thu, 18 Dec 2025 18:01:13 GMT
+recorded_with: VCR 6.3.1

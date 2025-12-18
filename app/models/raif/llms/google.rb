@@ -107,7 +107,7 @@ private
     parts = resp&.dig("candidates", 0, "content", "parts")
     return if parts.blank?
 
-    parts.select { |p| p.key?("text") }.map { |p| p["text"] }.join("\n")
+    parts.select { |p| p.key?("text") }.map { |p| p["text"] }.join(" ")
   end
 
   def extract_json_response(resp)

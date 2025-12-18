@@ -40,25 +40,28 @@ private
     delta = nil
 
     parts.each_with_index do |part, index|
-      delta = extract_text_delta(part, index) if part.key?("text")
-
-      # Update or add the part in our accumulated response
-      @response_json["candidates"][0]["content"]["parts"][index] = part
+      if part.key?("text")
+        delta = part["text"]
+        accumulate_text_part(part, index)
+      else
+        # For non-text parts (e.g., functionCall), just store directly
+        @response_json["candidates"][0]["content"]["parts"][index] = part
+      end
     end
 
     delta
   end
 
-  def extract_text_delta(part, index)
-    new_text = part["text"]
+  def accumulate_text_part(part, index)
     existing_part = @response_json.dig("candidates", 0, "content", "parts", index)
 
-    if existing_part.present?
-      existing_text = existing_part["text"] || ""
-      return new_text[existing_text.length..] if new_text.length > existing_text.length
+    if existing_part.present? && existing_part.key?("text")
+      # Accumulate text from incremental chunks
+      existing_part["text"] += part["text"]
+    else
+      # First text chunk for this index
+      @response_json["candidates"][0]["content"]["parts"][index] = part.dup
     end
-
-    new_text
   end
 
 end

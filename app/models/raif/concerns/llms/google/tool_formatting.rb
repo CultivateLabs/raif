@@ -17,7 +17,7 @@ module Raif::Concerns::Llms::Google::ToolFormatting
           function_declarations << {
             name: tool.tool_name,
             description: tool.tool_description,
-            parameters: tool.tool_arguments_schema
+            parameters: sanitize_schema_for_google(tool.tool_arguments_schema)
           }
         end
       end
@@ -47,5 +47,26 @@ module Raif::Concerns::Llms::Google::ToolFormatting
 
   def build_forced_tool_choice(tool_name)
     { mode: "ANY", allowedFunctionNames: [tool_name] }
+  end
+
+private
+
+  # Google's API doesn't support additionalProperties in JSON schemas
+  # This method recursively removes it from the schema
+  def sanitize_schema_for_google(schema)
+    return schema unless schema.is_a?(Hash)
+
+    sanitized = schema.except(:additionalProperties, "additionalProperties")
+
+    sanitized.transform_values do |value|
+      case value
+      when Hash
+        sanitize_schema_for_google(value)
+      when Array
+        value.map { |item| sanitize_schema_for_google(item) }
+      else
+        value
+      end
+    end
   end
 end
