@@ -187,6 +187,11 @@ Raif.configure do |config|
   # Use this to globally disable requests to LLM APIs.
   # config.llm_api_requests_enabled = true
 
+  # Timeout settings for LLM API requests (in seconds). All default to nil (use Faraday defaults).
+  # config.request_open_timeout = nil  # Time to wait for a connection to be opened
+  # config.request_read_timeout = nil  # Time to wait for data to be read
+  # config.request_write_timeout = nil # Time to wait for data to be written
+
   # The default LLM model to use for LLM-as-judge evaluations.
   # If not set, falls back to the default_llm_model_key.
   # config.evals_default_llm_judge_model_key = ENV["RAIF_EVALS_DEFAULT_LLM_JUDGE_MODEL_KEY"].presence

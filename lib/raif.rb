@@ -42,4 +42,12 @@ module Raif
   def self.running_evals?
     ENV["RAIF_RUNNING_EVALS"] == "true"
   end
+
+  def self.default_request_options
+    {
+      open_timeout: config.request_open_timeout,
+      read_timeout: config.request_read_timeout,
+      write_timeout: config.request_write_timeout
+    }.compact
+  end
 end

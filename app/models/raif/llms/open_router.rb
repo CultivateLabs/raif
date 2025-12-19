@@ -24,7 +24,7 @@ class Raif::Llms::OpenRouter < Raif::Llm
 private
 
   def connection
-    @connection ||= Faraday.new(url: "https://openrouter.ai/api/v1") do |f|
+    @connection ||= Faraday.new(url: "https://openrouter.ai/api/v1", request: Raif.default_request_options) do |f|
       f.headers["Authorization"] = "Bearer #{Raif.config.open_router_api_key}"
       f.headers["HTTP-Referer"] = Raif.config.open_router_site_url if Raif.config.open_router_site_url.present?
       f.headers["X-Title"] = Raif.config.open_router_app_name if Raif.config.open_router_app_name.present?

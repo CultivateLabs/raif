@@ -29,7 +29,7 @@ private
 
   def connection
     @connection ||= begin
-      conn = Faraday.new(url: Raif.config.open_ai_base_url) do |f|
+      conn = Faraday.new(url: Raif.config.open_ai_base_url, request: Raif.default_request_options) do |f|
         case Raif.config.open_ai_auth_header_style
         when :bearer
           f.headers["Authorization"] = "Bearer #{Raif.config.open_ai_api_key}"

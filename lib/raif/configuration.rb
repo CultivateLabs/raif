@@ -35,6 +35,9 @@ module Raif
       :open_router_models_enabled,
       :open_router_app_name,
       :open_router_site_url,
+      :request_open_timeout,
+      :request_read_timeout,
+      :request_write_timeout,
       :streaming_update_chunk_size_threshold,
       :task_creator_optional,
       :task_system_prompt_intro,
@@ -88,6 +91,9 @@ module Raif
       @open_router_models_enabled = @open_router_api_key.present?
       @open_router_app_name = nil
       @open_router_site_url = nil
+      @request_open_timeout = nil
+      @request_read_timeout = nil
+      @request_write_timeout = nil
       @streaming_update_chunk_size_threshold = 25
       @task_creator_optional = true
       @user_tool_types = []
