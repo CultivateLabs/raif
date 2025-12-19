@@ -21,6 +21,7 @@
 - Add display of available model tools to the admin interface. [#273](https://github.com/CultivateLabs/raif/pull/273)
 - Added `llm_messages_max_length` to `Raif::Conversation` to limit the number of conversation entries sent to the LLM. Defaults to 50 entries, configurable via `Raif.config.conversation_llm_messages_max_length_default`. [#275](https://github.com/CultivateLabs/raif/pull/275)
 - JSON schemas can now utilize an instance of the task or model tool as context when building the schema. [#314](https://github.com/CultivateLabs/raif/pull/314)
+- Added configurable timeout settings for LLM API requests: `request_open_timeout`, `request_read_timeout`, and `request_write_timeout`. [#321](https://github.com/CultivateLabs/raif/pull/321)
 
 ## v1.3
 
