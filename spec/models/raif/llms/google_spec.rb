@@ -381,6 +381,15 @@ RSpec.describe Raif::Llms::Google, type: :model do
           expect(parameters[:generationConfig][:responseMimeType]).to eq("application/json")
           expect(parameters[:generationConfig][:responseSchema]).to be_present
         end
+
+        it "sanitizes additionalProperties from responseSchema" do
+          # Verify the original schema has additionalProperties
+          expect(model_completion.json_response_schema).to have_key(:additionalProperties)
+
+          # Verify the sanitized schema does not
+          response_schema = parameters[:generationConfig][:responseSchema]
+          expect(response_schema).not_to have_key(:additionalProperties)
+        end
       end
 
       context "when the model completion does not have a json_response_schema" do

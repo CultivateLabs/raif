@@ -85,6 +85,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           {
             "type" => "tool_call_result",
             "provider_tool_call_id" => "tool_wikipedia_search_rbwce0jU7EYMR3L6UAh1",
+            "name" => "wikipedia_search",
             "result" => {
               "results" => [
                 {
@@ -133,6 +134,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           {
             "type" => "tool_call_result",
             "provider_tool_call_id" => "tool_fetch_url_GKGtiWPSbWm49odYOBka",
+            "name" => "fetch_url",
             "result" =>
             {
               "status" => 200,

@@ -86,6 +86,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           {
             "type" => "tool_call_result",
             "provider_tool_call_id" => "toolu_abc123",
+            "name" => "wikipedia_search",
             "result" =>
             {
               "results" =>
@@ -138,6 +139,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           {
             "type" => "tool_call_result",
             "provider_tool_call_id" => "toolu_abc123",
+            "name" => "fetch_url",
             "result" =>
             {
               "status" => 200,

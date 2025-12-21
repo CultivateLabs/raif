@@ -97,7 +97,7 @@ private
     # Use native JSON schema support for structured output
     if model_completion.response_format_json? && model_completion.json_response_schema.present?
       config[:responseMimeType] = "application/json"
-      config[:responseSchema] = model_completion.json_response_schema
+      config[:responseSchema] = sanitize_schema_for_google(model_completion.json_response_schema)
     end
 
     config
