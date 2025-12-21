@@ -1,0 +1,62 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse
+    body:
+      encoding: UTF-8
+      string: '{"contents":[{"role":"user","parts":[{"text":"What''s on the homepage
+        of https://www.wsj.com today?"}]}],"generationConfig":{"temperature":0.7},"tools":[{"functionDeclarations":[{"name":"fetch_url","description":"Fetch
+        a URL and return the page content as markdown","parameters":{"type":"object","properties":{"url":{"type":"string","description":"The
+        URL to fetch content from"}},"required":["url"]}}]}]}'
+    headers:
+      X-Goog-Api-Key:
+      - "<GOOGLE_API_KEY>"
+      User-Agent:
+      - Faraday v2.14.0
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Content-Type:
+      - text/event-stream
+      Content-Disposition:
+      - attachment
+      Vary:
+      - Origin
+      - Referer
+      - X-Origin
+      Transfer-Encoding:
+      - chunked
+      Date:
+      - Thu, 18 Dec 2025 18:16:43 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      X-Xss-Protection:
+      - '0'
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Content-Type-Options:
+      - nosniff
+      Server-Timing:
+      - gfet4t7; dur=808
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+    body:
+      encoding: UTF-8
+      string: "data: {\"candidates\": [{\"content\": {\"parts\": [{\"functionCall\":
+        {\"name\": \"fetch_url\",\"args\": {\"url\": \"https://www.wsj.com\"}},\"thoughtSignature\":
+        \"<GOOGLE_THOUGHT_SIGNATURE>\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\":
+        0,\"finishMessage\": \"Model generated function call(s).\"}],\"usageMetadata\":
+        {\"promptTokenCount\": 65,\"candidatesTokenCount\": 22,\"totalTokenCount\":
+        141,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 65}],\"thoughtsTokenCount\":
+        54},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\": \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\n"
+  recorded_at: Thu, 18 Dec 2025 18:16:43 GMT
+recorded_with: VCR 6.3.1

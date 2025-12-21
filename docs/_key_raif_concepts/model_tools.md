@@ -118,6 +118,7 @@ Current provider-managed tool support:
 | Anthropic Claude       | ✅        | ✅            | ❌               |
 | AWS Bedrock (Claude)   | ❌        | ❌            | ❌               |
 | OpenRouter             | ❌        | ❌            | ❌               |
+| Google AI              | ✅        | ✅            | ❌               |
 
 To use provider-managed tools, include them in the `available_model_tools` array, just like any other model tool:
 

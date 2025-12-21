@@ -57,7 +57,8 @@ VCR.configure do |config|
     "Amz-Sdk-Invocation-Id" => "<AMZ_SDK_INVOCATION_ID>",
     "X-Amz-Sso-Bearer-Token" => "<AMZ_SSO_BEARER_TOKEN>",
     "X-Amz-Security-Token" => "<AMZ_SECURITY_TOKEN>",
-    "X-Amz-Content-Sha256" => "<AMZ_CONTENT_SHA256>"
+    "X-Amz-Content-Sha256" => "<AMZ_CONTENT_SHA256>",
+    "X-Goog-Api-Key" => "<GOOGLE_API_KEY>"
   }.each do |key, value|
     config.filter_sensitive_data(value) do |interaction|
       interaction.request.headers[key]&.first
@@ -98,6 +99,19 @@ VCR.configure do |config|
     interaction.response.headers.delete("Set-Cookie")
     interaction.response.headers.delete("Request-Id")
     interaction.response.headers.delete("Anthropic-Organization-Id")
+  end
+
+  # Filter Google responseId in response bodies
+  config.filter_sensitive_data("<GOOGLE_RESPONSE_ID>") do |interaction|
+    if interaction.response.body&.include?("responseId")
+      interaction.response.body[/"responseId"\s*:\s*"([^"]+)"/, 1]
+    end
+  end
+
+  config.filter_sensitive_data("<GOOGLE_THOUGHT_SIGNATURE>") do |interaction|
+    if interaction.response.body&.include?("thoughtSignature")
+      interaction.response.body[/"thoughtSignature"\s*:\s*"([^"]+)"/, 1]
+    end
   end
 
   Rails.application.config.filter_parameters.each do |param|
