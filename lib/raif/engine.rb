@@ -73,6 +73,14 @@ module Raif
     end
 
     config.after_initialize do
+      next unless Raif.config.google_models_enabled
+
+      Raif.default_llms[Raif::Llms::Google].each do |llm_config|
+        Raif.register_llm(Raif::Llms::Google, **llm_config)
+      end
+    end
+
+    config.after_initialize do
       next unless Raif.config.bedrock_embedding_models_enabled
 
       require "aws-sdk-bedrockruntime"

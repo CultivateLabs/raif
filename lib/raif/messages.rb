@@ -74,17 +74,19 @@ module Raif
 
     # Tool invocation request from the assistant
     class ToolCall
-      attr_reader :provider_tool_call_id, :name, :arguments, :assistant_message
+      attr_reader :provider_tool_call_id, :name, :arguments, :assistant_message, :provider_metadata
 
       # @param name [String] The tool name (snake_case)
       # @param arguments [Hash] The arguments passed to the tool
       # @param provider_tool_call_id [String, nil] Provider-assigned ID for the tool call
       # @param assistant_message [String, nil] Optional assistant message accompanying the tool call
-      def initialize(name:, arguments:, provider_tool_call_id: nil, assistant_message: nil)
+      # @param provider_metadata [Hash, nil] Provider-specific metadata (e.g., Google's thoughtSignature)
+      def initialize(name:, arguments:, provider_tool_call_id: nil, assistant_message: nil, provider_metadata: nil)
         @provider_tool_call_id = provider_tool_call_id
         @name = name
         @arguments = arguments
         @assistant_message = assistant_message
+        @provider_metadata = provider_metadata
       end
 
       # @return [Hash] Hash representation for JSONB storage and LLM APIs
@@ -94,7 +96,8 @@ module Raif
           "provider_tool_call_id" => provider_tool_call_id,
           "name" => name,
           "arguments" => arguments,
-          "assistant_message" => assistant_message
+          "assistant_message" => assistant_message,
+          "provider_metadata" => provider_metadata
         }.compact
       end
 
@@ -106,19 +109,22 @@ module Raif
           name: hash["name"],
           arguments: hash["arguments"],
           provider_tool_call_id: hash["provider_tool_call_id"],
-          assistant_message: hash["assistant_message"]
+          assistant_message: hash["assistant_message"],
+          provider_metadata: hash["provider_metadata"]
         )
       end
     end
 
     # Result of a tool invocation
     class ToolCallResult
-      attr_reader :provider_tool_call_id, :result
+      attr_reader :provider_tool_call_id, :name, :result
 
       # @param result [Hash, String] The result returned by the tool
       # @param provider_tool_call_id [String, nil] Provider-assigned ID matching the tool call
-      def initialize(result:, provider_tool_call_id: nil)
+      # @param name [String, nil] The tool name (required by some providers like Google)
+      def initialize(result:, provider_tool_call_id: nil, name: nil)
         @provider_tool_call_id = provider_tool_call_id
+        @name = name
         @result = result
       end
 
@@ -127,6 +133,7 @@ module Raif
         {
           "type" => "tool_call_result",
           "provider_tool_call_id" => provider_tool_call_id,
+          "name" => name,
           "result" => result
         }.compact
       end
@@ -137,6 +144,7 @@ module Raif
       def self.from_h(hash)
         new(
           provider_tool_call_id: hash["provider_tool_call_id"],
+          name: hash["name"],
           result: hash["result"]
         )
       end

@@ -52,6 +52,12 @@ Raif.configure do |config|
   # The site URL to include in OpenRouter API requests headers. Optional.
   # config.open_router_site_url = "https://myapp.com"
 
+  # Your Google AI API key. Defaults to ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
+  # config.google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
+
+  # Whether Google models are enabled.
+  # config.google_models_enabled = ENV["GOOGLE_API_KEY"].present?
+
   # The default LLM model to use. Defaults to "open_ai_gpt_4o"
   # Available keys:
   #   open_ai_gpt_4o_mini
@@ -115,6 +121,10 @@ Raif.configure do |config|
   #   open_router_llama_4_scout
   #   open_router_open_ai_gpt_oss_120b
   #   open_router_open_ai_gpt_oss_20b
+  #   google_gemini_2_5_pro
+  #   google_gemini_2_5_flash
+  #   google_gemini_3_0_pro
+  #   google_gemini_3_0_flash
   #
   # config.default_llm_model_key = "open_ai_gpt_4o"
 

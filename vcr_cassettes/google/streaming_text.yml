@@ -1,0 +1,74 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse
+    body:
+      encoding: UTF-8
+      string: '{"contents":[{"role":"user","parts":[{"text":"Please write me a poem"}]}],"generationConfig":{"temperature":0.7}}'
+    headers:
+      X-Goog-Api-Key:
+      - "<GOOGLE_API_KEY>"
+      User-Agent:
+      - Faraday v2.14.0
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Content-Type:
+      - text/event-stream
+      Content-Disposition:
+      - attachment
+      Vary:
+      - Origin
+      - Referer
+      - X-Origin
+      Transfer-Encoding:
+      - chunked
+      Date:
+      - Thu, 18 Dec 2025 18:39:45 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      X-Xss-Protection:
+      - '0'
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Content-Type-Options:
+      - nosniff
+      Server-Timing:
+      - gfet4t7; dur=7405
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+    body:
+      encoding: UTF-8
+      string: "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"The
+        world awakes with whispered sigh,\\nA gentle breath upon the air.\\nWhere
+        morning mists begin to lie,\\nAnd banish shadows everywhere.\\n\\nThe sunbeams
+        stretch their golden fingers,\\nTo paint the dew on leaf and\"}],\"role\":
+        \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 6,\"candidatesTokenCount\":
+        49,\"totalTokenCount\": 1393,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        6}],\"thoughtsTokenCount\": 1338},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
+        \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\ndata: {\"candidates\": [{\"content\": {\"parts\":
+        [{\"text\": \" bloom,\\nWhile distant song a robin lingers,\\nDispelling all
+        the fading gloom.\\n\\nA quiet peace begins to settle,\\nUpon the heart, a
+        gentle balm.\\nNo urgency, no need to meddle,\\nJust nature\"}],\"role\":
+        \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 6,\"candidatesTokenCount\":
+        97,\"totalTokenCount\": 1441,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        6}],\"thoughtsTokenCount\": 1338},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
+        \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\ndata: {\"candidates\": [{\"content\": {\"parts\":
+        [{\"text\": \"'s soft and timeless calm.\\n\\nSo take a moment, soft and deep,\\nTo
+        breathe it in, this world so fair.\\nWhile secret promises it keeps,\\nAnd
+        wonders wait beyond compare.\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\":
+        0}],\"usageMetadata\": {\"promptTokenCount\": 6,\"candidatesTokenCount\":
+        139,\"totalTokenCount\": 1483,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        6}],\"thoughtsTokenCount\": 1338},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
+        \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\n"
+  recorded_at: Thu, 18 Dec 2025 18:39:46 GMT
+recorded_with: VCR 6.3.1

@@ -130,7 +130,8 @@ module Raif
           provider_tool_call_id: tool_call["provider_tool_call_id"],
           name: tool_call["name"],
           arguments: tool_call["arguments"],
-          assistant_message: assistant_response_message
+          assistant_message: assistant_response_message,
+          provider_metadata: tool_call["provider_metadata"]
         )
         add_conversation_history_entry(tool_call_message.to_h)
 
@@ -166,11 +167,7 @@ module Raif
         if tool_name == "agent_final_answer"
           self.final_answer = tool_invocation.result
         else
-          tool_call_result_message = Raif::Messages::ToolCallResult.new(
-            provider_tool_call_id: tool_call["provider_tool_call_id"],
-            result: tool_invocation.result
-          )
-          add_conversation_history_entry(tool_call_result_message.to_h)
+          add_conversation_history_entry(tool_invocation.as_tool_call_result_message)
         end
       end
 

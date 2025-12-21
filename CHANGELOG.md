@@ -1,5 +1,6 @@
 ## v1.4.0 (Unreleased)
 
+- Added Google AI adapter with support for Gemini models (2.5 Flash, 2.5 Pro, 3.0 Flash, 3.0 Pro).[#319](https://github.com/CultivateLabs/raif/pull/319)
 - **Breaking Change**: `Raif::Agents::ReActAgent` has been removed in favor of `Raif::Agents::NativeToolCallingAgent`, which provides better tool calling support across all LLM providers. [#304](https://github.com/CultivateLabs/raif/pull/304)
 - Improved tool call handling in agents with provider-specific formatting. Tool calls and their results are now stored in a structured format in conversation history and properly formatted for each LLM provider (OpenAI, Anthropic, Bedrock, OpenRouter). [#304](https://github.com/CultivateLabs/raif/pull/304)
 - Added `provider_tool_call_id` to `Raif::ModelToolInvocation` to track tool calls across different LLM providers. [#304](https://github.com/CultivateLabs/raif/pull/304)

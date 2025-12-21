@@ -73,6 +73,10 @@ en:
       bedrock_claude_4_5_sonnet: Anthropic Claude 4.5 Sonnet (via AWS Bedrock)
       bedrock_claude_4_opus: Anthropic Claude 4 Opus (via AWS Bedrock)
       bedrock_claude_4_sonnet: Anthropic Claude 4 Sonnet (via AWS Bedrock)
+      google_gemini_2_5_flash: Google Gemini 2.5 Flash
+      google_gemini_2_5_pro: Google Gemini 2.5 Pro
+      google_gemini_3_0_flash: Google Gemini 3.0 Flash
+      google_gemini_3_0_pro: Google Gemini 3.0 Pro
       open_ai_gpt_3_5_turbo: OpenAI GPT-3.5 Turbo
       open_ai_gpt_4_1: OpenAI GPT-4.1
       open_ai_gpt_4_1_mini: OpenAI GPT-4.1 Mini

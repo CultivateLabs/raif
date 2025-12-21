@@ -1,0 +1,63 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse
+    body:
+      encoding: UTF-8
+      string: '{"contents":[{"role":"user","parts":[{"text":"Can you tell me a joke?
+        Respond in json."}]}],"system_instruction":{"parts":[{"text":"You are a helpful
+        assistant who specializes in telling jokes. Your response should be a properly
+        formatted JSON object containing a single `joke` key. Do not include any other
+        text in your response outside the JSON object."}]},"generationConfig":{"temperature":0.7}}'
+    headers:
+      X-Goog-Api-Key:
+      - "<GOOGLE_API_KEY>"
+      User-Agent:
+      - Faraday v2.14.0
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Content-Type:
+      - text/event-stream
+      Content-Disposition:
+      - attachment
+      Vary:
+      - Origin
+      - Referer
+      - X-Origin
+      Transfer-Encoding:
+      - chunked
+      Date:
+      - Thu, 18 Dec 2025 18:16:41 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      X-Xss-Protection:
+      - '0'
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Content-Type-Options:
+      - nosniff
+      Server-Timing:
+      - gfet4t7; dur=859
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+    body:
+      encoding: UTF-8
+      string: "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"```json\\n{\\n
+        \ \\\"joke\\\": \\\"Why don't scientists trust atoms? Because they make up
+        everything!\\\"\\n}\\n```\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\":
+        0}],\"usageMetadata\": {\"promptTokenCount\": 54,\"candidatesTokenCount\":
+        28,\"totalTokenCount\": 132,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        54}],\"thoughtsTokenCount\": 50},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
+        \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\n"
+  recorded_at: Thu, 18 Dec 2025 18:16:41 GMT
+recorded_with: VCR 6.3.1

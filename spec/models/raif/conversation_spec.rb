@@ -77,6 +77,7 @@ RSpec.describe Raif::Conversation, type: :model do
         {
           "type" => "tool_call_result",
           "provider_tool_call_id" => "call_123",
+          "name" => mti.tool_name,
           "result" => { "status" => "success" }
         },
         # Entry 3: user message + tool call (with assistant_message) + tool result
@@ -91,6 +92,7 @@ RSpec.describe Raif::Conversation, type: :model do
         {
           "type" => "tool_call_result",
           "provider_tool_call_id" => "call_456",
+          "name" => mti2.tool_name,
           "result" => { "status" => "pending" }
         }
       ]

@@ -1,0 +1,410 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+    body:
+      encoding: UTF-8
+      string: '{"contents":[{"role":"user","parts":[{"text":"What are the latest developments
+        in Ruby on Rails?"}]}],"generationConfig":{"temperature":0.7},"tools":[{"google_search":{}}]}'
+    headers:
+      X-Goog-Api-Key:
+      - "<GOOGLE_API_KEY>"
+      User-Agent:
+      - Faraday v2.14.0
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Content-Type:
+      - application/json; charset=UTF-8
+      Vary:
+      - Origin
+      - Referer
+      - X-Origin
+      Date:
+      - Thu, 18 Dec 2025 18:14:43 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      X-Xss-Protection:
+      - '0'
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Content-Type-Options:
+      - nosniff
+      Server-Timing:
+      - gfet4t7; dur=8600
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: ASCII-8BIT
+      string: |
+        {
+          "candidates": [
+            {
+              "content": {
+                "parts": [
+                  {
+                    "text": "Ruby on Rails continues to evolve with significant updates and new features aimed at enhancing developer experience, performance, and application capabilities. The most recent developments include the releases of Rails 7.1, Rails 7.2, and the major updates to Rails 8.0 and 8.1.\n\n### Latest Releases and Key Features:\n\n**Ruby on Rails 8.1 (Released October 24, 2025)**\nRails 8.1.0 was released on October 24, 2025. This version introduces several major features, including Active Job Continuations, Structured Event Reporting, Local CI, and Markdown rendering. Rails 8.1.x is currently supported for bug fixes until October 10, 2026, and for security fixes until October 10, 2027.\n\n**Ruby on Rails 8.0 (Released November 8, 2024)**\nRuby on Rails 8.0.0 was released on November 8, 2024. This major release signifies a fundamental shift in Rails development, empowering individual developers to host and manage their applications independently without relying on Platform-as-a-service. It focuses on streamlining deployment and management for single developers. Rails 8.0.x has extended support for bug fixes until May 7, 2026, and for security fixes until November 7, 2026.\n\n**Ruby on Rails 7.2 (Released August 9, 2024)**\nRails 7.2 introduced several notable improvements and features:\n*   **Development Containers:** It now includes configuration for development containers, making it easier to set up isolated and reproducible development environments.\n*   **Production Defaults:** Rails 7.2 comes with enhanced production defaults, including enabling YJIT (Ruby's JIT compiler) by default if running Ruby 3.3+, which can offer significant performance improvements (15-25% latency improvements).\n*   **Minimum Ruby Version:** Ruby 3.1 is now the new minimum Ruby version required.\n*   **Default Progressive Web Application (PWA) Files:** New applications now come with default PWA files.\n*   **Code Quality and CI:** It adds Omakase RuboCop rules and GitHub CI workflow by default to new applications, along with Brakeman for security analysis.\n*   **Database Features:** Significant updates to Active Record database features include changes to composite primary keys (CPKs) and enhanced database transaction handling to improve consistency with background jobs. Active Job will now defer enqueuing background jobs until after a database transaction has been committed.\n*   **Performance Optimizations:** The default Puma thread count has been adjusted from 5 to 3 to improve latency, and `jemalloc` is included in the default Dockerfile for optimized memory allocation.\n*   **New Rails Guides Design:** The Rails guides received a new, cleaner, and more consistent design.\n*   **Rate Limiting:** Rails 7.2 introduces rate limiting in ActionController, allowing developers to control the frequency of requests to specific actions.\n\n**Ruby on Rails 7.1 (Released October 5, 2023)**\nRails 7.1 brought several key enhancements:\n*   **Dockerfile Generation:** It now supports generating Dockerfiles for new Rails applications, aiding in deployment with Kamal.\n*   **Authentication Improvements:** New features for authentication include `ActiveRecord::Base.normalizes` for easier data normalization, `ActiveRecord::Base.generates_token_for` for creating password reset and magic link tokens, and `authenticate_by` and `password_challenge` methods to enhance security against timing-based enumeration attacks.\n*   **Asynchronous Querying:** Building on Rails 7, version 7.1 expanded asynchronous query capabilities, allowing more queries, including aggregate methods like `async_sum`, `async_pluck`, and `async_count_by_sql`, to run in background threads.\n*   **Composite Primary Keys:** Full support for composite primary keys at both the database and application levels was introduced.\n*   **Enhanced Autoloading:** `config.autoload_lib` and `config.autoload_lib_once` were added for improved autoloading.\n*   **Bulk Job Enqueuing:** The `perform_all_later` method was added to enqueue multiple jobs simultaneously.\n*   **Unused Route Command:** A new option for the `rails routes` command was added to display unused routes.\n\nRails 7.0 and 7.1 have reached their end-of-life and are no longer officially supported for security or bug fixes as of October 29, 2025."
+                  }
+                ],
+                "role": "model"
+              },
+              "finishReason": "STOP",
+              "index": 0,
+              "groundingMetadata": {
+                "searchEntryPoint": {
+                  "renderedContent": "\u003cstyle\u003e\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n\u003c/style\u003e\n\u003cdiv class=\"container\"\u003e\n  \u003cdiv class=\"headline\"\u003e\n    \u003csvg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/\u003e\n    \u003c/svg\u003e\n    \u003csvg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\"\u003e\n      \u003ccircle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/\u003e\n      \u003cpath d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/\u003e\n      \u003cpath d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/\u003e\n      \u003cpath d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/\u003e\n      \u003cpath d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/\u003e\n    \u003c/svg\u003e\n    \u003cdiv class=\"gradient-container\"\u003e\u003cdiv class=\"gradient\"\u003e\u003c/div\u003e\u003c/div\u003e\n  \u003c/div\u003e\n  \u003cdiv class=\"carousel\"\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE1WTzfBwR7NhMUNW0B0MEwz4uhVlUG8EQZ34V8y_i18WLtj23HYlMcuyk7rUZLBRqRnMG8u2yiFvOa0a9zzR8UcMPZ0ZwcfTVfYsdT_Qrz8O0NV9XY1p2o8kwdIBBoaSBvtQ2KkUwKbG_4X3-m4wPHyOSCmRXl8R47kfiXYP1kOUbspYFkWX8b9RZobh0aSZfRDad0RtnUyq7l50yk\"\u003eRuby on Rails 7.2 features\u003c/a\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGkHuLSsk5QF0ZK6bgXuQeocJT8lgn58BlIY885VANwCngQ56p6tk4rdf7oZTjSyluDFxu9Y94iIL-2aIeXfaPLKRtmkI65Sg9iYwuxztGd3IJWTu9reX0VgoQqfXcQ4PTsnQsyy1QQ2UeJ70tZ09LpLlaMnu3DsY8x20qZ4hDXtXllhzU3dJ1NJqCGucW6yWF_lH6oQt8_R_SBCIL7xdRzpsH7pQ==\"\u003elatest Ruby on Rails developments\u003c/a\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE0RU_bUA-JQtoTkpYu5m0fJDnDB32xY2VvQ4R_8cvS9GmIUmfQbS1IJ7OYRgN6v3wXif7pLS4T7AZmOd8nuDZ1p2jbfO_jvcp6w8etzZguTj_b9kMhfj2ywgrFZZYY6DvubeV2RJtWExRlBhru5OK5rOkLXCEGuc_j4HqoJcgVZseO5NjjdQPQLqeC3rDxMcuPkwBkyivF05w4S0Mxh8c=\"\u003eRuby on Rails recent updates\u003c/a\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE0tWOHFI9ArU1U5uqjizdZLRZzO2EIaX05AUWxHtQrfQ4EaWylWtoe6Txc6qgjfC0sfbvlTnNvFBN6_xl0oizL9dXVhZoxa_BWuv4C5j_UHHAAOiKLrlyuXNY6TQjm9yQu7dHButMc_N9W6goS2g5lyxYe72GF2Wr9wZNTbKvWS_0O29Jo45vyVe9lkFadhr8NYjwx719s2h6-jIdm\"\u003eRuby on Rails 7.1 features\u003c/a\u003e\n  \u003c/div\u003e\n\u003c/div\u003e\n"
+                },
+                "groundingChunks": [
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE3HdTtOhMBF_f8OiLFJwtIIcLRicbaKMBPCKZv4u5s-kf1neRnRrgJyfx_0KD-qw_Cr1LudjjcC2jXDsXTv8ywdmtFhLRYDRqfHNwwjgoVySK5ZXYDn19ygNPtEMqxu8vrHCpTsH0=",
+                      "title": "wikipedia.org"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGg5rnqkR13TFZQ17uqCQ0V8K0703ldfUSDinBv80hpL6Fmn0JU5Q9vt6EswRThj3LI0i1pqTcV_pxBXa0hRQ9lGihe2GmDdo8_T89lCrrO17HLgyipXHnjY10buKGFCuit8XZSs1aI9sjxCNANE3DhTjP89w6MHqFmHFTrsSmNNbJRFE2qryfaIXQjXjkurD8=",
+                      "title": "rubyonrails.org"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGzrXnCduCTfZViwvGAjGL2kiEGqczx0-aqyjfYZEHUo_bFUGxBDVY-V-A6i1GwSYvuQICL9bf4FwF6you1kWi2QxKcs1yo-sqs4Jp-VP8DZLSZqN5fpo5LoqssgjfgPVwZLisgUZenGWxgQXT5SX2c",
+                      "title": "rubyonrails.org"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGqOnKodwSl4D3krdGbThqX0CLgwnfoPGwtfD8PdrH8LOwF4gF3TpKflq4BOJ1rH4Fa84GLePHYr9M8o0dVfA7y3g92oNNcjz3FcJLtZn71TKQFcBgetWxHgktHUZBykK6ThcvMRX5irxcyQy7eqbxXCoTpzzuB5iNGYA==",
+                      "title": "rubyonrails.org"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQES59skE00PxwgYlrzLUAG2Ti3Rq3vT6ograt8PNSABMUArCZ0SNRbKLW0Ml9sAgaLw32Jc5bUCoCTUkUfPKJjQqLRyK0IReAKFGyawBYXp1f0g_gr1a_se0gfv4yelp4A-Wt4EerqgcUp37sLc4CwAVEQEJBV2Q7E=",
+                      "title": "saeloun.com"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGbM2F7M2wyOWFNXsSapnMqcxxiOy_OVAzs1r-V7w8CRSjzgU9OF1OoDjlxCHh5gdbvrjRCUincQpaOZnEVbD43fBVxpePlO1jgn0CKBG1wGsCYzXFzgo5Q_WXTtae8SKcDZi6F0JhdFRxBCuFpyXhzkt2nKtpDbn1S4lNan1zw0mqsG1XrbjzlXBaNgBsm0pyAzEGUgigvWx17TBKqqOlY8m1u3T74",
+                      "title": "daily.dev"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHnBqEFYLGAZDLbJ_lS2PDd5-73AGT1MlKzj7emg_BwMukhRWZZHDw_l21XCU6y4AHv-2qamttxFmmUzZ3dIDmUw-RoJ0vj6nDZN-FRDrq6K0L2TBulz-zadWQbnIZw1JVV2_LUPIHvlm9556i_UP2NXEsps3Yvew2Dbrhj4kmxfneY5gm3qMDwSpqo1W6PUeSfXjHKcZXlqIG1aWHTo-xa73ZU1VCpnexLmw==",
+                      "title": "appsignal.com"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHH2hZhrfjTZd1N05YhYYNhzkJv986W_9RAuErTWqnsf1nvnpZQ6ZspnJw_gIzZSfV0PimUpr-0rSTFYGDJz8e6gcbIj_l9d1oGRerJRmYaD543Pdpv5H-gvBLV_b3jVJTHMtfy1hrMlbsc3gM6gpfR",
+                      "title": "rubyonrails.org"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGaXfuZa_5OTBO-1Thwnc87CayQSO0n6vODoK7F_tlgHl8Ei7oDWVxPL5EWNL_NxGYgOrxNl1yUhqBeJ7isjlJPJK-3hM-2f4wo2MZRGQ3s2krePg0KCu9YsJART7ioWjbKEjUtpgjfqrlYLA==",
+                      "title": "gorails.com"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEGzYKE6xaYqG8SOOK_0kPM4WZNeQxUM-KVTR7Tpd6jjnLcNxZJsB5k3gwUKk-Ze0we9dgBXoS81iw5XINJL8vvTKJpTUzs4lB2jDMkVcNb-MakGCENm7ZBLGtF8JXWDMmB7xmZB3lbBfeNhXajtksuO1yn2WAn55agNG_B",
+                      "title": "appsignal.com"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFN4Dg5W0vkndG6AEVt3dG905pBxVgBZIVms-1h0noorrKFtrCIqRAxmMjYBAmRy3VmYuHmw7lLs_yYOpUJTPDOsKGLnsQOtgk2_s2ACOWwpegLFGDDc5gdZLYusJc0NfCOHEKGZmjowB6ZCj0tcZrzMnCZhpeQ10l-OLGeNjcUgQ==",
+                      "title": "medium.com"
+                    }
+                  },
+                  {
+                    "web": {
+                      "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGUngJDlbtUrPpkcyLqise9oxEK-hdAptLtAbMx207vfhMlzQmgpOSpOiruzSKzKgN4k6mQMVKg5CdIiICEWxrLJp7iwvp4zsc027ld6rLwV00xHcwfC_P_LS8u82ss4lLaKB0R17bOp5OU4KQ_drp_ST_t10i0fWWVLedz84mnW4F_10NtBnOxorskxvpw40QUBleLwU_lsR4d8UUVfHij5dRM6KDMf4Y=",
+                      "title": "medium.com"
+                    }
+                  }
+                ],
+                "groundingSupports": [
+                  {
+                    "segment": {
+                      "startIndex": 415,
+                      "endIndex": 560,
+                      "text": "This version introduces several major features, including Active Job Continuations, Structured Event Reporting, Local CI, and Markdown rendering."
+                    },
+                    "groundingChunkIndices": [
+                      0
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 571,
+                      "endIndex": 680,
+                      "text": "x is currently supported for bug fixes until October 10, 2026, and for security fixes until October 10, 2027."
+                    },
+                    "groundingChunkIndices": [
+                      1
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 984,
+                      "endIndex": 1059,
+                      "text": "It focuses on streamlining deployment and management for single developers."
+                    },
+                    "groundingChunkIndices": [
+                      0
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 1070,
+                      "endIndex": 1172,
+                      "text": "x has extended support for bug fixes until May 7, 2026, and for security fixes until November 7, 2026."
+                    },
+                    "groundingChunkIndices": [
+                      1
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 1174,
+                      "endIndex": 1454,
+                      "text": "**Ruby on Rails 7.2 (Released August 9, 2024)**\nRails 7.2 introduced several notable improvements and features:\n*   **Development Containers:** It now includes configuration for development containers, making it easier to set up isolated and reproducible development environments."
+                    },
+                    "groundingChunkIndices": [
+                      2,
+                      3,
+                      4
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 1455,
+                      "endIndex": 1697,
+                      "text": "*   **Production Defaults:** Rails 7.2 comes with enhanced production defaults, including enabling YJIT (Ruby's JIT compiler) by default if running Ruby 3.3+, which can offer significant performance improvements (15-25% latency improvements)."
+                    },
+                    "groundingChunkIndices": [
+                      3
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 1698,
+                      "endIndex": 1782,
+                      "text": "*   **Minimum Ruby Version:** Ruby 3.1 is now the new minimum Ruby version required."
+                    },
+                    "groundingChunkIndices": [
+                      2,
+                      3
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 1783,
+                      "endIndex": 1889,
+                      "text": "*   **Default Progressive Web Application (PWA) Files:** New applications now come with default PWA files."
+                    },
+                    "groundingChunkIndices": [
+                      2,
+                      3,
+                      4
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 1890,
+                      "endIndex": 2046,
+                      "text": "*   **Code Quality and CI:** It adds Omakase RuboCop rules and GitHub CI workflow by default to new applications, along with Brakeman for security analysis."
+                    },
+                    "groundingChunkIndices": [
+                      2,
+                      3,
+                      4
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 2047,
+                      "endIndex": 2265,
+                      "text": "*   **Database Features:** Significant updates to Active Record database features include changes to composite primary keys (CPKs) and enhanced database transaction handling to improve consistency with background jobs."
+                    },
+                    "groundingChunkIndices": [
+                      5,
+                      6
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 2266,
+                      "endIndex": 2372,
+                      "text": "Active Job will now defer enqueuing background jobs until after a database transaction has been committed."
+                    },
+                    "groundingChunkIndices": [
+                      6
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 2373,
+                      "endIndex": 2573,
+                      "text": "*   **Performance Optimizations:** The default Puma thread count has been adjusted from 5 to 3 to improve latency, and `jemalloc` is included in the default Dockerfile for optimized memory allocation."
+                    },
+                    "groundingChunkIndices": [
+                      3
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 2574,
+                      "endIndex": 2676,
+                      "text": "*   **New Rails Guides Design:** The Rails guides received a new, cleaner, and more consistent design."
+                    },
+                    "groundingChunkIndices": [
+                      2,
+                      3
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 2677,
+                      "endIndex": 2833,
+                      "text": "*   **Rate Limiting:** Rails 7.2 introduces rate limiting in ActionController, allowing developers to control the frequency of requests to specific actions."
+                    },
+                    "groundingChunkIndices": [
+                      4
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 2835,
+                      "endIndex": 3058,
+                      "text": "**Ruby on Rails 7.1 (Released October 5, 2023)**\nRails 7.1 brought several key enhancements:\n*   **Dockerfile Generation:** It now supports generating Dockerfiles for new Rails applications, aiding in deployment with Kamal."
+                    },
+                    "groundingChunkIndices": [
+                      0,
+                      7
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 3219,
+                      "endIndex": 3407,
+                      "text": "generates_token_for` for creating password reset and magic link tokens, and `authenticate_by` and `password_challenge` methods to enhance security against timing-based enumeration attacks."
+                    },
+                    "groundingChunkIndices": [
+                      7,
+                      8
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 3408,
+                      "endIndex": 3653,
+                      "text": "*   **Asynchronous Querying:** Building on Rails 7, version 7.1 expanded asynchronous query capabilities, allowing more queries, including aggregate methods like `async_sum`, `async_pluck`, and `async_count_by_sql`, to run in background threads."
+                    },
+                    "groundingChunkIndices": [
+                      9,
+                      10,
+                      11
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 3654,
+                      "endIndex": 3785,
+                      "text": "*   **Composite Primary Keys:** Full support for composite primary keys at both the database and application levels was introduced."
+                    },
+                    "groundingChunkIndices": [
+                      7
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 3850,
+                      "endIndex": 3905,
+                      "text": "autoload_lib_once` were added for improved autoloading."
+                    },
+                    "groundingChunkIndices": [
+                      7
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 3906,
+                      "endIndex": 4015,
+                      "text": "*   **Bulk Job Enqueuing:** The `perform_all_later` method was added to enqueue multiple jobs simultaneously."
+                    },
+                    "groundingChunkIndices": [
+                      7,
+                      11
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 4016,
+                      "endIndex": 4125,
+                      "text": "*   **Unused Route Command:** A new option for the `rails routes` command was added to display unused routes."
+                    },
+                    "groundingChunkIndices": [
+                      8
+                    ]
+                  },
+                  {
+                    "segment": {
+                      "startIndex": 4127,
+                      "endIndex": 4264,
+                      "text": "Rails 7.0 and 7.1 have reached their end-of-life and are no longer officially supported for security or bug fixes as of October 29, 2025."
+                    },
+                    "groundingChunkIndices": [
+                      1
+                    ]
+                  }
+                ],
+                "webSearchQueries": [
+                  "latest Ruby on Rails developments",
+                  "Ruby on Rails recent updates",
+                  "Ruby on Rails 7.2 features",
+                  "Ruby on Rails 7.1 features"
+                ]
+              }
+            }
+          ],
+          "usageMetadata": {
+            "promptTokenCount": 11,
+            "candidatesTokenCount": 1038,
+            "totalTokenCount": 1414,
+            "promptTokensDetails": [
+              {
+                "modality": "TEXT",
+                "tokenCount": 11
+              }
+            ],
+            "toolUsePromptTokenCount": 157,
+            "toolUsePromptTokensDetails": [
+              {
+                "modality": "TEXT",
+                "tokenCount": 157
+              }
+            ],
+            "thoughtsTokenCount": 208
+          },
+          "modelVersion": "gemini-2.5-flash",
+          "responseId": "<GOOGLE_RESPONSE_ID>"
+        }
+  recorded_at: Thu, 18 Dec 2025 18:14:43 GMT
+recorded_with: VCR 6.3.1
