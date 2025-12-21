@@ -59,6 +59,7 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
   def as_tool_call_result_message
     Raif::Messages::ToolCallResult.new(
       provider_tool_call_id: provider_tool_call_id,
+      name: tool_name,
       result: result
     ).to_h
   end

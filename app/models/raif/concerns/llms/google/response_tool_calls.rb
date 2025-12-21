@@ -14,12 +14,19 @@ module Raif::Concerns::Llms::Google::ResponseToolCalls
 
     function_calls.map do |part|
       function_call = part["functionCall"]
-      {
+      tool_call = {
         # Google doesn't provide a unique ID for function calls, so we generate one
         "provider_tool_call_id" => SecureRandom.uuid,
         "name" => function_call["name"],
         "arguments" => function_call["args"]
       }
+
+      # Capture thoughtSignature if present (required for Gemini 2.5+ thinking models)
+      if part["thoughtSignature"].present?
+        tool_call["provider_metadata"] = { "thought_signature" => part["thoughtSignature"] }
+      end
+
+      tool_call
     end
   end
 end

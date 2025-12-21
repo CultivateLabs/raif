@@ -73,12 +73,18 @@ module Raif::Concerns::Llms::Google::MessageFormatting
       parts << format_string_message(tool_call["assistant_message"])
     end
 
-    parts << {
+    function_call_part = {
       "functionCall" => {
         "name" => tool_call["name"],
         "args" => tool_call["arguments"]
       }
     }
+
+    # Include thoughtSignature if present (required for Gemini 2.5+ thinking models)
+    thought_signature = tool_call.dig("provider_metadata", "thought_signature")
+    function_call_part["thoughtSignature"] = thought_signature if thought_signature.present?
+
+    parts << function_call_part
 
     {
       "role" => "model",

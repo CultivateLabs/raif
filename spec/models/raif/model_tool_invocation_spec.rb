@@ -123,6 +123,7 @@ RSpec.describe Raif::ModelToolInvocation, type: :model do
       expected = {
         "type" => "tool_call_result",
         "provider_tool_call_id" => "call_123",
+        "name" => "test_model_tool",
         "result" => { "status" => "success", "data" => "some data" }
       }
 
