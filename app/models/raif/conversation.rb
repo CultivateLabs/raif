@@ -14,16 +14,19 @@
 #  llm_model_key              :string           not null
 #  requested_language_key     :string
 #  response_format            :integer          default("text"), not null
+#  source_type                :string
 #  system_prompt              :text
 #  type                       :string           not null
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  creator_id                 :bigint           not null
+#  source_id                  :bigint
 #
 # Indexes
 #
 #  index_raif_conversations_on_created_at  (created_at)
 #  index_raif_conversations_on_creator     (creator_type,creator_id)
+#  index_raif_conversations_on_source      (source_type,source_id)
 #
 class Raif::Conversation < Raif::ApplicationRecord
   include Raif::Concerns::HasLlm
@@ -32,6 +35,7 @@ class Raif::Conversation < Raif::ApplicationRecord
   include Raif::Concerns::LlmResponseParsing
 
   belongs_to :creator, polymorphic: true
+  belongs_to :source, polymorphic: true, optional: true
 
   class << self
     def before_prompt_model_for_entry_response(&block)

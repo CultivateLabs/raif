@@ -14,21 +14,42 @@
 #  llm_model_key              :string           not null
 #  requested_language_key     :string
 #  response_format            :integer          default("text"), not null
+#  source_type                :string
 #  system_prompt              :text
 #  type                       :string           not null
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  creator_id                 :bigint           not null
+#  source_id                  :bigint
 #
 # Indexes
 #
 #  index_raif_conversations_on_created_at  (created_at)
 #  index_raif_conversations_on_creator     (creator_type,creator_id)
+#  index_raif_conversations_on_source      (source_type,source_id)
 #
 require "rails_helper"
 
 RSpec.describe Raif::Conversation, type: :model do
   let(:creator) { Raif::TestUser.create!(email: "test@example.com") }
+
+  describe "associations" do
+    it "belongs to a polymorphic source" do
+      source_record = Raif::TestUser.create!(email: "source@example.com")
+      conversation = FB.create(:raif_conversation, creator: creator, source: source_record)
+
+      expect(conversation.source).to eq(source_record)
+      expect(conversation.source_type).to eq("Raif::TestUser")
+      expect(conversation.source_id).to eq(source_record.id)
+    end
+
+    it "allows source to be nil" do
+      conversation = FB.create(:raif_conversation, creator: creator, source: nil)
+
+      expect(conversation.source).to be_nil
+      expect(conversation).to be_valid
+    end
+  end
 
   describe "#llm_messages" do
     it "returns the messages" do
