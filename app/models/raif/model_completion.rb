@@ -26,6 +26,7 @@
 #  response_tool_calls       :jsonb
 #  retry_count               :integer          default(0), not null
 #  source_type               :string
+#  started_at                :datetime
 #  stream_response           :boolean          default(FALSE), not null
 #  system_prompt             :text
 #  temperature               :decimal(5, 3)
@@ -43,14 +44,16 @@
 #  index_raif_model_completions_on_created_at    (created_at)
 #  index_raif_model_completions_on_failed_at     (failed_at)
 #  index_raif_model_completions_on_source        (source_type,source_id)
+#  index_raif_model_completions_on_started_at    (started_at)
 #
 class Raif::ModelCompletion < Raif::ApplicationRecord
   include Raif::Concerns::LlmResponseParsing
   include Raif::Concerns::HasAvailableModelTools
   include Raif::Concerns::BooleanTimestamp
 
-  boolean_timestamp :failed_at
+  boolean_timestamp :started_at
   boolean_timestamp :completed_at
+  boolean_timestamp :failed_at
 
   belongs_to :source, polymorphic: true, optional: true
 

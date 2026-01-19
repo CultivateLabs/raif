@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_19_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_19_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -140,6 +140,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_19_000001) do
     t.integer "retry_count", default: 0, null: false
     t.bigint "source_id"
     t.string "source_type"
+    t.datetime "started_at"
     t.boolean "stream_response", default: false, null: false
     t.text "system_prompt"
     t.decimal "temperature", precision: 5, scale: 3
@@ -151,6 +152,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_19_000001) do
     t.index ["created_at"], name: "index_raif_model_completions_on_created_at"
     t.index ["failed_at"], name: "index_raif_model_completions_on_failed_at"
     t.index ["source_type", "source_id"], name: "index_raif_model_completions_on_source"
+    t.index ["started_at"], name: "index_raif_model_completions_on_started_at"
   end
 
   create_table "raif_model_tool_invocations", force: :cascade do |t|

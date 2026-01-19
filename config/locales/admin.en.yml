@@ -32,6 +32,8 @@ en:
         est_costs: est. costs
         failed: Failed
         failed_at: Failed At
+        failure_error: Failure Error
+        failure_reason: Failure Reason
         filter: Filter
         final_answer: Final Answer
         id: ID
@@ -71,7 +73,6 @@ en:
         requested_language: Requested Language
         response: Response
         response_format: Response Format
-        response_format_parameter: Response Format Parameter
         result: Result
         retry_count: Retry Count
         running: Running

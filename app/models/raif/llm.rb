@@ -96,6 +96,8 @@ module Raif
         stream_response: block_given?
       )
 
+      model_completion.started!
+
       retry_with_backoff(model_completion) do
         perform_model_completion!(model_completion, &block)
       end

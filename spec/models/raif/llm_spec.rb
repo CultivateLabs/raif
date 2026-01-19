@@ -115,6 +115,13 @@ RSpec.describe Raif::Llm, type: :model do
         expect(result.failure_reason).to be_nil
       end
 
+      it "marks completion as started" do
+        result = test_llm.chat(messages: messages, system_prompt: system_prompt)
+
+        expect(result.started?).to be true
+        expect(result.started_at).to be_present
+      end
+
       it "marks completion as completed on success" do
         result = test_llm.chat(messages: messages, system_prompt: system_prompt)
 

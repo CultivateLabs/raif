@@ -26,6 +26,7 @@
 #  response_tool_calls       :jsonb
 #  retry_count               :integer          default(0), not null
 #  source_type               :string
+#  started_at                :datetime
 #  stream_response           :boolean          default(FALSE), not null
 #  system_prompt             :text
 #  temperature               :decimal(5, 3)
@@ -43,6 +44,7 @@
 #  index_raif_model_completions_on_created_at    (created_at)
 #  index_raif_model_completions_on_failed_at     (failed_at)
 #  index_raif_model_completions_on_source        (source_type,source_id)
+#  index_raif_model_completions_on_started_at    (started_at)
 #
 require "rails_helper"
 
@@ -305,6 +307,43 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         it "removes the script tags" do
           expect(model_completion.parsed_response).to include("<div>\nalert('XSS')<p>Safe content</p>\n</div>")
         end
+      end
+    end
+  end
+
+  describe "start tracking" do
+    describe "boolean_timestamp :started_at" do
+      let(:model_completion) do
+        described_class.create!(
+          llm_model_key: "open_ai_gpt_4o",
+          model_api_name: "gpt-4o",
+          messages: [{ "role" => "user", "content" => "Hello" }]
+        )
+      end
+
+      it "defines started? method" do
+        expect(model_completion.started?).to be false
+        model_completion.update!(started_at: Time.current)
+        expect(model_completion.started?).to be true
+      end
+
+      it "defines started! method" do
+        expect(model_completion.started_at).to be_nil
+        model_completion.started!
+        expect(model_completion.reload.started_at).to be_present
+      end
+
+      it "defines .started scope" do
+        unstarted_completion = model_completion
+        started_completion = described_class.create!(
+          llm_model_key: "open_ai_gpt_4o",
+          model_api_name: "gpt-4o",
+          messages: [{ "role" => "user", "content" => "Hello" }],
+          started_at: Time.current
+        )
+
+        expect(described_class.started).to include(started_completion)
+        expect(described_class.started).not_to include(unstarted_completion)
       end
     end
   end
