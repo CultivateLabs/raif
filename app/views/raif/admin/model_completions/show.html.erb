@@ -64,7 +64,7 @@
             <% if @model_completion.prompt_tokens %>
               <%= number_with_delimiter(@model_completion.prompt_tokens) %>
               <% if @model_completion.prompt_token_cost %>
-                <small>(<%= number_to_currency(@model_completion.prompt_token_cost, precision: 6) %>)</small>
+                <small>(<%= t("raif.admin.common.est_cost") %>: <%= number_to_currency(@model_completion.prompt_token_cost, precision: 6) %>)</small>
               <% end %>
             <% else %>
               -
@@ -77,7 +77,7 @@
             <% if @model_completion.completion_tokens %>
               <%= number_with_delimiter(@model_completion.completion_tokens) %>
               <% if @model_completion.output_token_cost %>
-                <small>(<%= number_to_currency(@model_completion.output_token_cost, precision: 6) %>)</small>
+                <small>(<%= t("raif.admin.common.est_cost") %>: <%= number_to_currency(@model_completion.output_token_cost, precision: 6) %>)</small>
               <% end %>
             <% else %>
               -
@@ -90,7 +90,7 @@
             <% if @model_completion.total_tokens %>
               <%= number_with_delimiter(@model_completion.total_tokens) %>
               <% if @model_completion.total_cost %>
-                <small>(<%= number_to_currency(@model_completion.total_cost, precision: 6) %>)</small>
+                <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(@model_completion.total_cost, precision: 6) %>)</small>
               <% end %>
             <% else %>
               -
