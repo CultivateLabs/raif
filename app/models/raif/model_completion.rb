@@ -7,7 +7,11 @@
 #  id                        :bigint           not null, primary key
 #  available_model_tools     :jsonb            not null
 #  citations                 :jsonb
+#  completed_at              :datetime
 #  completion_tokens         :integer
+#  failed_at                 :datetime
+#  failure_error             :string
+#  failure_reason            :string
 #  llm_model_key             :string           not null
 #  max_completion_tokens     :integer
 #  messages                  :jsonb            not null
@@ -22,6 +26,7 @@
 #  response_tool_calls       :jsonb
 #  retry_count               :integer          default(0), not null
 #  source_type               :string
+#  started_at                :datetime
 #  stream_response           :boolean          default(FALSE), not null
 #  system_prompt             :text
 #  temperature               :decimal(5, 3)
@@ -35,12 +40,20 @@
 #
 # Indexes
 #
-#  index_raif_model_completions_on_created_at  (created_at)
-#  index_raif_model_completions_on_source      (source_type,source_id)
+#  index_raif_model_completions_on_completed_at  (completed_at)
+#  index_raif_model_completions_on_created_at    (created_at)
+#  index_raif_model_completions_on_failed_at     (failed_at)
+#  index_raif_model_completions_on_source        (source_type,source_id)
+#  index_raif_model_completions_on_started_at    (started_at)
 #
 class Raif::ModelCompletion < Raif::ApplicationRecord
   include Raif::Concerns::LlmResponseParsing
   include Raif::Concerns::HasAvailableModelTools
+  include Raif::Concerns::BooleanTimestamp
+
+  boolean_timestamp :started_at
+  boolean_timestamp :completed_at
+  boolean_timestamp :failed_at
 
   belongs_to :source, polymorphic: true, optional: true
 
@@ -80,6 +93,13 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     if prompt_token_cost.present? || output_token_cost.present?
       self.total_cost = (prompt_token_cost || 0) + (output_token_cost || 0)
     end
+  end
+
+  def record_failure!(exception)
+    self.failed_at = Time.current
+    self.failure_error = exception.class.name
+    self.failure_reason = exception.message.truncate(255)
+    save!
   end
 
 private

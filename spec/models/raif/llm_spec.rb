@@ -78,6 +78,69 @@ RSpec.describe Raif::Llm, type: :model do
         expect(mc.raw_response).to eq(nil)
         expect(mc.retry_count).to eq(0)
       end
+
+      it "records failure when Faraday::Error occurs" do
+        allow(Raif.config).to receive(:llm_request_retriable_exceptions).and_return([])
+        allow(test_llm).to receive(:perform_model_completion!).and_raise(Faraday::ConnectionFailed.new("Connection failed"))
+
+        expect do
+          test_llm.chat(messages: messages, system_prompt: system_prompt)
+        end.to raise_error(Faraday::ConnectionFailed)
+
+        mc = Raif::ModelCompletion.newest_first.first
+        expect(mc.failed?).to be true
+        expect(mc.failure_error).to eq("Faraday::ConnectionFailed")
+        expect(mc.failure_reason).to eq("Connection failed")
+      end
+
+      it "records failure when StandardError occurs" do
+        allow(Raif.config).to receive(:llm_request_retriable_exceptions).and_return([])
+        allow(test_llm).to receive(:perform_model_completion!).and_raise(StandardError.new("Unexpected error"))
+
+        expect do
+          test_llm.chat(messages: messages, system_prompt: system_prompt)
+        end.to raise_error(StandardError)
+
+        mc = Raif::ModelCompletion.newest_first.first
+        expect(mc.failed?).to be true
+        expect(mc.failure_error).to eq("StandardError")
+        expect(mc.failure_reason).to eq("Unexpected error")
+      end
+
+      it "does not record failure on success" do
+        result = test_llm.chat(messages: messages, system_prompt: system_prompt)
+
+        expect(result.failed?).to be false
+        expect(result.failure_error).to be_nil
+        expect(result.failure_reason).to be_nil
+      end
+
+      it "marks completion as started" do
+        result = test_llm.chat(messages: messages, system_prompt: system_prompt)
+
+        expect(result.started?).to be true
+        expect(result.started_at).to be_present
+      end
+
+      it "marks completion as completed on success" do
+        result = test_llm.chat(messages: messages, system_prompt: system_prompt)
+
+        expect(result.completed?).to be true
+        expect(result.completed_at).to be_present
+      end
+
+      it "does not mark completion as completed on failure" do
+        allow(Raif.config).to receive(:llm_request_retriable_exceptions).and_return([])
+        allow(test_llm).to receive(:perform_model_completion!).and_raise(StandardError.new("Unexpected error"))
+
+        expect do
+          test_llm.chat(messages: messages, system_prompt: system_prompt)
+        end.to raise_error(StandardError)
+
+        mc = Raif::ModelCompletion.newest_first.first
+        expect(mc.completed?).to be false
+        expect(mc.completed_at).to be_nil
+      end
     end
 
     context "with invalid response_format" do
@@ -180,6 +243,25 @@ RSpec.describe Raif::Llm, type: :model do
         expect(mc.messages).to eq([{ "role" => "user", "content" => [{ "text" => "Hello", "type" => "text" }] }])
         expect(mc.raw_response).to eq(nil)
         expect(mc.retry_count).to eq(2)
+      end
+
+      it "records failure after retries exhausted" do
+        llm = retriable_llm_class.new(
+          failures_before_success: 3, # more than max retries (2) so that this fails before succeeding
+          exception_to_raise: retry_exception,
+          key: :test_retry_llm,
+          api_name: "test_retry_api"
+        )
+        allow(llm).to receive(:sleep) # Skip sleep delay in tests
+
+        expect do
+          llm.chat(messages: messages)
+        end.to raise_error(Faraday::ConnectionFailed)
+
+        mc = Raif::ModelCompletion.last
+        expect(mc.failed?).to be true
+        expect(mc.failure_error).to eq("Faraday::ConnectionFailed")
+        expect(mc.failure_reason).to eq("Connection failed")
       end
     end
 
