@@ -8,6 +8,9 @@
 #  available_model_tools     :jsonb            not null
 #  citations                 :jsonb
 #  completion_tokens         :integer
+#  failed_at                 :datetime
+#  failure_error             :string
+#  failure_reason            :string
 #  llm_model_key             :string           not null
 #  max_completion_tokens     :integer
 #  messages                  :jsonb            not null
@@ -36,6 +39,7 @@
 # Indexes
 #
 #  index_raif_model_completions_on_created_at  (created_at)
+#  index_raif_model_completions_on_failed_at   (failed_at)
 #  index_raif_model_completions_on_source      (source_type,source_id)
 #
 require "rails_helper"
@@ -299,6 +303,93 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         it "removes the script tags" do
           expect(model_completion.parsed_response).to include("<div>\nalert('XSS')<p>Safe content</p>\n</div>")
         end
+      end
+    end
+  end
+
+  describe "failure tracking" do
+    describe "boolean_timestamp :failed_at" do
+      let(:model_completion) do
+        described_class.create!(
+          llm_model_key: "open_ai_gpt_4o",
+          model_api_name: "gpt-4o",
+          messages: [{ "role" => "user", "content" => "Hello" }]
+        )
+      end
+
+      it "defines failed? method" do
+        expect(model_completion.failed?).to be false
+        model_completion.update!(failed_at: Time.current)
+        expect(model_completion.failed?).to be true
+      end
+
+      it "defines failed! method" do
+        expect(model_completion.failed_at).to be_nil
+        model_completion.failed!
+        expect(model_completion.reload.failed_at).to be_present
+      end
+
+      it "defines .failed scope" do
+        unfailed_completion = model_completion
+        failed_completion = described_class.create!(
+          llm_model_key: "open_ai_gpt_4o",
+          model_api_name: "gpt-4o",
+          messages: [{ "role" => "user", "content" => "Hello" }],
+          failed_at: Time.current
+        )
+
+        expect(described_class.failed).to include(failed_completion)
+        expect(described_class.failed).not_to include(unfailed_completion)
+      end
+    end
+
+    describe "#record_failure!" do
+      let(:model_completion) do
+        described_class.create!(
+          llm_model_key: "open_ai_gpt_4o",
+          model_api_name: "gpt-4o",
+          messages: [{ "role" => "user", "content" => "Hello" }]
+        )
+      end
+
+      it "records the failure details" do
+        exception = StandardError.new("Something went wrong")
+
+        model_completion.record_failure!(exception)
+
+        expect(model_completion.failed?).to be true
+        expect(model_completion.failure_error).to eq("StandardError")
+        expect(model_completion.failure_reason).to eq("Something went wrong")
+      end
+
+      it "records custom exception class names" do
+        exception = Faraday::ConnectionFailed.new("Connection refused")
+
+        model_completion.record_failure!(exception)
+
+        expect(model_completion.failure_error).to eq("Faraday::ConnectionFailed")
+        expect(model_completion.failure_reason).to eq("Connection refused")
+      end
+
+      it "truncates long failure reasons to 255 characters" do
+        long_message = "x" * 300
+        exception = StandardError.new(long_message)
+
+        model_completion.record_failure!(exception)
+
+        expect(model_completion.failure_reason.length).to eq(255)
+        expect(model_completion.failure_reason).to end_with("...")
+      end
+
+      it "persists the failure to the database" do
+        exception = StandardError.new("Test error")
+
+        model_completion.record_failure!(exception)
+
+        reloaded = described_class.find(model_completion.id)
+        expect(reloaded.failed?).to be true
+        expect(reloaded.failure_error).to eq("StandardError")
+        expect(reloaded.failure_reason).to eq("Test error")
       end
     end
   end

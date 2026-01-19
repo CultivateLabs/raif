@@ -8,6 +8,9 @@
 #  available_model_tools     :jsonb            not null
 #  citations                 :jsonb
 #  completion_tokens         :integer
+#  failed_at                 :datetime
+#  failure_error             :string
+#  failure_reason            :string
 #  llm_model_key             :string           not null
 #  max_completion_tokens     :integer
 #  messages                  :jsonb            not null
@@ -36,11 +39,14 @@
 # Indexes
 #
 #  index_raif_model_completions_on_created_at  (created_at)
+#  index_raif_model_completions_on_failed_at   (failed_at)
 #  index_raif_model_completions_on_source      (source_type,source_id)
 #
 class Raif::ModelCompletion < Raif::ApplicationRecord
   include Raif::Concerns::LlmResponseParsing
   include Raif::Concerns::HasAvailableModelTools
+
+  boolean_timestamp :failed_at
 
   belongs_to :source, polymorphic: true, optional: true
 
@@ -80,6 +86,13 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     if prompt_token_cost.present? || output_token_cost.present?
       self.total_cost = (prompt_token_cost || 0) + (output_token_cost || 0)
     end
+  end
+
+  def record_failure!(exception)
+    self.failed_at = Time.current
+    self.failure_error = exception.class.name
+    self.failure_reason = exception.message.truncate(255)
+    save!
   end
 
 private

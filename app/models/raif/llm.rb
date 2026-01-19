@@ -103,10 +103,15 @@ module Raif
       model_completion
     rescue Raif::Errors::StreamingError => e
       Rails.logger.error("Raif streaming error -- code: #{e.code} -- type: #{e.type} -- message: #{e.message} -- event: #{e.event}")
+      model_completion&.record_failure!(e)
       raise e
     rescue Faraday::Error => e
       Raif.logger.error("LLM API request failed (status: #{e.response_status}): #{e.message}")
       Raif.logger.error(e.response_body)
+      model_completion&.record_failure!(e)
+      raise e
+    rescue StandardError => e
+      model_completion&.record_failure!(e)
       raise e
     end
 
