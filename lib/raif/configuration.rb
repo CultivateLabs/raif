@@ -31,6 +31,7 @@ module Raif
       :open_ai_api_version,
       :open_ai_auth_header_style,
       :open_ai_base_url,
+      :open_ai_embedding_base_url,
       :open_ai_embedding_models_enabled,
       :open_ai_models_enabled,
       :open_router_api_key,
@@ -89,6 +90,7 @@ module Raif
       @open_ai_api_version = nil
       @open_ai_auth_header_style = :bearer
       @open_ai_base_url = "https://api.openai.com/v1"
+      @open_ai_embedding_base_url = "https://api.openai.com/v1"
       @open_ai_embedding_models_enabled = ENV["OPENAI_API_KEY"].present?
       @open_ai_models_enabled = ENV["OPENAI_API_KEY"].present?
       open_router_api_key = ENV["OPEN_ROUTER_API_KEY"].presence || ENV["OPENROUTER_API_KEY"]

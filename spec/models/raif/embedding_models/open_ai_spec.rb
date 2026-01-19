@@ -26,6 +26,24 @@ RSpec.describe Raif::EmbeddingModels::OpenAi, type: :model do
     end
   end
 
+  describe "custom base URL" do
+    let(:custom_base_url) { "https://custom-embedding-server.example.com/v1" }
+    let(:input) { "Test input" }
+    let(:embedding_vector) { Array.new(model.default_output_vector_size) { rand(-1.0..1.0) } }
+    let(:response_body) { { "data" => [{ "embedding" => embedding_vector }] } }
+
+    it "uses the configured open_ai_embedding_base_url" do
+      allow(Raif.config).to receive(:open_ai_embedding_base_url).and_return(custom_base_url)
+
+      # Create a fresh model instance without memoized connection
+      fresh_model = Raif.embedding_model(:open_ai_text_embedding_3_small).dup
+
+      # Verify the connection is built with the custom URL
+      connection = fresh_model.send(:connection)
+      expect(connection.url_prefix.to_s).to eq("#{custom_base_url}/")
+    end
+  end
+
   describe "#generate_embedding!" do
     context "with a string input" do
       let(:input) { "This is a test sentence" }
