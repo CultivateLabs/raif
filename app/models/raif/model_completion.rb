@@ -7,6 +7,7 @@
 #  id                        :bigint           not null, primary key
 #  available_model_tools     :jsonb            not null
 #  citations                 :jsonb
+#  completed_at              :datetime
 #  completion_tokens         :integer
 #  failed_at                 :datetime
 #  failure_error             :string
@@ -38,15 +39,18 @@
 #
 # Indexes
 #
-#  index_raif_model_completions_on_created_at  (created_at)
-#  index_raif_model_completions_on_failed_at   (failed_at)
-#  index_raif_model_completions_on_source      (source_type,source_id)
+#  index_raif_model_completions_on_completed_at  (completed_at)
+#  index_raif_model_completions_on_created_at    (created_at)
+#  index_raif_model_completions_on_failed_at     (failed_at)
+#  index_raif_model_completions_on_source        (source_type,source_id)
 #
 class Raif::ModelCompletion < Raif::ApplicationRecord
   include Raif::Concerns::LlmResponseParsing
   include Raif::Concerns::HasAvailableModelTools
+  include Raif::Concerns::BooleanTimestamp
 
   boolean_timestamp :failed_at
+  boolean_timestamp :completed_at
 
   belongs_to :source, polymorphic: true, optional: true
 

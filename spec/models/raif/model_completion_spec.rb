@@ -7,6 +7,7 @@
 #  id                        :bigint           not null, primary key
 #  available_model_tools     :jsonb            not null
 #  citations                 :jsonb
+#  completed_at              :datetime
 #  completion_tokens         :integer
 #  failed_at                 :datetime
 #  failure_error             :string
@@ -38,9 +39,10 @@
 #
 # Indexes
 #
-#  index_raif_model_completions_on_created_at  (created_at)
-#  index_raif_model_completions_on_failed_at   (failed_at)
-#  index_raif_model_completions_on_source      (source_type,source_id)
+#  index_raif_model_completions_on_completed_at  (completed_at)
+#  index_raif_model_completions_on_created_at    (created_at)
+#  index_raif_model_completions_on_failed_at     (failed_at)
+#  index_raif_model_completions_on_source        (source_type,source_id)
 #
 require "rails_helper"
 
@@ -303,6 +305,43 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         it "removes the script tags" do
           expect(model_completion.parsed_response).to include("<div>\nalert('XSS')<p>Safe content</p>\n</div>")
         end
+      end
+    end
+  end
+
+  describe "completion tracking" do
+    describe "boolean_timestamp :completed_at" do
+      let(:model_completion) do
+        described_class.create!(
+          llm_model_key: "open_ai_gpt_4o",
+          model_api_name: "gpt-4o",
+          messages: [{ "role" => "user", "content" => "Hello" }]
+        )
+      end
+
+      it "defines completed? method" do
+        expect(model_completion.completed?).to be false
+        model_completion.update!(completed_at: Time.current)
+        expect(model_completion.completed?).to be true
+      end
+
+      it "defines completed! method" do
+        expect(model_completion.completed_at).to be_nil
+        model_completion.completed!
+        expect(model_completion.reload.completed_at).to be_present
+      end
+
+      it "defines .completed scope" do
+        uncompleted_completion = model_completion
+        completed_completion = described_class.create!(
+          llm_model_key: "open_ai_gpt_4o",
+          model_api_name: "gpt-4o",
+          messages: [{ "role" => "user", "content" => "Hello" }],
+          completed_at: Time.current
+        )
+
+        expect(described_class.completed).to include(completed_completion)
+        expect(described_class.completed).not_to include(uncompleted_completion)
       end
     end
   end

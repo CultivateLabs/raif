@@ -100,6 +100,7 @@ module Raif
         perform_model_completion!(model_completion, &block)
       end
 
+      model_completion.completed!
       model_completion
     rescue Raif::Errors::StreamingError => e
       Rails.logger.error("Raif streaming error -- code: #{e.code} -- type: #{e.type} -- message: #{e.message} -- event: #{e.event}")

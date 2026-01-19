@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_19_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_19_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -118,6 +118,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_19_000000) do
   create_table "raif_model_completions", force: :cascade do |t|
     t.jsonb "available_model_tools", null: false
     t.jsonb "citations"
+    t.datetime "completed_at"
     t.integer "completion_tokens"
     t.datetime "created_at", null: false
     t.datetime "failed_at"
@@ -146,6 +147,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_19_000000) do
     t.decimal "total_cost", precision: 10, scale: 6
     t.integer "total_tokens"
     t.datetime "updated_at", null: false
+    t.index ["completed_at"], name: "index_raif_model_completions_on_completed_at"
     t.index ["created_at"], name: "index_raif_model_completions_on_created_at"
     t.index ["failed_at"], name: "index_raif_model_completions_on_failed_at"
     t.index ["source_type", "source_id"], name: "index_raif_model_completions_on_source"

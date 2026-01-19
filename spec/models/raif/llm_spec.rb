@@ -114,6 +114,26 @@ RSpec.describe Raif::Llm, type: :model do
         expect(result.failure_error).to be_nil
         expect(result.failure_reason).to be_nil
       end
+
+      it "marks completion as completed on success" do
+        result = test_llm.chat(messages: messages, system_prompt: system_prompt)
+
+        expect(result.completed?).to be true
+        expect(result.completed_at).to be_present
+      end
+
+      it "does not mark completion as completed on failure" do
+        allow(Raif.config).to receive(:llm_request_retriable_exceptions).and_return([])
+        allow(test_llm).to receive(:perform_model_completion!).and_raise(StandardError.new("Unexpected error"))
+
+        expect do
+          test_llm.chat(messages: messages, system_prompt: system_prompt)
+        end.to raise_error(StandardError)
+
+        mc = Raif::ModelCompletion.newest_first.first
+        expect(mc.completed?).to be false
+        expect(mc.completed_at).to be_nil
+      end
     end
 
     context "with invalid response_format" do
