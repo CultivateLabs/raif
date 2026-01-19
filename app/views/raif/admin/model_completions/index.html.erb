@@ -2,6 +2,31 @@
 
 <div class="row">
   <div class="col-12">
+    <%= form_tag raif.admin_model_completions_path, method: :get, class: "mb-4" do %>
+      <div class="row align-items-end">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="status"><%= t("raif.admin.common.status") %></label>
+            <%= select_tag :status,
+                  options_for_select(
+                    [
+                      [t("raif.admin.common.all"), :all],
+                      [t("raif.admin.common.completed"), :completed],
+                      [t("raif.admin.common.failed"), :failed],
+                      [t("raif.admin.common.in_progress"), :started],
+                      [t("raif.admin.common.pending"), :pending]
+                    ],
+                    @selected_status
+                  ),
+                  { class: "form-select" } %>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <%= submit_tag t("raif.admin.common.filter"), class: "btn btn-primary" %>
+        </div>
+      </div>
+    <% end %>
+
     <% if @model_completions.any? %>
       <div class="table-responsive">
         <table class="table table-striped table-hover">

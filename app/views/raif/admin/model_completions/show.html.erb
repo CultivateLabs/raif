@@ -8,73 +8,112 @@
     <h5 class="mb-0"><%= t("raif.admin.common.details") %></h5>
   </div>
   <div class="card-body">
-    <div class="row mb-3">
-      <div class="col-md-3"><strong><%= t("raif.admin.common.id") %>:</strong></div>
-      <div class="col-md-9"><%= @model_completion.id %></div>
-    </div>
-    <div class="row mb-3">
-      <div class="col-md-3"><strong><%= t("raif.admin.common.source") %>:</strong></div>
-      <div class="col-md-9"><%= @model_completion.source_type %> #<%= @model_completion.source_id %></div>
-    </div>
-    <div class="row mb-3">
-      <div class="col-md-3"><strong><%= t("raif.admin.common.model") %>:</strong></div>
-      <div class="col-md-9"><%= @model_completion.llm_model_key %></div>
-    </div>
-    <div class="row mb-3">
-      <div class="col-md-3"><strong><%= t("raif.admin.common.response_format") %>:</strong></div>
-      <div class="col-md-9"><%= @model_completion.response_format %></div>
-    </div>
-    <div class="row mb-3">
-      <div class="col-md-3"><strong><%= t("raif.admin.common.response_format_parameter") %>:</strong></div>
-      <div class="col-md-9"><%= @model_completion.response_format_parameter %></div>
-    </div>
-    <div class="row mb-3">
-      <div class="col-md-3"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
-      <div class="col-md-9"><%= @model_completion.created_at.rfc822 %></div>
-    </div>
-    <div class="row mb-3">
-      <div class="col-md-3"><strong><%= t("raif.admin.common.retry_count") %>:</strong></div>
-      <div class="col-md-9"><%= @model_completion.retry_count %></div>
-    </div>
-    <div class="row mb-3">
-      <div class="col-md-3"><strong><%= t("raif.admin.common.prompt_tokens") %>:</strong></div>
-      <div class="col-md-9">
-        <% if @model_completion.prompt_tokens %>
-          <%= number_with_delimiter(@model_completion.prompt_tokens) %>
-          <% if @model_completion.prompt_token_cost %>
-            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(@model_completion.prompt_token_cost, precision: 6) %>)</small>
-          <% end %>
-        <% else %>
-          -
-        <% end %>
+    <div class="row">
+      <div class="col-md-6">
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.id") %>:</strong></div>
+          <div class="col-7"><%= @model_completion.id %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.source") %>:</strong></div>
+          <div class="col-7"><%= @model_completion.source_type %> #<%= @model_completion.source_id %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.model") %>:</strong></div>
+          <div class="col-7"><%= @model_completion.llm_model_key %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.response_format") %>:</strong></div>
+          <div class="col-7"><%= @model_completion.response_format %><%= " (#{@model_completion.response_format_parameter})" if @model_completion.response_format_parameter.present? %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.status") %>:</strong></div>
+          <div class="col-7">
+            <% if @model_completion.failed? %>
+              <span class="badge bg-danger"><%= t("raif.admin.common.failed") %></span>
+            <% elsif @model_completion.completed? %>
+              <span class="badge bg-success"><%= t("raif.admin.common.completed") %></span>
+            <% elsif @model_completion.started? %>
+              <span class="badge bg-warning text-dark"><%= t("raif.admin.common.in_progress") %></span>
+            <% else %>
+              <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
+            <% end %>
+          </div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.retry_count") %>:</strong></div>
+          <div class="col-7"><%= @model_completion.retry_count %></div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion.created_at.rfc822 %></small></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.started_at") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion.started_at&.rfc822 || "-" %></small></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.completed_at") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion.completed_at&.rfc822 || "-" %></small></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.prompt_tokens") %>:</strong></div>
+          <div class="col-7">
+            <% if @model_completion.prompt_tokens %>
+              <%= number_with_delimiter(@model_completion.prompt_tokens) %>
+              <% if @model_completion.prompt_token_cost %>
+                <small>(<%= number_to_currency(@model_completion.prompt_token_cost, precision: 6) %>)</small>
+              <% end %>
+            <% else %>
+              -
+            <% end %>
+          </div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.completion_tokens") %>:</strong></div>
+          <div class="col-7">
+            <% if @model_completion.completion_tokens %>
+              <%= number_with_delimiter(@model_completion.completion_tokens) %>
+              <% if @model_completion.output_token_cost %>
+                <small>(<%= number_to_currency(@model_completion.output_token_cost, precision: 6) %>)</small>
+              <% end %>
+            <% else %>
+              -
+            <% end %>
+          </div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.total_tokens") %>:</strong></div>
+          <div class="col-7">
+            <% if @model_completion.total_tokens %>
+              <%= number_with_delimiter(@model_completion.total_tokens) %>
+              <% if @model_completion.total_cost %>
+                <small>(<%= number_to_currency(@model_completion.total_cost, precision: 6) %>)</small>
+              <% end %>
+            <% else %>
+              -
+            <% end %>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="row mb-3">
-      <div class="col-md-3"><strong><%= t("raif.admin.common.completion_tokens") %>:</strong></div>
-      <div class="col-md-9">
-        <% if @model_completion.completion_tokens %>
-          <%= number_with_delimiter(@model_completion.completion_tokens) %>
-          <% if @model_completion.output_token_cost %>
-            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(@model_completion.output_token_cost, precision: 6) %>)</small>
-          <% end %>
-        <% else %>
-          -
-        <% end %>
-      </div>
+    <% if @model_completion.failed? %>
+    <hr>
+    <div class="row mb-2">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.failed_at") %>:</strong></div>
+      <div class="col-md-10"><small><%= @model_completion.failed_at&.rfc822 || "-" %></small></div>
     </div>
-    <div class="row mb-3">
-      <div class="col-md-3"><strong><%= t("raif.admin.common.total_tokens") %>:</strong></div>
-      <div class="col-md-9">
-        <% if @model_completion.total_tokens %>
-          <%= number_with_delimiter(@model_completion.total_tokens) %>
-          <% if @model_completion.total_cost %>
-            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(@model_completion.total_cost, precision: 6) %>)</small>
-          <% end %>
-        <% else %>
-          -
-        <% end %>
-      </div>
+    <div class="row mb-2">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.failure_error") %>:</strong></div>
+      <div class="col-md-10"><code><%= @model_completion.failure_error %></code></div>
     </div>
+    <div class="row mb-2">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.failure_reason") %>:</strong></div>
+      <div class="col-md-10"><%= @model_completion.failure_reason %></div>
+    </div>
+    <% end %>
   </div>
 </div>
 
