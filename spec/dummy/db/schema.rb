@@ -123,7 +123,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_19_000002) do
     t.datetime "created_at", null: false
     t.datetime "failed_at"
     t.string "failure_error"
-    t.string "failure_reason"
+    t.text "failure_reason"
     t.string "llm_model_key", null: false
     t.integer "max_completion_tokens"
     t.jsonb "messages", null: false
