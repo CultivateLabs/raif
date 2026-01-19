@@ -11,7 +11,7 @@
 #  completion_tokens         :integer
 #  failed_at                 :datetime
 #  failure_error             :string
-#  failure_reason            :string
+#  failure_reason            :text
 #  llm_model_key             :string           not null
 #  max_completion_tokens     :integer
 #  messages                  :jsonb            not null
