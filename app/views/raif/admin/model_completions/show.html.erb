@@ -125,7 +125,7 @@
   <div class="card-body">
     <% @model_completion.messages.each do |message| %>
       <div class="mb-3">
-        <strong><%= message["role"].titleize %>:</strong>
+        <strong><%= message["role"]&.titleize %>:</strong>
         <% if message["content"].present? %>
           <pre class="mt-2"><%= message["content"] %></pre>
         <% end %>
