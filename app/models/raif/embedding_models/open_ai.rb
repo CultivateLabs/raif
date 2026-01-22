@@ -30,7 +30,7 @@ private
   end
 
   def connection
-    @connection ||= Faraday.new(url: "https://api.openai.com/v1", request: Raif.default_request_options) do |f|
+    @connection ||= Faraday.new(url: Raif.config.open_ai_embedding_base_url, request: Raif.default_request_options) do |f|
       f.headers["Authorization"] = "Bearer #{Raif.config.open_ai_api_key}"
       f.request :json
       f.response :json
