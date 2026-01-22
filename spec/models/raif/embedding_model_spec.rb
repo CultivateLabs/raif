@@ -20,4 +20,42 @@ RSpec.describe Raif::EmbeddingModel, type: :model do
       expect(embedding_model.name).to_not include("Translation missing")
     end
   end
+
+  describe "#name" do
+    context "when I18n translation exists" do
+      it "returns the I18n translation" do
+        embedding_model = Raif::EmbeddingModel.new(
+          key: :open_ai_text_embedding_3_large,
+          api_name: "text-embedding-3-large",
+          display_name: "Custom Display Name",
+          default_output_vector_size: 3072
+        )
+
+        expect(embedding_model.name).to eq(I18n.t("raif.embedding_model_names.open_ai_text_embedding_3_large"))
+      end
+    end
+
+    context "when I18n translation does not exist" do
+      it "falls back to display_name when provided" do
+        embedding_model = Raif::EmbeddingModel.new(
+          key: :custom_embedding_key,
+          api_name: "custom-embedding",
+          display_name: "My Custom Embedding Model",
+          default_output_vector_size: 1536
+        )
+
+        expect(embedding_model.name).to eq("My Custom Embedding Model")
+      end
+
+      it "falls back to humanized key when display_name is not provided" do
+        embedding_model = Raif::EmbeddingModel.new(
+          key: :my_custom_embedding,
+          api_name: "custom-embedding",
+          default_output_vector_size: 1536
+        )
+
+        expect(embedding_model.name).to eq("My custom embedding")
+      end
+    end
+  end
 end

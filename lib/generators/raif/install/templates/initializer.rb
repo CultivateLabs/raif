@@ -14,6 +14,10 @@ Raif.configure do |config|
   # Set this if you want to use the OpenAI adapter with a different provider (e.g. for using Azure instead of OpenAI)
   # config.open_ai_base_url = "https://api.openai.com/v1"
 
+  # The base URL for OpenAI embedding API requests.
+  # Set this if you want to use a different provider for embeddings (e.g. Ollama, vLLM, or other OpenAI-compatible APIs)
+  # config.open_ai_embedding_base_url = "https://api.openai.com/v1"
+
   # When set, this will be included as an api-version parameter in any OpenAI API requests (e.g. for using Azure instead of OpenAI)
   # config.open_ai_api_version = nil
 

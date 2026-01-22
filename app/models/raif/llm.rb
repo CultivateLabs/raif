@@ -7,6 +7,7 @@ module Raif
 
     attr_accessor :key,
       :api_name,
+      :display_name,
       :default_temperature,
       :default_max_completion_tokens,
       :supports_native_tool_use,
@@ -25,6 +26,7 @@ module Raif
     def initialize(
       key:,
       api_name:,
+      display_name: nil,
       model_provider_settings: {},
       supported_provider_managed_tools: [],
       supports_native_tool_use: true,
@@ -35,6 +37,7 @@ module Raif
     )
       @key = key
       @api_name = api_name
+      @display_name = display_name
       @provider_settings = model_provider_settings
       @supports_native_tool_use = supports_native_tool_use
       @default_temperature = temperature || 0.7
@@ -45,7 +48,7 @@ module Raif
     end
 
     def name
-      I18n.t("raif.model_names.#{key}")
+      I18n.t("raif.model_names.#{key}", default: display_name || key.to_s.humanize)
     end
 
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
