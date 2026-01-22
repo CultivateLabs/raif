@@ -299,7 +299,7 @@ In March 2018, NASA delayed Webb's launch an additional two years to May 2020 af
 
 After construction was completed, Webb underwent final tests at Northrop Grumman's historic in Redondo Beach, California. A ship carrying the telescope left California on 26 September 2021, passed through the , and arrived in on 12 October 2021.
 
-### Cost and schedule issues 
+### Cost and schedule issues
 []
 
 NASA's lifetime cost for the project is[] expected to be US$9.7 billion, of which US$8.8 billion was spent on spacecraft design and development and US$861 million is planned to support five years of mission operations. Representatives from ESA and CSA stated their project contributions amount to approximately €700&nbsp;million and CA$200 million, respectively.
