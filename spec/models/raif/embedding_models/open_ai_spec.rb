@@ -40,7 +40,7 @@ RSpec.describe Raif::EmbeddingModels::OpenAi, type: :model do
 
       # Verify the connection is built with the custom URL
       connection = fresh_model.send(:connection)
-      expect(connection.url_prefix.to_s).to eq("#{custom_base_url}/")
+      expect(connection.url_prefix.to_s.chomp("/")).to eq(custom_base_url)
     end
   end
 
