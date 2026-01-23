@@ -308,4 +308,39 @@ RSpec.describe Raif::Llm, type: :model do
       expect(llm.name).to_not include("Translation missing")
     end
   end
+
+  describe "#name" do
+    context "when I18n translation exists" do
+      it "returns the I18n translation" do
+        llm = Raif::Llms::TestLlm.new(
+          key: :open_ai_gpt_4o,
+          api_name: "gpt-4o",
+          display_name: "Custom Display Name"
+        )
+
+        expect(llm.name).to eq(I18n.t("raif.model_names.open_ai_gpt_4o"))
+      end
+    end
+
+    context "when I18n translation does not exist" do
+      it "falls back to display_name when provided" do
+        llm = Raif::Llms::TestLlm.new(
+          key: :custom_model_key,
+          api_name: "custom-model",
+          display_name: "My Custom Model"
+        )
+
+        expect(llm.name).to eq("My Custom Model")
+      end
+
+      it "falls back to humanized key when display_name is not provided" do
+        llm = Raif::Llms::TestLlm.new(
+          key: :my_custom_model,
+          api_name: "custom-model"
+        )
+
+        expect(llm.name).to eq("My custom model")
+      end
+    end
+  end
 end
