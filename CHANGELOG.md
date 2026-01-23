@@ -1,4 +1,4 @@
-## v1.4.0 (Unreleased)
+## v1.4.0
 
 - Added Google AI adapter with support for Gemini models (2.5 Flash, 2.5 Pro, 3.0 Flash, 3.0 Pro).[#319](https://github.com/CultivateLabs/raif/pull/319)
 - **Breaking Change**: `Raif::Agents::ReActAgent` has been removed in favor of `Raif::Agents::NativeToolCallingAgent`, which provides better tool calling support across all LLM providers. [#304](https://github.com/CultivateLabs/raif/pull/304)
