@@ -49,6 +49,7 @@
 class Raif::ModelCompletion < Raif::ApplicationRecord
   include Raif::Concerns::LlmResponseParsing
   include Raif::Concerns::HasAvailableModelTools
+  include Raif::Concerns::HasRuntimeDuration
   include Raif::Concerns::BooleanTimestamp
 
   boolean_timestamp :started_at

@@ -31,8 +31,8 @@ RSpec.describe "Admin::Agents", type: :feature do
         :raif_native_tool_calling_agent,
         creator: creator,
         task: "Calculate 15 * 24",
-        started_at: 5.minutes.ago,
-        completed_at: 4.minutes.ago,
+        started_at: Time.zone.parse("2026-01-01 08:00:00 UTC"),
+        completed_at: Time.zone.parse("2026-01-01 08:01:30 UTC"),
         iteration_count: 3,
         max_iterations: 5,
         final_answer: "The result of 15 * 24 is 360."
@@ -69,6 +69,7 @@ RSpec.describe "Admin::Agents", type: :feature do
       expect(page).to have_content(I18n.t("raif.admin.common.created_at"))
       expect(page).to have_content(I18n.t("raif.admin.common.task"))
       expect(page).to have_content(I18n.t("raif.admin.common.status"))
+      expect(page).to have_content(I18n.t("raif.admin.common.duration"))
       expect(page).to have_content(I18n.t("raif.admin.common.iterations"))
       expect(page).to have_content(I18n.t("raif.admin.common.final_answer"))
 
@@ -78,6 +79,7 @@ RSpec.describe "Admin::Agents", type: :feature do
       expect(page).to have_css(".badge.bg-danger", text: "Failed")
       expect(page).to have_css(".badge.bg-warning", text: "Running")
       expect(page).to have_css(".badge.bg-secondary", text: "Pending")
+      expect(page).to have_content("1m 30s")
 
       # Check iteration counts
       expect(page).to have_content("0 / 5") # pending_agent
@@ -105,8 +107,8 @@ RSpec.describe "Admin::Agents", type: :feature do
         :raif_native_tool_calling_agent,
         creator: creator,
         task: "What is the capital of France?",
-        started_at: 5.minutes.ago,
-        completed_at: 4.minutes.ago,
+        started_at: Time.zone.parse("2026-01-01 10:00:00 UTC"),
+        completed_at: Time.zone.parse("2026-01-01 10:01:35 UTC"),
         iteration_count: 2,
         max_iterations: 5,
         final_answer: "The capital of France is Paris.",
@@ -146,6 +148,8 @@ RSpec.describe "Admin::Agents", type: :feature do
       # Check status
       expect(page).to have_css(".badge.bg-success", text: "Completed")
       expect(page).to have_content(agent.completed_at.rfc822)
+      expect(page).to have_content(I18n.t("raif.admin.common.duration"))
+      expect(page).to have_content("1m 35s")
 
       # Check iterations
       expect(page).to have_content("2 / 5")

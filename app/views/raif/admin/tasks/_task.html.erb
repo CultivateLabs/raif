@@ -16,5 +16,6 @@
       <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
     <% end %>
   </td>
+  <td><small class="text-muted"><%= task.runtime_duration %></small></td>
   <td><small class="text-muted"><%= truncate(task.prompt, length: 100) %></small></td>
 </tr>

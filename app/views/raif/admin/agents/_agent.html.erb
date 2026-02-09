@@ -14,6 +14,7 @@
       <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
     <% end %>
   </td>
+  <td><small class="text-muted"><%= agent.runtime_duration %></small></td>
   <td><%= agent.iteration_count %> / <%= agent.max_iterations %></td>
   <td>
     <% if agent.total_cost && agent.total_cost > 0 %>

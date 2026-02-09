@@ -59,6 +59,10 @@
           <div class="col-7"><small><%= @model_completion.completed_at&.rfc822 || "-" %></small></div>
         </div>
         <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.duration") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion.runtime_duration %></small></div>
+        </div>
+        <div class="row mb-2">
           <div class="col-5"><strong><%= t("raif.admin.common.prompt_tokens") %>:</strong></div>
           <div class="col-7">
             <% if @model_completion.prompt_tokens %>
