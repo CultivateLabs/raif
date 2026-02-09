@@ -68,6 +68,10 @@
         <% end %>
       </div>
     </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.duration") %>:</strong></div>
+      <div class="col-md-9"><%= @task.runtime_duration %></div>
+    </div>
     <% if @task.requested_language_key.present? %>
       <div class="row mb-3">
         <div class="col-md-3"><strong><%= t("raif.admin.common.requested_language") %>:</strong></div>

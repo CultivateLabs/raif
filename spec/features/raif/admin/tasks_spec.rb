@@ -7,7 +7,15 @@ RSpec.describe "Admin::Tasks", type: :feature do
 
   describe "index page" do
     let!(:tasks) { FB.create_list(:raif_test_task, 2, creator: creator) }
-    let!(:completed_task){ FB.create(:raif_test_task, :completed, creator: creator) }
+    let!(:completed_task) do
+      FB.create(
+        :raif_test_task,
+        :completed,
+        creator: creator,
+        started_at: Time.zone.parse("2026-01-01 09:00:00 UTC"),
+        completed_at: Time.zone.parse("2026-01-01 09:01:30 UTC")
+      )
+    end
     let!(:failed_task){ FB.create(:raif_test_task, :failed, creator: creator) }
     let!(:in_progress_task){ FB.create(:raif_test_task, creator: creator, started_at: 1.minute.ago) }
     let!(:long_prompt_task) do
@@ -24,6 +32,7 @@ RSpec.describe "Admin::Tasks", type: :feature do
       expect(page).to have_content(I18n.t("raif.admin.common.creator"))
       expect(page).to have_content(I18n.t("raif.admin.common.model"))
       expect(page).to have_content(I18n.t("raif.admin.common.status"))
+      expect(page).to have_content(I18n.t("raif.admin.common.duration"))
       expect(page).to have_content(I18n.t("raif.admin.common.prompt"))
 
       # Check tasks count and status badges
@@ -32,6 +41,7 @@ RSpec.describe "Admin::Tasks", type: :feature do
       expect(page).to have_css(".badge.bg-danger", text: I18n.t("raif.admin.common.failed"))
       expect(page).to have_css(".badge.bg-warning", text: I18n.t("raif.admin.common.in_progress"))
       expect(page).to have_css(".badge.bg-secondary", text: I18n.t("raif.admin.common.pending"))
+      expect(page).to have_content("1m 30s")
 
       # Truncated long prompt
       expect(page).to have_content("a" * 97 + "...")
@@ -52,7 +62,9 @@ RSpec.describe "Admin::Tasks", type: :feature do
         prompt: "Test prompt",
         raw_response: "Test response",
         system_prompt: "You are a test assistant",
-        llm_model_key: "open_ai_gpt_4o_mini"
+        llm_model_key: "open_ai_gpt_4o_mini",
+        started_at: Time.zone.parse("2026-01-01 10:00:00 UTC"),
+        completed_at: Time.zone.parse("2026-01-01 10:01:35 UTC")
       )
     end
 
@@ -74,6 +86,8 @@ RSpec.describe "Admin::Tasks", type: :feature do
       expect(page).to have_content(task.created_at.rfc822)
       expect(page).to have_content(task.started_at.rfc822)
       expect(page).to have_content(task.completed_at.rfc822)
+      expect(page).to have_content(I18n.t("raif.admin.common.duration"))
+      expect(page).to have_content("1m 35s")
 
       # Check prompt and response
       expect(page).to have_content("Test prompt")

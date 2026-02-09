@@ -26,6 +26,7 @@ en:
         creator: Creator
         description: Description
         details: Details
+        duration: Duration
         entries_count: Entries Count
         entry: Entry
         est_cost: est. cost

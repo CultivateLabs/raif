@@ -1,6 +1,6 @@
 ## v1.5.0-pre
 
-Nothing yet.
+- Add runtime durations to admin pages [#357](https://github.com/CultivateLabs/raif/pull/357)
 
 ## v1.4.0
 

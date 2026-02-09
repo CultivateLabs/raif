@@ -27,7 +27,9 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
           model_api_name: "gpt-4o-mini",
           response_format: "text",
           raw_response: "Test response 1",
-          total_tokens: 1000
+          total_tokens: 1000,
+          started_at: Time.zone.parse("2026-01-01 10:00:00 UTC"),
+          completed_at: Time.zone.parse("2026-01-01 10:01:30 UTC")
         ),
         Raif::ModelCompletion.create!(
           source: conversation_entry,
@@ -87,6 +89,7 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
       expect(page).to have_content(I18n.t("raif.admin.common.source"))
       expect(page).to have_content(I18n.t("raif.admin.common.model"))
       expect(page).to have_content(I18n.t("raif.admin.common.response_format"))
+      expect(page).to have_content(I18n.t("raif.admin.common.duration"))
       expect(page).to have_content(I18n.t("raif.admin.common.total_tokens"))
       expect(page).to have_content(I18n.t("raif.admin.common.response"))
 
@@ -105,6 +108,7 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
       expect(page).to have_content("1,000")
       expect(page).to have_content("200")
       expect(page).to have_content("300")
+      expect(page).to have_content("1m 30s")
 
       # Truncated long response
       expect(page).to have_content("a" * 97 + "...")
@@ -128,6 +132,8 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
         prompt_tokens: 2500,
         completion_tokens: 7500,
         total_tokens: 10000,
+        started_at: Time.zone.parse("2026-01-01 11:00:00 UTC"),
+        completed_at: Time.zone.parse("2026-01-01 11:01:35 UTC"),
         messages: [
           { "role" => "user", "content" => "Test message" },
           { "role" => "assistant", "content" => "This is a test response" }
@@ -149,6 +155,8 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
 
       # Check timestamps
       expect(page).to have_content(text_completion.created_at.rfc822)
+      expect(page).to have_content(I18n.t("raif.admin.common.duration"))
+      expect(page).to have_content("1m 35s")
 
       # Check retry count
       expect(page).to have_content(I18n.t("raif.admin.common.retry_count"))

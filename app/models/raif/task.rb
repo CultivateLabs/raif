@@ -42,6 +42,7 @@ module Raif
     include Raif::Concerns::HasLlm
     include Raif::Concerns::HasRequestedLanguage
     include Raif::Concerns::HasAvailableModelTools
+    include Raif::Concerns::HasRuntimeDuration
     include Raif::Concerns::InvokesModelTools
     include Raif::Concerns::LlmResponseParsing
     include Raif::Concerns::LlmTemperature

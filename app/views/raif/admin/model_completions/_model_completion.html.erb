@@ -13,6 +13,7 @@
       <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
     <% end %>
   </td>
+  <td><small class="text-muted"><%= model_completion.runtime_duration %></small></td>
   <td><%= model_completion.total_tokens ? number_with_delimiter(model_completion.total_tokens) : "-" %></td>
   <td><%= model_completion.total_cost ? number_to_currency(model_completion.total_cost, precision: 6) : "-" %></td>
   <td>
