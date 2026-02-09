@@ -365,6 +365,20 @@ module Raif
           input_token_cost: 0.0002625 / 1000,
           output_token_cost: 0.0042 / 1000,
           max_completion_tokens: 4096
+        },
+        {
+          key: :bedrock_deep_seek_v3_2,
+          api_name: "deepseek.v3.2",
+          input_token_cost: 0.00135 / 1_000,
+          output_token_cost: 0.0054 / 1_000,
+          max_completion_tokens: 164_000
+        },
+        {
+          key: :bedrock_deep_seek_r1,
+          api_name: "deepseek.r1-v1:0",
+          input_token_cost: 0.00135 / 1_000,
+          output_token_cost: 0.0054 / 1_000,
+          max_completion_tokens: 32_768
         }
       ],
       Raif::Llms::OpenRouter => [
