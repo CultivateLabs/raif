@@ -8,10 +8,10 @@ module Raif::Concerns::HasRuntimeDuration
   end
 
   def runtime_duration_seconds
-    return nil if started_at.blank? || runtime_ended_at.blank?
+    return if started_at.blank? || runtime_ended_at.blank?
 
     duration_in_seconds = runtime_ended_at - started_at
-    return nil if duration_in_seconds.negative?
+    return if duration_in_seconds.negative?
 
     duration_in_seconds
   end
