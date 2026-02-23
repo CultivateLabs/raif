@@ -75,6 +75,8 @@ en:
       bedrock_claude_4_sonnet: Anthropic Claude 4 Sonnet (via AWS Bedrock)
       bedrock_deepseek_r1: DeepSeek R1 (via AWS Bedrock)
       bedrock_deepseek_v3_2: DeepSeek v3.2 (via AWS Bedrock)
+      bedrock_gpt_oss_120b: OpenAI GPT-OSS 120B (via AWS Bedrock)
+      bedrock_gpt_oss_20b: OpenAI GPT-OSS 20B (via AWS Bedrock)
       google_gemini_2_5_flash: Google Gemini 2.5 Flash
       google_gemini_2_5_pro: Google Gemini 2.5 Pro
       google_gemini_3_0_flash: Google Gemini 3.0 Flash

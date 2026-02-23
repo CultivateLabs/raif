@@ -379,6 +379,20 @@ module Raif
           input_token_cost: 0.00135 / 1_000,
           output_token_cost: 0.0054 / 1_000,
           max_completion_tokens: 32_768
+        },
+        {
+          key: :bedrock_gpt_oss_120b,
+          api_name: "openai.gpt-oss-120b-1:0",
+          input_token_cost: 0.15 / 1_000_000,
+          output_token_cost: 0.60 / 1_000_000,
+          max_completion_tokens: 32_768
+        },
+        {
+          key: :bedrock_gpt_oss_20b,
+          api_name: "openai.gpt-oss-20b-1:0",
+          input_token_cost: 0.05 / 1_000_000,
+          output_token_cost: 0.20 / 1_000_000,
+          max_completion_tokens: 32_768
         }
       ],
       Raif::Llms::OpenRouter => [

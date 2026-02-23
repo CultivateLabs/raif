@@ -260,6 +260,29 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
   end
 
+  describe "#resolve_model_api_name" do
+    it "prefixes non-gpt-oss model ids when a prefix is configured" do
+      allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return("us")
+
+      resolved = llm.send(:resolve_model_api_name, "anthropic.claude-3-5-sonnet-20241022-v2:0")
+      expect(resolved).to eq("us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+    end
+
+    it "does not prefix gpt-oss model ids when a prefix is configured" do
+      allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return("us")
+
+      resolved = llm.send(:resolve_model_api_name, "openai.gpt-oss-20b-1:0")
+      expect(resolved).to eq("openai.gpt-oss-20b-1:0")
+    end
+
+    it "does not double-prefix model ids that already have the configured prefix" do
+      allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return("us")
+
+      resolved = llm.send(:resolve_model_api_name, "us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+      expect(resolved).to eq("us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+    end
+  end
+
   describe "#build_tools_parameter" do
     let(:model_completion) do
       Raif::ModelCompletion.new(
