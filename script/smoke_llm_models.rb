@@ -75,7 +75,7 @@ selectors.each do |selector|
 end
 
 if unknown_selectors.any?
-  puts "Unknown selector(s): #{unknown_selectors.join(', ')}"
+  puts "Unknown selector(s): #{unknown_selectors.join(", ")}"
   puts "Run `bin/smoke_llm_models --list` to see valid model keys."
   exit 1
 end
@@ -185,7 +185,8 @@ selected_model_keys.each do |model_key|
 
   begin
     model_completion = Raif.llm(model_key.to_sym).chat(message: options.fetch(:prompt))
-    puts "PASS #{model_key} api=#{model_completion.model_api_name} tokens=#{model_completion.total_tokens} text=#{model_completion.raw_response.inspect}"
+    puts "PASS #{model_key} api=#{model_completion.model_api_name} " \
+      "tokens=#{model_completion.total_tokens} text=#{model_completion.raw_response.inspect}"
   rescue StandardError => e
     puts "FAIL #{model_key} #{e.class}: #{e.message}"
   end
