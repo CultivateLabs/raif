@@ -42,7 +42,7 @@ Raif is a Ruby on Rails engine for adding AI-powered features to Rails applicati
 
 ## About the Project
 
-Raif and its core concepts were extracted from [ARC Analysis](https://www.arcanalysis.ai?utm_source=raif-docs){:target="_blank"}, an AI-driven research & analysis platform built by [Cultivate Labs](https://www.cultivatelabs.com?utm_source=raif-docs){:target="_blank"}.
+Raif and its core concepts were extracted from [Hinsley](https://www.hinsley.ai/){:target="_blank"}, an AI-driven research & analysis platform built by [Cultivate Labs](https://www.cultivatelabs.com?utm_source=raif-docs){:target="_blank"}.
 
 ### Contributing
 
