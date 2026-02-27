@@ -58,7 +58,10 @@ en:
       anthropic_claude_3_opus: Anthropic Claude 3 Opus
       anthropic_claude_4_1_opus: Anthropic Claude 4.1 Opus
       anthropic_claude_4_5_haiku: Anthropic Claude 4.5 Haiku
+      anthropic_claude_4_5_opus: Anthropic Claude 4.5 Opus
       anthropic_claude_4_5_sonnet: Anthropic Claude 4.5 Sonnet
+      anthropic_claude_4_6_opus: Anthropic Claude 4.6 Opus
+      anthropic_claude_4_6_sonnet: Anthropic Claude 4.6 Sonnet
       anthropic_claude_4_opus: Anthropic Claude 4 Opus
       anthropic_claude_4_sonnet: Anthropic Claude 4 Sonnet
       bedrock_amazon_nova_lite: Amazon Nova Lite (via AWS Bedrock)
@@ -70,7 +73,10 @@ en:
       bedrock_claude_3_opus: Anthropic Claude 3 Opus (via AWS Bedrock)
       bedrock_claude_4_1_opus: Claude 4.1 Opus (via AWS Bedrock)
       bedrock_claude_4_5_haiku: Anthropic Claude 4.5 Haiku (via AWS Bedrock)
+      bedrock_claude_4_5_opus: Anthropic Claude 4.5 Opus (via AWS Bedrock)
       bedrock_claude_4_5_sonnet: Anthropic Claude 4.5 Sonnet (via AWS Bedrock)
+      bedrock_claude_4_6_opus: Anthropic Claude 4.6 Opus (via AWS Bedrock)
+      bedrock_claude_4_6_sonnet: Anthropic Claude 4.6 Sonnet (via AWS Bedrock)
       bedrock_claude_4_opus: Anthropic Claude 4 Opus (via AWS Bedrock)
       bedrock_claude_4_sonnet: Anthropic Claude 4 Sonnet (via AWS Bedrock)
       bedrock_deepseek_r1: DeepSeek R1 (via AWS Bedrock)
