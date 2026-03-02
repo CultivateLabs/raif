@@ -6,9 +6,7 @@ class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
 
   def perform_model_completion!(model_completion, &block)
-    if Raif.config.aws_bedrock_model_name_prefix.present?
-      model_completion.model_api_name = "#{Raif.config.aws_bedrock_model_name_prefix}.#{model_completion.model_api_name}"
-    end
+    model_completion.model_api_name = resolve_model_api_name(model_completion.model_api_name)
 
     params = build_request_parameters(model_completion)
 
@@ -146,6 +144,20 @@ private
         end
       end
     end
+  end
+
+  def resolve_model_api_name(model_api_name)
+    api_name = model_api_name.to_s
+    prefix = Raif.config.aws_bedrock_model_name_prefix.to_s.presence
+
+    return api_name if prefix.blank?
+    return api_name if api_name.start_with?("#{prefix}.")
+
+    # GPT-OSS Bedrock model IDs are provider IDs (e.g. openai.gpt-oss-20b-1:0),
+    # not inference profile IDs, so they should not be prefixed.
+    return api_name if api_name.start_with?("openai.gpt-oss-")
+
+    "#{prefix}.#{api_name}"
   end
 
 end
