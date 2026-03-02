@@ -186,6 +186,39 @@ module Raif
       Raif::Llms::OpenAiResponses => open_ai_responses_models,
       Raif::Llms::Anthropic => [
         {
+          key: :anthropic_claude_4_6_opus,
+          api_name: "claude-opus-4-6",
+          input_token_cost: 5.0 / 1_000_000,
+          output_token_cost: 25.0 / 1_000_000,
+          max_completion_tokens: 128_000,
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
+          key: :anthropic_claude_4_6_sonnet,
+          api_name: "claude-sonnet-4-6",
+          input_token_cost: 3.0 / 1_000_000,
+          output_token_cost: 15.0 / 1_000_000,
+          max_completion_tokens: 64_000,
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
+          key: :anthropic_claude_4_5_opus,
+          api_name: "claude-opus-4-5",
+          input_token_cost: 5.0 / 1_000_000,
+          output_token_cost: 25.0 / 1_000_000,
+          max_completion_tokens: 64_000,
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
           key: :anthropic_claude_4_5_sonnet,
           api_name: "claude-sonnet-4-5",
           input_token_cost: 3.0 / 1_000_000,
@@ -283,6 +316,27 @@ module Raif
       ],
       Raif::Llms::Bedrock => [
         {
+          key: :bedrock_claude_4_6_opus,
+          api_name: "anthropic.claude-opus-4-6-v1",
+          input_token_cost: 0.005 / 1000,
+          output_token_cost: 0.025 / 1000,
+          max_completion_tokens: 128_000
+        },
+        {
+          key: :bedrock_claude_4_6_sonnet,
+          api_name: "anthropic.claude-sonnet-4-6",
+          input_token_cost: 0.003 / 1000,
+          output_token_cost: 0.015 / 1000,
+          max_completion_tokens: 64_000
+        },
+        {
+          key: :bedrock_claude_4_5_opus,
+          api_name: "anthropic.claude-opus-4-5-20251101-v1:0",
+          input_token_cost: 0.005 / 1000,
+          output_token_cost: 0.025 / 1000,
+          max_completion_tokens: 64_000
+        },
+        {
           key: :bedrock_claude_4_5_sonnet,
           api_name: "anthropic.claude-sonnet-4-5-20250929-v1:0",
           input_token_cost: 0.003 / 1000,
@@ -378,6 +432,20 @@ module Raif
           api_name: "deepseek.r1-v1:0",
           input_token_cost: 0.00135 / 1_000,
           output_token_cost: 0.0054 / 1_000,
+          max_completion_tokens: 32_768
+        },
+        {
+          key: :bedrock_gpt_oss_120b,
+          api_name: "openai.gpt-oss-120b-1:0",
+          input_token_cost: 0.15 / 1_000_000,
+          output_token_cost: 0.60 / 1_000_000,
+          max_completion_tokens: 32_768
+        },
+        {
+          key: :bedrock_gpt_oss_20b,
+          api_name: "openai.gpt-oss-20b-1:0",
+          input_token_cost: 0.05 / 1_000_000,
+          output_token_cost: 0.20 / 1_000_000,
           max_completion_tokens: 32_768
         }
       ],
