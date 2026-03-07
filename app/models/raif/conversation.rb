@@ -29,6 +29,8 @@
 #  index_raif_conversations_on_source      (source_type,source_id)
 #
 class Raif::Conversation < Raif::ApplicationRecord
+  prepend Raif::Concerns::HasPromptTemplates
+
   include Raif::Concerns::HasLlm
   include Raif::Concerns::HasRequestedLanguage
   include Raif::Concerns::HasAvailableModelTools

@@ -17,7 +17,8 @@
       "Bash(bundle install)",
       "Bash(bundle exec i18n-tasks:*)",
       "Bash(bundle exec rails runner:*)",
-      "Bash(bundle exec rubocop:*)"
+      "Bash(bundle exec rubocop:*)",
+      "Bash(sort:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

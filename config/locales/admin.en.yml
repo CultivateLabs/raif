@@ -126,6 +126,16 @@ en:
         show:
           back_to_model_tool_invocations: Back to Model Tool Invocations
           title: 'Model Tool Invocation #%{id}'
+      prompt_previews:
+        index:
+          no_previews: No prompt previews found.
+          no_previews_hint: 'Create preview classes in your configured preview paths (default: test/raif/prompt_previews/) by subclassing Raif::PromptPreview.'
+          title: Prompt Previews
+        show:
+          instance: 'Instance:'
+          no_output: No prompt or system prompt was generated. Make sure your preview method returns a configured instance.
+          prompt: Prompt
+          system_prompt: System Prompt
       stats:
         model_tool_invocations:
           back_to_stats: Back to Stats

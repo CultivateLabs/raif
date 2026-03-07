@@ -39,6 +39,8 @@
 #
 module Raif
   class Task < Raif::ApplicationRecord
+    prepend Raif::Concerns::HasPromptTemplates
+
     include Raif::Concerns::HasLlm
     include Raif::Concerns::HasRequestedLanguage
     include Raif::Concerns::HasAvailableModelTools

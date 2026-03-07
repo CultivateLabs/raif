@@ -26,5 +26,8 @@ Raif::Engine.routes.draw do
     resources :agents, only: [:index, :show]
     resources :model_tool_invocations, only: [:index, :show]
     resource :config, only: [:show]
+    resources :prompt_previews, only: [:index] do
+      get ":method_name", action: :show, as: :method, on: :member
+    end
   end
 end
