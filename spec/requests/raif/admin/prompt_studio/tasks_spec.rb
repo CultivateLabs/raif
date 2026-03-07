@@ -15,23 +15,20 @@ RSpec.describe "Admin::PromptStudio::Tasks", type: :request do
     context "when prompt_studio_runs_enabled" do
       before { allow(Raif.config).to receive(:prompt_studio_runs_enabled).and_return(true) }
 
-      it "creates a new task with prompt_studio_run flag and redirects to it" do
-        stub_raif_task(Raif::TestTask) { "Stubbed response" }
-
+      it "creates a new task with prompt_studio_run flag and enqueues the job" do
         expect { post_create }.to change(Raif::Task, :count).by(1)
+          .and have_enqueued_job(Raif::PromptStudioTaskRunJob)
 
         new_task = Raif::Task.last
         expect(new_task.prompt_studio_run?).to be true
         expect(new_task.type).to eq(task.type)
-        expect(new_task.completed_at).to be_present
-        expect(new_task.raw_response).to eq("Stubbed response")
+        expect(new_task.started_at).to be_present
+        expect(new_task.completed_at).to be_nil
         expect(response).to redirect_to(raif.admin_prompt_studio_task_path(new_task))
       end
 
       it "preserves run_with from the original task" do
         task.update!(run_with: { "topic" => "pirates" })
-
-        stub_raif_task(Raif::TestTask) { "Stubbed response" }
 
         post_create
 
@@ -41,7 +38,6 @@ RSpec.describe "Admin::PromptStudio::Tasks", type: :request do
 
       it "allows selecting a different model" do
         other_key = (Raif.available_llm_keys.map(&:to_s) - [task.llm_model_key]).first
-        stub_raif_task(Raif::TestTask) { "Different model response" }
 
         post_create(llm_model_key: other_key)
 

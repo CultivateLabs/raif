@@ -141,8 +141,8 @@ en:
           original_system_prompt: Original System Prompt
           prompt_changed: Prompt Changed
           prompt_studio: Prompt Studio
-          run_in_prompt_studio: Run in Prompt Studio
           prompt_unchanged: Prompt Unchanged
+          run_in_prompt_studio: Run in Prompt Studio
           runs_disabled: Prompt Studio runs are not enabled in this environment.
           select_type: Select a type to browse instances
           system_prompt_changed: System Prompt Changed
@@ -165,6 +165,7 @@ en:
           show:
             page_title: 'Prompt Studio - Task #%{id}'
             task_details: Task Details
+            view_response: View Response
       stats:
         model_tool_invocations:
           back_to_stats: Back to Stats

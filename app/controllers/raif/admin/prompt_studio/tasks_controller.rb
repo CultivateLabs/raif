@@ -47,7 +47,7 @@ module Raif
           new_task.assign_attributes(original_task.prompt_studio_rerun_attributes)
 
           new_task.save!
-          new_task.run
+          Raif::PromptStudioTaskRunJob.perform_later(task: new_task)
 
           redirect_to raif.admin_prompt_studio_task_path(new_task)
         rescue StandardError => e
