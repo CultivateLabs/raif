@@ -1,0 +1,57 @@
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1 class="mb-0"><%= t("raif.admin.prompt_studio.agents.show.page_title", id: @agent.id) %></h1>
+  <%= link_to t("raif.admin.prompt_studio.common.back"),
+        raif.admin_prompt_studio_agents_path(agent_type: @agent.type),
+        class: "btn btn-outline-secondary" %>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t("raif.admin.prompt_studio.agents.show.agent_details") %></h5>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.id") %>:</strong></div>
+      <div class="col-md-10"><%= @agent.id %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.type") %>:</strong></div>
+      <div class="col-md-10"><%= @agent.type %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.model") %>:</strong></div>
+      <div class="col-md-10"><%= @agent.llm_model_key %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
+      <div class="col-md-10"><%= @agent.created_at.rfc822 %></div>
+    </div>
+    <% if @agent.task.present? %>
+      <div class="row mb-3">
+        <div class="col-md-2"><strong><%= t("raif.admin.common.task") %>:</strong></div>
+        <div class="col-md-10"><%= @agent.task %></div>
+      </div>
+    <% end %>
+    <% if @agent.run_with.present? %>
+      <div class="row mb-3">
+        <div class="col-md-2"><strong><%= t("raif.admin.common.run_with") %>:</strong></div>
+        <div class="col-md-10">
+          <pre class="pre-wrap mb-0"><%= JSON.pretty_generate(@agent.run_with) %></pre>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<%= render "raif/admin/prompt_studio/shared/prompt_comparison", comparison: @comparison %>
+
+<% if @agent.final_answer.present? %>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><%= t("raif.admin.common.final_answer") %></h5>
+    </div>
+    <div class="card-body">
+      <pre class="pre-wrap"><%= @agent.final_answer %></pre>
+    </div>
+  </div>
+<% end %>

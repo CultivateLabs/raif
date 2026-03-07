@@ -1,0 +1,67 @@
+<% if comparison[:warnings].any? %>
+  <div class="alert alert-warning">
+    <ul class="mb-0">
+      <% comparison[:warnings].each do |warning| %>
+        <li><%= warning %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<% if comparison[:original_system_prompt].present? || comparison[:current_system_prompt].present? %>
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><%= t("raif.admin.common.system_prompt") %></h5>
+      <% if comparison[:system_prompt_changed] %>
+        <span class="badge bg-warning text-dark"><%= t("raif.admin.prompt_studio.common.system_prompt_changed") %></span>
+      <% elsif comparison[:current_system_prompt].present? %>
+        <span class="badge bg-success"><%= t("raif.admin.prompt_studio.common.system_prompt_unchanged") %></span>
+      <% end %>
+    </div>
+    <div class="card-body">
+      <% if comparison[:system_prompt_changed] %>
+        <div class="row">
+          <div class="col-md-6">
+            <h6><%= t("raif.admin.prompt_studio.common.original_system_prompt") %></h6>
+            <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:original_system_prompt] %></pre>
+          </div>
+          <div class="col-md-6">
+            <h6><%= t("raif.admin.prompt_studio.common.current_system_prompt") %></h6>
+            <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:current_system_prompt] %></pre>
+          </div>
+        </div>
+      <% else %>
+        <pre class="pre-wrap"><%= comparison[:current_system_prompt] || comparison[:original_system_prompt] %></pre>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<% if comparison[:original_prompt].present? || comparison[:current_prompt].present? %>
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><%= t("raif.admin.common.prompt") %></h5>
+      <% if comparison[:prompt_changed] %>
+        <span class="badge bg-warning text-dark"><%= t("raif.admin.prompt_studio.common.prompt_changed") %></span>
+      <% elsif comparison[:current_prompt].present? %>
+        <span class="badge bg-success"><%= t("raif.admin.prompt_studio.common.prompt_unchanged") %></span>
+      <% end %>
+    </div>
+    <div class="card-body">
+      <% if comparison[:prompt_changed] %>
+        <div class="row">
+          <div class="col-md-6">
+            <h6><%= t("raif.admin.prompt_studio.common.original_prompt") %></h6>
+            <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:original_prompt] %></pre>
+          </div>
+          <div class="col-md-6">
+            <h6><%= t("raif.admin.prompt_studio.common.current_prompt") %></h6>
+            <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:current_prompt] %></pre>
+          </div>
+        </div>
+      <% else %>
+        <pre class="pre-wrap"><%= comparison[:current_prompt] || comparison[:original_prompt] %></pre>
+      <% end %>
+    </div>
+  </div>
+<% end %>

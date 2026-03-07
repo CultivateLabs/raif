@@ -11,6 +11,7 @@
 #  failed_at              :datetime
 #  llm_model_key          :string           not null
 #  prompt                 :text
+#  prompt_studio_run      :boolean          default(FALSE), not null
 #  raw_response           :text
 #  requested_language_key :string
 #  response_format        :integer          default("text"), not null

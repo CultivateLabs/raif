@@ -1,0 +1,104 @@
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1 class="mb-0"><%= t("raif.admin.prompt_studio.tasks.show.page_title", id: @task.id) %></h1>
+  <%= link_to t("raif.admin.prompt_studio.common.back"),
+        raif.admin_prompt_studio_tasks_path(task_type: @task.type),
+        class: "btn btn-outline-secondary" %>
+</div>
+
+<% if flash[:alert].present? %>
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <%= flash[:alert] %>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+<% end %>
+
+<div class="row mb-4">
+  <div class="<%= prompt_studio_runs_enabled? ? "col-md-7" : "col-12" %>">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><%= t("raif.admin.prompt_studio.tasks.show.task_details") %></h5>
+        <% if @task.prompt_studio_run? %>
+          <span class="badge bg-info"><%= t("raif.admin.prompt_studio.common.run_in_prompt_studio") %></span>
+        <% end %>
+      </div>
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-md-3"><strong><%= t("raif.admin.common.id") %>:</strong></div>
+          <div class="col-md-9"><%= @task.id %></div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-3"><strong><%= t("raif.admin.common.type") %>:</strong></div>
+          <div class="col-md-9"><%= @task.type %></div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-3"><strong><%= t("raif.admin.common.model") %>:</strong></div>
+          <div class="col-md-9"><%= @task.llm_model_key %></div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-3"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
+          <div class="col-md-9"><%= @task.created_at.rfc822 %></div>
+        </div>
+        <% if @task.run_with.present? %>
+          <div class="row mb-3">
+            <div class="col-md-3"><strong><%= t("raif.admin.common.run_with") %>:</strong></div>
+            <div class="col-md-9">
+              <pre class="pre-wrap mb-0"><%= JSON.pretty_generate(@task.run_with) %></pre>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  <% if prompt_studio_runs_enabled? %>
+    <div class="col-md-5">
+      <div class="card h-100">
+        <div class="card-header">
+          <h5 class="mb-0"><%= t("raif.admin.prompt_studio.tasks.rerun.title") %></h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted"><%= t("raif.admin.prompt_studio.tasks.rerun.description") %></p>
+          <div class="mb-3">
+            <% if @comparison[:current_system_prompt].present? %>
+              <% if @comparison[:system_prompt_changed] %>
+                <span class="badge bg-warning text-dark"><%= t("raif.admin.prompt_studio.common.system_prompt_changed") %></span>
+              <% else %>
+                <span class="badge bg-success"><%= t("raif.admin.prompt_studio.common.system_prompt_unchanged") %></span>
+              <% end %>
+            <% end %>
+            <% if @comparison[:current_prompt].present? %>
+              <% if @comparison[:prompt_changed] %>
+                <span class="badge bg-warning text-dark"><%= t("raif.admin.prompt_studio.common.prompt_changed") %></span>
+              <% else %>
+                <span class="badge bg-success"><%= t("raif.admin.prompt_studio.common.prompt_unchanged") %></span>
+              <% end %>
+            <% end %>
+          </div>
+          <%= form_tag raif.admin_prompt_studio_tasks_path(source_task_id: @task.id), method: :post do %>
+            <div class="mb-3">
+              <label for="llm_model_key"><%= t("raif.admin.common.model") %></label>
+              <%= select_tag :llm_model_key,
+                    options_for_select(@available_llm_keys, @task.llm_model_key),
+                    class: "form-select" %>
+            </div>
+            <%= submit_tag t("raif.admin.prompt_studio.tasks.rerun.submit"),
+                  class: "btn btn-primary",
+                  data: { confirm: t("raif.admin.prompt_studio.tasks.rerun.confirm"), disable_with: t("raif.admin.prompt_studio.tasks.rerun.running") } %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<%= render "raif/admin/prompt_studio/shared/prompt_comparison", comparison: @comparison %>
+
+<% if @task.raw_response.present? %>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><%= t("raif.admin.common.response") %> (<%= @task.response_format %>)</h5>
+    </div>
+    <div class="card-body">
+      <pre class="pre-wrap"><%= @task.raw_response %></pre>
+    </div>
+  </div>
+<% end %>

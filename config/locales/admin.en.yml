@@ -76,6 +76,7 @@ en:
         response_format: Response Format
         result: Result
         retry_count: Retry Count
+        run_with: run_with
         running: Running
         since: Since
         source: Source
@@ -126,16 +127,44 @@ en:
         show:
           back_to_model_tool_invocations: Back to Model Tool Invocations
           title: 'Model Tool Invocation #%{id}'
-      prompt_previews:
-        index:
-          no_previews: No prompt previews found.
-          no_previews_hint: 'Create preview classes in your configured preview paths (default: test/raif/prompt_previews/) by subclassing Raif::PromptPreview.'
-          title: Prompt Previews
-        show:
-          instance: 'Instance:'
-          no_output: No prompt or system prompt was generated. Make sure your preview method returns a configured instance.
-          prompt: Prompt
-          system_prompt: System Prompt
+      prompt_studio:
+        agents:
+          show:
+            agent_details: Agent Details
+            page_title: 'Prompt Studio - Agent #%{id}'
+        common:
+          back: Back
+          current_prompt: Current Prompt
+          current_system_prompt: Current System Prompt
+          no_instances: No instances found.
+          original_prompt: Original Prompt
+          original_system_prompt: Original System Prompt
+          prompt_changed: Prompt Changed
+          prompt_studio: Prompt Studio
+          run_in_prompt_studio: Run in Prompt Studio
+          prompt_unchanged: Prompt Unchanged
+          runs_disabled: Prompt Studio runs are not enabled in this environment.
+          select_type: Select a type to browse instances
+          system_prompt_changed: System Prompt Changed
+          system_prompt_unchanged: System Prompt Unchanged
+          type: Type
+          warning_stale_reference: 'Warning: Some run_with references could not be loaded. The current prompt may differ from what would be generated with the original data.'
+        conversations:
+          show:
+            conversation_details: Conversation Details
+            page_title: 'Prompt Studio - Conversation #%{id}'
+        tasks:
+          rerun:
+            confirm: This will create a new task and send a request to the selected LLM. Continue?
+            description: Re-run this task with the current prompt templates and a selected model. This will create a new task record.
+            error: 'Re-run failed: %{message}'
+            invalid_model: Please select a valid model.
+            running: Running...
+            submit: Re-run Task
+            title: Re-run with Current Prompts
+          show:
+            page_title: 'Prompt Studio - Task #%{id}'
+            task_details: Task Details
       stats:
         model_tool_invocations:
           back_to_stats: Back to Stats

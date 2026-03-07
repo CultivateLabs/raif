@@ -1,0 +1,36 @@
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1 class="mb-0"><%= t("raif.admin.prompt_studio.conversations.show.page_title", id: @conversation.id) %></h1>
+  <%= link_to t("raif.admin.prompt_studio.common.back"),
+        raif.admin_prompt_studio_conversations_path(conversation_type: @conversation.type),
+        class: "btn btn-outline-secondary" %>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t("raif.admin.prompt_studio.conversations.show.conversation_details") %></h5>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.id") %>:</strong></div>
+      <div class="col-md-10"><%= @conversation.id %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.type") %>:</strong></div>
+      <div class="col-md-10"><%= @conversation.type %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.model") %>:</strong></div>
+      <div class="col-md-10"><%= @conversation.llm_model_key %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
+      <div class="col-md-10"><%= @conversation.created_at.rfc822 %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-2"><strong><%= t("raif.admin.common.entries_count") %>:</strong></div>
+      <div class="col-md-10"><%= @conversation.conversation_entries_count %></div>
+    </div>
+  </div>
+</div>
+
+<%= render "raif/admin/prompt_studio/shared/prompt_comparison", comparison: @comparison %>

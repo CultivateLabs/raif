@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_19_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_07_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -178,6 +178,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_19_000002) do
     t.datetime "failed_at"
     t.string "llm_model_key", null: false
     t.text "prompt"
+    t.boolean "prompt_studio_run", default: false, null: false
     t.text "raw_response"
     t.string "requested_language_key"
     t.integer "response_format", default: 0, null: false
