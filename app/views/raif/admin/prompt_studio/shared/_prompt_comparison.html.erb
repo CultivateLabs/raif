@@ -1,5 +1,5 @@
 <% if comparison[:warnings].any? %>
-  <div class="alert alert-warning">
+  <div class="alert <%= comparison[:has_stale_references] ? "alert-danger" : "alert-warning" %>">
     <ul class="mb-0">
       <% comparison[:warnings].each do |warning| %>
         <li><%= warning %></li>

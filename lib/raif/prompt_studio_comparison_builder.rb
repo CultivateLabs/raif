@@ -20,6 +20,7 @@ module Raif
         current_system_prompt: current_system_prompt,
         prompt_changed: changed?(original_prompt, current_prompt),
         system_prompt_changed: changed?(original_system_prompt, current_system_prompt),
+        has_stale_references: has_stale_references?,
         warnings: warnings
       }
     end
@@ -62,23 +63,30 @@ module Raif
 
     def warnings
       @warnings ||= [].tap do |w|
-        check_stale_references(w)
+        w << I18n.t("raif.admin.prompt_studio.common.warning_stale_reference") if has_stale_references?
       end
     end
 
-    def check_stale_references(warnings)
-      return unless @record.respond_to?(:run_with) && @record.run_with.present?
+    def has_stale_references?
+      return @has_stale_references if defined?(@has_stale_references)
+
+      @has_stale_references = detect_stale_references
+    end
+
+    def detect_stale_references
+      return false unless @record.respond_to?(:run_with) && @record.run_with.present?
 
       @record.run_with.each do |_key, value|
         if value.is_a?(String) && value.start_with?("gid://")
           begin
             GlobalID::Locator.locate(value)
           rescue ActiveRecord::RecordNotFound
-            warnings << I18n.t("raif.admin.prompt_studio.common.warning_stale_reference")
-            break
+            return true
           end
         end
       end
+
+      false
     end
 
     def changed?(original, current)

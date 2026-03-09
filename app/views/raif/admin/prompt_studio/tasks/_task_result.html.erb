@@ -80,16 +80,22 @@
                 <% end %>
               <% end %>
             </div>
-            <%= form_tag raif.admin_prompt_studio_tasks_path(source_task_id: task.id), method: :post do %>
-              <div class="mb-3">
-                <label for="llm_model_key"><%= t("raif.admin.common.model") %></label>
-                <%= select_tag :llm_model_key,
-                      options_for_select(Raif.available_llm_keys.map(&:to_s).sort, task.llm_model_key),
-                      class: "form-select" %>
+            <% if comparison[:has_stale_references] %>
+              <div class="alert alert-danger mb-0">
+                <%= t("raif.admin.prompt_studio.common.warning_stale_reference") %>
               </div>
-              <%= submit_tag t("raif.admin.prompt_studio.tasks.rerun.submit"),
-                    class: "btn btn-primary",
-                    data: { confirm: t("raif.admin.prompt_studio.tasks.rerun.confirm"), disable_with: t("raif.admin.prompt_studio.tasks.rerun.running") } %>
+            <% else %>
+              <%= form_tag raif.admin_prompt_studio_tasks_path(source_task_id: task.id), method: :post do %>
+                <div class="mb-3">
+                  <label for="llm_model_key"><%= t("raif.admin.common.model") %></label>
+                  <%= select_tag :llm_model_key,
+                        options_for_select(Raif.available_llm_keys.map(&:to_s).sort, task.llm_model_key),
+                        class: "form-select" %>
+                </div>
+                <%= submit_tag t("raif.admin.prompt_studio.tasks.rerun.submit"),
+                      class: "btn btn-primary",
+                      data: { confirm: t("raif.admin.prompt_studio.tasks.rerun.confirm"), disable_with: t("raif.admin.prompt_studio.tasks.rerun.running") } %>
+              <% end %>
             <% end %>
           </div>
         </div>
