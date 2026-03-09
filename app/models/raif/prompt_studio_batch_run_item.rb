@@ -129,8 +129,7 @@ module Raif
         prompt_studio_run: true,
         started_at: Time.current
       )
-      new_task.assign_attributes(source_task.prompt_studio_rerun_attributes)
-      apply_prompt_studio_task_attributes(new_task)
+      new_task.assign_attributes(source_task.prompt_studio_task_attributes)
       new_task.save!
 
       update!(result_task_id: new_task.id)
@@ -156,7 +155,7 @@ module Raif
         prompt_studio_run: true,
         llm_model_key: batch_run.judge_llm_model_key
       }
-      judge_args.merge!(prompt_studio_task_attributes)
+      judge_args.merge!(source_task.prompt_studio_task_attributes)
 
       if config["include_original_prompt_as_context"]
         judge_args[:additional_context] =
@@ -217,16 +216,5 @@ module Raif
       )
     end
 
-    def prompt_studio_task_attributes
-      callback = Raif.config.prompt_studio_task_attributes
-      return {} unless callback
-
-      callback.call(source_task) || {}
-    end
-
-    def apply_prompt_studio_task_attributes(task)
-      attrs = prompt_studio_task_attributes
-      task.assign_attributes(attrs) if attrs.present?
-    end
   end
 end

@@ -195,11 +195,12 @@ module Raif
       schema_for_instance(:json_response)
     end
 
-    # Returns additional attributes to copy when re-running a task from Prompt Studio.
-    # Override in your ApplicationTask or task subclass to include app-specific attributes.
+    # Returns additional attributes to assign when creating tasks in Prompt Studio
+    # (reruns, batch runs, and judge tasks). Override in your ApplicationTask or
+    # task subclass to include app-specific attributes.
     #
     # @return [Hash] additional attributes to assign to the new task
-    def prompt_studio_rerun_attributes
+    def prompt_studio_task_attributes
       {}
     end
 
