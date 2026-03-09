@@ -5,7 +5,7 @@
 # Table name: raif_prompt_studio_batch_run_items
 #
 #  id             :bigint           not null, primary key
-#  metadata       :jsonb            not null
+#  metadata       :jsonb
 #  status         :string           default("pending"), not null
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
@@ -32,6 +32,8 @@ module Raif
     include ActionView::RecordIdentifier
 
     STATUSES = %w[pending running judging completed failed].freeze
+
+    after_initialize -> { self.metadata ||= {} }
 
     belongs_to :batch_run,
       class_name: "Raif::PromptStudioBatchRun",
