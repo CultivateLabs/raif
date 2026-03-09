@@ -114,6 +114,15 @@ module Raif
     end
 
     config.after_initialize do
+      require "raif/evals/llm_judge"
+      require "raif/evals/llm_judges/binary"
+      require "raif/evals/llm_judges/comparative"
+      require "raif/evals/llm_judges/scored"
+      require "raif/evals/llm_judges/summarization"
+      require "raif/evals/scoring_rubric"
+    end
+
+    config.after_initialize do
       Raif.config.validate!
     end
 

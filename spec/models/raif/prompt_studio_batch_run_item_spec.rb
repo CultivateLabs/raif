@@ -5,6 +5,7 @@
 # Table name: raif_prompt_studio_batch_run_items
 #
 #  id             :bigint           not null, primary key
+#  metadata       :jsonb            not null
 #  status         :string           default("pending"), not null
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null

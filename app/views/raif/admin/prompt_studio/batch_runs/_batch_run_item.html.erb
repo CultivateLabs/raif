@@ -38,12 +38,16 @@
   <% if item.batch_run.has_judge? %>
     <td>
       <% if item.judge_summary.present? %>
-        <strong><%= item.judge_summary %></strong>
+        <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#judge-detail-modal-<%= item.id %>">
+          <strong><%= item.judge_summary %></strong>
+        </a>
       <% end %>
     </td>
     <td>
       <% if item.judge_reasoning.present? %>
-        <%= tag.span truncate(item.judge_reasoning, length: 80), title: item.judge_reasoning %>
+        <a href="#" class="text-decoration-none text-body" data-bs-toggle="modal" data-bs-target="#judge-detail-modal-<%= item.id %>">
+          <%= truncate(item.judge_reasoning, length: 80) %>
+        </a>
       <% end %>
     </td>
   <% end %>

@@ -68,7 +68,7 @@
     <div class="mb-3">
       <label for="judge_llm_model_key" class="form-label"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.judge_model_label") %></label>
       <%= select_tag :judge_llm_model_key,
-            options_for_select(Raif.available_llm_keys.map(&:to_s).sort),
+            llm_model_options,
             class: "form-select",
             data: { raif__cost_estimate_target: "judgeModelSelect", action: "raif--cost-estimate#calculate" } %>
     </div>

@@ -14,6 +14,15 @@ module Raif
       task.raw_response
     end
 
+    def llm_model_options(selected: nil)
+      options = Raif.available_llm_keys.map do |key|
+        label = I18n.t("raif.model_names.#{key}", default: key.to_s)
+        [label, key.to_s]
+      end.sort_by(&:first)
+
+      options_for_select(options, selected&.to_s)
+    end
+
     def llm_pricing_json
       pricing = {}
       Raif.available_llm_keys.each do |key|

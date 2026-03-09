@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 
-require "raif/evals"
-
 # == Schema Information
 #
 # Table name: raif_prompt_studio_batch_run_items
 #
 #  id             :bigint           not null, primary key
+#  metadata       :jsonb            not null
 #  status         :string           default("pending"), not null
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
@@ -82,7 +81,12 @@ module Raif
       when "Raif::Evals::LlmJudges::Scored"
         "Score: #{parsed["score"]}"
       when "Raif::Evals::LlmJudges::Comparative"
-        parsed["winner"] == "tie" ? "Tie" : "Winner: #{parsed["winner"]}"
+        if parsed["winner"] == "tie"
+          I18n.t("raif.admin.prompt_studio.batch_runs.judge.tie")
+        else
+          winner_label = comparative_winner_label(parsed["winner"])
+          I18n.t("raif.admin.prompt_studio.batch_runs.judge.winner", name: winner_label)
+        end
       when "Raif::Evals::LlmJudges::Summarization"
         "Overall: #{parsed.dig("overall", "score")}/5"
       end
@@ -95,6 +99,17 @@ module Raif
       return unless parsed.is_a?(Hash)
 
       parsed["reasoning"]
+    end
+
+    def comparative_winner_label(winner_letter)
+      new_response_letter = metadata&.dig("new_response_letter")
+      return winner_letter unless new_response_letter
+
+      if winner_letter == new_response_letter
+        I18n.t("raif.admin.prompt_studio.batch_runs.judge.new_response")
+      else
+        I18n.t("raif.admin.prompt_studio.batch_runs.judge.original_response")
+      end
     end
 
   private
@@ -159,12 +174,16 @@ module Raif
           **judge_args
         )
       when "Raif::Evals::LlmJudges::Comparative"
-        judge_class.run(
+        result = judge_class.run(
           content_to_judge: new_task.raw_response,
           over_content: source_task.raw_response,
           comparison_criteria: config["comparison_criteria"],
           **judge_args
         )
+        # Store which letter was assigned to the new response so we can display
+        # "Winner: New Response" / "Winner: Original Response" instead of "A"/"B"
+        update!(metadata: metadata.merge("new_response_letter" => result.expected_winner))
+        result
       when "Raif::Evals::LlmJudges::Summarization"
         judge_class.run(
           original_content: source_task.prompt,

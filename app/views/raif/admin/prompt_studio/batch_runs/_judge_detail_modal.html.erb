@@ -1,0 +1,27 @@
+<div class="modal fade" id="judge-detail-modal-<%= item.id %>" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><%= t("raif.admin.prompt_studio.batch_runs.show.judge_result") %> &mdash; Task #<%= item.source_task_id %></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <% if item.judge_summary.present? %>
+          <div class="mb-3">
+            <h6><%= t("raif.admin.prompt_studio.batch_runs.show.judge_result") %></h6>
+            <span class="badge bg-primary fs-6"><%= item.judge_summary %></span>
+          </div>
+        <% end %>
+        <% if item.judge_reasoning.present? %>
+          <div>
+            <h6><%= t("raif.admin.prompt_studio.batch_runs.show.judge_reasoning") %></h6>
+            <pre class="pre-wrap border rounded p-3 bg-light"><%= item.judge_reasoning %></pre>
+          </div>
+        <% end %>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t("raif.admin.prompt_studio.common.back") %></button>
+      </div>
+    </div>
+  </div>
+</div>

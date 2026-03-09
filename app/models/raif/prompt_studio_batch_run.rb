@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "raif/evals"
-
 # == Schema Information
 #
 # Table name: raif_prompt_studio_batch_runs

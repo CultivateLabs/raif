@@ -173,6 +173,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_08_000001) do
     t.bigint "batch_run_id", null: false
     t.datetime "created_at", null: false
     t.bigint "judge_task_id"
+    t.jsonb "metadata", default: {}, null: false
     t.bigint "result_task_id"
     t.bigint "source_task_id", null: false
     t.string "status", default: "pending", null: false

@@ -8,6 +8,7 @@ class CreateRaifPromptStudioBatchRunItems < ActiveRecord::Migration[7.1]
       t.bigint :result_task_id
       t.bigint :judge_task_id
       t.string :status, default: "pending", null: false
+      t.jsonb :metadata, default: {}, null: false
 
       t.timestamps
     end

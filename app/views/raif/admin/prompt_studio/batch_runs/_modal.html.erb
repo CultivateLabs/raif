@@ -9,7 +9,7 @@
         <div class="mb-3">
           <label for="llm_model_key" class="form-label"><%= t("raif.admin.common.model") %></label>
           <%= select_tag :llm_model_key,
-                options_for_select(Raif.available_llm_keys.map(&:to_s).sort),
+                llm_model_options,
                 class: "form-select",
                 data: { raif__cost_estimate_target: "modelSelect", action: "raif--cost-estimate#calculate" } %>
         </div>
