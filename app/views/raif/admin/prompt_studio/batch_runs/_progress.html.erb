@@ -47,6 +47,29 @@
             <% if batch_run.judge_average_score %>
               <%= t("raif.admin.prompt_studio.batch_runs.show.average_score") %>: <%= batch_run.judge_average_score %>
             <% end %>
+          <% when "Raif::Evals::LlmJudges::Comparative" %>
+            <% summary = batch_run.judge_comparative_summary %>
+            <% if summary %>
+              <div class="d-flex gap-4 mt-2">
+                <div>
+                  <span class="badge bg-success"><%= summary[:new_win_pct] %>%</span>
+                  <%= t("raif.admin.prompt_studio.batch_runs.judge.new_response") %>
+                  <span class="text-muted">(<%= summary[:new_wins] %>/<%= summary[:total] %>)</span>
+                </div>
+                <div>
+                  <span class="badge bg-secondary"><%= summary[:original_win_pct] %>%</span>
+                  <%= t("raif.admin.prompt_studio.batch_runs.judge.original_response") %>
+                  <span class="text-muted">(<%= summary[:original_wins] %>/<%= summary[:total] %>)</span>
+                </div>
+                <% if summary[:ties] > 0 %>
+                  <div>
+                    <span class="badge bg-warning text-dark"><%= summary[:tie_pct] %>%</span>
+                    <%= t("raif.admin.prompt_studio.batch_runs.judge.tie") %>
+                    <span class="text-muted">(<%= summary[:ties] %>/<%= summary[:total] %>)</span>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
           <% end %>
         </div>
       <% end %>

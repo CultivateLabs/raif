@@ -87,6 +87,44 @@ module Raif
       (scores.sum.to_f / scores.size).round(1)
     end
 
+    def judge_comparative_summary
+      completed_items = items.where.not(judge_task_id: nil).includes(:judge_task)
+      return if completed_items.empty?
+
+      new_wins = 0
+      original_wins = 0
+      ties = 0
+
+      completed_items.each do |item|
+        next unless item.judge_task&.completed?
+
+        parsed = item.judge_task.parsed_response
+        next unless parsed.is_a?(Hash)
+
+        winner = parsed["winner"]
+        if winner == "tie"
+          ties += 1
+        elsif winner == item.metadata&.dig("new_response_letter")
+          new_wins += 1
+        else
+          original_wins += 1
+        end
+      end
+
+      total = new_wins + original_wins + ties
+      return if total.zero?
+
+      {
+        new_wins: new_wins,
+        original_wins: original_wins,
+        ties: ties,
+        total: total,
+        new_win_pct: ((new_wins.to_f / total) * 100).round,
+        original_win_pct: ((original_wins.to_f / total) * 100).round,
+        tie_pct: ((ties.to_f / total) * 100).round
+      }
+    end
+
   private
 
     def completed_judge_tasks

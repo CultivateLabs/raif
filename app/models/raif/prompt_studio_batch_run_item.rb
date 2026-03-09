@@ -65,8 +65,8 @@ module Raif
       update!(status: "failed")
     ensure
       broadcast_item
-      broadcast_progress
       batch_run.check_completion!
+      broadcast_progress
     end
 
     def judge_summary
