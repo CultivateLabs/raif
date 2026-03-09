@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_19_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_08_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -169,6 +169,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_19_000002) do
     t.index ["source_type", "source_id"], name: "index_raif_model_tool_invocations_on_source"
   end
 
+  create_table "raif_prompt_studio_batch_run_items", force: :cascade do |t|
+    t.bigint "batch_run_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "judge_task_id"
+    t.jsonb "metadata"
+    t.bigint "result_task_id"
+    t.bigint "source_task_id", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.index ["batch_run_id"], name: "index_raif_prompt_studio_batch_run_items_on_batch_run_id"
+    t.index ["judge_task_id"], name: "index_raif_prompt_studio_batch_run_items_on_judge_task_id"
+    t.index ["result_task_id"], name: "index_raif_prompt_studio_batch_run_items_on_result_task_id"
+    t.index ["source_task_id"], name: "index_raif_prompt_studio_batch_run_items_on_source_task_id"
+    t.index ["status"], name: "index_raif_prompt_studio_batch_run_items_on_status"
+  end
+
+  create_table "raif_prompt_studio_batch_runs", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.integer "completed_count", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "failed_at"
+    t.integer "failed_count", default: 0
+    t.jsonb "judge_config", null: false
+    t.string "judge_llm_model_key"
+    t.string "judge_type"
+    t.string "llm_model_key", null: false
+    t.datetime "started_at"
+    t.string "task_type", null: false
+    t.integer "total_count", default: 0
+    t.datetime "updated_at", null: false
+  end
+
   create_table "raif_tasks", force: :cascade do |t|
     t.jsonb "available_model_tools", null: false
     t.datetime "completed_at"
@@ -178,6 +210,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_19_000002) do
     t.datetime "failed_at"
     t.string "llm_model_key", null: false
     t.text "prompt"
+    t.boolean "prompt_studio_run", default: false, null: false
     t.text "raw_response"
     t.string "requested_language_key"
     t.integer "response_format", default: 0, null: false
@@ -218,5 +251,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_19_000002) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "raif_conversation_entries", "raif_conversations"
+  add_foreign_key "raif_prompt_studio_batch_run_items", "raif_prompt_studio_batch_runs", column: "batch_run_id"
+  add_foreign_key "raif_prompt_studio_batch_run_items", "raif_tasks", column: "judge_task_id"
+  add_foreign_key "raif_prompt_studio_batch_run_items", "raif_tasks", column: "result_task_id"
+  add_foreign_key "raif_prompt_studio_batch_run_items", "raif_tasks", column: "source_task_id"
   add_foreign_key "raif_user_tool_invocations", "raif_conversation_entries"
 end

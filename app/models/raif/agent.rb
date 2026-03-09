@@ -35,6 +35,8 @@
 #
 module Raif
   class Agent < ApplicationRecord
+    prepend Raif::Concerns::HasPromptTemplates
+
     include Raif::Concerns::HasLlm
     include Raif::Concerns::HasRequestedLanguage
     include Raif::Concerns::HasAvailableModelTools

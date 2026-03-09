@@ -1,0 +1,19 @@
+<% if @task.status == :in_progress %>
+  <%= turbo_stream_from @task %>
+<% end %>
+
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1 class="mb-0"><%= t("raif.admin.prompt_studio.tasks.show.page_title", id: @task.id) %></h1>
+  <%= link_to t("raif.admin.prompt_studio.common.back"),
+        raif.admin_prompt_studio_tasks_path(task_type: @task.type),
+        class: "btn btn-outline-secondary" %>
+</div>
+
+<% if flash[:alert].present? %>
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <%= flash[:alert] %>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+<% end %>
+
+<%= render "raif/admin/prompt_studio/tasks/task_result", task: @task, comparison: @comparison, original_task: @original_task %>

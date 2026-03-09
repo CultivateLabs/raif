@@ -17,12 +17,23 @@ module Raif
         default: false,
         desc: "Skip generating the corresponding eval set"
 
+      class_option :skip_prompt_template,
+        type: :boolean,
+        default: false,
+        desc: "Skip generating the prompt template file"
+
       def create_application_task
         template "application_task.rb.tt", "app/models/raif/application_task.rb" unless File.exist?("app/models/raif/application_task.rb")
       end
 
       def create_task_file
         template "task.rb.tt", File.join("app/models/raif/tasks", class_path, "#{file_name}.rb")
+      end
+
+      def create_prompt_template
+        return if options[:skip_prompt_template]
+
+        template "prompt.erb.tt", prompt_template_file_path
       end
 
       def create_eval_set
@@ -33,6 +44,9 @@ module Raif
 
       def show_instructions
         say "\nTask created!"
+        unless options[:skip_prompt_template]
+          say "  Prompt template: #{prompt_template_file_path}"
+        end
         say ""
       end
 
@@ -40,6 +54,10 @@ module Raif
 
       def eval_set_file_path
         File.join("raif_evals", "eval_sets", "tasks", class_path, "#{file_name}_eval_set.rb")
+      end
+
+      def prompt_template_file_path
+        File.join("app/views/raif/tasks", class_path, "#{file_name}.prompt.erb")
       end
 
     end

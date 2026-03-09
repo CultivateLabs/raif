@@ -1,0 +1,17 @@
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item">
+    <%= link_to t("raif.admin.common.tasks"),
+          raif.admin_prompt_studio_tasks_path,
+          class: "nav-link #{active_tab == :tasks ? "active" : ""}" %>
+  </li>
+  <li class="nav-item">
+    <%= link_to t("raif.admin.common.conversations"),
+          raif.admin_prompt_studio_conversations_path,
+          class: "nav-link #{active_tab == :conversations ? "active" : ""}" %>
+  </li>
+  <li class="nav-item">
+    <%= link_to t("raif.admin.common.agents"),
+          raif.admin_prompt_studio_agents_path,
+          class: "nav-link #{active_tab == :agents ? "active" : ""}" %>
+  </li>
+</ul>

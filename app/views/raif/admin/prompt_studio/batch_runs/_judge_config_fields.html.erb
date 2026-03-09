@@ -1,0 +1,76 @@
+<div id="judge-config-section" data-controller="raif--judge-config">
+  <h6 class="mb-2"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.title") %></h6>
+  <p class="text-muted small"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.description") %></p>
+
+  <div class="mb-3">
+    <label for="judge_type" class="form-label"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.type_label") %></label>
+    <%= select_tag :judge_type,
+          options_for_select([
+            [t("raif.admin.prompt_studio.batch_runs.judge_config.type_none"), ""],
+            [t("raif.admin.prompt_studio.batch_runs.judge_config.type_binary"), "Raif::Evals::LlmJudges::Binary"],
+            [t("raif.admin.prompt_studio.batch_runs.judge_config.type_scored"), "Raif::Evals::LlmJudges::Scored"],
+            [t("raif.admin.prompt_studio.batch_runs.judge_config.type_comparative"), "Raif::Evals::LlmJudges::Comparative"],
+            [t("raif.admin.prompt_studio.batch_runs.judge_config.type_summarization"), "Raif::Evals::LlmJudges::Summarization"]
+          ]),
+          class: "form-select",
+          data: { action: "raif--judge-config#toggle raif--cost-estimate#calculate", raif__cost_estimate_target: "judgeTypeSelect" } %>
+  </div>
+
+  <div class="d-none" data-raif--judge-config-target="binary">
+    <div class="mb-3">
+      <label for="judge_criteria" class="form-label"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.criteria_label") %></label>
+      <%= text_area_tag :judge_criteria,
+            nil,
+            class: "form-control",
+            rows: 2,
+            placeholder: t("raif.admin.prompt_studio.batch_runs.judge_config.criteria_placeholder") %>
+    </div>
+    <div class="form-check mb-3">
+      <%= check_box_tag :judge_strict_mode, "1", false, class: "form-check-input" %>
+      <label for="judge_strict_mode" class="form-check-label"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.strict_mode_label") %></label>
+    </div>
+  </div>
+
+  <div class="d-none" data-raif--judge-config-target="scored">
+    <div class="mb-3">
+      <label for="judge_scoring_rubric" class="form-label"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.rubric_label") %></label>
+      <%= select_tag :judge_scoring_rubric,
+            options_for_select([
+              [t("raif.admin.prompt_studio.batch_runs.judge_config.rubric_accuracy"), "accuracy"],
+              [t("raif.admin.prompt_studio.batch_runs.judge_config.rubric_helpfulness"), "helpfulness"],
+              [t("raif.admin.prompt_studio.batch_runs.judge_config.rubric_clarity"), "clarity"]
+            ]),
+            class: "form-select" %>
+    </div>
+  </div>
+
+  <div class="d-none" data-raif--judge-config-target="comparative">
+    <div class="mb-3">
+      <label for="judge_comparison_criteria" class="form-label"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.comparison_criteria_label") %></label>
+      <%= text_area_tag :judge_comparison_criteria,
+            nil,
+            class: "form-control",
+            rows: 2,
+            placeholder: t("raif.admin.prompt_studio.batch_runs.judge_config.comparison_criteria_placeholder") %>
+    </div>
+  </div>
+
+  <div class="d-none" data-raif--judge-config-target="summarization">
+    <p class="text-muted small"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.summarization_description") %></p>
+  </div>
+
+  <div class="d-none" data-raif--judge-config-target="sharedOptions">
+    <div class="form-check mb-3">
+      <%= check_box_tag :judge_include_original_prompt_as_context, "1", true, class: "form-check-input" %>
+      <label for="judge_include_original_prompt_as_context" class="form-check-label"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.include_original_prompt_as_context_label") %></label>
+      <div class="form-text"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.include_original_prompt_as_context_description") %></div>
+    </div>
+    <div class="mb-3">
+      <label for="judge_llm_model_key" class="form-label"><%= t("raif.admin.prompt_studio.batch_runs.judge_config.judge_model_label") %></label>
+      <%= select_tag :judge_llm_model_key,
+            llm_model_options,
+            class: "form-select",
+            data: { raif__cost_estimate_target: "judgeModelSelect", action: "raif--cost-estimate#calculate" } %>
+    </div>
+  </div>
+</div>

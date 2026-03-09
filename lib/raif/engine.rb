@@ -9,6 +9,11 @@ module Raif
   class Engine < ::Rails::Engine
     isolate_namespace Raif
 
+    initializer "raif.prompt_template_formats", before: :add_view_paths do
+      Mime::Type.register "text/plain", :prompt unless Mime::Type.lookup_by_extension(:prompt)
+      Mime::Type.register "text/plain", :system_prompt unless Mime::Type.lookup_by_extension(:system_prompt)
+    end
+
     # If the host app is using FactoryBot, add the factories to the host app so they can be used in host apptests
     if defined?(FactoryBotRails)
       config.factory_bot.definition_file_paths += [File.expand_path("../../../spec/factories/shared", __FILE__)]
@@ -93,7 +98,8 @@ module Raif
     config.after_initialize do
       next unless Rails.env.test?
 
-      Raif.config.conversation_types += ["Raif::TestConversation"]
+      Raif.config.conversation_types += ["Raif::TestConversation", "Raif::TestTemplateConversation"]
+      Raif.config.agent_types += ["Raif::TestTemplateAgent"]
 
       require "#{Raif::Engine.root}/spec/support/test_llm"
       Raif.register_llm(Raif::Llms::TestLlm, key: :raif_test_llm, api_name: "raif-test-llm")

@@ -16,15 +16,19 @@ For example, say you have a `Document` model in your app and want to have a summ
 rails generate raif:task DocumentSummarization --response-format html
 ```
 
-This will create a new task in `app/models/raif/tasks/document_summarization.rb`.
+This will create a new task in `app/models/raif/tasks/document_summarization.rb` along with a [prompt template](../learn_more/prompt_templates) at `app/views/raif/tasks/document_summarization.prompt.erb`.
 
 If you don't specify a response format, it will default to `:text`, which expects a plaintext response from the LLM. If you want the LLM to return a formatted response, you can specify the response format as `:html` or `:json`. Make sure to include instructions in your prompt to the LLM to return the response in the specified format.
 
 If you specify a response format, Raif will automatically parse the response for you, which is described in more detail in the [Response Formats](../learn_more/response_formats) docs. You can utilize the `parsed_response` method to get the parsed response or `raw_response` to get the raw, unprocessed response.
 
+# Defining Prompts
+
+By default, the generator creates an ERB [prompt template](../learn_more/prompt_templates) for your task. You can also define prompts by overriding the `build_prompt` and `build_system_prompt` methods directly in Ruby. See the [Prompt Templates](../learn_more/prompt_templates) docs for details on precedence and how to mix and match approaches.
+
 # HTML Response Format Tasks
 
-Below is an example task that uses the `:html` response format:
+Below is an example task that uses the `:html` response format and the method-based approach for defining prompts:
 
 ```ruby
 class Raif::Tasks::DocumentSummarization < Raif::ApplicationTask

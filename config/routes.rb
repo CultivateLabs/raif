@@ -26,5 +26,12 @@ Raif::Engine.routes.draw do
     resources :agents, only: [:index, :show]
     resources :model_tool_invocations, only: [:index, :show]
     resource :config, only: [:show]
+
+    namespace :prompt_studio do
+      resources :tasks, only: [:index, :show, :create]
+      resources :conversations, only: [:index, :show]
+      resources :agents, only: [:index, :show]
+      resources :batch_runs, only: [:create, :show]
+    end
   end
 end

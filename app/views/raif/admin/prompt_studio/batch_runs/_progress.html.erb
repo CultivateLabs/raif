@@ -1,0 +1,78 @@
+<%= tag.div id: dom_id(batch_run, :progress) do %>
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <strong><%= t("raif.admin.prompt_studio.batch_runs.show.progress") %></strong>
+          <% case batch_run.status %>
+          <% when :pending %>
+            <span class="badge bg-secondary ms-2"><%= t("raif.admin.prompt_studio.batch_runs.status.pending") %></span>
+          <% when :in_progress %>
+            <span class="badge bg-warning text-dark ms-2">
+              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              <%= t("raif.admin.prompt_studio.batch_runs.status.in_progress") %>
+            </span>
+          <% when :completed %>
+            <span class="badge bg-success ms-2"><%= t("raif.admin.prompt_studio.batch_runs.status.completed") %></span>
+          <% when :failed %>
+            <span class="badge bg-danger ms-2"><%= t("raif.admin.prompt_studio.batch_runs.status.failed") %></span>
+          <% end %>
+        </div>
+        <div class="text-muted">
+          <%= batch_run.completed_count + batch_run.failed_count %> / <%= batch_run.total_count %>
+          <% if batch_run.failed_count > 0 %>
+            (<span class="text-danger"><%= batch_run.failed_count %> <%= t("raif.admin.common.failed").downcase %></span>)
+          <% end %>
+        </div>
+      </div>
+      <div class="progress" style="height: 20px;">
+        <div class="progress-bar bg-success" role="progressbar"
+          style="width: <%= batch_run.progress_percentage %>%"
+          aria-valuenow="<%= batch_run.progress_percentage %>"
+          aria-valuemin="0"
+          aria-valuemax="100">
+          <%= batch_run.progress_percentage %>%
+        </div>
+      </div>
+
+      <% if batch_run.has_judge? && batch_run.completed? %>
+        <div class="mt-3">
+          <strong><%= t("raif.admin.prompt_studio.batch_runs.show.summary") %>:</strong>
+          <% case batch_run.judge_type %>
+          <% when "Raif::Evals::LlmJudges::Binary" %>
+            <% if batch_run.judge_pass_rate %>
+              <%= t("raif.admin.prompt_studio.batch_runs.show.pass_rate") %>: <%= batch_run.judge_pass_rate %>
+            <% end %>
+          <% when "Raif::Evals::LlmJudges::Scored" %>
+            <% if batch_run.judge_average_score %>
+              <%= t("raif.admin.prompt_studio.batch_runs.show.average_score") %>: <%= batch_run.judge_average_score %>
+            <% end %>
+          <% when "Raif::Evals::LlmJudges::Comparative" %>
+            <% summary = batch_run.judge_comparative_summary %>
+            <% if summary %>
+              <div class="d-flex gap-4 mt-2">
+                <div>
+                  <span class="badge bg-success"><%= summary[:new_win_pct] %>%</span>
+                  <%= t("raif.admin.prompt_studio.batch_runs.judge.new_response") %>
+                  <span class="text-muted">(<%= summary[:new_wins] %>/<%= summary[:total] %>)</span>
+                </div>
+                <div>
+                  <span class="badge bg-secondary"><%= summary[:original_win_pct] %>%</span>
+                  <%= t("raif.admin.prompt_studio.batch_runs.judge.original_response") %>
+                  <span class="text-muted">(<%= summary[:original_wins] %>/<%= summary[:total] %>)</span>
+                </div>
+                <% if summary[:ties] > 0 %>
+                  <div>
+                    <span class="badge bg-warning text-dark"><%= summary[:tie_pct] %>%</span>
+                    <%= t("raif.admin.prompt_studio.batch_runs.judge.tie") %>
+                    <span class="text-muted">(<%= summary[:ties] %>/<%= summary[:total] %>)</span>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

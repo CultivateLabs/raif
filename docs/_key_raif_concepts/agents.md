@@ -50,7 +50,9 @@ You can create custom agents using the generator:
 rails generate raif:agent WikipediaResearchAgent
 ```
 
-This will create a new agent in `app/models/raif/agents/wikipedia_research_agent.rb`:
+This will create a new agent in `app/models/raif/agents/wikipedia_research_agent.rb` along with a system prompt [template](../learn_more/prompt_templates) at `app/views/raif/agents/wikipedia_research_agent.system_prompt.erb`.
+
+You can define the system prompt either in the template or by overriding `build_system_prompt` in the class:
 
 ```ruby
 module Raif
@@ -65,8 +67,8 @@ module Raif
       #   ]
       # }
 
-      # Enter your agent's system prompt here. Alternatively, you can change your agent's superclass
-      # to an existing agent types (like Raif::Agents::NativeToolCallingAgent) to utilize an existing system prompt.
+      # Enter your agent's system prompt here. Alternatively, you can define it in
+      # app/views/raif/agents/wikipedia_research_agent.system_prompt.erb
       def build_system_prompt
         # TODO: Implement your system prompt here
       end

@@ -76,6 +76,7 @@ en:
         response_format: Response Format
         result: Result
         retry_count: Retry Count
+        run_with: Run With
         running: Running
         since: Since
         source: Source
@@ -126,6 +127,103 @@ en:
         show:
           back_to_model_tool_invocations: Back to Model Tool Invocations
           title: 'Model Tool Invocation #%{id}'
+      prompt_studio:
+        agents:
+          show:
+            agent_details: Agent Details
+            page_title: 'Prompt Studio - Agent #%{id}'
+        batch_runs:
+          create:
+            confirm: This will create a batch run and send requests to the selected LLM. Continue?
+            error: 'Batch run failed: %{message}'
+            new_batch_run: New Batch Run
+            no_tasks_selected: Please select at least one task.
+            submit: Run Selected Batch
+            tasks_selected: tasks selected
+            title: Batch Run
+          judge:
+            new_response: New Response
+            original_response: Original Response
+            tie: Tie
+            winner: 'Winner: %{name}'
+          judge_config:
+            comparison_criteria_label: Comparison Criteria
+            comparison_criteria_placeholder: Which response better addresses the prompt
+            criteria_label: Criteria
+            criteria_placeholder: Response is accurate and complete
+            description: Optionally evaluate each result with an LLM judge.
+            include_original_prompt_as_context_description: Provides the original task prompt to the judge as additional context for evaluation.
+            include_original_prompt_as_context_label: Include original prompt as context
+            judge_model_label: Judge Model
+            rubric_accuracy: Accuracy
+            rubric_clarity: Clarity
+            rubric_helpfulness: Helpfulness
+            rubric_label: Scoring Rubric
+            strict_mode_label: Strict Mode
+            summarization_description: Uses the original task prompt as the source content and the new response as the summary to evaluate.
+            title: LLM Judge Configuration
+            type_binary: Binary (Pass/Fail)
+            type_comparative: Comparative (A vs B)
+            type_label: Judge Type
+            type_none: None
+            type_scored: Scored (Rubric)
+            type_summarization: Summarization
+          show:
+            average_score: Average Score
+            judge_reasoning: Judge Reasoning
+            judge_result: Judge Result
+            new_response: New Response
+            original_response: Original Response
+            page_title: 'Batch Run #%{id}'
+            pass_rate: Pass Rate
+            progress: Progress
+            results: Results
+            source_task: Source Task
+            summary: Summary
+          status:
+            completed: Completed
+            failed: Failed
+            in_progress: In Progress
+            judging: Judging
+            pending: Pending
+            running: Running
+        common:
+          back: Back
+          current_prompt: Current Prompt
+          current_system_prompt: Current System Prompt
+          no_instances: No instances found.
+          original_prompt: Original Prompt
+          original_system_prompt: Original System Prompt
+          prompt_changed: Prompt Changed
+          prompt_studio: Prompt Studio
+          prompt_unchanged: Prompt Unchanged
+          run_in_prompt_studio: Run in Prompt Studio
+          runs_disabled: Prompt Studio runs are not enabled in this environment.
+          select_type: Select a type to browse instances
+          system_prompt_changed: System Prompt Changed
+          system_prompt_unchanged: System Prompt Unchanged
+          type: Type
+          warning_stale_reference: 'Warning: Some run_with references could not be loaded. The current prompt may differ from what would be generated with the original data.'
+        conversations:
+          show:
+            conversation_details: Conversation Details
+            page_title: 'Prompt Studio - Conversation #%{id}'
+        tasks:
+          rerun:
+            confirm: This will create a new task and send a request to the selected LLM. Continue?
+            description: Re-run this task with the current prompt templates and a selected model. This will create a new task record.
+            error: 'Re-run failed: %{message}'
+            invalid_model: Please select a valid model.
+            running: Running...
+            submit: Re-run Task
+            title: Re-run with Current Prompts
+          show:
+            new_response: New Response
+            original_response: Original Response
+            page_title: 'Prompt Studio - Task #%{id}'
+            response_comparison: Response Comparison
+            task_details: Task Details
+            view_response: View Response
       stats:
         model_tool_invocations:
           back_to_stats: Back to Stats

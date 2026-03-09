@@ -17,6 +17,7 @@ The admin interface contains sections for:
 - [Conversations](#conversations)
 - [Agents](#agents)
 - [Model Tool Invocations](#model-tool-invocations)
+- [Prompt Studio](#prompt-studio)
 - [Stats](#stats)
 
 # Authorization
@@ -69,6 +70,15 @@ List of `Raif::ModelToolInvocation` records:
 
 `Raif::ModelToolInvocation` record detail:
 ![Model Tool Invocation Detail](../assets/images/screenshots/admin-model-tool-invocation-show.png){:class="img-border"}
+
+## Prompt Studio
+
+Prompt Studio lets you inspect and compare [prompt templates](prompt_templates) using real database records. Select a task, conversation, or agent type, browse existing instances, and see a side-by-side comparison of the current prompt versus the prompt that was originally stored when the record was created. This makes it easy to see how template changes affect real-world inputs.
+
+Prompt Studio is available at:
+- `/raif/admin/prompt_studio/tasks`
+- `/raif/admin/prompt_studio/conversations`
+- `/raif/admin/prompt_studio/agents`
 
 ## Stats
 

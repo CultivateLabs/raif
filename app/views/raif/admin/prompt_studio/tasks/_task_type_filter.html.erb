@@ -1,0 +1,30 @@
+<div class="row mb-4">
+  <div class="col-12">
+    <%= form_tag raif.admin_prompt_studio_tasks_path, method: :get, class: "mb-4" do %>
+      <div class="row align-items-end">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="task_type"><%= t("raif.admin.prompt_studio.common.type") %></label>
+            <%= select_tag :task_type,
+                  options_for_select(
+                    task_types.map { |type| [type, type] },
+                    selected_type
+                  ),
+                  include_blank: t("raif.admin.prompt_studio.common.select_type"),
+                  class: "form-select" %>
+          </div>
+        </div>
+        <div class="col-md-auto">
+          <%= submit_tag t("raif.admin.common.filter"), class: "btn btn-primary" %>
+        </div>
+        <% if show_batch_runs %>
+          <div class="col-md-auto ms-auto">
+            <button type="button" class="btn btn-outline-primary" disabled data-bs-toggle="modal" data-bs-target="#batch-run-modal" data-raif--select-all-checkboxes-target="batchButton">
+              <%= t("raif.admin.prompt_studio.batch_runs.create.new_batch_run") %>
+            </button>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

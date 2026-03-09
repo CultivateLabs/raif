@@ -1,0 +1,4 @@
+<%% # Implement the LLM prompt for Raif::Tasks::<%= class_name %> here. %>
+<%% # All instance methods and run_with attributes are available in this template. %>
+<%% # You can also use Rails view helpers (content_tag, strip_tags, truncate, etc.) %>
+<%% # and render partials with: <%%= render partial: "raif/shared/my_partial" %> %>

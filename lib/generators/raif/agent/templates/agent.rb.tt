@@ -9,11 +9,13 @@
     #   ]
     # end
 
-    # Enter your agent's system prompt here. Alternatively, you can change your agent's superclass
-    # to an existing agent types (like Raif::Agents::NativeToolCallingAgent) to utilize an existing system prompt.
-    def build_system_prompt
-      # TODO: Implement your system prompt here
-    end
+    # System prompt is defined in app/views/raif/agents/<%= class_path.any? ? class_path.join("/") + "/" : "" %><%= file_name %>.system_prompt.erb
+    # Alternatively, you can change your agent's superclass to an existing agent type
+    # (like Raif::Agents::NativeToolCallingAgent) to utilize an existing system prompt,
+    # or override build_system_prompt directly:
+    # def build_system_prompt
+    #   "Your system prompt here"
+    # end
 
     # Each iteration of the agent loop will generate a new Raif::ModelCompletion record and
     # then call this method with it as an argument.

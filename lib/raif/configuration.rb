@@ -43,6 +43,8 @@ module Raif
       :request_write_timeout,
       :streaming_update_chunk_size_threshold,
       :task_creator_optional,
+      :prompt_studio_runs_enabled,
+      :prompt_studio_task_attributes,
       :task_system_prompt_intro,
       :user_tool_types
 
@@ -96,6 +98,8 @@ module Raif
       open_router_api_key = ENV["OPEN_ROUTER_API_KEY"].presence || ENV["OPENROUTER_API_KEY"]
       @open_router_api_key = default_disable_llm_api_requests? ? "placeholder-open-router-api-key" : open_router_api_key
       @open_router_models_enabled = @open_router_api_key.present?
+      @prompt_studio_runs_enabled = Rails.env.development?
+      @prompt_studio_task_attributes = nil
       @open_router_app_name = nil
       @open_router_site_url = nil
       @request_open_timeout = nil
