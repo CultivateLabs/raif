@@ -5,7 +5,7 @@
 <%= render "raif/admin/prompt_studio/shared/nav_tabs", active_tab: :tasks %>
 
 <% if @show_batch_runs %>
-  <div data-controller="raif--select-all-checkboxes">
+  <div data-controller="raif--select-all-checkboxes raif--cost-estimate" data-raif--cost-estimate-pricing-value="<%= llm_pricing_json %>">
     <%= render "raif/admin/prompt_studio/tasks/task_type_filter",
           task_types: @task_types,
           selected_type: @selected_type,

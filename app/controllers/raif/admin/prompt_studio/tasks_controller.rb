@@ -9,7 +9,7 @@ module Raif
           @selected_type = params[:task_type] if params[:task_type].present?
 
           if @selected_type.present?
-            tasks = Raif::Task.where(type: @selected_type).completed.order(created_at: :desc)
+            tasks = Raif::Task.where(type: @selected_type).completed.includes(:raif_model_completion).order(created_at: :desc)
             @pagy, @tasks = pagy(tasks)
           end
 

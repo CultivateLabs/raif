@@ -13,5 +13,20 @@ module Raif
     rescue JSON::ParserError
       task.raw_response
     end
+
+    def llm_pricing_json
+      pricing = {}
+      Raif.available_llm_keys.each do |key|
+        config = Raif.llm_config(key)
+        next unless config
+
+        pricing[key.to_s] = {
+          input: config[:input_token_cost] || 0,
+          output: config[:output_token_cost] || 0
+        }
+      end
+
+      pricing.to_json
+    end
   end
 end

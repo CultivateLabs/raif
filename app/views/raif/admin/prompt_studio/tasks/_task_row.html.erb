@@ -1,6 +1,6 @@
 <tr>
   <% if show_checkbox %>
-    <td><input type="checkbox" name="source_task_ids[]" value="<%= task.id %>" class="form-check-input task-checkbox" data-raif--select-all-checkboxes-target="checkbox" data-action="raif--select-all-checkboxes#updateCount"></td>
+    <td><input type="checkbox" name="source_task_ids[]" value="<%= task.id %>" class="form-check-input task-checkbox" data-raif--select-all-checkboxes-target="checkbox" data-raif--cost-estimate-target="checkbox" data-action="raif--select-all-checkboxes#updateCount raif--cost-estimate#calculate" data-prompt-tokens="<%= task.raif_model_completion&.prompt_tokens || 0 %>" data-completion-tokens="<%= task.raif_model_completion&.completion_tokens || 0 %>"></td>
   <% end %>
   <td><%= task.id %></td>
   <td><%= task.type %></td>
