@@ -179,6 +179,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_08_000001) do
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.index ["batch_run_id"], name: "index_raif_prompt_studio_batch_run_items_on_batch_run_id"
+    t.index ["judge_task_id"], name: "index_raif_prompt_studio_batch_run_items_on_judge_task_id"
+    t.index ["result_task_id"], name: "index_raif_prompt_studio_batch_run_items_on_result_task_id"
+    t.index ["source_task_id"], name: "index_raif_prompt_studio_batch_run_items_on_source_task_id"
     t.index ["status"], name: "index_raif_prompt_studio_batch_run_items_on_status"
   end
 

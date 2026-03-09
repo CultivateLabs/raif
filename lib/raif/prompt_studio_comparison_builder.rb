@@ -79,8 +79,8 @@ module Raif
       @record.run_with.each do |_key, value|
         if value.is_a?(String) && value.start_with?("gid://")
           begin
-            GlobalID::Locator.locate(value)
-          rescue ActiveRecord::RecordNotFound
+            return true if GlobalID::Locator.locate(value).nil?
+          rescue StandardError
             return true
           end
         end

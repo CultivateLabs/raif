@@ -142,7 +142,11 @@ module Raif
       self.failed_count = items.where(status: "failed").count
 
       if remaining.zero?
-        self.completed_at = Time.current
+        if failed_count > 0 && completed_count == 0
+          self.failed_at = Time.current
+        else
+          self.completed_at = Time.current
+        end
       end
 
       save!

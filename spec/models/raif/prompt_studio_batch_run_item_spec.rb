@@ -5,7 +5,7 @@
 # Table name: raif_prompt_studio_batch_run_items
 #
 #  id             :bigint           not null, primary key
-#  metadata       :jsonb            not null
+#  metadata       :jsonb
 #  status         :string           default("pending"), not null
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
@@ -16,8 +16,11 @@
 #
 # Indexes
 #
-#  index_raif_prompt_studio_batch_run_items_on_batch_run_id  (batch_run_id)
-#  index_raif_prompt_studio_batch_run_items_on_status        (status)
+#  index_raif_prompt_studio_batch_run_items_on_batch_run_id    (batch_run_id)
+#  index_raif_prompt_studio_batch_run_items_on_judge_task_id   (judge_task_id)
+#  index_raif_prompt_studio_batch_run_items_on_result_task_id  (result_task_id)
+#  index_raif_prompt_studio_batch_run_items_on_source_task_id  (source_task_id)
+#  index_raif_prompt_studio_batch_run_items_on_status          (status)
 #
 # Foreign Keys
 #

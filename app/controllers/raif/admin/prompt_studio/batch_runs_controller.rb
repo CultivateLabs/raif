@@ -17,6 +17,20 @@ module Raif
             return
           end
 
+          available_keys = Raif.available_llm_keys.map(&:to_s)
+
+          unless params[:llm_model_key].present? && available_keys.include?(params[:llm_model_key])
+            redirect_to raif.admin_prompt_studio_tasks_path(task_type: params[:task_type]),
+              alert: t("raif.admin.prompt_studio.tasks.rerun.invalid_model")
+            return
+          end
+
+          if params[:judge_type].present? && params[:judge_llm_model_key].present? && !available_keys.include?(params[:judge_llm_model_key])
+            redirect_to raif.admin_prompt_studio_tasks_path(task_type: params[:task_type]),
+              alert: t("raif.admin.prompt_studio.tasks.rerun.invalid_model")
+            return
+          end
+
           batch_run = Raif::PromptStudioBatchRun.new(
             task_type: params[:task_type],
             llm_model_key: params[:llm_model_key],

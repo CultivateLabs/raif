@@ -50,7 +50,7 @@ module Raif
           new_task.assign_attributes(original_task.prompt_studio_rerun_attributes)
 
           if Raif.config.prompt_studio_task_attributes
-            new_task.assign_attributes(Raif.config.prompt_studio_task_attributes.call(original_task))
+            new_task.assign_attributes(Raif.config.prompt_studio_task_attributes.call(original_task) || {})
           end
 
           new_task.save!

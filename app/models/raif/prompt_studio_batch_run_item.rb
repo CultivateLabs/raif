@@ -16,8 +16,11 @@
 #
 # Indexes
 #
-#  index_raif_prompt_studio_batch_run_items_on_batch_run_id  (batch_run_id)
-#  index_raif_prompt_studio_batch_run_items_on_status        (status)
+#  index_raif_prompt_studio_batch_run_items_on_batch_run_id    (batch_run_id)
+#  index_raif_prompt_studio_batch_run_items_on_judge_task_id   (judge_task_id)
+#  index_raif_prompt_studio_batch_run_items_on_result_task_id  (result_task_id)
+#  index_raif_prompt_studio_batch_run_items_on_source_task_id  (source_task_id)
+#  index_raif_prompt_studio_batch_run_items_on_status          (status)
 #
 # Foreign Keys
 #
@@ -218,7 +221,7 @@ module Raif
       callback = Raif.config.prompt_studio_task_attributes
       return {} unless callback
 
-      callback.call(source_task)
+      callback.call(source_task) || {}
     end
 
     def apply_prompt_studio_task_attributes(task)
