@@ -141,6 +141,11 @@ en:
             submit: Run Selected Batch
             tasks_selected: tasks selected
             title: Batch Run
+          judge:
+            new_response: New Response
+            original_response: Original Response
+            tie: Tie
+            winner: 'Winner: %{name}'
           judge_config:
             comparison_criteria_label: Comparison Criteria
             comparison_criteria_placeholder: Which response better addresses the prompt
@@ -163,11 +168,6 @@ en:
             type_none: None
             type_scored: Scored (Rubric)
             type_summarization: Summarization
-          judge:
-            new_response: New Response
-            original_response: Original Response
-            tie: Tie
-            winner: 'Winner: %{name}'
           show:
             average_score: Average Score
             judge_reasoning: Judge Reasoning
