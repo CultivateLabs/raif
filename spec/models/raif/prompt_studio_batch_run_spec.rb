@@ -6,16 +6,16 @@
 #
 #  id                  :bigint           not null, primary key
 #  completed_at        :datetime
-#  completed_count     :integer          default(0)
+#  completed_count     :integer          default(0), not null
 #  failed_at           :datetime
-#  failed_count        :integer          default(0)
+#  failed_count        :integer          default(0), not null
 #  judge_config        :jsonb            not null
 #  judge_llm_model_key :string
 #  judge_type          :string
 #  llm_model_key       :string           not null
 #  started_at          :datetime
 #  task_type           :string           not null
-#  total_count         :integer          default(0)
+#  total_count         :integer          default(0), not null
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
 #
