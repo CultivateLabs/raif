@@ -187,17 +187,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_08_000001) do
 
   create_table "raif_prompt_studio_batch_runs", force: :cascade do |t|
     t.datetime "completed_at"
-    t.integer "completed_count", default: 0
+    t.integer "completed_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "failed_at"
-    t.integer "failed_count", default: 0
+    t.integer "failed_count", default: 0, null: false
     t.jsonb "judge_config", null: false
     t.string "judge_llm_model_key"
     t.string "judge_type"
     t.string "llm_model_key", null: false
     t.datetime "started_at"
     t.string "task_type", null: false
-    t.integer "total_count", default: 0
+    t.integer "total_count", default: 0, null: false
     t.datetime "updated_at", null: false
   end
 
