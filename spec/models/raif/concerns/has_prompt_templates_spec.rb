@@ -50,8 +50,8 @@ RSpec.describe Raif::Concerns::HasPromptTemplates do
   describe "template resolution for conversations" do
     context "when a .system_prompt.erb template exists" do
       it "uses the template for the system prompt" do
-        conversation = Raif::TestTemplateConversation.new(persona: "expert chef")
-        expect(conversation.build_system_prompt).to eq("You are a expert chef. Help the user with their questions.")
+        conversation = Raif::TestTemplateConversation.new(persona: "talented chef")
+        expect(conversation.build_system_prompt).to eq("You are a talented chef. Help the user with their questions.")
       end
     end
 
@@ -66,8 +66,8 @@ RSpec.describe Raif::Concerns::HasPromptTemplates do
   describe "template resolution for agents" do
     context "when a .system_prompt.erb template exists" do
       it "uses the template for the system prompt" do
-        agent = Raif::TestTemplateAgent.new(agent_role: "analyst")
-        expect(agent.build_system_prompt).to eq("You are a analyst agent. Complete the assigned task thoroughly.")
+        agent = Raif::TestTemplateAgent.new(agent_role: "research")
+        expect(agent.build_system_prompt).to eq("You are a research agent. Complete the assigned task thoroughly.")
       end
     end
 

@@ -14,6 +14,7 @@ export default class extends Controller {
     const checked = this.selectAllTarget.checked;
     this.checkboxTargets.forEach((cb) => (cb.checked = checked));
     this.updateCount();
+    this.dispatch("toggled");
   }
 
   updateCount() {

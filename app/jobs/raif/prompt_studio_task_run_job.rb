@@ -8,7 +8,7 @@ module Raif
       broadcast_task_result(task)
     rescue StandardError => e
       logger.error "Error running prompt studio task: #{e.message}"
-      logger.error e.backtrace.join("\n")
+      logger.error e.backtrace&.join("\n")
 
       task.update(failed_at: Time.current) unless task.failed_at?
       broadcast_task_result(task)

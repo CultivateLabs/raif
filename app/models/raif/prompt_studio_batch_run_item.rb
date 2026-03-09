@@ -65,7 +65,7 @@ module Raif
       update!(status: "completed")
     rescue StandardError => e
       Rails.logger.error "Error running batch run item ##{id}: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
+      Rails.logger.error e.backtrace&.join("\n")
 
       update!(status: "failed")
     ensure

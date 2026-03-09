@@ -64,7 +64,9 @@ module Raif
 
         def resolve_source_tasks
           ids = Array(params[:source_task_ids]).map(&:to_i).reject(&:zero?)
-          Raif::Task.where(id: ids).completed
+          scope = Raif::Task.where(id: ids).completed
+          scope = scope.where(type: params[:task_type]) if params[:task_type].present?
+          scope
         end
 
         def build_judge_config
