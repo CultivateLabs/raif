@@ -1,0 +1,26 @@
+<div class="row mb-4">
+  <div class="col-12">
+    <%= form_tag filter_path, method: :get, class: "mb-4" do %>
+      <div class="row align-items-end">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="<%= param_name %>"><%= t("raif.admin.prompt_studio.common.type") %></label>
+            <%= select_tag param_name,
+                  options_for_select(
+                    types.map { |type| [type, type] },
+                    selected_type
+                  ),
+                  include_blank: t("raif.admin.prompt_studio.common.select_type"),
+                  class: "form-select" %>
+          </div>
+        </div>
+        <div class="col-md-auto">
+          <%= submit_tag t("raif.admin.common.filter"), class: "btn btn-primary" %>
+        </div>
+        <% if local_assigns[:extra_buttons] %>
+          <%= extra_buttons %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

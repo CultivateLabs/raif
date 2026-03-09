@@ -4,29 +4,11 @@
 
 <%= render "raif/admin/prompt_studio/shared/nav_tabs", active_tab: :conversations %>
 
-<div class="row mb-4">
-  <div class="col-12">
-    <%= form_tag raif.admin_prompt_studio_conversations_path, method: :get, class: "mb-4" do %>
-      <div class="row align-items-end">
-        <div class="col-md-4">
-          <div class="form-group">
-            <label for="conversation_type"><%= t("raif.admin.prompt_studio.common.type") %></label>
-            <%= select_tag :conversation_type,
-                  options_for_select(
-                    @conversation_types.map { |type| [type, type] },
-                    @selected_type
-                  ),
-                  include_blank: t("raif.admin.prompt_studio.common.select_type"),
-                  class: "form-select" %>
-          </div>
-        </div>
-        <div class="col-md-2">
-          <%= submit_tag t("raif.admin.common.filter"), class: "btn btn-primary" %>
-        </div>
-      </div>
-    <% end %>
-  </div>
-</div>
+<%= render "raif/admin/prompt_studio/shared/type_filter",
+      filter_path: raif.admin_prompt_studio_conversations_path,
+      param_name: :conversation_type,
+      types: @conversation_types,
+      selected_type: @selected_type %>
 
 <% if @selected_type.present? && @conversations.present? %>
   <div class="table-responsive">

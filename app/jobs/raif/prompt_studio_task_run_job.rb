@@ -17,38 +17,15 @@ module Raif
   private
 
     def broadcast_task_result(task)
-      comparison = build_comparison(task)
+      comparison = Raif::PromptStudioComparisonBuilder.build(task)
+      original_task = task.prompt_studio_run? && task.source.is_a?(Raif::Task) ? task.source : nil
 
       Turbo::StreamsChannel.broadcast_replace_to(
         task,
         target: ActionView::RecordIdentifier.dom_id(task, :result),
         partial: "raif/admin/prompt_studio/tasks/task_result",
-        locals: { task: task, comparison: comparison }
+        locals: { task: task, comparison: comparison, original_task: original_task }
       )
-    end
-
-    def build_comparison(task)
-      current_prompt = begin
-        task.build_prompt
-      rescue StandardError
-        nil
-      end
-
-      current_system_prompt = begin
-        task.build_system_prompt
-      rescue StandardError
-        nil
-      end
-
-      {
-        original_prompt: task.prompt,
-        original_system_prompt: task.system_prompt,
-        current_prompt: current_prompt,
-        current_system_prompt: current_system_prompt,
-        prompt_changed: task.prompt.present? && current_prompt.present? && task.prompt.strip != current_prompt.strip,
-        system_prompt_changed: task.system_prompt.present? && current_system_prompt.present? && task.system_prompt.strip != current_system_prompt.strip,
-        warnings: []
-      }
     end
 
   end

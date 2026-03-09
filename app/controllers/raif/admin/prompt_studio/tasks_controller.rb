@@ -12,11 +12,14 @@ module Raif
             tasks = Raif::Task.where(type: @selected_type).completed.order(created_at: :desc)
             @pagy, @tasks = pagy(tasks)
           end
+
+          @show_batch_runs = prompt_studio_runs_enabled? && @selected_type.present? && @tasks.present?
         end
 
         def show
           @task = Raif::Task.find(params[:id])
           @comparison = build_prompt_comparison(@task)
+          @original_task = @task.source if @task.prompt_studio_run? && @task.source.is_a?(Raif::Task)
           @available_llm_keys = Raif.available_llm_keys.map(&:to_s).sort
         end
 
@@ -37,7 +40,7 @@ module Raif
 
           new_task = original_task.class.new(
             creator: original_task.creator,
-            source: original_task.source,
+            source: original_task,
             llm_model_key: llm_model_key,
             available_model_tools: original_task.available_model_tools,
             run_with: original_task.run_with,

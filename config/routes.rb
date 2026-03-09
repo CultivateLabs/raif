@@ -31,6 +31,7 @@ Raif::Engine.routes.draw do
       resources :tasks, only: [:index, :show, :create]
       resources :conversations, only: [:index, :show]
       resources :agents, only: [:index, :show]
+      resources :batch_runs, only: [:create, :show]
     end
   end
 end

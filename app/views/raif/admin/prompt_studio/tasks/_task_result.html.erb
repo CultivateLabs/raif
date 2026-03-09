@@ -99,7 +99,33 @@
 
   <%= render "raif/admin/prompt_studio/shared/prompt_comparison", comparison: comparison %>
 
-  <% if task.raw_response.present? %>
+  <% if task.raw_response.present? && original_task&.raw_response.present? %>
+    <div class="card mb-4" id="task-response">
+      <div class="card-header">
+        <h5 class="mb-0"><%= t("raif.admin.prompt_studio.tasks.show.response_comparison") %></h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6>
+              <%= t("raif.admin.prompt_studio.tasks.show.original_response") %>
+              <small class="text-muted">
+                (<%= link_to "##{original_task.id}", raif.admin_prompt_studio_task_path(original_task) %> &mdash; <%= original_task.llm_model_key %>)
+              </small>
+            </h6>
+            <pre class="pre-wrap border rounded p-3 bg-light"><%= original_task.raw_response %></pre>
+          </div>
+          <div class="col-md-6">
+            <h6>
+              <%= t("raif.admin.prompt_studio.tasks.show.new_response") %>
+              <small class="text-muted">(<%= task.llm_model_key %>)</small>
+            </h6>
+            <pre class="pre-wrap border rounded p-3 bg-light"><%= task.raw_response %></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% elsif task.raw_response.present? %>
     <div class="card mb-4" id="task-response">
       <div class="card-header">
         <h5 class="mb-0"><%= t("raif.admin.common.response") %> (<%= task.response_format %>)</h5>

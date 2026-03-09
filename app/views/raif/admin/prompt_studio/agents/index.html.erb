@@ -4,29 +4,11 @@
 
 <%= render "raif/admin/prompt_studio/shared/nav_tabs", active_tab: :agents %>
 
-<div class="row mb-4">
-  <div class="col-12">
-    <%= form_tag raif.admin_prompt_studio_agents_path, method: :get, class: "mb-4" do %>
-      <div class="row align-items-end">
-        <div class="col-md-4">
-          <div class="form-group">
-            <label for="agent_type"><%= t("raif.admin.prompt_studio.common.type") %></label>
-            <%= select_tag :agent_type,
-                  options_for_select(
-                    @agent_types.map { |type| [type, type] },
-                    @selected_type
-                  ),
-                  include_blank: t("raif.admin.prompt_studio.common.select_type"),
-                  class: "form-select" %>
-          </div>
-        </div>
-        <div class="col-md-2">
-          <%= submit_tag t("raif.admin.common.filter"), class: "btn btn-primary" %>
-        </div>
-      </div>
-    <% end %>
-  </div>
-</div>
+<%= render "raif/admin/prompt_studio/shared/type_filter",
+      filter_path: raif.admin_prompt_studio_agents_path,
+      param_name: :agent_type,
+      types: @agent_types,
+      selected_type: @selected_type %>
 
 <% if @selected_type.present? && @agents.present? %>
   <div class="table-responsive">
