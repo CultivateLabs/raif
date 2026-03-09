@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "raif/evals"
+
 # == Schema Information
 #
 # Table name: raif_prompt_studio_batch_run_items
@@ -108,6 +110,7 @@ module Raif
         started_at: Time.current
       )
       new_task.assign_attributes(source_task.prompt_studio_rerun_attributes)
+      apply_prompt_studio_task_attributes(new_task)
       new_task.save!
 
       update!(result_task_id: new_task.id)
@@ -129,9 +132,11 @@ module Raif
       judge_class = batch_run.judge_class
       config = batch_run.judge_config
       judge_args = {
+        creator: source_task.creator,
         prompt_studio_run: true,
         llm_model_key: batch_run.judge_llm_model_key
       }
+      judge_args.merge!(prompt_studio_task_attributes)
 
       if config["include_original_prompt_as_context"]
         judge_args[:additional_context] =
@@ -186,6 +191,18 @@ module Raif
         partial: "raif/admin/prompt_studio/batch_runs/progress",
         locals: { batch_run: batch_run }
       )
+    end
+
+    def prompt_studio_task_attributes
+      callback = Raif.config.prompt_studio_task_attributes
+      return {} unless callback
+
+      callback.call(source_task)
+    end
+
+    def apply_prompt_studio_task_attributes(task)
+      attrs = prompt_studio_task_attributes
+      task.assign_attributes(attrs) if attrs.present?
     end
   end
 end
