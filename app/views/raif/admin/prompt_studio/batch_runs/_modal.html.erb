@@ -11,7 +11,7 @@
           <%= select_tag :llm_model_key,
                 llm_model_options,
                 class: "form-select",
-                data: { raif__cost_estimate_target: "modelSelect", action: "raif--cost-estimate#calculate" } %>
+                data: { controller: "raif--tom-select", raif__cost_estimate_target: "modelSelect", action: "raif--cost-estimate#calculate" } %>
         </div>
 
         <%= render "raif/admin/prompt_studio/batch_runs/judge_config_fields" %>
