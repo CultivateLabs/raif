@@ -15,8 +15,7 @@ RSpec.describe Raif::PromptStudioTaskRunJob, type: :job do
       expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
         task,
         target: ActionView::RecordIdentifier.dom_id(task, :result),
-        partial: "raif/admin/prompt_studio/tasks/task_result",
-        locals: hash_including(task: task)
+        html: a_string_including("Stubbed response")
       )
 
       described_class.new.perform(task: task)
@@ -30,14 +29,13 @@ RSpec.describe Raif::PromptStudioTaskRunJob, type: :job do
       let(:source_task) { FB.create(:raif_test_task, :completed, creator: creator) }
       let(:task) { FB.create(:raif_test_task, creator: creator, source: source_task, started_at: Time.current, prompt_studio_run: true) }
 
-      it "passes the original_task in the broadcast locals" do
+      it "includes the original and new responses in the broadcast" do
         stub_raif_task(Raif::TestTask) { "Stubbed response" }
 
         expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
           task,
           target: ActionView::RecordIdentifier.dom_id(task, :result),
-          partial: "raif/admin/prompt_studio/tasks/task_result",
-          locals: hash_including(task: task, original_task: source_task)
+          html: a_string_including("Original Response", "New Response")
         )
 
         described_class.new.perform(task: task)
@@ -53,8 +51,7 @@ RSpec.describe Raif::PromptStudioTaskRunJob, type: :job do
         expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
           task,
           target: ActionView::RecordIdentifier.dom_id(task, :result),
-          partial: "raif/admin/prompt_studio/tasks/task_result",
-          locals: hash_including(task: task)
+          html: a_string_including("Failed")
         )
 
         described_class.new.perform(task: task)

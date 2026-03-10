@@ -90,7 +90,8 @@
                   <label for="llm_model_key"><%= t("raif.admin.common.model") %></label>
                   <%= select_tag :llm_model_key,
                         llm_model_options(selected: task.llm_model_key),
-                        class: "form-select" %>
+                        class: "form-select",
+                        data: { controller: "raif--tom-select" } %>
                 </div>
                 <%= submit_tag t("raif.admin.prompt_studio.tasks.rerun.submit"),
                       class: "btn btn-primary",

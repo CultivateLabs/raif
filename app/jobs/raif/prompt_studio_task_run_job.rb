@@ -20,11 +20,15 @@ module Raif
       comparison = Raif::PromptStudioComparisonBuilder.build(task)
       original_task = task.prompt_studio_run? && task.source.is_a?(Raif::Task) ? task.source : nil
 
+      html = Raif::Admin::PromptStudio::TasksController.render(
+        partial: "raif/admin/prompt_studio/tasks/task_result",
+        locals: { task: task, comparison: comparison, original_task: original_task }
+      )
+
       Turbo::StreamsChannel.broadcast_replace_to(
         task,
         target: ActionView::RecordIdentifier.dom_id(task, :result),
-        partial: "raif/admin/prompt_studio/tasks/task_result",
-        locals: { task: task, comparison: comparison, original_task: original_task }
+        html: html
       )
     end
 

@@ -7,4 +7,5 @@ pin "raif/controllers/conversations_controller", to: "raif/controllers/conversat
 pin "raif/admin/judge_config_controller", to: "raif/admin/judge_config_controller.js"
 pin "raif/admin/select_all_checkboxes_controller", to: "raif/admin/select_all_checkboxes_controller.js"
 pin "raif/admin/cost_estimate_controller", to: "raif/admin/cost_estimate_controller.js"
+pin "raif/admin/tom_select_controller", to: "raif/admin/tom_select_controller.js"
 pin "raif/stream_actions/raif_scroll_to_bottom", to: "raif/stream_actions/raif_scroll_to_bottom.js"

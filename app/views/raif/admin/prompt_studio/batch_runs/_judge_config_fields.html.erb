@@ -13,7 +13,7 @@
             [t("raif.admin.prompt_studio.batch_runs.judge_config.type_summarization"), "Raif::Evals::LlmJudges::Summarization"]
           ]),
           class: "form-select",
-          data: { action: "raif--judge-config#toggle raif--cost-estimate#calculate", raif__cost_estimate_target: "judgeTypeSelect" } %>
+          data: { controller: "raif--tom-select", action: "raif--judge-config#toggle raif--cost-estimate#calculate", raif__cost_estimate_target: "judgeTypeSelect" } %>
   </div>
 
   <div class="d-none" data-raif--judge-config-target="binary">
@@ -70,7 +70,7 @@
       <%= select_tag :judge_llm_model_key,
             llm_model_options,
             class: "form-select",
-            data: { raif__cost_estimate_target: "judgeModelSelect", action: "raif--cost-estimate#calculate" } %>
+            data: { controller: "raif--tom-select", raif__cost_estimate_target: "judgeModelSelect", action: "raif--cost-estimate#calculate" } %>
     </div>
   </div>
 </div>
