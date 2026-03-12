@@ -2,7 +2,7 @@
   <div class="col-12">
     <%= form_tag raif.admin_prompt_studio_tasks_path, method: :get, class: "mb-4" do %>
       <div class="row align-items-end">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="form-group">
             <label for="task_type"><%= t("raif.admin.prompt_studio.common.type") %></label>
             <%= select_tag :task_type,
@@ -13,6 +13,33 @@
                   include_blank: t("raif.admin.prompt_studio.common.select_type"),
                   class: "form-select",
                   data: { controller: "raif--tom-select" } %>
+          </div>
+        </div>
+        <% if local_assigns[:llm_model_keys]&.any? %>
+          <div class="col-md-2">
+            <div class="form-group">
+              <label for="llm_model_key"><%= t("raif.admin.common.model") %></label>
+              <%= select_tag :llm_model_key,
+                    options_for_select(
+                      llm_model_keys.map { |key| [key, key] },
+                      params[:llm_model_key]
+                    ),
+                    include_blank: t("raif.admin.common.all"),
+                    class: "form-select",
+                    data: { controller: "raif--tom-select" } %>
+            </div>
+          </div>
+        <% end %>
+        <div class="col-md-2">
+          <div class="form-group">
+            <label for="created_after"><%= t("raif.admin.prompt_studio.common.created_after") %></label>
+            <%= date_field_tag :created_after, params[:created_after], class: "form-control", autocomplete: "off" %>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="form-group">
+            <label for="created_before"><%= t("raif.admin.prompt_studio.common.created_before") %></label>
+            <%= date_field_tag :created_before, params[:created_before], class: "form-control", autocomplete: "off" %>
           </div>
         </div>
         <div class="col-md-auto">

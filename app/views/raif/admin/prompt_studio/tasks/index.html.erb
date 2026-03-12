@@ -9,6 +9,7 @@
     <%= render "raif/admin/prompt_studio/tasks/task_type_filter",
           task_types: @task_types,
           selected_type: @selected_type,
+          llm_model_keys: @llm_model_keys,
           show_batch_runs: true %>
 
     <%= form_tag raif.admin_prompt_studio_batch_runs_path, method: :post, id: "batch-run-form" do %>
@@ -21,6 +22,7 @@
   <%= render "raif/admin/prompt_studio/tasks/task_type_filter",
         task_types: @task_types,
         selected_type: @selected_type,
+        llm_model_keys: @llm_model_keys,
         show_batch_runs: false %>
 
   <% if @selected_type.present? && @tasks.present? %>
