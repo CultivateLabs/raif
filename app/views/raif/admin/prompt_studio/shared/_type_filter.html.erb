@@ -33,13 +33,13 @@
         <div class="col-md-2">
           <div class="form-group">
             <label for="created_after"><%= t("raif.admin.prompt_studio.common.created_after") %></label>
-            <%= date_field_tag :created_after, params[:created_after], class: "form-control" %>
+            <%= date_field_tag :created_after, params[:created_after], class: "form-control", autocomplete: "off" %>
           </div>
         </div>
         <div class="col-md-2">
           <div class="form-group">
             <label for="created_before"><%= t("raif.admin.prompt_studio.common.created_before") %></label>
-            <%= date_field_tag :created_before, params[:created_before], class: "form-control" %>
+            <%= date_field_tag :created_before, params[:created_before], class: "form-control", autocomplete: "off" %>
           </div>
         </div>
         <div class="col-md-auto">
