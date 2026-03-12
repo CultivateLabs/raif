@@ -7,9 +7,10 @@ module Raif
         def index
           @conversation_types = Raif::Conversation.distinct.pluck(:type).sort
           @selected_type = params[:conversation_type] if params[:conversation_type].present?
+          @llm_model_keys = Raif::Conversation.where(type: @selected_type).distinct.pluck(:llm_model_key).compact.sort if @selected_type.present?
 
           if @selected_type.present?
-            conversations = Raif::Conversation.where(type: @selected_type).order(created_at: :desc)
+            conversations = apply_filters(Raif::Conversation.where(type: @selected_type)).order(created_at: :desc)
             @pagy, @conversations = pagy(conversations)
           end
         end

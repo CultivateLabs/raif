@@ -8,7 +8,8 @@
       filter_path: raif.admin_prompt_studio_agents_path,
       param_name: :agent_type,
       types: @agent_types,
-      selected_type: @selected_type %>
+      selected_type: @selected_type,
+      llm_model_keys: @llm_model_keys %>
 
 <% if @selected_type.present? && @agents.present? %>
   <div class="table-responsive">

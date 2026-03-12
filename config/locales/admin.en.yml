@@ -199,6 +199,8 @@ en:
           prompt_unchanged: Prompt Unchanged
           run_in_prompt_studio: Run in Prompt Studio
           runs_disabled: Prompt Studio runs are not enabled in this environment.
+          created_after: Created After
+          created_before: Created Before
           select_type: Select a type to browse instances
           system_prompt_changed: System Prompt Changed
           system_prompt_unchanged: System Prompt Unchanged
