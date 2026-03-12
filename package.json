@@ -2,8 +2,10 @@
   "name": "app",
   "private": "true",
   "dependencies": {
-    "autoprefixer": "^10.4.20",
+    "@hotwired/stimulus": "^3.2.2",
     "@parcel/watcher": "^2.5.0",
+    "autoprefixer": "^10.4.20",
+    "esbuild": "^0.27.4",
     "nodemon": "^3.1.7",
     "postcss": "^8.4.47",
     "postcss-cli": "^11.0.0",
@@ -15,7 +17,10 @@
     "build:css:compile:raif_admin": "sass ./app/assets/stylesheets/raif_admin.scss:./app/assets/builds/raif_admin.css --no-source-map --load-path=node_modules --load-path=vendor/stylesheets",
     "build:css:prefix:raif_admin": "postcss ./app/assets/builds/raif_admin.css --use=autoprefixer --output=./app/assets/builds/raif_admin.css",
     "build:css": "yarn build:css:compile:raif && yarn build:css:prefix:raif && yarn build:css:compile:raif_admin && yarn build:css:prefix:raif_admin",
-    "watch:css": "nodemon --watch ./app/assets/stylesheets/ --watch ./vendor/stylesheets/ --ext scss --exec \"yarn build:css\""
+    "build:js": "esbuild ./app/assets/javascript/raif_admin_sprockets.js --bundle --format=iife --outfile=./app/assets/builds/raif_admin_sprockets.js",
+    "build": "yarn build:css && yarn build:js",
+    "watch:css": "nodemon --watch ./app/assets/stylesheets/ --watch ./vendor/stylesheets/ --ext scss --exec \"yarn build:css\"",
+    "watch:js": "esbuild ./app/assets/javascript/raif_admin_sprockets.js --bundle --format=iife --outfile=./app/assets/builds/raif_admin_sprockets.js --watch"
   },
   "browserslist": [
     "defaults"
