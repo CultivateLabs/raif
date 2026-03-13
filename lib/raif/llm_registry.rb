@@ -622,6 +622,26 @@ module Raif
       ],
       Raif::Llms::Google => [
         {
+          key: :google_gemini_3_1_pro,
+          api_name: "gemini-3.1-pro-preview",
+          input_token_cost: 2.0 / 1_000_000,
+          output_token_cost: 12.0 / 1_000_000,
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
+          key: :google_gemini_3_1_flash_lite,
+          api_name: "gemini-3.1-flash-lite-preview",
+          input_token_cost: 0.25 / 1_000_000,
+          output_token_cost: 1.5 / 1_000_000,
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
           key: :google_gemini_3_0_pro,
           api_name: "gemini-3-pro-preview",
           input_token_cost: 2.0 / 1_000_000,

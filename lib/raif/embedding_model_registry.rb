@@ -77,6 +77,14 @@ module Raif
           input_token_cost: 0.01 / 1_000_000,
           default_output_vector_size: 1024,
         },
+      ],
+      Raif::EmbeddingModels::Google => [
+        {
+          key: :google_gemini_embedding_2,
+          api_name: "gemini-embedding-2-preview",
+          input_token_cost: 0.20 / 1_000_000,
+          default_output_vector_size: 3072,
+        },
       ]
     }
   end

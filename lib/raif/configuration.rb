@@ -22,6 +22,7 @@ module Raif
       :evals_default_llm_judge_model_key,
       :evals_verbose_output,
       :google_api_key,
+      :google_embedding_models_enabled,
       :google_models_enabled,
       :llm_api_requests_enabled,
       :llm_request_max_retries,
@@ -76,6 +77,7 @@ module Raif
       @evals_verbose_output = false
       google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
       @google_api_key = default_disable_llm_api_requests? ? "placeholder-google-api-key" : google_api_key
+      @google_embedding_models_enabled = false
       @google_models_enabled = @google_api_key.present?
       @llm_api_requests_enabled = !default_disable_llm_api_requests?
       @llm_request_max_retries = 2
@@ -177,6 +179,11 @@ module Raif
       if google_models_enabled && google_api_key.blank?
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.google_api_key is required when Raif.config.google_models_enabled is true. Set it via Raif.config.google_api_key or ENV['GOOGLE_API_KEY']" # rubocop:disable Layout/LineLength
+      end
+
+      if google_embedding_models_enabled && google_api_key.blank?
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.google_api_key is required when Raif.config.google_embedding_models_enabled is true. Set it via Raif.config.google_api_key or ENV['GOOGLE_API_KEY']" # rubocop:disable Layout/LineLength
       end
     end
 
