@@ -459,14 +459,20 @@ module Raif
         {
           key: :open_router_deepseek_chat_v3,
           api_name: "deepseek/deepseek-chat-v3-0324",
-          input_token_cost: 0.27 / 1_000_000,
-          output_token_cost: 1.1 / 1_000_000,
+          input_token_cost: 0.20 / 1_000_000,
+          output_token_cost: 0.77 / 1_000_000,
         },
         {
           key: :open_router_deepseek_v3_1,
           api_name: "deepseek/deepseek-chat-v3.1",
           input_token_cost: 0.25 / 1_000_000,
           output_token_cost: 1.0 / 1_000_000,
+        },
+        {
+          key: :open_router_deepseek_v3_2,
+          api_name: "deepseek/deepseek-v3.2",
+          input_token_cost: 0.26 / 1_000_000,
+          output_token_cost: 0.38 / 1_000_000,
         },
         {
           key: :open_router_gemini_2_0_flash,
@@ -511,6 +517,12 @@ module Raif
           output_token_cost: 2.35 / 1_000_000,
         },
         {
+          key: :open_router_kimi_k2_5,
+          api_name: "moonshotai/kimi-k2.5",
+          input_token_cost: 0.45 / 1_000_000,
+          output_token_cost: 2.20 / 1_000_000,
+        },
+        {
           key: :open_router_llama_3_3_70b_instruct,
           api_name: "meta-llama/llama-3.3-70b-instruct",
           input_token_cost: 0.10 / 1_000_000,
@@ -539,6 +551,18 @@ module Raif
           api_name: "minimax/minimax-m2",
           input_token_cost: 0.255 / 1_000_000,
           output_token_cost: 1.02 / 1_000_000,
+        },
+        {
+          key: :open_router_minimax_m2_1,
+          api_name: "minimax/minimax-m2.1",
+          input_token_cost: 0.27 / 1_000_000,
+          output_token_cost: 0.95 / 1_000_000,
+        },
+        {
+          key: :open_router_minimax_m2_5,
+          api_name: "minimax/minimax-m2.5",
+          input_token_cost: 0.27 / 1_000_000,
+          output_token_cost: 0.95 / 1_000_000,
         },
         {
           key: :open_router_mistral_large_3_2512,
