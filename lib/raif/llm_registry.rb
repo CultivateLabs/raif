@@ -42,6 +42,13 @@ module Raif
   def self.default_llms
     open_ai_models = [
       {
+        key: :open_ai_gpt_5_4,
+        api_name: "gpt-5.4",
+        input_token_cost: 2.5 / 1_000_000,
+        output_token_cost: 15.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
         key: :open_ai_gpt_5_2,
         api_name: "gpt-5.2",
         input_token_cost: 1.75 / 1_000_000,
@@ -123,8 +130,8 @@ module Raif
       {
         key: :open_ai_o1_mini,
         api_name: "o1-mini",
-        input_token_cost: 1.5 / 1_000_000,
-        output_token_cost: 6.0 / 1_000_000,
+        input_token_cost: 1.1 / 1_000_000,
+        output_token_cost: 4.4 / 1_000_000,
         model_provider_settings: { supports_temperature: false },
       },
       {
@@ -164,7 +171,7 @@ module Raif
     # o1-mini is not supported by the OpenAI Responses API.
     open_ai_responses_models.delete_if{|model| model[:key] == :open_ai_o1_mini }
 
-    # o1-pro and o3-pro are not supported by the OpenAI Completions API, but it is supported by the OpenAI Responses API.
+    # These models are not supported by the OpenAI Completions API, but are supported by the OpenAI Responses API.
     open_ai_responses_models << {
       key: :open_ai_responses_o1_pro,
       api_name: "o1-pro",
@@ -179,6 +186,30 @@ module Raif
       input_token_cost: 20.0 / 1_000_000,
       output_token_cost: 80.0 / 1_000_000,
       model_provider_settings: { supports_temperature: false },
+    }
+
+    open_ai_responses_models << {
+      key: :open_ai_responses_gpt_5_pro,
+      api_name: "gpt-5-pro",
+      input_token_cost: 15.0 / 1_000_000,
+      output_token_cost: 120.0 / 1_000_000,
+      model_provider_settings: { supports_temperature: false },
+    }
+
+    open_ai_responses_models << {
+      key: :open_ai_responses_gpt_5_2_pro,
+      api_name: "gpt-5.2-pro",
+      input_token_cost: 21.0 / 1_000_000,
+      output_token_cost: 168.0 / 1_000_000,
+      model_provider_settings: { supports_temperature: false },
+    }
+
+    open_ai_responses_models << {
+      key: :open_ai_responses_gpt_5_4_pro,
+      api_name: "gpt-5.4-pro",
+      input_token_cost: 30.0 / 1_000_000,
+      output_token_cost: 180.0 / 1_000_000,
+      model_provider_settings: { supports_temperature: false, supports_structured_outputs: false },
     }
 
     {
