@@ -58,22 +58,27 @@ end
 ```
 
 Currently supported OpenAI Responses API models:
+- `open_ai_responses_gpt_5_4`
+- `open_ai_responses_gpt_5_4_pro`
+- `open_ai_responses_gpt_5_2`
+- `open_ai_responses_gpt_5_2_pro`
+- `open_ai_responses_gpt_5_1`
 - `open_ai_responses_gpt_5`
+- `open_ai_responses_gpt_5_pro`
 - `open_ai_responses_gpt_5_mini`
 - `open_ai_responses_gpt_5_nano`
-- `open_ai_responses_gpt_3_5_turbo`
 - `open_ai_responses_gpt_4_1`
 - `open_ai_responses_gpt_4_1_mini`
 - `open_ai_responses_gpt_4_1_nano`
 - `open_ai_responses_gpt_4o`
 - `open_ai_responses_gpt_4o_mini`
-- `open_ai_responses_o1`
-- `open_ai_responses_o1_mini`
-- `open_ai_responses_o1_pro`
-- `open_ai_responses_o3`
-- `open_ai_responses_o3_mini`
-- `open_ai_responses_o3_pro`
+- `open_ai_responses_gpt_3_5_turbo`
 - `open_ai_responses_o4_mini`
+- `open_ai_responses_o3`
+- `open_ai_responses_o3_pro`
+- `open_ai_responses_o3_mini`
+- `open_ai_responses_o1`
+- `open_ai_responses_o1_pro`
 
 ### OpenAI Completions API
 
@@ -88,20 +93,23 @@ end
 ```
 
 Currently supported OpenAI Completions API models:
+- `open_ai_gpt_5_4`
+- `open_ai_gpt_5_2`
+- `open_ai_gpt_5_1`
 - `open_ai_gpt_5`
 - `open_ai_gpt_5_mini`
 - `open_ai_gpt_5_nano`
-- `open_ai_gpt_3_5_turbo`
 - `open_ai_gpt_4_1`
 - `open_ai_gpt_4_1_mini`
 - `open_ai_gpt_4_1_nano`
 - `open_ai_gpt_4o`
 - `open_ai_gpt_4o_mini`
-- `open_ai_o1`
-- `open_ai_o1_mini`
+- `open_ai_gpt_3_5_turbo`
+- `open_ai_o4_mini`
 - `open_ai_o3`
 - `open_ai_o3_mini`
-- `open_ai_o4_mini`
+- `open_ai_o1`
+- `open_ai_o1_mini`
 
 
 ## Anthropic
@@ -117,14 +125,18 @@ end
 ```
 
 Currently supported Anthropic models:
-- `anthropic_claude_3_5_haiku`
-- `anthropic_claude_3_5_sonnet`
-- `anthropic_claude_3_7_sonnet`
-- `anthropic_claude_3_opus`
-- `anthropic_claude_4_opus`
-- `anthropic_claude_4_1_opus`
-- `anthropic_claude_4_sonnet`
+- `anthropic_claude_4_6_opus`
+- `anthropic_claude_4_6_sonnet`
+- `anthropic_claude_4_5_opus`
 - `anthropic_claude_4_5_sonnet`
+- `anthropic_claude_4_5_haiku`
+- `anthropic_claude_4_1_opus`
+- `anthropic_claude_4_opus`
+- `anthropic_claude_4_sonnet`
+- `anthropic_claude_3_7_sonnet`
+- `anthropic_claude_3_5_sonnet`
+- `anthropic_claude_3_5_haiku`
+- `anthropic_claude_3_opus`
 
 ## AWS Bedrock
 
@@ -139,17 +151,25 @@ end
 ```
 
 Currently supported Bedrock models:
-- `bedrock_claude_3_5_haiku`
-- `bedrock_claude_3_5_sonnet`
-- `bedrock_claude_3_7_sonnet`
-- `bedrock_claude_3_opus`
-- `bedrock_claude_4_opus`
-- `bedrock_claude_4_1_opus`
-- `bedrock_claude_4_sonnet`
+- `bedrock_claude_4_6_opus`
+- `bedrock_claude_4_6_sonnet`
+- `bedrock_claude_4_5_opus`
 - `bedrock_claude_4_5_sonnet`
-- `bedrock_amazon_nova_lite`
+- `bedrock_claude_4_5_haiku`
+- `bedrock_claude_4_1_opus`
+- `bedrock_claude_4_opus`
+- `bedrock_claude_4_sonnet`
+- `bedrock_claude_3_7_sonnet`
+- `bedrock_claude_3_5_sonnet`
+- `bedrock_claude_3_5_haiku`
+- `bedrock_claude_3_opus`
 - `bedrock_amazon_nova_micro`
+- `bedrock_amazon_nova_lite`
 - `bedrock_amazon_nova_pro`
+- `bedrock_deepseek_v3_2`
+- `bedrock_deepseek_r1`
+- `bedrock_gpt_oss_120b`
+- `bedrock_gpt_oss_20b`
 
 ## OpenRouter
 [OpenRouter](https://openrouter.ai/){:target="_blank"} is a unified API that provides access to multiple AI models from different providers including Anthropic, Meta, Google, and more.
@@ -169,11 +189,25 @@ end
 Currently included OpenRouter models:
 - `open_router_claude_3_7_sonnet`
 - `open_router_deepseek_chat_v3`
+- `open_router_deepseek_v3_1`
+- `open_router_deepseek_v3_2`
 - `open_router_gemini_2_0_flash`
+- `open_router_gemini_2_5_flash`
+- `open_router_gemini_2_5_pro`
+- `open_router_gemini_3_pro_preview`
+- `open_router_grok_4`
+- `open_router_grok_4_1_fast`
+- `open_router_kimi_k2_thinking`
+- `open_router_kimi_k2_5`
 - `open_router_llama_3_1_8b_instruct`
 - `open_router_llama_3_3_70b_instruct`
 - `open_router_llama_4_maverick`
 - `open_router_llama_4_scout`
+- `open_router_minimax_m2`
+- `open_router_minimax_m2_1`
+- `open_router_minimax_m2_5`
+- `open_router_mistral_large_3_2512`
+- `open_router_mistral_small_3_2_24b`
 - `open_router_open_ai_gpt_oss_120b`
 - `open_router_open_ai_gpt_oss_20b`
 
