@@ -86,6 +86,14 @@ module Raif
     end
 
     config.after_initialize do
+      next unless Raif.config.google_embedding_models_enabled
+
+      Raif.default_embedding_models[Raif::EmbeddingModels::Google].each do |embedding_model_config|
+        Raif.register_embedding_model(Raif::EmbeddingModels::Google, **embedding_model_config)
+      end
+    end
+
+    config.after_initialize do
       next unless Raif.config.bedrock_embedding_models_enabled
 
       require "aws-sdk-bedrockruntime"
