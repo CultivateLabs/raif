@@ -77,7 +77,7 @@ module Raif
       @evals_verbose_output = false
       google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
       @google_api_key = default_disable_llm_api_requests? ? "placeholder-google-api-key" : google_api_key
-      @google_embedding_models_enabled = @google_api_key.present?
+      @google_embedding_models_enabled = false
       @google_models_enabled = @google_api_key.present?
       @llm_api_requests_enabled = !default_disable_llm_api_requests?
       @llm_request_max_retries = 2
