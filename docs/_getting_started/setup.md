@@ -39,7 +39,7 @@ rails db:migrate
 
 You **must configure at least one API key** for an LLM provider ([OpenAI](#openai), [Anthropic](#anthropic), [AWS Bedrock](#aws-bedrock), [OpenRouter](#openrouter), [Google AI](#google-ai)). 
 
-By default, the initializer will load them from environment variables (e.g. `ENV["OPENAI_API_KEY"]`, `ENV["ANTHROPIC_API_KEY"]`, `ENV["OPEN_ROUTER_API_KEY"]`). Alternatively, you can set them directly in `config/initializers/raif.rb`.
+By default, the initializer will load them from environment variables (e.g. `ENV["OPENAI_API_KEY"]`, `ENV["ANTHROPIC_API_KEY"]`, `ENV["OPEN_ROUTER_API_KEY"]`, `ENV["GOOGLE_AI_API_KEY"]`). Alternatively, you can set them directly in `config/initializers/raif.rb`.
 
 ## OpenAI
 
@@ -218,16 +218,20 @@ The Google AI adapter provides access to Google's Gemini models with support for
 ```ruby
 Raif.configure do |config|
   config.google_models_enabled = true
-  config.google_api_key = ENV["GOOGLE_API_KEY"]
+  config.google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
   config.default_llm_model_key = "google_gemini_2_5_flash"
 end
 ```
 
 Currently supported Google AI models:
-- `google_gemini_2_5_flash`
-- `google_gemini_2_5_pro`
-- `google_gemini_3_0_flash`
+- `google_gemini_3_1_pro`
+- `google_gemini_3_1_flash_lite`
 - `google_gemini_3_0_pro`
+- `google_gemini_3_0_flash`
+- `google_gemini_2_5_pro`
+- `google_gemini_2_5_flash`
+
+Google embedding models use the same API key, but remain opt-in. See [Embedding Models](../learn_more/embedding_models) to enable `config.google_embedding_models_enabled`.
 
 ---
 

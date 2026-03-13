@@ -60,7 +60,10 @@ Raif.configure do |config|
   # config.google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
 
   # Whether Google models are enabled.
-  # config.google_models_enabled = ENV["GOOGLE_API_KEY"].present?
+  # config.google_models_enabled = ENV["GOOGLE_AI_API_KEY"].present? || ENV["GOOGLE_API_KEY"].present?
+
+  # Whether Google embedding models are enabled. Defaults to false
+  # config.google_embedding_models_enabled = false
 
   # The default LLM model to use. Defaults to "open_ai_gpt_4o"
   # Available keys:
@@ -156,6 +159,8 @@ Raif.configure do |config|
   #   open_router_mistral_small_3_2_24b
   #   open_router_open_ai_gpt_oss_120b
   #   open_router_open_ai_gpt_oss_20b
+  #   google_gemini_3_1_pro
+  #   google_gemini_3_1_flash_lite
   #   google_gemini_3_0_pro
   #   google_gemini_3_0_flash
   #   google_gemini_2_5_pro
@@ -170,6 +175,7 @@ Raif.configure do |config|
   #   open_ai_text_embedding_3_large
   #   open_ai_text_embedding_ada_002
   #   bedrock_titan_embed_text_v2
+  #   google_gemini_embedding_2
   #
   # config.default_embedding_model_key = "open_ai_text_embedding_3_small"
 
