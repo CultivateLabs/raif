@@ -287,7 +287,7 @@ module Raif
           api_name: "claude-opus-4-20250514",
           input_token_cost: 15.0 / 1_000_000,
           output_token_cost: 75.0 / 1_000_000,
-          max_completion_tokens: 8192,
+          max_completion_tokens: 32_000,
           supported_provider_managed_tools: [
             Raif::ModelTools::ProviderManaged::WebSearch,
             Raif::ModelTools::ProviderManaged::CodeExecution
@@ -298,7 +298,7 @@ module Raif
           api_name: "claude-sonnet-4-20250514",
           input_token_cost: 3.0 / 1_000_000,
           output_token_cost: 15.0 / 1_000_000,
-          max_completion_tokens: 8192,
+          max_completion_tokens: 64_000,
           supported_provider_managed_tools: [
             Raif::ModelTools::ProviderManaged::WebSearch,
             Raif::ModelTools::ProviderManaged::CodeExecution
@@ -393,14 +393,14 @@ module Raif
           api_name: "anthropic.claude-sonnet-4-20250514-v1:0",
           input_token_cost: 0.003 / 1000,
           output_token_cost: 0.015 / 1000,
-          max_completion_tokens: 8192
+          max_completion_tokens: 64_000
         },
         {
           key: :bedrock_claude_4_opus,
           api_name: "anthropic.claude-opus-4-20250514-v1:0",
           input_token_cost: 0.015 / 1000,
           output_token_cost: 0.075 / 1000,
-          max_completion_tokens: 8192
+          max_completion_tokens: 32_000
         },
         {
           key: :bedrock_claude_3_7_sonnet,
@@ -454,8 +454,8 @@ module Raif
         {
           key: :bedrock_deepseek_v3_2,
           api_name: "deepseek.v3.2",
-          input_token_cost: 0.00135 / 1_000,
-          output_token_cost: 0.0054 / 1_000,
+          input_token_cost: 0.62 / 1_000_000,
+          output_token_cost: 1.85 / 1_000_000,
           max_completion_tokens: 164_000
         },
         {
@@ -475,8 +475,8 @@ module Raif
         {
           key: :bedrock_gpt_oss_20b,
           api_name: "openai.gpt-oss-20b-1:0",
-          input_token_cost: 0.05 / 1_000_000,
-          output_token_cost: 0.20 / 1_000_000,
+          input_token_cost: 0.07 / 1_000_000,
+          output_token_cost: 0.30 / 1_000_000,
           max_completion_tokens: 32_768
         }
       ],
@@ -490,14 +490,20 @@ module Raif
         {
           key: :open_router_deepseek_chat_v3,
           api_name: "deepseek/deepseek-chat-v3-0324",
-          input_token_cost: 0.27 / 1_000_000,
-          output_token_cost: 1.1 / 1_000_000,
+          input_token_cost: 0.20 / 1_000_000,
+          output_token_cost: 0.77 / 1_000_000,
         },
         {
           key: :open_router_deepseek_v3_1,
           api_name: "deepseek/deepseek-chat-v3.1",
           input_token_cost: 0.25 / 1_000_000,
           output_token_cost: 1.0 / 1_000_000,
+        },
+        {
+          key: :open_router_deepseek_v3_2,
+          api_name: "deepseek/deepseek-v3.2",
+          input_token_cost: 0.26 / 1_000_000,
+          output_token_cost: 0.38 / 1_000_000,
         },
         {
           key: :open_router_gemini_2_0_flash,
@@ -542,6 +548,12 @@ module Raif
           output_token_cost: 2.35 / 1_000_000,
         },
         {
+          key: :open_router_kimi_k2_5,
+          api_name: "moonshotai/kimi-k2.5",
+          input_token_cost: 0.45 / 1_000_000,
+          output_token_cost: 2.20 / 1_000_000,
+        },
+        {
           key: :open_router_llama_3_3_70b_instruct,
           api_name: "meta-llama/llama-3.3-70b-instruct",
           input_token_cost: 0.10 / 1_000_000,
@@ -570,6 +582,18 @@ module Raif
           api_name: "minimax/minimax-m2",
           input_token_cost: 0.255 / 1_000_000,
           output_token_cost: 1.02 / 1_000_000,
+        },
+        {
+          key: :open_router_minimax_m2_1,
+          api_name: "minimax/minimax-m2.1",
+          input_token_cost: 0.27 / 1_000_000,
+          output_token_cost: 0.95 / 1_000_000,
+        },
+        {
+          key: :open_router_minimax_m2_5,
+          api_name: "minimax/minimax-m2.5",
+          input_token_cost: 0.27 / 1_000_000,
+          output_token_cost: 0.95 / 1_000_000,
         },
         {
           key: :open_router_mistral_large_3_2512,
