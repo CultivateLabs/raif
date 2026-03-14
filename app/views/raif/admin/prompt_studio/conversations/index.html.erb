@@ -8,7 +8,8 @@
       filter_path: raif.admin_prompt_studio_conversations_path,
       param_name: :conversation_type,
       types: @conversation_types,
-      selected_type: @selected_type %>
+      selected_type: @selected_type,
+      llm_model_keys: @llm_model_keys %>
 
 <% if @selected_type.present? && @conversations.present? %>
   <div class="table-responsive">

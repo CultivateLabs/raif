@@ -189,6 +189,8 @@ en:
             running: Running
         common:
           back: Back
+          created_after: Created After
+          created_before: Created Before
           current_prompt: Current Prompt
           current_system_prompt: Current System Prompt
           no_instances: No instances found.

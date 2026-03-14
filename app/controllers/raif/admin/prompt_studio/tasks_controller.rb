@@ -7,9 +7,10 @@ module Raif
         def index
           @task_types = Raif::Task.distinct.pluck(:type).sort
           @selected_type = params[:task_type] if params[:task_type].present?
+          @llm_model_keys = Raif::Task.where(type: @selected_type).distinct.pluck(:llm_model_key).compact.sort if @selected_type.present?
 
           if @selected_type.present?
-            tasks = Raif::Task.where(type: @selected_type).completed.includes(:raif_model_completion).order(created_at: :desc)
+            tasks = apply_filters(Raif::Task.where(type: @selected_type).completed).includes(:raif_model_completion).order(created_at: :desc)
             @pagy, @tasks = pagy(tasks)
           end
 

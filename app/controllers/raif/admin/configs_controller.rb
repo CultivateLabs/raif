@@ -33,6 +33,7 @@ module Raif
           { key: "evals_default_llm_judge_model_key", value: @config.evals_default_llm_judge_model_key },
           { key: "evals_verbose_output", value: @config.evals_verbose_output },
           { key: "google_api_key", value: mask_sensitive_value(@config.google_api_key) },
+          { key: "google_embedding_models_enabled", value: @config.google_embedding_models_enabled },
           { key: "google_models_enabled", value: @config.google_models_enabled },
           { key: "llm_api_requests_enabled", value: @config.llm_api_requests_enabled },
           { key: "llm_request_max_retries", value: @config.llm_request_max_retries },

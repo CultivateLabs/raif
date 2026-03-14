@@ -25,6 +25,7 @@ en:
         title: Past Conversations
     embedding_model_names:
       bedrock_titan_embed_text_v2: AWS Bedrock Titan Text Embeddings v2
+      google_gemini_embedding_2: Google Gemini Embedding 2
       open_ai_text_embedding_3_large: OpenAI Text Embedding 3 Large
       open_ai_text_embedding_3_small: OpenAI Text Embedding 3 Small
       open_ai_text_embedding_ada_002: OpenAI Text Embedding Ada 002
@@ -85,8 +86,10 @@ en:
       bedrock_gpt_oss_20b: OpenAI GPT-OSS 20B (via AWS Bedrock)
       google_gemini_2_5_flash: Google Gemini 2.5 Flash
       google_gemini_2_5_pro: Google Gemini 2.5 Pro
-      google_gemini_3_0_flash: Google Gemini 3.0 Flash
-      google_gemini_3_0_pro: Google Gemini 3.0 Pro
+      google_gemini_3_0_flash: Google Gemini 3 Flash
+      google_gemini_3_0_pro: Google Gemini 3 Pro
+      google_gemini_3_1_flash_lite: Google Gemini 3.1 Flash-Lite
+      google_gemini_3_1_pro: Google Gemini 3.1 Pro
       open_ai_gpt_3_5_turbo: OpenAI GPT-3.5 Turbo
       open_ai_gpt_4_1: OpenAI GPT-4.1
       open_ai_gpt_4_1_mini: OpenAI GPT-4.1 Mini
@@ -96,6 +99,7 @@ en:
       open_ai_gpt_5: OpenAI GPT-5
       open_ai_gpt_5_1: OpenAI GPT-5.1
       open_ai_gpt_5_2: OpenAI GPT-5.2
+      open_ai_gpt_5_4: OpenAI GPT-5.4
       open_ai_gpt_5_mini: OpenAI GPT-5 Mini
       open_ai_gpt_5_nano: OpenAI GPT-5 Nano
       open_ai_o1: OpenAI o1
@@ -112,8 +116,12 @@ en:
       open_ai_responses_gpt_5: OpenAI GPT-5 (Responses API)
       open_ai_responses_gpt_5_1: OpenAI GPT-5.1 (Responses API)
       open_ai_responses_gpt_5_2: OpenAI GPT-5.2 (Responses API)
+      open_ai_responses_gpt_5_2_pro: OpenAI GPT-5.2 Pro (Responses API)
+      open_ai_responses_gpt_5_4: OpenAI GPT-5.4 (Responses API)
+      open_ai_responses_gpt_5_4_pro: OpenAI GPT-5.4 Pro (Responses API)
       open_ai_responses_gpt_5_mini: OpenAI GPT-5 Mini (Responses API)
       open_ai_responses_gpt_5_nano: OpenAI GPT-5 Nano (Responses API)
+      open_ai_responses_gpt_5_pro: OpenAI GPT-5 Pro (Responses API)
       open_ai_responses_o1: OpenAI o1 (Responses API)
       open_ai_responses_o1_mini: OpenAI o1 Mini (Responses API)
       open_ai_responses_o1_pro: OpenAI o1 Pro (Responses API)
@@ -124,18 +132,22 @@ en:
       open_router_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via OpenRouter)
       open_router_deepseek_chat_v3: DeepSeek Chat v3 (via OpenRouter)
       open_router_deepseek_v3_1: DeepSeek v3.1 (via OpenRouter)
+      open_router_deepseek_v3_2: DeepSeek v3.2 (via OpenRouter)
       open_router_gemini_2_0_flash: Google Gemini 2.0 Flash (via OpenRouter)
       open_router_gemini_2_5_flash: Gemini 2.5 Flash (via OpenRouter)
       open_router_gemini_2_5_pro: Gemini 2.5 Pro (via OpenRouter)
       open_router_gemini_3_pro_preview: Gemini 3 Pro Preview (via OpenRouter)
       open_router_grok_4: Grok 4 (via OpenRouter)
       open_router_grok_4_1_fast: Grok 4.1 Fast (via OpenRouter)
+      open_router_kimi_k2_5: Kimi K2.5 (via OpenRouter)
       open_router_kimi_k2_thinking: Kimi K2 Thinking (via OpenRouter)
       open_router_llama_3_1_8b_instruct: Meta Llama 3.1 8B Instruct (via OpenRouter)
       open_router_llama_3_3_70b_instruct: Meta Llama 3.3 70B Instruct (via OpenRouter)
       open_router_llama_4_maverick: Meta Llama 4 Maverick (via OpenRouter)
       open_router_llama_4_scout: Meta Llama 4 Scout (via OpenRouter)
       open_router_minimax_m2: Minimax M2 (via OpenRouter)
+      open_router_minimax_m2_1: Minimax M2.1 (via OpenRouter)
+      open_router_minimax_m2_5: Minimax M2.5 (via OpenRouter)
       open_router_mistral_large_3_2512: Mistral Large 3 (via OpenRouter)
       open_router_mistral_small_3_2_24b: Mistral Small 3.2 24B (via OpenRouter)
       open_router_open_ai_gpt_oss_120b: OpenAI GPT-OSS 120B (via OpenRouter)
