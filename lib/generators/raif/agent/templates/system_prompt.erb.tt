@@ -1,0 +1,3 @@
+<%% # Define the system prompt for Raif::Agents::<%= class_name %> here. %>
+<%% # All instance methods and run_with attributes are available in this template. %>
+<%% # You can also use Rails view helpers and render partials. %>

@@ -34,6 +34,7 @@ Raif is a Ruby on Rails engine for adding AI-powered features to Rails applicati
 - **[Evals](key_raif_concepts/evals)** - Evaluate the performance of your LLM-powered features
 - **[Provider-Managed Tools](key_raif_concepts/model_tools#provider-managed-tools)** - Support for tools that are managed by the LLM provider, such as web search, code execution, and image generation.
 - **[Multiple LLM Providers Adapters](getting_started/setup#configuring-llm-providers--api-keys)** - OpenAI, Anthropic Claude, AWS Bedrock, OpenRouter
+- **[Prompt Templates](learn_more/prompt_templates)** - Define prompts using ERB templates with Rails view helpers, partials, and preview support
 - **[Built-in Response Format Handling](learn_more/response_formats)** - Support for structured outputs including JSON responses, schemas, & parsing. HTML response handling and sanitization.
 - **[Image & PDF Support](learn_more/images_files_pdfs)** - Support for including images and PDF in prompts.
 - **[Web Admin Interface](learn_more/web_admin)** - A web interface for viewing and managing all LLM interactions.

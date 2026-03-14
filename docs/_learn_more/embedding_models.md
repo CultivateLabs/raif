@@ -13,10 +13,13 @@ Raif supports generation of vector embeddings. You can enable and configure embe
 Raif.configure do |config|
   config.open_ai_embedding_models_enabled = true
   config.bedrock_embedding_models_enabled = true
-  
+  config.google_embedding_models_enabled = true
+
   config.default_embedding_model_key = "open_ai_text_embedding_3_small"
 end
 ```
+
+Google embeddings use the same API key as Google LLM models. Configure `config.google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]` if you are not already doing so in your initializer.
 
 ## Supported Embedding Models
 
@@ -29,6 +32,9 @@ Raif currently supports the following embedding models:
 
 ### AWS Bedrock
 - `bedrock_titan_embed_text_v2`
+
+### Google AI
+- `google_gemini_embedding_2`
 
 ## Creating Embeddings
 
@@ -53,6 +59,17 @@ Or to generate embeddings for a piece of text with a specific model:
 ```ruby
 model = Raif.embedding_model(:open_ai_text_embedding_3_small)
 embedding = model.generate_embedding!("Your text here")
+```
+
+## Smoke Testing Embedding Models
+
+Use `bin/smoke_embedding_models` to verify credentials and connectivity for the embedding models you have enabled. The script skips providers that do not have credentials configured.
+
+```bash
+bin/smoke_embedding_models --list
+bin/smoke_embedding_models google
+bin/smoke_embedding_models google_gemini_embedding_2
+bin/smoke_embedding_models ALL
 ```
 
 ---

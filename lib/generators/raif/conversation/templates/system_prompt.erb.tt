@@ -1,0 +1,4 @@
+<%% # Define the system prompt for Raif::Conversations::<%= class_name %> here. %>
+<%% # All instance methods are available in this template. %>
+<%% # You can also use Rails view helpers and render partials. %>
+<%% # If this file is removed, the default system prompt from Raif.config.conversation_system_prompt_intro will be used. %>

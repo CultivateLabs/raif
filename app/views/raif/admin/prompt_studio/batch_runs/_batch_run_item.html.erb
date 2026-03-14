@@ -1,0 +1,54 @@
+<%= tag.tr id: dom_id(item) do %>
+  <td>
+    <%= link_to "##{item.source_task_id}", raif.admin_prompt_studio_task_path(item.source_task_id), class: "text-decoration-none" %>
+  </td>
+  <td>
+    <% case item.status %>
+    <% when "pending" %>
+      <span class="badge bg-secondary"><%= t("raif.admin.prompt_studio.batch_runs.status.pending") %></span>
+    <% when "running" %>
+      <span class="badge bg-warning text-dark">
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        <%= t("raif.admin.prompt_studio.batch_runs.status.running") %>
+      </span>
+    <% when "judging" %>
+      <span class="badge bg-info text-dark">
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        <%= t("raif.admin.prompt_studio.batch_runs.status.judging") %>
+      </span>
+    <% when "completed" %>
+      <span class="badge bg-success"><%= t("raif.admin.prompt_studio.batch_runs.status.completed") %></span>
+    <% when "failed" %>
+      <span class="badge bg-danger"><%= t("raif.admin.prompt_studio.batch_runs.status.failed") %></span>
+    <% end %>
+  </td>
+  <td>
+    <% if item.source_task&.raw_response.present? %>
+      <%= tag.span truncate(item.source_task.raw_response, length: 80), title: item.source_task.raw_response %>
+    <% end %>
+  </td>
+  <td>
+    <% if item.result_task&.raw_response.present? %>
+      <%= link_to truncate(item.result_task.raw_response, length: 80),
+            raif.admin_prompt_studio_task_path(item.result_task),
+            class: "text-decoration-none",
+            title: item.result_task.raw_response %>
+    <% end %>
+  </td>
+  <% if item.batch_run.has_judge? %>
+    <td>
+      <% if item.judge_summary.present? %>
+        <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#judge-detail-modal-<%= item.id %>">
+          <strong><%= item.judge_summary %></strong>
+        </a>
+      <% end %>
+    </td>
+    <td>
+      <% if item.judge_reasoning.present? %>
+        <a href="#" class="text-decoration-none text-body" data-bs-toggle="modal" data-bs-target="#judge-detail-modal-<%= item.id %>">
+          <%= truncate(item.judge_reasoning, length: 80) %>
+        </a>
+      <% end %>
+    </td>
+  <% end %>
+<% end %>

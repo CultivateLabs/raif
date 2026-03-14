@@ -1,0 +1,145 @@
+<%= tag.div id: dom_id(task, :result) do %>
+  <div class="row mb-4">
+    <div class="<%= Raif.config.prompt_studio_runs_enabled ? "col-md-7" : "col-12" %>">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><%= t("raif.admin.prompt_studio.tasks.show.task_details") %></h5>
+          <% if task.prompt_studio_run? %>
+            <span class="badge bg-info"><%= t("raif.admin.prompt_studio.common.run_in_prompt_studio") %></span>
+          <% end %>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-3"><strong><%= t("raif.admin.common.id") %>:</strong></div>
+            <div class="col-md-9"><%= task.id %></div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-3"><strong><%= t("raif.admin.common.type") %>:</strong></div>
+            <div class="col-md-9"><%= task.type %></div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-3"><strong><%= t("raif.admin.common.model") %>:</strong></div>
+            <div class="col-md-9"><%= task.llm_model_key %></div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-3"><strong><%= t("raif.admin.common.status") %>:</strong></div>
+            <div class="col-md-9">
+              <% if task.status == :in_progress %>
+                <span class="badge bg-warning text-dark">
+                  <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                  <%= t("raif.admin.common.running") %>
+                </span>
+              <% elsif task.completed_at? %>
+                <span class="badge bg-success"><%= t("raif.admin.common.completed") %></span>
+                <% if task.raw_response.present? %>
+                  <a href="#task-response" class="ms-2 small"><%= t("raif.admin.prompt_studio.tasks.show.view_response") %></a>
+                <% end %>
+              <% elsif task.failed_at? %>
+                <span class="badge bg-danger"><%= t("raif.admin.common.failed") %></span>
+              <% else %>
+                <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
+              <% end %>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-3"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
+            <div class="col-md-9"><%= task.created_at.rfc822 %></div>
+          </div>
+          <% if task.run_with.present? %>
+            <div class="row mb-3">
+              <div class="col-md-3"><strong><%= t("raif.admin.common.run_with") %>:</strong></div>
+              <div class="col-md-9">
+                <pre class="pre-wrap mb-0"><%= JSON.pretty_generate(task.run_with) %></pre>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+    <% if Raif.config.prompt_studio_runs_enabled %>
+      <div class="col-md-5">
+        <div class="card h-100">
+          <div class="card-header">
+            <h5 class="mb-0"><%= t("raif.admin.prompt_studio.tasks.rerun.title") %></h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted"><%= t("raif.admin.prompt_studio.tasks.rerun.description") %></p>
+            <div class="mb-3">
+              <% if comparison[:current_system_prompt].present? %>
+                <% if comparison[:system_prompt_changed] %>
+                  <span class="badge bg-warning text-dark"><%= t("raif.admin.prompt_studio.common.system_prompt_changed") %></span>
+                <% else %>
+                  <span class="badge bg-success"><%= t("raif.admin.prompt_studio.common.system_prompt_unchanged") %></span>
+                <% end %>
+              <% end %>
+              <% if comparison[:current_prompt].present? %>
+                <% if comparison[:prompt_changed] %>
+                  <span class="badge bg-warning text-dark"><%= t("raif.admin.prompt_studio.common.prompt_changed") %></span>
+                <% else %>
+                  <span class="badge bg-success"><%= t("raif.admin.prompt_studio.common.prompt_unchanged") %></span>
+                <% end %>
+              <% end %>
+            </div>
+            <% if comparison[:has_stale_references] %>
+              <div class="alert alert-danger mb-0">
+                <%= t("raif.admin.prompt_studio.common.warning_stale_reference") %>
+              </div>
+            <% else %>
+              <%= form_tag raif.admin_prompt_studio_tasks_path(source_task_id: task.id), method: :post do %>
+                <div class="mb-3">
+                  <label for="llm_model_key"><%= t("raif.admin.common.model") %></label>
+                  <%= select_tag :llm_model_key,
+                        llm_model_options(selected: task.llm_model_key),
+                        class: "form-select",
+                        data: { controller: "raif--tom-select" } %>
+                </div>
+                <%= submit_tag t("raif.admin.prompt_studio.tasks.rerun.submit"),
+                      class: "btn btn-primary",
+                      data: { confirm: t("raif.admin.prompt_studio.tasks.rerun.confirm"), disable_with: t("raif.admin.prompt_studio.tasks.rerun.running") } %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <%= render "raif/admin/prompt_studio/shared/prompt_comparison", comparison: comparison %>
+
+  <% if task.raw_response.present? && original_task&.raw_response.present? %>
+    <div class="card mb-4" id="task-response">
+      <div class="card-header">
+        <h5 class="mb-0"><%= t("raif.admin.prompt_studio.tasks.show.response_comparison") %></h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6>
+              <%= t("raif.admin.prompt_studio.tasks.show.original_response") %>
+              <small class="text-muted">
+                (<%= link_to "##{original_task.id}", raif.admin_prompt_studio_task_path(original_task) %> &mdash; <%= original_task.llm_model_key %>)
+              </small>
+            </h6>
+            <pre class="pre-wrap border rounded p-3 bg-light"><%= format_task_response(original_task) %></pre>
+          </div>
+          <div class="col-md-6">
+            <h6>
+              <%= t("raif.admin.prompt_studio.tasks.show.new_response") %>
+              <small class="text-muted">(<%= task.llm_model_key %>)</small>
+            </h6>
+            <pre class="pre-wrap border rounded p-3 bg-light"><%= format_task_response(task) %></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% elsif task.raw_response.present? %>
+    <div class="card mb-4" id="task-response">
+      <div class="card-header">
+        <h5 class="mb-0"><%= t("raif.admin.common.response") %> (<%= task.response_format %>)</h5>
+      </div>
+      <div class="card-body">
+        <pre class="pre-wrap"><%= format_task_response(task) %></pre>
+      </div>
+    </div>
+  <% end %>
+<% end %>

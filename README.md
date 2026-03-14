@@ -6,7 +6,7 @@
 [![Documentation](https://img.shields.io/badge/docs-YARD-blue.svg)](https://cultivatelabs.github.io/raif/)
 
 
-Raif (Ruby AI Framework) is a Rails engine that helps you add AI-powered features to your Rails apps, such as [tasks](https://docs.raif.ai/key_raif_concepts/tasks), [conversations](https://docs.raif.ai/key_raif_concepts/conversations), and [agents](https://docs.raif.ai/key_raif_concepts/agents).  It supports for multiple LLM providers including [OpenAI](https://docs.raif.ai/getting_started/setup#openai), [Anthropic Claude](https://docs.raif.ai/getting_started/setup#anthropic), [AWS Bedrock](https://docs.raif.ai/getting_started/setup#aws-bedrock), and [OpenRouter](https://docs.raif.ai/getting_started/setup#openrouter).
+Raif (Ruby AI Framework) is a Rails engine that helps you add AI-powered features to your Rails apps, such as [tasks](https://docs.raif.ai/key_raif_concepts/tasks), [conversations](https://docs.raif.ai/key_raif_concepts/conversations), and [agents](https://docs.raif.ai/key_raif_concepts/agents). It supports multiple LLM providers including [OpenAI](https://docs.raif.ai/getting_started/setup#openai), [Anthropic Claude](https://docs.raif.ai/getting_started/setup#anthropic), [AWS Bedrock](https://docs.raif.ai/getting_started/setup#aws-bedrock), [OpenRouter](https://docs.raif.ai/getting_started/setup#openrouter), and [Google AI](https://docs.raif.ai/getting_started/setup#google-ai).
 
 Raif is built by [Cultivate Labs](https://www.cultivatelabs.com) and is used to power [Hinsley](https://www.hinsley.ai/), an AI-powered research & analysis platform.
 

@@ -44,14 +44,15 @@
     end
     <%- end -%>
 
-    def build_prompt
-      # Implement the LLM prompt for this task.
-      raise NotImplementedError, "Implement #build_prompt in #{self.class.name}"
-    end
-
-    # Optional: Override build_system_prompt if you need custom system instructions.
-    # The default implementation, which you'll get if you call super, will use Raif.config.task_system_prompt_intro 
-    # and append the system_prompt_language_preference if the task's requested_language_key is set.
+    # Prompt is defined in app/views/raif/tasks/<%= class_path.any? ? class_path.join("/") + "/" : "" %><%= file_name %>.prompt.erb
+    # You can also define a system prompt template at:
+    #   app/views/raif/tasks/<%= class_path.any? ? class_path.join("/") + "/" : "" %><%= file_name %>.system_prompt.erb
+    #
+    # Alternatively, override build_prompt and/or build_system_prompt methods directly:
+    # def build_prompt
+    #   "Your prompt here"
+    # end
+    #
     # def build_system_prompt
     #   super + "\nAdditional system instructions..."
     # end

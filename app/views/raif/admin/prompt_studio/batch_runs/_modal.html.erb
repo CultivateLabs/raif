@@ -1,0 +1,35 @@
+<div class="modal fade" id="batch-run-modal" tabindex="-1" aria-labelledby="batch-run-modal-label" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="batch-run-modal-label"><%= t("raif.admin.prompt_studio.batch_runs.create.title") %></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="llm_model_key" class="form-label"><%= t("raif.admin.common.model") %></label>
+          <%= select_tag :llm_model_key,
+                llm_model_options,
+                class: "form-select",
+                data: { controller: "raif--tom-select", raif__cost_estimate_target: "modelSelect", action: "raif--cost-estimate#calculate" } %>
+        </div>
+
+        <%= render "raif/admin/prompt_studio/batch_runs/judge_config_fields" %>
+
+        <div class="alert alert-light border mb-0 mt-3 d-none" data-raif--cost-estimate-target="estimate"></div>
+      </div>
+      <div class="modal-footer d-flex justify-content-between">
+        <span class="text-muted">
+          <span data-raif--select-all-checkboxes-target="selectedCount">0</span>
+          <%= t("raif.admin.prompt_studio.batch_runs.create.tasks_selected") %>
+        </span>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t("raif.admin.prompt_studio.common.back") %></button>
+          <%= submit_tag t("raif.admin.prompt_studio.batch_runs.create.submit"),
+                class: "btn btn-primary",
+                data: { confirm: t("raif.admin.prompt_studio.batch_runs.create.confirm") } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -38,8 +38,11 @@ RSpec.describe Raif::Generators::TaskGenerator, type: :generator do
       expect(content).to include("module Tasks")
       expect(content).to include("class MyTask < Raif::ApplicationTask")
       expect(content).to include("llm_response_format :text")
-      expect(content).to include("def build_prompt")
-      expect(content).to include("raise NotImplementedError")
+      expect(content).to include("Prompt is defined in app/views/raif/tasks/my_task.prompt.erb")
+    end
+
+    it "creates the prompt template file" do
+      expect(File).to exist(File.join(tmp_dir, "app/views/raif/tasks/my_task.prompt.erb"))
     end
 
     it "creates the eval set file" do
@@ -68,6 +71,10 @@ RSpec.describe Raif::Generators::TaskGenerator, type: :generator do
       expect(content).to include("module Admin")
       expect(content).to include("module Analytics")
       expect(content).to include("class UserReport < Raif::ApplicationTask")
+    end
+
+    it "creates the prompt template file in the nested directory" do
+      expect(File).to exist(File.join(tmp_dir, "app/views/raif/tasks/admin/analytics/user_report.prompt.erb"))
     end
 
     it "creates eval set file with proper nested module structure" do
@@ -126,6 +133,20 @@ RSpec.describe Raif::Generators::TaskGenerator, type: :generator do
         expect(content).not_to include("json_response_schema do")
         expect(content).to include("# Optional: Set the allowed tags for the task. Only relevant if response_format is :html.")
       end
+    end
+  end
+
+  describe "with skip_prompt_template option" do
+    before do
+      run_generator ["my_task", "--skip-prompt-template"]
+    end
+
+    it "does not create the prompt template file" do
+      expect(File).not_to exist(File.join(tmp_dir, "app/views/raif/tasks/my_task.prompt.erb"))
+    end
+
+    it "still creates the task file" do
+      expect(File).to exist(File.join(tmp_dir, "app/models/raif/tasks/my_task.rb"))
     end
   end
 

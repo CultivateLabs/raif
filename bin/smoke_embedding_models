@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+set -eu
+
+bundle exec spec/dummy/bin/rails runner script/smoke_embedding_models.rb "$@"

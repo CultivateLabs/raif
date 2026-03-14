@@ -1,0 +1,5 @@
+Tell me a joke about <%= topic %>.
+
+<%= content_tag(:instructions, render(partial: "raif/shared/instructions")) %>
+
+Keep your response to <%= truncate("a very long sentence that should be cut off", length: 20) %>.

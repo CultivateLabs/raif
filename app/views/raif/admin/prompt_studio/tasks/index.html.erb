@@ -1,0 +1,35 @@
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1 class="mb-0"><%= t("raif.admin.prompt_studio.common.prompt_studio") %></h1>
+</div>
+
+<%= render "raif/admin/prompt_studio/shared/nav_tabs", active_tab: :tasks %>
+
+<% if @show_batch_runs %>
+  <div data-controller="raif--select-all-checkboxes raif--cost-estimate" data-raif--cost-estimate-pricing-value="<%= llm_pricing_json %>" data-action="raif--select-all-checkboxes:toggled->raif--cost-estimate#calculate">
+    <%= render "raif/admin/prompt_studio/tasks/task_type_filter",
+          task_types: @task_types,
+          selected_type: @selected_type,
+          llm_model_keys: @llm_model_keys,
+          show_batch_runs: true %>
+
+    <%= form_tag raif.admin_prompt_studio_batch_runs_path, method: :post, id: "batch-run-form" do %>
+      <%= hidden_field_tag :task_type, @selected_type %>
+      <%= render "raif/admin/prompt_studio/tasks/tasks_table", tasks: @tasks, pagy: @pagy, show_checkbox: true %>
+      <%= render "raif/admin/prompt_studio/batch_runs/modal" %>
+    <% end %>
+  </div>
+<% else %>
+  <%= render "raif/admin/prompt_studio/tasks/task_type_filter",
+        task_types: @task_types,
+        selected_type: @selected_type,
+        llm_model_keys: @llm_model_keys,
+        show_batch_runs: false %>
+
+  <% if @selected_type.present? && @tasks.present? %>
+    <%= render "raif/admin/prompt_studio/tasks/tasks_table", tasks: @tasks, pagy: @pagy, show_checkbox: false %>
+  <% elsif @selected_type.present? %>
+    <div class="alert alert-info">
+      <%= t("raif.admin.prompt_studio.common.no_instances") %>
+    </div>
+  <% end %>
+<% end %>

@@ -11,6 +11,7 @@
 #  failed_at              :datetime
 #  llm_model_key          :string           not null
 #  prompt                 :text
+#  prompt_studio_run      :boolean          default(FALSE), not null
 #  raw_response           :text
 #  requested_language_key :string
 #  response_format        :integer          default("text"), not null
@@ -39,6 +40,8 @@
 #
 module Raif
   class Task < Raif::ApplicationRecord
+    prepend Raif::Concerns::HasPromptTemplates
+
     include Raif::Concerns::HasLlm
     include Raif::Concerns::HasRequestedLanguage
     include Raif::Concerns::HasAvailableModelTools
@@ -190,6 +193,15 @@ module Raif
     # For class-level schemas, returns the class-level schema
     def json_response_schema
       schema_for_instance(:json_response)
+    end
+
+    # Returns additional attributes to assign when creating tasks in Prompt Studio
+    # (reruns, batch runs, and judge tasks). Override in your ApplicationTask or
+    # task subclass to include app-specific attributes.
+    #
+    # @return [Hash] additional attributes to assign to the new task
+    def prompt_studio_task_attributes
+      {}
     end
 
     def build_prompt

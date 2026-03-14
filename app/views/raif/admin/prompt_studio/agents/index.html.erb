@@ -1,0 +1,56 @@
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1 class="mb-0"><%= t("raif.admin.prompt_studio.common.prompt_studio") %></h1>
+</div>
+
+<%= render "raif/admin/prompt_studio/shared/nav_tabs", active_tab: :agents %>
+
+<%= render "raif/admin/prompt_studio/shared/type_filter",
+      filter_path: raif.admin_prompt_studio_agents_path,
+      param_name: :agent_type,
+      types: @agent_types,
+      selected_type: @selected_type,
+      llm_model_keys: @llm_model_keys %>
+
+<% if @selected_type.present? && @agents.present? %>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th><%= t("raif.admin.common.id") %></th>
+          <th><%= t("raif.admin.common.type") %></th>
+          <th><%= t("raif.admin.common.created_at") %></th>
+          <th><%= t("raif.admin.common.model") %></th>
+          <th><%= t("raif.admin.common.status") %></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @agents.each do |agent| %>
+          <tr>
+            <td><%= agent.id %></td>
+            <td><%= agent.type %></td>
+            <td><%= agent.created_at.rfc822 %></td>
+            <td><%= agent.llm_model_key %></td>
+            <td>
+              <% if agent.completed_at? %>
+                <span class="badge bg-success"><%= t("raif.admin.common.completed") %></span>
+              <% elsif agent.failed_at? %>
+                <span class="badge bg-danger"><%= t("raif.admin.common.failed") %></span>
+              <% elsif agent.started_at? %>
+                <span class="badge bg-warning text-dark"><%= t("raif.admin.common.in_progress") %></span>
+              <% end %>
+            </td>
+            <td>
+              <%= link_to "View", raif.admin_prompt_studio_agent_path(agent), class: "btn btn-sm btn-outline-primary" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <div class="mt-3"><%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %></div>
+<% elsif @selected_type.present? %>
+  <div class="alert alert-info">
+    <%= t("raif.admin.prompt_studio.common.no_instances") %>
+  </div>
+<% end %>

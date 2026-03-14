@@ -66,9 +66,9 @@ For example, say you are implementing a customer support chatbot in your applica
 rails generate raif:conversation CustomerSupport
 ```
 
-This will create a new conversation type in `app/models/raif/conversations/customer_support.rb`.
+This will create a new conversation type in `app/models/raif/conversations/customer_support.rb` along with a system prompt [template](../learn_more/prompt_templates) at `app/views/raif/conversations/customer_support.system_prompt.erb`.
 
-You can then customize the system prompt, initial message, and available [model tools](model_tools) for that conversation type:
+You can define the system prompt either in the template or by overriding methods in the class. You can also customize the initial message and available [model tools](model_tools):
 
 ```ruby
 class Raif::Conversations::CustomerSupport < Raif::Conversation
