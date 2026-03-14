@@ -89,7 +89,7 @@ GEM
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
       uri (>= 0.13.1)
-    addressable (2.8.8)
+    addressable (2.8.9)
       public_suffix (>= 2.0.2, < 8.0)
     annotaterb (4.22.0)
       activerecord (>= 6.0.0)
@@ -228,7 +228,7 @@ GEM
       reline (>= 0.4.2)
     jmespath (1.6.2)
     json (2.19.1)
-    json-schema (6.1.0)
+    json-schema (6.2.0)
       addressable (~> 2.8)
       bigdecimal (>= 3.1, < 5)
     language_server-protocol (3.17.0.5)
@@ -317,7 +317,7 @@ GEM
     psych (5.3.1)
       date
       stringio
-    public_suffix (7.0.2)
+    public_suffix (7.0.5)
     puma (7.2.0)
       nio4r (~> 2.0)
     racc (1.8.1)
