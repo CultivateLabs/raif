@@ -157,6 +157,8 @@ Raif.configure do |config|
   #   open_router_minimax_m2_5
   #   open_router_mistral_large_3_2512
   #   open_router_mistral_small_3_2_24b
+  #   open_router_gemini_3_1_pro_preview
+  #   open_router_gemini_3_1_flash_lite_preview
   #   open_router_open_ai_gpt_oss_120b
   #   open_router_open_ai_gpt_oss_20b
   #   google_gemini_3_1_pro
