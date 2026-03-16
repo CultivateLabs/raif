@@ -530,6 +530,18 @@ module Raif
           output_token_cost: 12.0 / 1_000_000,
         },
         {
+          key: :open_router_gemini_3_1_pro_preview,
+          api_name: "google/gemini-3.1-pro-preview",
+          input_token_cost: 2.0 / 1_000_000,
+          output_token_cost: 12.0 / 1_000_000,
+        },
+        {
+          key: :open_router_gemini_3_1_flash_lite_preview,
+          api_name: "google/gemini-3.1-flash-lite-preview",
+          input_token_cost: 0.25 / 1_000_000,
+          output_token_cost: 1.5 / 1_000_000,
+        },
+        {
           key: :open_router_grok_4,
           api_name: "x-ai/grok-4",
           input_token_cost: 3.0 / 1_000_000,
