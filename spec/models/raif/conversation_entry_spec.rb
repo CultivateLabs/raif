@@ -126,6 +126,32 @@ RSpec.describe Raif::ConversationEntry, type: :model do
       end
     end
 
+    context "when the response includes a tool call with extra arguments" do
+      before do
+        tool_calls = [{
+          "name": "test_model_tool",
+          "arguments": { "items": [{ "title": "foo", "description": "bar" }], "length": 2000, "offset": 0 }
+        }]
+
+        stub_raif_conversation(conversation) do |_messages, model_completion|
+          model_completion.response_tool_calls = tool_calls
+
+          "Hello"
+        end
+      end
+
+      it "strips the extra arguments and completes successfully" do
+        entry.process_entry!
+        expect(entry.reload).to be_completed
+        expect(entry.raif_model_tool_invocations.count).to eq(1)
+
+        invocation = entry.raif_model_tool_invocations.first
+        expect(invocation.tool_arguments).to eq({ "items" => [{ "title" => "foo", "description" => "bar" }] })
+        expect(invocation.tool_arguments).not_to have_key("length")
+        expect(invocation.tool_arguments).not_to have_key("offset")
+      end
+    end
+
     context "when the response does not include a tool call" do
       before do
         stub_raif_conversation(conversation) do |_messages|
