@@ -125,19 +125,23 @@ module Raif
 
         tool_call = model_completion.response_tool_calls.first
 
-        # Add the tool call to history
+        tool_name = tool_call["name"]
+        tool_arguments = tool_call["arguments"]
+        tool_klass = available_model_tools_map[tool_name]
+
+        # Prepare tool arguments before recording to history so the history
+        # accurately reflects what was actually invoked
+        tool_arguments = tool_klass.prepare_tool_arguments(tool_arguments) if tool_klass.present?
+
+        # Add the tool call to history (with prepared arguments if tool is known)
         tool_call_message = Raif::Messages::ToolCall.new(
           provider_tool_call_id: tool_call["provider_tool_call_id"],
           name: tool_call["name"],
-          arguments: tool_call["arguments"],
+          arguments: tool_arguments,
           assistant_message: assistant_response_message,
           provider_metadata: tool_call["provider_metadata"]
         )
         add_conversation_history_entry(tool_call_message.to_h)
-
-        tool_name = tool_call["name"]
-        tool_arguments = tool_call["arguments"]
-        tool_klass = available_model_tools_map[tool_name]
 
         # The model tried to use a tool that doesn't exist
         if tool_klass.blank?
