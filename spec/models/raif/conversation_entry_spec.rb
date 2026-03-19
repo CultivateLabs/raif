@@ -120,7 +120,7 @@ RSpec.describe Raif::ConversationEntry, type: :model do
             "type" => "tool_call_result",
             "provider_tool_call_id" => "abc123",
             "name" => "current_temperature_test_tool",
-            "result" => { "temperature" => 72 }
+            "result" => "The current temperature for zip code 12345 is 72 degrees Fahrenheit."
           }
         ])
       end
@@ -190,6 +190,33 @@ RSpec.describe Raif::ConversationEntry, type: :model do
           expect(entry.reload).to be_completed
           expect(entry.model_response_message).to eq("Here's a <a href=\"https://example.com\">link</a>. It's a good link.")
         end
+      end
+    end
+
+    context "when prompting fails after persisting a model completion" do
+      let!(:model_completion) do
+        Raif::ModelCompletion.create!(
+          source: entry,
+          llm_model_key: conversation.llm_model_key,
+          model_api_name: "test-model",
+          response_format: conversation.response_format.to_sym,
+          available_model_tools: conversation.available_model_tools,
+          messages: [],
+          system_prompt: conversation.build_system_prompt
+        )
+      end
+
+      before do
+        allow(conversation).to receive(:prompt_model_for_entry_response).with(entry: entry).and_return(nil)
+      end
+
+      it "preserves the failed model completion row for debugging" do
+        expect do
+          entry.process_entry!
+        end.not_to change { Raif::ModelCompletion.where(id: model_completion.id).count }
+
+        expect(entry.reload).to be_failed
+        expect(entry.raif_model_completion).to eq(model_completion)
       end
     end
   end
