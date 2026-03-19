@@ -143,6 +143,8 @@ RSpec.describe Raif::Llm, type: :model do
       end
 
       it "records failure when the model returns no text and no tool calls" do
+        allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+
         allow(test_llm).to receive(:perform_model_completion!) do |model_completion|
           model_completion.response_array = [{ "text" => "" }]
           model_completion.prompt_tokens = 100
@@ -318,6 +320,13 @@ RSpec.describe Raif::Llm, type: :model do
           llm.chat(messages: messages)
         end.to raise_error(Faraday::ConnectionFailed)
       end
+    end
+  end
+
+  describe "#retriable_exceptions" do
+    it "returns the configured retriable exceptions by default" do
+      llm = Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api")
+      expect(llm.send(:retriable_exceptions)).to eq(Raif.config.llm_request_retriable_exceptions)
     end
   end
 

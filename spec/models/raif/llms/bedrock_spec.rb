@@ -283,6 +283,103 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
   end
 
+  describe "#retriable_exceptions" do
+    it "includes BlankResponseError for gpt-oss models" do
+      gpt_oss_llm = Raif::Llms::Bedrock.new(key: :bedrock_gpt_oss_120b, api_name: "openai.gpt-oss-120b-1:0")
+      expect(gpt_oss_llm.retriable_exceptions).to include(Raif::Errors::BlankResponseError)
+    end
+
+    it "does not include BlankResponseError for non-gpt-oss Bedrock models" do
+      expect(llm.retriable_exceptions).not_to include(Raif::Errors::BlankResponseError)
+    end
+  end
+
+  describe "blank response retry behavior" do
+    let(:original_gpt_oss_config) { Raif.llm_config(:bedrock_gpt_oss_120b)&.dup }
+
+    let(:gpt_oss_llm) do
+      Raif::Llms::Bedrock.new(key: :bedrock_gpt_oss_120b, api_name: "openai.gpt-oss-120b-1:0")
+    end
+
+    let(:blank_response) do
+      content = [Aws::BedrockRuntime::Types::ContentBlock::Text.new(text: "")]
+      message = Aws::BedrockRuntime::Types::Message.new(role: "assistant", content: content)
+      output = Aws::BedrockRuntime::Types::ConverseOutput::Message.new(message: message)
+      usage = Aws::BedrockRuntime::Types::TokenUsage.new(input_tokens: 100, output_tokens: 0, total_tokens: 100)
+      Aws::BedrockRuntime::Types::ConverseResponse.new(output: output, usage: usage, stop_reason: "end_turn")
+    end
+
+    let(:successful_response) do
+      content = [Aws::BedrockRuntime::Types::ContentBlock::Text.new(text: "Here is the answer.")]
+      message = Aws::BedrockRuntime::Types::Message.new(role: "assistant", content: content)
+      output = Aws::BedrockRuntime::Types::ConverseOutput::Message.new(message: message)
+      usage = Aws::BedrockRuntime::Types::TokenUsage.new(input_tokens: 100, output_tokens: 50, total_tokens: 150)
+      Aws::BedrockRuntime::Types::ConverseResponse.new(output: output, usage: usage, stop_reason: "end_turn")
+    end
+
+    before do
+      allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
+      allow(Raif.config).to receive(:llm_request_max_retries).and_return(2)
+      allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return(nil)
+      allow(gpt_oss_llm).to receive(:sleep)
+
+      Raif.register_llm(Raif::Llms::Bedrock, { key: :bedrock_gpt_oss_120b, api_name: "openai.gpt-oss-120b-1:0" })
+    end
+
+    after do
+      if original_gpt_oss_config.present?
+        Raif.register_llm(original_gpt_oss_config[:llm_class], original_gpt_oss_config.except(:llm_class))
+      else
+        Raif.llm_registry.delete(:bedrock_gpt_oss_120b)
+      end
+    end
+
+    it "retries a blank response and succeeds on a subsequent attempt" do
+      call_count = 0
+      mock_client = instance_double(Aws::BedrockRuntime::Client)
+      allow(gpt_oss_llm).to receive(:bedrock_client).and_return(mock_client)
+      allow(mock_client).to receive(:converse) do
+        call_count += 1
+        call_count == 1 ? blank_response : successful_response
+      end
+
+      mc = gpt_oss_llm.chat(messages: [{ role: "user", content: "Hello" }])
+
+      expect(mc.completed?).to be true
+      expect(mc.raw_response).to eq("Here is the answer.")
+      expect(mc.retry_count).to eq(1)
+      expect(call_count).to eq(2)
+    end
+
+    it "fails after exhausting retries on persistent blank responses" do
+      mock_client = instance_double(Aws::BedrockRuntime::Client)
+      allow(gpt_oss_llm).to receive(:bedrock_client).and_return(mock_client)
+      allow(mock_client).to receive(:converse).and_return(blank_response)
+
+      expect do
+        gpt_oss_llm.chat(messages: [{ role: "user", content: "Hello" }])
+      end.to raise_error(Raif::Errors::BlankResponseError)
+
+      mc = Raif::ModelCompletion.newest_first.first
+      expect(mc.failed?).to be true
+      expect(mc.retry_count).to eq(2)
+    end
+
+    it "does not retry blank responses for non-gpt-oss Bedrock models" do
+      mock_client = instance_double(Aws::BedrockRuntime::Client)
+      allow(llm).to receive(:bedrock_client).and_return(mock_client)
+      allow(mock_client).to receive(:converse).and_return(blank_response)
+
+      expect do
+        llm.chat(messages: [{ role: "user", content: "Hello" }])
+      end.to raise_error(Raif::Errors::BlankResponseError)
+
+      mc = Raif::ModelCompletion.newest_first.first
+      expect(mc.failed?).to be true
+      expect(mc.retry_count).to eq(0)
+    end
+  end
+
   describe "#build_tools_parameter" do
     let(:model_completion) do
       Raif::ModelCompletion.new(
