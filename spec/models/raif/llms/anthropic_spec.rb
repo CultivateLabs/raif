@@ -166,14 +166,13 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         end
       end
 
-      it "returns nil when content is missing" do
-        model_completion = llm.chat(
-          messages: [{ role: "user", content: "Hello" }],
-          response_format: :json
-        )
-
-        expect(model_completion.raw_response).to be_nil
-        expect(model_completion.response_tool_calls).to be_nil
+      it "raises BlankResponseError when content is missing" do
+        expect do
+          llm.chat(
+            messages: [{ role: "user", content: "Hello" }],
+            response_format: :json
+          )
+        end.to raise_error(Raif::Errors::BlankResponseError)
       end
     end
 
@@ -758,6 +757,46 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
             }
           ]
         }
+      ])
+    end
+
+    it "consolidates consecutive user-role tool results and user messages" do
+      messages = [
+        {
+          "type" => "tool_call_result",
+          "provider_tool_call_id" => "call_123",
+          "name" => "fetch_url",
+          "result" => { "content" => "Page content here" }
+        },
+        { "role" => "user", "content" => "Summarize it" }
+      ]
+
+      expect(llm.format_messages(messages)).to eq([
+        {
+          "role" => "user",
+          "content" => [
+            {
+              "type" => "tool_result",
+              "tool_use_id" => "call_123",
+              "content" => "{\"content\":\"Page content here\"}"
+            },
+            { "type" => "text", "text" => "Summarize it" }
+          ]
+        }
+      ])
+    end
+
+    it "leaves non-consecutive same-role messages unchanged" do
+      messages = [
+        { "role" => "user", "content" => "First" },
+        { "role" => "assistant", "content" => "Second" },
+        { "role" => "user", "content" => "Third" }
+      ]
+
+      expect(llm.format_messages(messages)).to eq([
+        { "role" => "user", "content" => [{ "type" => "text", "text" => "First" }] },
+        { "role" => "assistant", "content" => [{ "type" => "text", "text" => "Second" }] },
+        { "role" => "user", "content" => [{ "type" => "text", "text" => "Third" }] }
       ])
     end
   end

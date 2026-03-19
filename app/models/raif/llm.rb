@@ -105,19 +105,24 @@ module Raif
         perform_model_completion!(model_completion, &block)
       end
 
+      # Some providers can return a transport-level "success" with no assistant text
+      # and no tool calls. Treat that as a failed completion so callers do not see a
+      # useless completed record and can recover explicitly.
+      ensure_model_completion_present!(model_completion)
+
       model_completion.completed!
       model_completion
     rescue Raif::Errors::StreamingError => e
       Rails.logger.error("Raif streaming error -- code: #{e.code} -- type: #{e.type} -- message: #{e.message} -- event: #{e.event}")
-      model_completion&.record_failure!(e)
+      model_completion&.record_failure!(e) unless model_completion&.failed?
       raise e
     rescue Faraday::Error => e
       Raif.logger.error("LLM API request failed (status: #{e.response_status}): #{e.message}")
       Raif.logger.error(e.response_body)
-      model_completion&.record_failure!(e)
+      model_completion&.record_failure!(e) unless model_completion&.failed?
       raise e
     rescue StandardError => e
-      model_completion&.record_failure!(e)
+      model_completion&.record_failure!(e) unless model_completion&.failed?
       raise e
     end
 
@@ -175,6 +180,18 @@ module Raif
 
     def streaming_response_type
       raise NotImplementedError, "#{self.class.name} must implement #streaming_response_type"
+    end
+
+    def ensure_model_completion_present!(model_completion)
+      # response_array/raw provider data may still be present for debugging even when
+      # the normalized response has no text or tool calls.
+      return if model_completion.raw_response.present? || model_completion.response_tool_calls.present?
+
+      error = Raif::Errors::BlankResponseError.new(
+        "Model completion #{model_completion.id} returned no text response and no tool calls"
+      )
+      model_completion.record_failure!(error)
+      raise error
     end
 
     def streaming_chunk_handler(model_completion, &block)
