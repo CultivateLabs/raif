@@ -160,6 +160,8 @@ end
 
 Once the tool invocation is completed (via the tool's [`process_invocation` method](../key_raif_concepts/model_tools#processing-model-tool-invocations)), you can provide the result back to the LLM as an observation. For example, if you're implementing a `GoogleSearch` tool, you'll want to return the search results.
 
+If your tool returns `true` from `triggers_observation_to_model?`, Raif will use `observation_for_invocation` when building the next conversation turn for the LLM. The raw `tool_invocation.result` is still persisted for admin pages and custom UI rendering.
+
 You implement the `observation_for_invocation` method in your model tool class to control what is provided back to the LLM:
 
 ```ruby
