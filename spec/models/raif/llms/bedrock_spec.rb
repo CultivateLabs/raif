@@ -559,6 +559,47 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       messages = [{ "role" => "user", "content" => [file] }]
       expect { llm.format_messages(messages) }.to raise_error(Raif::Errors::UnsupportedFeatureError)
     end
+
+    it "consolidates consecutive user-role tool results and user messages" do
+      messages = [
+        {
+          "type" => "tool_call_result",
+          "provider_tool_call_id" => "call_123",
+          "name" => "fetch_url",
+          "result" => { "content" => "Page content here" }
+        },
+        { "role" => "user", "content" => "Summarize it" }
+      ]
+
+      expect(llm.format_messages(messages)).to eq([
+        {
+          "role" => "user",
+          "content" => [
+            {
+              "tool_result" => {
+                "tool_use_id" => "call_123",
+                "content" => [{ "json" => { "content" => "Page content here" } }]
+              }
+            },
+            { "text" => "Summarize it" }
+          ]
+        }
+      ])
+    end
+
+    it "leaves non-consecutive same-role messages unchanged" do
+      messages = [
+        { "role" => "user", "content" => "First" },
+        { "role" => "assistant", "content" => "Second" },
+        { "role" => "user", "content" => "Third" }
+      ]
+
+      expect(llm.format_messages(messages)).to eq([
+        { "role" => "user", "content" => [{ "text" => "First" }] },
+        { "role" => "assistant", "content" => [{ "text" => "Second" }] },
+        { "role" => "user", "content" => [{ "text" => "Third" }] }
+      ])
+    end
   end
 
   describe "#build_forced_tool_choice" do
