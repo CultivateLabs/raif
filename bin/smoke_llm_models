@@ -1,4 +1,38 @@
 #!/usr/bin/env sh
+#
+# Smoke-test registered LLM models by sending a simple prompt and reporting the result.
+#
+# Usage:
+#   bin/smoke_llm_models [ALL|provider|model_key ...] [options]
+#
+# Options:
+#   -p, --prompt PROMPT   Prompt to send to each model (default: "Reply with exactly: ok")
+#   --list                List all registered model keys and exit
+#
+# Selectors:
+#   ALL                          Test every registered model
+#   anthropic                    All Anthropic (direct API) models
+#   bedrock                      All AWS Bedrock models
+#   open_ai                      All OpenAI Completions API models
+#   open_ai_responses            All OpenAI Responses API models
+#   open_router                  All OpenRouter models
+#   google                       All Google models
+#   <model_key>                  A specific model key (e.g. anthropic_claude_4_6_opus)
+#
+# Environment variables:
+#   ANTHROPIC_API_KEY            Required for Anthropic models
+#   OPENAI_API_KEY               Required for OpenAI models
+#   OPEN_ROUTER_API_KEY          Required for OpenRouter models (also accepts OPENROUTER_API_KEY)
+#   GOOGLE_AI_API_KEY            Required for Google models (also accepts GOOGLE_API_KEY)
+#   AWS_REGION                   AWS region for Bedrock (default: us-east-1)
+#   RAIF_SMOKE_MODELS            Comma-separated selectors (used when no arguments are given)
+#
+# Examples:
+#   bin/smoke_llm_models ALL
+#   bin/smoke_llm_models anthropic bedrock
+#   bin/smoke_llm_models anthropic_claude_4_6_opus open_ai_gpt_5_4
+#   bin/smoke_llm_models open_ai_responses --prompt "Reply with exactly: ping"
+#   bin/smoke_llm_models --list
 
 set -eu
 

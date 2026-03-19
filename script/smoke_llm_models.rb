@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# See bin/smoke_llm_models for usage instructions.
+
 require "optparse"
 
 DEFAULT_PROMPT = "Reply with exactly: ok"

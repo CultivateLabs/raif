@@ -77,11 +77,13 @@ class Raif::ModelTool
     end
 
     def invoke_tool(provider_tool_call_id:, tool_arguments:, source:)
+      prepared_arguments = prepare_tool_arguments(tool_arguments)
+
       tool_invocation = Raif::ModelToolInvocation.new(
         provider_tool_call_id: provider_tool_call_id,
         source: source,
         tool_type: name,
-        tool_arguments: tool_arguments
+        tool_arguments: prepared_arguments
       )
 
       ActiveRecord::Base.transaction do
@@ -94,6 +96,46 @@ class Raif::ModelTool
     rescue StandardError => e
       tool_invocation.failed!
       raise e
+    end
+
+    # Prepares tool arguments before validation and invocation. Override in subclasses
+    # to add tool-specific argument processing (e.g. type coercion, default injection).
+    # The base implementation strips keys not declared in the tool's argument schema,
+    # which handles LLMs that hallucinate extra parameters.
+    #
+    # @param arguments [Hash] The raw tool arguments from the LLM response
+    # @return [Hash] The prepared arguments ready for validation and processing
+    def prepare_tool_arguments(arguments)
+      strip_unknown_tool_arguments(arguments)
+    end
+
+  private
+
+    # Removes keys from the arguments hash that are not declared in the tool's
+    # argument schema. Logs a warning when keys are stripped so hallucination
+    # patterns can be monitored. Normalizes all keys to strings for consistent
+    # comparison since the schema builder uses symbol keys and LLM responses
+    # use string keys.
+    #
+    # @param arguments [Hash] The raw tool arguments
+    # @return [Hash] The arguments with only schema-declared keys
+    def strip_unknown_tool_arguments(arguments)
+      return arguments unless arguments.is_a?(Hash)
+
+      schema_properties = tool_arguments_schema[:properties] || tool_arguments_schema["properties"]
+      return arguments if schema_properties.blank?
+
+      normalized_arguments = arguments.deep_stringify_keys
+      allowed_keys = schema_properties.keys.map(&:to_s)
+      dropped_keys = normalized_arguments.keys - allowed_keys
+
+      if dropped_keys.any?
+        Rails.logger.warn(
+          "[Raif::ModelTool] Stripped unexpected tool arguments for #{name}: #{dropped_keys.join(", ")}"
+        )
+      end
+
+      normalized_arguments.slice(*allowed_keys)
     end
   end
 

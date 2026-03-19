@@ -98,6 +98,47 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       ])
     end
 
+    it "strips extra tool arguments and proceeds with invocation" do
+      stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
+        .to_return(status: 200, body: { query: { search: [] } }.to_json)
+
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_123",
+              "name" => "wikipedia_search",
+              "arguments" => { "query" => "capital of France", "length" => 2000, "offset" => 0 }
+            }
+          ]
+          "Let me search for that."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+          "The answer is Paris."
+        end
+      end
+
+      agent.run!
+
+      expect(agent).to be_completed
+
+      # Verify the tool was invoked with only the valid key
+      tool_invocation = agent.raif_model_tool_invocations.find_by(tool_type: "Raif::ModelTools::WikipediaSearch")
+      expect(tool_invocation).to be_present
+      expect(tool_invocation.tool_arguments).to eq("query" => "capital of France")
+
+      # Verify conversation history records the prepared (not raw) arguments
+      tool_call_entry = agent.conversation_history.find { |e| e["name"] == "wikipedia_search" }
+      expect(tool_call_entry["arguments"]).to eq("query" => "capital of France")
+      expect(tool_call_entry["arguments"]).not_to have_key("length")
+    end
+
     it "handles a tool call with invalid tool arguments" do
       stub_raif_agent(agent) do |_messages, model_completion|
         model_completion.response_tool_calls = [
@@ -121,7 +162,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         },
         {
           "name" => "wikipedia_search",
-          "arguments" => { "search_term" => "jingle bells" },
+          "arguments" => {},
           "type" => "tool_call",
           "assistant_message" => "I'll try to use Wikipedia search with wrong arguments."
         },
