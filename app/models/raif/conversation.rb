@@ -155,15 +155,18 @@ class Raif::Conversation < Raif::ApplicationRecord
       tool_invocations = entry.raif_model_tool_invocations.to_a
 
       if tool_invocations.any?
-        # First tool call includes the assistant's message (if any)
+        # First tool call includes the assistant's message (if any).
+        # For the result payload we send the model-facing observation when the tool
+        # opts into observations, while keeping the raw invocation.result persisted
+        # for admin/UI rendering.
         first_invocation = tool_invocations.shift
         messages << first_invocation.as_tool_call_message(assistant_message: entry.model_response_message.presence)
-        messages << first_invocation.as_tool_call_result_message
+        messages << first_invocation.as_tool_call_result_message(result: tool_result_for_llm(first_invocation))
 
         # Remaining tool calls (if multiple)
         tool_invocations.each do |tool_invocation|
           messages << tool_invocation.as_tool_call_message
-          messages << tool_invocation.as_tool_call_result_message
+          messages << tool_invocation.as_tool_call_result_message(result: tool_result_for_llm(tool_invocation))
         end
       elsif entry.model_response_message.present?
         # No tool calls, just a regular assistant response
@@ -176,6 +179,19 @@ class Raif::Conversation < Raif::ApplicationRecord
 
   def available_user_tool_classes
     available_user_tools.map(&:constantize)
+  end
+
+private
+
+  def tool_result_for_llm(tool_invocation)
+    # Some tools persist a compact structured result for display/admin purposes but
+    # need to send richer text/XML back to the model for the continuation turn.
+    return tool_invocation.result unless tool_invocation.triggers_observation_to_model?
+
+    tool = tool_invocation.tool
+    return tool_invocation.result unless tool.respond_to?(:observation_for_invocation)
+
+    tool.observation_for_invocation(tool_invocation).presence || tool_invocation.result
   end
 
 end

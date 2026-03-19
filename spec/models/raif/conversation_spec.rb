@@ -121,6 +121,36 @@ RSpec.describe Raif::Conversation, type: :model do
       expect(conversation.llm_messages).to eq(messages)
     end
 
+    it "uses tool observations for tool result messages when the tool triggers observations" do
+      conversation = FB.create(:raif_conversation, creator: creator)
+      entry = FB.create(:raif_conversation_entry, :completed, raif_conversation: conversation, creator: creator)
+      entry.update_columns(model_response_message: nil)
+
+      tool_invocation = FB.create(
+        :raif_model_tool_invocation,
+        source: entry,
+        tool_type: "Raif::ModelTools::CurrentTemperatureTestTool",
+        tool_arguments: { "zip_code" => "60601" }
+      )
+      tool_invocation.update!(result: { "temperature" => 72 }, provider_tool_call_id: "call_789")
+
+      expect(conversation.llm_messages).to eq([
+        { "role" => "user", "content" => entry.user_message },
+        {
+          "type" => "tool_call",
+          "provider_tool_call_id" => "call_789",
+          "name" => "current_temperature_test_tool",
+          "arguments" => { "zip_code" => "60601" }
+        },
+        {
+          "type" => "tool_call_result",
+          "provider_tool_call_id" => "call_789",
+          "name" => "current_temperature_test_tool",
+          "result" => "The current temperature for zip code 60601 is 72 degrees Fahrenheit."
+        }
+      ])
+    end
+
     describe "llm_messages_max_length" do
       it "defaults to the config value on initialization" do
         conversation = Raif::Conversation.new(creator: creator)

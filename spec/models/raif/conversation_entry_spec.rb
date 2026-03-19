@@ -120,7 +120,7 @@ RSpec.describe Raif::ConversationEntry, type: :model do
             "type" => "tool_call_result",
             "provider_tool_call_id" => "abc123",
             "name" => "current_temperature_test_tool",
-            "result" => { "temperature" => 72 }
+            "result" => "The current temperature for zip code 12345 is 72 degrees Fahrenheit."
           }
         ])
       end
