@@ -3,6 +3,12 @@
 module Raif::Concerns::Llms::Anthropic::MessageFormatting
   extend ActiveSupport::Concern
 
+  def format_messages(messages)
+    # Anthropic tool results come back as user-role content blocks, so conversation
+    # continuations may need adjacent user messages collapsed after formatting.
+    consolidate_consecutive_role_messages(super, content_key: "content")
+  end
+
   def format_model_image_input_message(image_input)
     if image_input.source_type == :url
       {

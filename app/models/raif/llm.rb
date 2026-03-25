@@ -103,21 +103,22 @@ module Raif
 
       retry_with_backoff(model_completion) do
         perform_model_completion!(model_completion, &block)
+        ensure_model_completion_present!(model_completion)
       end
 
       model_completion.completed!
       model_completion
     rescue Raif::Errors::StreamingError => e
       Rails.logger.error("Raif streaming error -- code: #{e.code} -- type: #{e.type} -- message: #{e.message} -- event: #{e.event}")
-      model_completion&.record_failure!(e)
+      model_completion&.record_failure!(e) unless model_completion&.failed?
       raise e
     rescue Faraday::Error => e
       Raif.logger.error("LLM API request failed (status: #{e.response_status}): #{e.message}")
       Raif.logger.error(e.response_body)
-      model_completion&.record_failure!(e)
+      model_completion&.record_failure!(e) unless model_completion&.failed?
       raise e
     rescue StandardError => e
-      model_completion&.record_failure!(e)
+      model_completion&.record_failure!(e) unless model_completion&.failed?
       raise e
     end
 
@@ -150,6 +151,10 @@ module Raif
 
   private
 
+    def retriable_exceptions
+      Raif.config.llm_request_retriable_exceptions
+    end
+
     def retry_with_backoff(model_completion)
       retries = 0
       max_retries = Raif.config.llm_request_max_retries
@@ -158,11 +163,11 @@ module Raif
 
       begin
         yield
-      rescue *Raif.config.llm_request_retriable_exceptions => e
+      rescue *retriable_exceptions => e
         retries += 1
         if retries <= max_retries
           delay = [base_delay * (2**(retries - 1)), max_delay].min
-          Raif.logger.warn("Retrying LLM API request after error: #{e.message}. Attempt #{retries}/#{max_retries}. Waiting #{delay} seconds...")
+          log_retry(e, model_completion, retries, max_retries, delay)
           model_completion.increment!(:retry_count)
           sleep delay
           retry
@@ -173,8 +178,33 @@ module Raif
       end
     end
 
+    def log_retry(error, model_completion, attempt, max_retries, delay)
+      if error.is_a?(Raif::Errors::BlankResponseError)
+        has_reasoning = model_completion.response_array&.any? do |block|
+          block.is_a?(Hash) ? block.key?("reasoning_content") : block.respond_to?(:reasoning_content)
+        end
+        Raif.logger.warn(
+          "Blank response retry #{attempt}/#{max_retries} for #{api_name} " \
+            "(ModelCompletion##{model_completion.id}, source: #{model_completion.source_type}##{model_completion.source_id}, " \
+            "completion_tokens: #{model_completion.completion_tokens}, reasoning_content_present: #{has_reasoning}). " \
+            "Waiting #{delay} seconds..."
+        )
+      else
+        Raif.logger.warn("Retrying LLM API request after error: #{error.message}. Attempt #{attempt}/#{max_retries}. Waiting #{delay} seconds...")
+      end
+    end
+
     def streaming_response_type
       raise NotImplementedError, "#{self.class.name} must implement #streaming_response_type"
+    end
+
+    def ensure_model_completion_present!(model_completion)
+      # response_array/raw provider data may still be present for debugging even when
+      # the normalized response has no text or tool calls.
+      return if model_completion.raw_response.present? || model_completion.response_tool_calls.present?
+
+      raise Raif::Errors::BlankResponseError,
+        "Model completion #{model_completion.id} returned no text response and no tool calls"
     end
 
     def streaming_chunk_handler(model_completion, &block)

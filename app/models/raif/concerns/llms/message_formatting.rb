@@ -45,4 +45,34 @@ module Raif::Concerns::Llms::MessageFormatting
     { "type" => "text", "text" => content }
   end
 
+  def consolidate_consecutive_role_messages(messages, content_key:)
+    # Bedrock, Anthropic, and Google all model tool results as normal role-based
+    # message content blocks. After formatting, a tool result can therefore be a
+    # "user" message immediately followed by the next user turn. Those providers
+    # expect alternating roles, so their adapters collapse adjacent same-role blocks.
+    return messages if messages.size <= 1
+
+    messages.each_with_object([]) do |message, consolidated|
+      candidate = message.deep_dup
+      previous_message = consolidated.last
+
+      if mergeable_consecutive_role_messages?(previous_message, candidate, content_key:)
+        previous_message[content_key] += candidate[content_key]
+      else
+        consolidated << candidate
+      end
+    end
+  end
+
+private
+
+  def mergeable_consecutive_role_messages?(previous_message, message, content_key:)
+    previous_message.is_a?(Hash) &&
+      message.is_a?(Hash) &&
+      previous_message["role"].present? &&
+      previous_message["role"] == message["role"] &&
+      previous_message[content_key].is_a?(Array) &&
+      message[content_key].is_a?(Array)
+  end
+
 end
