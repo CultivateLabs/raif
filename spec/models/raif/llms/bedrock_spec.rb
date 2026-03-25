@@ -275,6 +275,13 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       expect(resolved).to eq("openai.gpt-oss-20b-1:0")
     end
 
+    it "does not prefix deepseek model ids when a prefix is configured" do
+      allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return("us")
+
+      resolved = llm.send(:resolve_model_api_name, "deepseek.v3.2")
+      expect(resolved).to eq("deepseek.v3.2")
+    end
+
     it "does not double-prefix model ids that already have the configured prefix" do
       allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return("us")
 

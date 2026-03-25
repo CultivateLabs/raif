@@ -162,9 +162,10 @@ private
     return api_name if prefix.blank?
     return api_name if api_name.start_with?("#{prefix}.")
 
-    # GPT-OSS Bedrock model IDs are provider IDs (e.g. openai.gpt-oss-20b-1:0),
-    # not inference profile IDs, so they should not be prefixed.
+    # Some Bedrock model IDs are provider IDs (not inference profile IDs),
+    # so they should not be prefixed.
     return api_name if api_name.start_with?("openai.gpt-oss-")
+    return api_name if api_name.start_with?("deepseek.")
 
     "#{prefix}.#{api_name}"
   end

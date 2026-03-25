@@ -470,7 +470,7 @@ module Raif
           api_name: "deepseek.v3.2",
           input_token_cost: 0.62 / 1_000_000,
           output_token_cost: 1.85 / 1_000_000,
-          max_completion_tokens: 164_000
+          max_completion_tokens: 32_768
         },
         {
           key: :bedrock_deepseek_r1,
