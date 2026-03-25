@@ -50,15 +50,6 @@ private
   end
 
   def update_model_completion(model_completion, resp)
-    if ENV["RAIF_DEBUG_STREAMING"].present?
-      # Temporary staging aid while we validate Bedrock GPT-OSS behavior.
-      # Remove this once we have confidence in the Bedrock-specific fixes.
-      Raif.logger.debug(
-        "Bedrock completion for ModelCompletion##{model_completion.id}: " \
-          "stop_reason=#{resp.stop_reason}, output_tokens=#{resp.usage&.output_tokens}"
-      )
-    end
-
     model_completion.raw_response = if model_completion.response_format_json?
       extract_json_response(resp)
     else
