@@ -3,6 +3,13 @@
 module Raif::Concerns::Llms::Bedrock::MessageFormatting
   extend ActiveSupport::Concern
 
+  def format_messages(messages)
+    # Bedrock tool results are represented as user-role content blocks, so a
+    # tool_result followed by the next user prompt must be merged into one user
+    # message before sending it to the provider.
+    consolidate_consecutive_role_messages(super, content_key: "content")
+  end
+
   def format_string_message(content, role: nil)
     { "text" => content }
   end

@@ -3,6 +3,8 @@
 class Raif::StreamingResponses::Bedrock
 
   def initialize_new_message
+    @reasoning_content_blocks = {}
+
     # Initialize empty AWS response object
     @message = Aws::BedrockRuntime::Types::Message.new(
       role: "assistant",
@@ -62,9 +64,12 @@ class Raif::StreamingResponses::Bedrock
         )
 
         @message.content[index].tool_use.input += event.delta.tool_use.input
+      elsif event.delta.is_a?(Aws::BedrockRuntime::Types::ContentBlockDelta::ReasoningContent)
+        accumulate_reasoning_content(index, event.delta.reasoning_content)
       end
     when :content_block_stop
-      content_block = @message.content[event.content_block_index]
+      index = event.content_block_index
+      content_block = @message.content[index]
 
       if content_block&.tool_use&.input.is_a?(String)
         begin
@@ -73,6 +78,8 @@ class Raif::StreamingResponses::Bedrock
           # If parsing fails, leave as a string
         end
       end
+
+      finalize_reasoning_content(index)
     when :message_stop
       @response.stop_reason = event.stop_reason
     when :metadata
@@ -84,6 +91,58 @@ class Raif::StreamingResponses::Bedrock
 
   def current_response
     @response
+  end
+
+private
+
+  def accumulate_reasoning_content(index, reasoning_delta)
+    reasoning_content = reasoning_content_for(index)
+    reasoning_content[:seen] = true
+
+    case reasoning_delta
+    when Aws::BedrockRuntime::Types::ReasoningContentBlockDelta::Text
+      reasoning_content[:text] << reasoning_delta.text.to_s
+    when Aws::BedrockRuntime::Types::ReasoningContentBlockDelta::Signature
+      reasoning_content[:signature] = reasoning_delta.signature
+    when Aws::BedrockRuntime::Types::ReasoningContentBlockDelta::RedactedContent
+      reasoning_content[:redacted_content] << reasoning_delta.redacted_content.to_s
+    else
+      reasoning_content[:unknown] = true
+    end
+  end
+
+  def finalize_reasoning_content(index)
+    reasoning_content = @reasoning_content_blocks.delete(index)
+    return unless reasoning_content&.dig(:seen)
+
+    @message.content[index] = Aws::BedrockRuntime::Types::ContentBlock::ReasoningContent.new(
+      reasoning_content: build_reasoning_content(reasoning_content)
+    )
+  end
+
+  def build_reasoning_content(reasoning_content)
+    if reasoning_content[:text].blank? && reasoning_content[:signature].blank? && reasoning_content[:redacted_content].present?
+      return Aws::BedrockRuntime::Types::ReasoningContentBlock::RedactedContent.new(
+        redacted_content: reasoning_content[:redacted_content]
+      )
+    end
+
+    Aws::BedrockRuntime::Types::ReasoningContentBlock::ReasoningText.new(
+      reasoning_text: Aws::BedrockRuntime::Types::ReasoningTextBlock.new(
+        text: reasoning_content[:text],
+        signature: reasoning_content[:signature]
+      )
+    )
+  end
+
+  def reasoning_content_for(index)
+    @reasoning_content_blocks[index] ||= {
+      seen: false,
+      text: +"",
+      signature: nil,
+      redacted_content: +"",
+      unknown: false
+    }
   end
 
 end

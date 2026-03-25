@@ -3,9 +3,10 @@
 module Raif::Concerns::Llms::Google::MessageFormatting
   extend ActiveSupport::Concern
 
-  # Override the base format_messages to use Google's message format
+  # Google uses a different envelope ("parts") and also represents tool results as
+  # user-role messages, so we normalize adjacent same-role messages after formatting.
   def format_messages(messages)
-    messages.map do |message|
+    formatted_messages = messages.map do |message|
       if message.is_a?(Hash) && message["type"] == "tool_call"
         format_tool_call_message(message)
       elsif message.is_a?(Hash) && message["type"] == "tool_call_result"
@@ -20,6 +21,8 @@ module Raif::Concerns::Llms::Google::MessageFormatting
         }
       end
     end
+
+    consolidate_consecutive_role_messages(formatted_messages, content_key: "parts")
   end
 
   def format_string_message(content, role: nil)

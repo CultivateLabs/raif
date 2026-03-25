@@ -74,7 +74,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   def process_entry!
     self.model_response_message = ""
 
-    self.raif_model_completion = raif_conversation.prompt_model_for_entry_response(entry: self) do |model_completion, _delta, _sse_event|
+    model_completion = raif_conversation.prompt_model_for_entry_response(entry: self) do |model_completion, _delta, _sse_event|
       self.raw_response = model_completion.raw_response
       self.model_response_message = raif_conversation.process_model_response_message(
         message: model_completion.parsed_response(force_reparse: true),
@@ -89,6 +89,10 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
 
       broadcast_replace_to raif_conversation
     end
+
+    # Failed prompt attempts can still persist a model completion for debugging.
+    # Avoid clearing the has_one association with nil, which would delete that row.
+    self.raif_model_completion = model_completion if model_completion.present?
 
     if raif_model_completion.present? && (raif_model_completion.parsed_response.present? || raif_model_completion.response_tool_calls.present?)
       extract_message_and_invoke_tools!

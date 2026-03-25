@@ -87,6 +87,8 @@ You should implement `process_invocation` to perform whatever actions are approp
 
 When your tool is being invoked in a [conversation](conversations) or [agent](agents), the results of the tool invocation are provided back to the LLM as an observation.
 
+When `triggers_observation_to_model?` returns `true`, Raif will call `observation_for_invocation` to build the model-facing observation. This observation can differ from the raw `tool_invocation.result`, which remains persisted for rendering and inspection.
+
 To control the manner in which the result is provided to the LLM, implement the `observation_for_invocation` method.
 
 ## Using Model Tools

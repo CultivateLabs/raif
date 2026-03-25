@@ -826,6 +826,47 @@ RSpec.describe Raif::Llms::Google, type: :model do
         }
       ])
     end
+
+    it "consolidates consecutive user-role tool results and user messages" do
+      messages = [
+        {
+          "type" => "tool_call_result",
+          "provider_tool_call_id" => "call_123",
+          "name" => "fetch_url",
+          "result" => { "content" => "Page content here" }
+        },
+        { "role" => "user", "content" => "Summarize it" }
+      ]
+
+      expect(llm.format_messages(messages)).to eq([
+        {
+          "role" => "user",
+          "parts" => [
+            {
+              "functionResponse" => {
+                "name" => "fetch_url",
+                "response" => { "content" => "Page content here" }
+              }
+            },
+            { "text" => "Summarize it" }
+          ]
+        }
+      ])
+    end
+
+    it "leaves non-consecutive same-role messages unchanged" do
+      messages = [
+        { "role" => "user", "content" => "First" },
+        { "role" => "assistant", "content" => "Second" },
+        { "role" => "user", "content" => "Third" }
+      ]
+
+      expect(llm.format_messages(messages)).to eq([
+        { "role" => "user", "parts" => [{ "text" => "First" }] },
+        { "role" => "model", "parts" => [{ "text" => "Second" }] },
+        { "role" => "user", "parts" => [{ "text" => "Third" }] }
+      ])
+    end
   end
 
   describe "#build_forced_tool_choice" do

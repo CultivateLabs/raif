@@ -56,7 +56,7 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
 
   # Returns tool result in the format expected by LLM message formatting
   # @return [Hash] Hash representation for JSONB storage and LLM APIs
-  def as_tool_call_result_message
+  def as_tool_call_result_message(result: self.result)
     Raif::Messages::ToolCallResult.new(
       provider_tool_call_id: provider_tool_call_id,
       name: tool_name,

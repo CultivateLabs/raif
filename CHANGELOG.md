@@ -2,6 +2,7 @@
 
 - Add runtime durations to admin pages [#357](https://github.com/CultivateLabs/raif/pull/357)
 - Add support for DeepSeek R1 and v3.2 models via AWS Bedrock. [#358](https://github.com/CultivateLabs/raif/pull/358)
+- Fix conversation tool continuations to send `observation_for_invocation` back to the model, treat blank completions as failures, and normalize consecutive same-role messages for Bedrock, Anthropic, and Google.
 
 ## v1.4.0
 
