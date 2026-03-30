@@ -471,4 +471,141 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       end
     end
   end
+
+  describe "#provider_managed_tool_calls" do
+    it "extracts anthropic-style provider-managed web search details" do
+      model_completion = described_class.new(
+        llm_model_key: "anthropic_claude_3_5_haiku",
+        model_api_name: "claude-3-5-haiku-20241022",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_array: [
+          {
+            "type" => "server_tool_use",
+            "id" => "srvtoolu_123",
+            "name" => "web_search",
+            "input" => { "query" => "latest ruby on rails releases" }
+          },
+          {
+            "type" => "web_search_tool_result",
+            "tool_use_id" => "srvtoolu_123",
+            "content" => [
+              {
+                "type" => "web_search_result",
+                "title" => "Ruby on Rails",
+                "url" => "https://rubyonrails.org/?utm_source=test",
+                "page_age" => "1 day ago"
+              }
+            ]
+          }
+        ],
+        citations: [
+          {
+            "title" => "Ruby on Rails",
+            "url" => "https://rubyonrails.org/?utm_source=test"
+          }
+        ]
+      )
+
+      expect(model_completion.provider_managed_tool_calls).to eq([
+        {
+          "tool_name" => "web_search",
+          "provider_tool_call_id" => "srvtoolu_123",
+          "status" => nil,
+          "arguments" => { "query" => "latest ruby on rails releases" },
+          "sources" => [
+            {
+              "title" => "Ruby on Rails",
+              "url" => "https://rubyonrails.org/",
+              "page_age" => "1 day ago"
+            }
+          ],
+          "raw_result" => [
+            {
+              "type" => "web_search_tool_result",
+              "tool_use_id" => "srvtoolu_123",
+              "content" => [
+                {
+                  "type" => "web_search_result",
+                  "title" => "Ruby on Rails",
+                  "url" => "https://rubyonrails.org/?utm_source=test",
+                  "page_age" => "1 day ago"
+                }
+              ]
+            }
+          ],
+          "inferred" => false
+        }
+      ])
+    end
+
+    it "extracts openai-style provider-managed web search details" do
+      model_completion = described_class.new(
+        llm_model_key: "open_ai_responses_gpt_4o",
+        model_api_name: "gpt-4o",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_array: [
+          {
+            "id" => "ws_123",
+            "type" => "web_search_call",
+            "status" => "completed"
+          }
+        ],
+        citations: [
+          {
+            "title" => "Ruby on Rails News",
+            "url" => "https://rubyonrails.org/blog/?utm_source=openai"
+          }
+        ]
+      )
+
+      expect(model_completion.provider_managed_tool_calls).to eq([
+        {
+          "tool_name" => "web_search",
+          "provider_tool_call_id" => "ws_123",
+          "status" => "completed",
+          "arguments" => nil,
+          "sources" => [
+            {
+              "title" => "Ruby on Rails News",
+              "url" => "https://rubyonrails.org/blog/"
+            }
+          ],
+          "raw_result" => nil,
+          "inferred" => false
+        }
+      ])
+    end
+
+    it "infers google web search usage from citations when no explicit tool block is stored" do
+      model_completion = described_class.new(
+        llm_model_key: "google_gemini_2_5_flash",
+        model_api_name: "gemini-2.5-flash",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_array: [{ "text" => "Rails 8.1 was recently released." }],
+        citations: [
+          {
+            "title" => "wikipedia.org",
+            "url" => "https://en.wikipedia.org/wiki/Ruby_on_Rails"
+          }
+        ]
+      )
+
+      expect(model_completion.provider_managed_tool_calls).to eq([
+        {
+          "tool_name" => "web_search",
+          "provider_tool_call_id" => nil,
+          "status" => "completed",
+          "arguments" => nil,
+          "sources" => [
+            {
+              "title" => "wikipedia.org",
+              "url" => "https://en.wikipedia.org/wiki/Ruby_on_Rails"
+            }
+          ],
+          "raw_result" => nil,
+          "inferred" => true
+        }
+      ])
+    end
+  end
 end
