@@ -14,7 +14,7 @@
             <label for="tool_types"><%= t("raif.admin.common.tool_type") %></label>
             <%= select_tag :tool_types,
                   options_for_select([[t("raif.admin.common.all"), "all"]] + @tool_types.map{|type| [type, type] }, @selected_type),
-                  { class: "form-select" } %>
+                  { class: "form-select", data: { controller: "raif--tom-select" } } %>
           </div>
         </div>
         <div class="col-md-2">
