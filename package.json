@@ -24,5 +24,10 @@
   },
   "browserslist": [
     "defaults"
-  ]
+  ],
+  "resolutions": {
+    "brace-expansion": ">=1.1.13",
+    "picomatch": ">=2.3.2",
+    "yaml": ">=2.8.3"
+  }
 }
