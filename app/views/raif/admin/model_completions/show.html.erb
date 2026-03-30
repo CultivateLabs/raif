@@ -104,68 +104,68 @@
       </div>
     </div>
     <% if @model_completion.failed? %>
-    <hr>
-    <div class="row mb-2">
-      <div class="col-md-2"><strong><%= t("raif.admin.common.failed_at") %>:</strong></div>
-      <div class="col-md-10"><small><%= @model_completion.failed_at&.rfc822 || "-" %></small></div>
-    </div>
-    <div class="row mb-2">
-      <div class="col-md-2"><strong><%= t("raif.admin.common.failure_error") %>:</strong></div>
-      <div class="col-md-10"><code><%= @model_completion.failure_error %></code></div>
-    </div>
-    <div class="row mb-2">
-      <div class="col-md-2"><strong><%= t("raif.admin.common.failure_reason") %>:</strong></div>
-      <div class="col-md-10"><%= @model_completion.failure_reason %></div>
-    </div>
+      <hr>
+      <div class="row mb-2">
+        <div class="col-md-2"><strong><%= t("raif.admin.common.failed_at") %>:</strong></div>
+        <div class="col-md-10"><small><%= @model_completion.failed_at&.rfc822 || "-" %></small></div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-md-2"><strong><%= t("raif.admin.common.failure_error") %>:</strong></div>
+        <div class="col-md-10"><code><%= @model_completion.failure_error %></code></div>
+      </div>
+      <div class="row mb-2">
+        <div class="col-md-2"><strong><%= t("raif.admin.common.failure_reason") %>:</strong></div>
+        <div class="col-md-10"><%= @model_completion.failure_reason %></div>
+      </div>
     <% end %>
   </div>
 </div>
 
 <% if @model_completion.messages.present? %>
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="mb-0"><%= t("raif.admin.common.messages") %></h5>
-  </div>
-  <div class="card-body">
-    <% @model_completion.messages.each do |message| %>
-      <div class="mb-3">
-        <% if message["role"].present? %>
-          <strong><%= message["role"].titleize %>:</strong>
-        <% end %>
-        <% if message["content"].present? %>
-          <pre class="mt-2"><%= message["content"] %></pre>
-        <% end %>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><%= t("raif.admin.common.messages") %></h5>
+    </div>
+    <div class="card-body">
+      <% @model_completion.messages.each do |message| %>
+        <div class="mb-3">
+          <% if message["role"].present? %>
+            <strong><%= message["role"].titleize %>:</strong>
+          <% end %>
+          <% if message["content"].present? %>
+            <pre class="mt-2"><%= message["content"] %></pre>
+          <% end %>
 
-        <% if message["tool_calls"].present? %>
-          <div class="mt-2">
-            <% message["tool_calls"].each do |tool_call| %>
-              <div class="border rounded p-2 mb-2 bg-light">
-                <div><strong><%= t("raif.admin.common.tool_name") %>:</strong> <%= tool_call.dig("function", "name") %></div>
-                <div><strong><%= t("raif.admin.common.arguments") %>:</strong></div>
-                <pre class="mb-0 mt-1"><%= begin
-                                             JSON.pretty_generate(JSON.parse(tool_call.dig("function", "arguments")))
-                                           rescue StandardError
-                                             tool_call.dig("function", "arguments")
-                                           end %></pre>
-              </div>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
+          <% if message["tool_calls"].present? %>
+            <div class="mt-2">
+              <% message["tool_calls"].each do |tool_call| %>
+                <div class="border rounded p-2 mb-2 bg-light">
+                  <div><strong><%= t("raif.admin.common.tool_name") %>:</strong> <%= tool_call.dig("function", "name") %></div>
+                  <div><strong><%= t("raif.admin.common.arguments") %>:</strong></div>
+                  <pre class="mb-0 mt-1"><%= begin
+                                               JSON.pretty_generate(JSON.parse(tool_call.dig("function", "arguments")))
+                                             rescue StandardError
+                                               tool_call.dig("function", "arguments")
+                                             end %></pre>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
   </div>
-</div>
 <% end %>
 
 <% if @model_completion.system_prompt.present? %>
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="mb-0"><%= t("raif.admin.common.system_prompt") %></h5>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><%= t("raif.admin.common.system_prompt") %></h5>
+    </div>
+    <div class="card-body">
+      <pre class="pre-wrap"><%= @model_completion.system_prompt %></pre>
+    </div>
   </div>
-  <div class="card-body">
-    <pre class="pre-wrap"><%= @model_completion.system_prompt %></pre>
-  </div>
-</div>
 <% end %>
 
 <div class="card mb-4">
@@ -180,7 +180,7 @@
       <h5 class="mb-0 mt-4"><%= t("raif.admin.common.prettified") %></h5>
       <% begin %>
         <pre class="pre-wrap"><%= JSON.pretty_generate(@model_completion.parsed_response) %></pre>
-      <% rescue StandardError %>
+        <% rescue StandardError %>
         <%= t("raif.admin.common.invalid_json") %>
       <% end %>
     <% elsif @model_completion.response_format_html? %>
@@ -209,6 +209,67 @@
     <% end %>
   </div>
 </div>
+
+<% if @model_completion.provider_managed_tool_calls.present? %>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><%= t("raif.admin.common.provider_managed_tool_calls") %></h5>
+    </div>
+    <div class="card-body">
+      <% @model_completion.provider_managed_tool_calls.each do |tool_call| %>
+        <div class="border rounded p-3 mb-3 bg-light">
+          <div class="d-flex justify-content-between align-items-start gap-3">
+            <div>
+              <div><strong><%= t("raif.admin.common.tool_name") %>:</strong> <%= tool_call["tool_name"].to_s.titleize %></div>
+              <% if tool_call["provider_tool_call_id"].present? %>
+                <div><strong><%= t("raif.admin.common.provider_tool_call_id") %>:</strong> <code><%= tool_call["provider_tool_call_id"] %></code></div>
+              <% end %>
+              <% if tool_call["inferred"] %>
+                <div><small class="text-muted"><%= t("raif.admin.common.inferred_from_citations") %></small></div>
+              <% end %>
+            </div>
+            <% if tool_call["status"].present? %>
+              <span class="badge bg-info text-dark"><%= tool_call["status"].to_s.titleize %></span>
+            <% end %>
+          </div>
+
+          <% if tool_call["arguments"].present? %>
+            <div class="mt-3"><strong><%= t("raif.admin.common.arguments") %>:</strong></div>
+            <pre class="mb-0 mt-1"><%= JSON.pretty_generate(tool_call["arguments"]) %></pre>
+          <% end %>
+
+          <% if tool_call["sources"].present? %>
+            <div class="mt-3">
+              <strong><%= t("raif.admin.common.sources") %>:</strong>
+              <div class="mt-2">
+                <% tool_call["sources"].each do |source| %>
+                  <div class="border rounded p-2 mb-2 bg-white">
+                    <% if source["url"].present? %>
+                      <div>
+                        <a href="<%= source["url"] %>" target="_blank" rel="noopener" class="text-decoration-none">
+                          <%= source["title"].presence || source["url"] %>
+                        </a>
+                      </div>
+                      <small class="text-muted d-block"><%= source["url"] %></small>
+                    <% else %>
+                      <div><%= source["title"] %></div>
+                    <% end %>
+                    <% if source["page_age"].present? %>
+                      <small class="text-muted d-block"><%= source["page_age"] %></small>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% elsif tool_call["raw_result"].present? %>
+            <div class="mt-3"><strong><%= t("raif.admin.common.result") %>:</strong></div>
+            <pre class="mb-0 mt-1"><%= JSON.pretty_generate(tool_call["raw_result"]) %></pre>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
 
 <div class="card mb-4">
   <div class="card-header">

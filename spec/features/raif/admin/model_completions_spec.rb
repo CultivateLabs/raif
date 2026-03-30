@@ -236,5 +236,86 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
         end
       end
     end
+
+    context "with provider-managed tool calls" do
+      let!(:provider_managed_completion) do
+        Raif::ModelCompletion.create!(
+          source: task,
+          llm_model_key: "anthropic_claude_3_5_haiku",
+          model_api_name: "claude-3-5-haiku-20241022",
+          response_format: "text",
+          raw_response: "Rails has seen several recent updates.",
+          total_tokens: 250,
+          available_model_tools: ["Raif::ModelTools::ProviderManaged::WebSearch"],
+          response_array: [
+            {
+              "type" => "server_tool_use",
+              "id" => "srvtoolu_123",
+              "name" => "web_search",
+              "input" => { "query" => "latest ruby on rails releases" }
+            },
+            {
+              "type" => "web_search_tool_result",
+              "tool_use_id" => "srvtoolu_123",
+              "content" => [
+                {
+                  "type" => "web_search_result",
+                  "title" => "Ruby on Rails",
+                  "url" => "https://rubyonrails.org/?utm_source=test",
+                  "page_age" => "1 day ago"
+                }
+              ]
+            }
+          ],
+          citations: [
+            {
+              "title" => "Ruby on Rails",
+              "url" => "https://rubyonrails.org/?utm_source=test"
+            }
+          ]
+        )
+      end
+
+      it "displays provider-managed tool details" do
+        visit raif.admin_model_completion_path(provider_managed_completion)
+
+        expect(page).to have_content(I18n.t("raif.admin.common.provider_managed_tool_calls"))
+        expect(page).to have_content("Web Search")
+        expect(page).to have_content("srvtoolu_123")
+        expect(page).to have_content("latest ruby on rails releases")
+        expect(page).to have_link("Ruby on Rails", href: "https://rubyonrails.org/")
+        expect(page).to have_content("1 day ago")
+      end
+    end
+
+    context "with inferred provider-managed tool calls" do
+      let!(:provider_managed_completion) do
+        Raif::ModelCompletion.create!(
+          source: task,
+          llm_model_key: "google_gemini_2_5_flash",
+          model_api_name: "gemini-2.5-flash",
+          response_format: "text",
+          raw_response: "Rails 8.1 was recently released.",
+          total_tokens: 250,
+          available_model_tools: ["Raif::ModelTools::ProviderManaged::WebSearch"],
+          response_array: [{ "text" => "Rails 8.1 was recently released." }],
+          citations: [
+            {
+              "title" => "wikipedia.org",
+              "url" => "https://en.wikipedia.org/wiki/Ruby_on_Rails"
+            }
+          ]
+        )
+      end
+
+      it "displays inferred provider-managed tool details from citations" do
+        visit raif.admin_model_completion_path(provider_managed_completion)
+
+        expect(page).to have_content(I18n.t("raif.admin.common.provider_managed_tool_calls"))
+        expect(page).to have_content("Web Search")
+        expect(page).to have_content(I18n.t("raif.admin.common.inferred_from_citations"))
+        expect(page).to have_link("wikipedia.org", href: "https://en.wikipedia.org/wiki/Ruby_on_Rails")
+      end
+    end
   end
 end

@@ -39,6 +39,7 @@ en:
         final_answer: Final Answer
         id: ID
         in_progress: In Progress
+        inferred_from_citations: Inferred from response citations.
         initial_task: Initial Task
         input: Input
         input_token_cost: Input Token Cost
@@ -69,6 +70,8 @@ en:
         prettified: Prettified
         prompt: Prompt
         prompt_tokens: Prompt Tokens
+        provider_managed_tool_calls: Provider-Managed Tool Calls
+        provider_tool_call_id: Provider Tool Call ID
         raw: Raw
         rendered: Rendered
         requested_language: Requested Language
@@ -80,6 +83,7 @@ en:
         running: Running
         since: Since
         source: Source
+        sources: Sources
         started_at: Started At
         stats: Stats
         status: Status
