@@ -24,6 +24,15 @@ module Raif::Concerns::ProviderManagedToolCalls
     end
   end
 
+  # Returns citations with URLs sanitized to only allow http/https schemes.
+  def sanitized_citations
+    @sanitized_citations ||= Array(citations).map do |citation|
+      url = citation["url"]
+      safe_url = url.present? && url.match?(%r{\Ahttps?://}i) ? url : nil
+      citation.merge("url" => safe_url)
+    end
+  end
+
 private
 
   def extract_provider_managed_tool_calls
@@ -40,7 +49,9 @@ private
         # Anthropic stores the tool invocation in one block and the result in a
         # separate block keyed by `tool_use_id`.
         build_provider_managed_server_tool_call(block, result_blocks_by_tool_use_id)
-      else
+      when "web_search_call", "web_search_preview",
+           "code_interpreter_call", "code_interpreter",
+           "image_generation_call", "image_generation"
         # OpenAI Responses persists provider-managed calls as top-level typed
         # blocks like `web_search_call`, `code_interpreter`, etc.
         build_provider_managed_tool_call_from_type(block)
@@ -112,7 +123,7 @@ private
   end
 
   def merge_provider_managed_sources(existing_sources, extra_sources)
-    Array(existing_sources).concat(Array(extra_sources)).filter_map do |source|
+    (Array(existing_sources) + Array(extra_sources)).filter_map do |source|
       next unless source.is_a?(Hash)
 
       {
@@ -143,6 +154,9 @@ private
   def normalize_provider_managed_source_url(url)
     return if url.blank?
 
-    Raif::Utils::HtmlFragmentProcessor.strip_tracking_parameters(url)
+    url = Raif::Utils::HtmlFragmentProcessor.strip_tracking_parameters(url)
+    return unless url.match?(%r{\Ahttps?://}i)
+
+    url
   end
 end

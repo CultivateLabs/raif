@@ -235,7 +235,11 @@
 
           <% if tool_call["arguments"].present? %>
             <div class="mt-3"><strong><%= t("raif.admin.common.arguments") %>:</strong></div>
-            <pre class="mb-0 mt-1"><%= JSON.pretty_generate(tool_call["arguments"]) %></pre>
+            <pre class="mb-0 mt-1"><%= begin
+                                         JSON.pretty_generate(tool_call["arguments"])
+                                       rescue StandardError
+                                         tool_call["arguments"]
+                                       end %></pre>
           <% end %>
 
           <% if tool_call["sources"].present? %>
@@ -263,7 +267,11 @@
             </div>
           <% elsif tool_call["raw_result"].present? %>
             <div class="mt-3"><strong><%= t("raif.admin.common.result") %>:</strong></div>
-            <pre class="mb-0 mt-1"><%= JSON.pretty_generate(tool_call["raw_result"]) %></pre>
+            <pre class="mb-0 mt-1"><%= begin
+                                         JSON.pretty_generate(tool_call["raw_result"])
+                                       rescue StandardError
+                                         tool_call["raw_result"]
+                                       end %></pre>
           <% end %>
         </div>
       <% end %>
@@ -276,17 +284,21 @@
     <h5 class="mb-0"><%= t("raif.admin.common.citations") %></h5>
   </div>
   <div class="card-body">
-    <% if @model_completion.citations.present? %>
-      <% @model_completion.citations.each_with_index do |citation, index| %>
+    <% if @model_completion.sanitized_citations.present? %>
+      <% @model_completion.sanitized_citations.each_with_index do |citation, index| %>
         <div class="mb-3 p-3 border rounded">
           <div class="d-flex align-items-start">
             <span class="badge bg-primary me-3"><%= index + 1 %></span>
             <div class="flex-grow-1">
               <h6 class="mb-1">
-                <a href="<%= citation["url"] %>" target="_blank" rel="noopener" class="text-decoration-none">
+                <% if citation["url"].present? %>
+                  <a href="<%= citation["url"] %>" target="_blank" rel="noopener" class="text-decoration-none">
+                    <%= citation["title"] %>
+                    <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.8em;"></i>
+                  </a>
+                <% else %>
                   <%= citation["title"] %>
-                  <i class="bi bi-box-arrow-up-right ms-1" style="font-size: 0.8em;"></i>
-                </a>
+                <% end %>
               </h6>
               <small class="text-muted"><%= citation["url"] %></small>
             </div>
