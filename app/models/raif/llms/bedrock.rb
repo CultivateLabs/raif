@@ -34,15 +34,6 @@ class Raif::Llms::Bedrock < Raif::Llm
     model_completion
   end
 
-  def retriable_exceptions
-    exceptions = super
-    if api_name.to_s.start_with?("openai.gpt-oss-")
-      exceptions + [Raif::Errors::BlankResponseError]
-    else
-      exceptions
-    end
-  end
-
 private
 
   def bedrock_client
@@ -50,6 +41,8 @@ private
   end
 
   def update_model_completion(model_completion, resp)
+    return if resp.nil?
+
     model_completion.raw_response = if model_completion.response_format_json?
       extract_json_response(resp)
     else
