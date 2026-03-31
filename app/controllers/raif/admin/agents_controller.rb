@@ -12,7 +12,7 @@ module Raif
         @selected_status = params[:status].present? ? params[:status].to_sym : :all
 
         @selected_llm_model_key = params[:llm_model_key].presence
-        @llm_model_keys = Raif::Agent.distinct.pluck(:llm_model_key).sort
+        @llm_model_keys = Raif::Agent.distinct.order(:llm_model_key).pluck(:llm_model_key)
 
         agents = Raif::Agent.order(created_at: :desc)
         agents = agents.where(type: @selected_type) if @selected_type.present? && @selected_type != "all"

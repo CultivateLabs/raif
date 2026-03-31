@@ -8,7 +8,7 @@ module Raif
       def index
         @selected_status = params[:status].present? ? params[:status].to_sym : :all
         @selected_llm_model_key = params[:llm_model_key].presence
-        @llm_model_keys = Raif::ModelCompletion.distinct.pluck(:llm_model_key).sort
+        @llm_model_keys = Raif::ModelCompletion.distinct.order(:llm_model_key).pluck(:llm_model_key)
 
         model_completions = Raif::ModelCompletion.order(created_at: :desc)
 

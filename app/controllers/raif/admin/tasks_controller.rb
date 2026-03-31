@@ -13,7 +13,7 @@ module Raif
         @selected_statuses = params[:task_statuses].present? ? params[:task_statuses].to_sym : :all
 
         @selected_llm_model_key = params[:llm_model_key].presence
-        @llm_model_keys = Raif::Task.distinct.pluck(:llm_model_key).sort
+        @llm_model_keys = Raif::Task.distinct.order(:llm_model_key).pluck(:llm_model_key)
 
         tasks = Raif::Task.order(created_at: :desc)
         tasks = tasks.where(type: @selected_type) if @selected_type.present? && @selected_type != "all"

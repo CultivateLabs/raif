@@ -101,8 +101,10 @@ RSpec.describe "Admin::Agents", type: :feature do
     end
 
     it "filters by type" do
+      FB.create(:raif_agent, type: "Raif::TestTemplateAgent", creator: creator, system_prompt: "Test prompt")
+
       visit raif.admin_agents_path
-      expect(page).to have_css("tr.raif-agent", count: 5)
+      expect(page).to have_css("tr.raif-agent", count: 6)
 
       select "Raif::Agents::NativeToolCallingAgent", from: "agent_type"
       click_button I18n.t("raif.admin.common.filter")

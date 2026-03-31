@@ -13,7 +13,7 @@
           <div class="form-group">
             <label for="task_types"><%= t("raif.admin.common.type") %></label>
             <%= select_tag :task_types,
-                  options_for_select([["All", "all"]] + @task_types.map{|type| [type, type] }, @selected_type),
+                  options_for_select([[t("raif.admin.common.all"), "all"]] + @task_types.map{|type| [type, type] }, @selected_type),
                   { class: "form-select", data: { controller: "raif--tom-select" } } %>
           </div>
         </div>
