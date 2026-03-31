@@ -34,7 +34,6 @@ class Raif::Llms::Bedrock < Raif::Llm
     model_completion
   end
 
-
 private
 
   def bedrock_client
