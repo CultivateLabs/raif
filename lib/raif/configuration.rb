@@ -87,6 +87,7 @@ module Raif
         Faraday::ServerError,
         Net::ReadTimeout,
         Net::OpenTimeout,
+        Raif::Errors::BlankResponseError,
       ]
       @model_superclass = "ApplicationRecord"
       @open_ai_api_key = default_disable_llm_api_requests? ? "placeholder-open-ai-api-key" : ENV["OPENAI_API_KEY"]

@@ -34,14 +34,6 @@ class Raif::Llms::Bedrock < Raif::Llm
     model_completion
   end
 
-  def retriable_exceptions
-    exceptions = super
-    if api_name.to_s.start_with?("openai.gpt-oss-")
-      exceptions + [Raif::Errors::BlankResponseError]
-    else
-      exceptions
-    end
-  end
 
 private
 
