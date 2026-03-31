@@ -387,6 +387,21 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
   end
 
+  describe "nil response handling" do
+    it "raises BlankResponseError when the API returns nil" do
+      mock_client = instance_double(Aws::BedrockRuntime::Client)
+      allow(llm).to receive(:bedrock_client).and_return(mock_client)
+      allow(mock_client).to receive(:converse).and_return(nil)
+
+      expect do
+        llm.chat(messages: [{ role: "user", content: "Hello" }])
+      end.to raise_error(Raif::Errors::BlankResponseError)
+
+      mc = Raif::ModelCompletion.newest_first.first
+      expect(mc.failed?).to be true
+    end
+  end
+
   describe "#build_tools_parameter" do
     let(:model_completion) do
       Raif::ModelCompletion.new(

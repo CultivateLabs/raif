@@ -50,6 +50,8 @@ private
   end
 
   def update_model_completion(model_completion, resp)
+    return if resp.nil?
+
     model_completion.raw_response = if model_completion.response_format_json?
       extract_json_response(resp)
     else

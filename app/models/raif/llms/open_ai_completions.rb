@@ -16,6 +16,8 @@ private
   end
 
   def update_model_completion(model_completion, response_json)
+    return if response_json.nil?
+
     model_completion.update!(
       response_id: response_json["id"],
       response_tool_calls: extract_response_tool_calls(response_json),
