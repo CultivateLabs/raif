@@ -318,10 +318,10 @@
     </div>
     <div class="card-body">
       <pre class="pre-wrap"><%= begin
-                                   JSON.pretty_generate(@model_completion.response_array)
-                                 rescue StandardError
-                                   @model_completion.response_array
-                                 end %></pre>
+                                  JSON.pretty_generate(@model_completion.response_array)
+                                rescue StandardError
+                                  @model_completion.response_array
+                                end %></pre>
     </div>
   </div>
 <% end %>
