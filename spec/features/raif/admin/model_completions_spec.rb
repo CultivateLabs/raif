@@ -299,6 +299,9 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
         expect(page).to have_content("latest ruby on rails releases")
         expect(page).to have_link("Ruby on Rails", href: "https://rubyonrails.org/")
         expect(page).to have_content("1 day ago")
+        expect(page).to have_content(I18n.t("raif.admin.common.response_array"))
+        expect(page).to have_content('"type": "server_tool_use"')
+        expect(page).to have_content('"type": "web_search_tool_result"')
       end
     end
 

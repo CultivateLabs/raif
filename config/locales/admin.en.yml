@@ -76,6 +76,7 @@ en:
         rendered: Rendered
         requested_language: Requested Language
         response: Response
+        response_array: Response Array
         response_format: Response Format
         result: Result
         retry_count: Retry Count
