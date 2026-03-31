@@ -7,6 +7,8 @@ module Raif
 
       def index
         @selected_status = params[:status].present? ? params[:status].to_sym : :all
+        @selected_llm_model_key = params[:llm_model_key].presence
+        @llm_model_keys = Raif::ModelCompletion.distinct.pluck(:llm_model_key).sort
 
         model_completions = Raif::ModelCompletion.order(created_at: :desc)
 
@@ -21,6 +23,10 @@ module Raif
           when :pending
             model_completions = model_completions.where(started_at: nil)
           end
+        end
+
+        if @selected_llm_model_key.present?
+          model_completions = model_completions.where(llm_model_key: @selected_llm_model_key)
         end
 
         @pagy, @model_completions = pagy(model_completions)

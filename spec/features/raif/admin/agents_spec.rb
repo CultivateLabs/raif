@@ -99,6 +99,41 @@ RSpec.describe "Admin::Agents", type: :feature do
       visit raif.admin_agents_path
       expect(page).to have_content(I18n.t("raif.admin.common.no_agents"))
     end
+
+    it "filters by type" do
+      visit raif.admin_agents_path
+      expect(page).to have_css("tr.raif-agent", count: 5)
+
+      select "Raif::Agents::NativeToolCallingAgent", from: "agent_type"
+      click_button I18n.t("raif.admin.common.filter")
+
+      expect(page).to have_css("tr.raif-agent", count: 5)
+    end
+
+    it "filters by status" do
+      visit raif.admin_agents_path
+      expect(page).to have_css("tr.raif-agent", count: 5)
+
+      select I18n.t("raif.admin.common.completed"), from: "status"
+      click_button I18n.t("raif.admin.common.filter")
+
+      expect(page).to have_css("tr.raif-agent", count: 1)
+    end
+
+    it "filters by llm_model_key" do
+      Raif::Agent.destroy_all
+      FB.create(:raif_native_tool_calling_agent, creator: creator, llm_model_key: "open_ai_gpt_4o")
+      FB.create(:raif_native_tool_calling_agent, creator: creator, llm_model_key: "open_ai_gpt_4o")
+      FB.create(:raif_native_tool_calling_agent, creator: creator, llm_model_key: "open_ai_gpt_4o_mini")
+
+      visit raif.admin_agents_path
+      expect(page).to have_css("tr.raif-agent", count: 3)
+
+      select "open_ai_gpt_4o_mini", from: "llm_model_key"
+      click_button I18n.t("raif.admin.common.filter")
+
+      expect(page).to have_css("tr.raif-agent", count: 1)
+    end
   end
 
   describe "show page" do
