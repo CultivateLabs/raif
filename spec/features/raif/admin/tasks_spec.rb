@@ -51,6 +51,21 @@ RSpec.describe "Admin::Tasks", type: :feature do
       visit raif.admin_tasks_path
       expect(page).to have_content(I18n.t("raif.admin.common.no_tasks"))
     end
+
+    it "filters by llm_model_key" do
+      Raif::Task.delete_all
+      FB.create(:raif_test_task, creator: creator, llm_model_key: "open_ai_gpt_4o")
+      FB.create(:raif_test_task, creator: creator, llm_model_key: "open_ai_gpt_4o")
+      FB.create(:raif_test_task, creator: creator, llm_model_key: "open_ai_gpt_4o_mini")
+
+      visit raif.admin_tasks_path
+      expect(page).to have_css("tr.raif-task", count: 3)
+
+      select "open_ai_gpt_4o_mini", from: "llm_model_key"
+      click_button I18n.t("raif.admin.common.filter")
+
+      expect(page).to have_css("tr.raif-task", count: 1)
+    end
   end
 
   describe "show page" do

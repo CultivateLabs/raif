@@ -118,6 +118,20 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
       visit raif.admin_model_completions_path
       expect(page).to have_content(I18n.t("raif.admin.common.no_model_completions"))
     end
+
+    it "filters by llm_model_key" do
+      visit raif.admin_model_completions_path
+
+      # All completions visible initially
+      expect(page).to have_css("tr.raif-model-completion", count: 5)
+
+      # Filter by bedrock model
+      select "bedrock_claude_3_5_sonnet", from: "llm_model_key"
+      click_button I18n.t("raif.admin.common.filter")
+
+      expect(page).to have_css("tr.raif-model-completion", count: 1)
+      expect(page).to have_content("bedrock_claude_3_5_sonnet")
+    end
   end
 
   describe "show page" do
@@ -285,6 +299,9 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
         expect(page).to have_content("latest ruby on rails releases")
         expect(page).to have_link("Ruby on Rails", href: "https://rubyonrails.org/")
         expect(page).to have_content("1 day ago")
+        expect(page).to have_content(I18n.t("raif.admin.common.response_array"))
+        expect(page).to have_content('"type": "server_tool_use"')
+        expect(page).to have_content('"type": "web_search_tool_result"')
       end
     end
 
