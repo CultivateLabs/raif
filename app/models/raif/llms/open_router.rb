@@ -39,6 +39,8 @@ private
   end
 
   def update_model_completion(model_completion, response_json)
+    return if response_json.nil?
+
     raw_response = if model_completion.response_format_json?
       extract_json_response(response_json)
     else
@@ -114,7 +116,7 @@ private
   end
 
   def extract_json_response(resp)
-    tool_calls = resp.dig("choices", 0, "message", "tool_calls")
+    tool_calls = resp&.dig("choices", 0, "message", "tool_calls")
     return extract_text_response(resp) if tool_calls.blank?
 
     tool_response = tool_calls.find do |tool_call|

@@ -359,6 +359,35 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       end
     end
 
+    context "when the API returns a nil response body" do
+      let(:stubs) { Faraday::Adapter::Test::Stubs.new }
+      let(:test_connection) do
+        Faraday.new do |builder|
+          builder.adapter :test, stubs
+          builder.request :json
+          builder.response :json
+          builder.response :raise_error
+        end
+      end
+
+      before do
+        allow(llm).to receive(:connection).and_return(test_connection)
+
+        stubs.post("chat/completions") do |_env|
+          [200, { "Content-Type" => "application/json" }, nil]
+        end
+      end
+
+      it "raises BlankResponseError so the task is marked as failed" do
+        expect do
+          llm.chat(
+            messages: [{ role: "user", content: "Hello" }],
+            response_format: :json
+          )
+        end.to raise_error(Raif::Errors::BlankResponseError)
+      end
+    end
+
     context "errors" do
       let(:stubs) { Faraday::Adapter::Test::Stubs.new }
       let(:test_connection) do

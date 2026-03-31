@@ -4,7 +4,7 @@ module Raif::Concerns::Llms::OpenAiCompletions::ResponseToolCalls
   extend ActiveSupport::Concern
 
   def extract_response_tool_calls(resp)
-    tool_calls = resp.dig("choices", 0, "message", "tool_calls")
+    tool_calls = resp&.dig("choices", 0, "message", "tool_calls")
     return if tool_calls.blank?
 
     tool_calls.map do |tool_call|
