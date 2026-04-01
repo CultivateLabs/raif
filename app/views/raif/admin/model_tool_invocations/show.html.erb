@@ -64,3 +64,21 @@
   </div>
 </div>
 <% end %>
+
+<% if @model_tool_invocation.admin_observation_available? %>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><%= t(".observation_sent_to_model") %></h5>
+    </div>
+    <% if @model_tool_invocation.admin_observation_error.present? %>
+      <div class="card-body text-muted">
+        <%= t(".observation_unavailable", error: @model_tool_invocation.admin_observation_error) %>
+      </div>
+    <% else %>
+      <div class="card-body">
+        <p class="text-muted small"><%= t(".observation_disclaimer") %></p>
+        <pre class="pre-wrap"><%= @model_tool_invocation.admin_observation %></pre>
+      </div>
+    <% end %>
+  </div>
+<% end %>

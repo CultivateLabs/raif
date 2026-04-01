@@ -68,9 +68,39 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
     "raif/model_tool_invocations/#{tool.invocation_partial_name}"
   end
 
+  def admin_observation
+    admin_observation_result[:observation]
+  end
+
+  def admin_observation_error
+    admin_observation_result[:error]
+  end
+
+  def admin_observation_available?
+    admin_observation.present? || admin_observation_error.present?
+  end
+
   def ensure_valid_tool_argument_schema
     unless JSON::Validator.validate(tool_arguments_schema, tool_arguments)
       errors.add(:tool_arguments, "does not match schema")
+    end
+  end
+
+private
+
+  # Best-effort reconstruction of the observation shown in admin. This uses the
+  # current formatter code against persisted invocation data, so failures are
+  # captured for display instead of breaking the page render.
+  def admin_observation_result
+    @admin_observation_result ||= if completed? && triggers_observation_to_model?
+      begin
+        observation = tool.observation_for_invocation(self)
+        { observation: observation.presence, error: nil }
+      rescue StandardError => e
+        { observation: nil, error: e.message }
+      end
+    else
+      { observation: nil, error: nil }
     end
   end
 
