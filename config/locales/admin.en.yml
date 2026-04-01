@@ -131,6 +131,9 @@ en:
       model_tool_invocations:
         show:
           back_to_model_tool_invocations: Back to Model Tool Invocations
+          observation_disclaimer: This observation is regenerated from current data and code. It may differ from what was originally sent to the model.
+          observation_sent_to_model: Observation Sent to Model
+          observation_unavailable: 'Could not generate observation: %{error}'
           title: 'Model Tool Invocation #%{id}'
       prompt_studio:
         agents:
