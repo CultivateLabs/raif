@@ -37,7 +37,24 @@ class Raif::Llms::Bedrock < Raif::Llm
 private
 
   def bedrock_client
-    @bedrock_client ||= Aws::BedrockRuntime::Client.new(region: Raif.config.aws_bedrock_region)
+    @bedrock_client ||= begin
+      client_options = {
+        region: Raif.config.aws_bedrock_region,
+        max_attempts: 1
+      }
+
+      client_options[:http_read_timeout] = Raif.config.request_read_timeout if Raif.config.request_read_timeout
+      client_options[:http_open_timeout] = Raif.config.request_open_timeout if Raif.config.request_open_timeout
+
+      Aws::BedrockRuntime::Client.new(client_options)
+    end
+  end
+
+  def retriable_exceptions
+    super + [
+      Aws::BedrockRuntime::Errors::ServiceError,
+      Seahorse::Client::NetworkingError
+    ]
   end
 
   def update_model_completion(model_completion, resp)

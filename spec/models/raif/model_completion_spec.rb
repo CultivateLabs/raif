@@ -180,6 +180,26 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         expect(model_completion.total_cost).to eq(expected_output_cost)
       end
 
+      it "factors retry_count into prompt_token_cost to reflect actual provider billing" do
+        model_completion = described_class.new(
+          llm_model_key: "open_ai_gpt_4o",
+          model_api_name: "gpt-4o",
+          prompt_tokens: 1000,
+          completion_tokens: 500,
+          retry_count: 3
+        )
+
+        # Each retry resends the same prompt, so input cost is multiplied by total attempts (retry_count + 1)
+        expected_prompt_cost = 2.5 / 1_000_000 * 1000 * 4
+        expected_output_cost = 10.0 / 1_000_000 * 500
+        expected_total_cost = expected_prompt_cost + expected_output_cost
+
+        model_completion.save(validate: false)
+        expect(model_completion.prompt_token_cost).to eq(expected_prompt_cost)
+        expect(model_completion.output_token_cost).to eq(expected_output_cost)
+        expect(model_completion.total_cost).to eq(expected_total_cost)
+      end
+
       it "does not calculate costs for a model that doesn't have cost configs" do
         # Create a mock of Raif.llm_config that returns a config without cost data
         allow(Raif).to receive(:llm_config).and_return({
