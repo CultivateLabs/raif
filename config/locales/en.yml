@@ -99,6 +99,7 @@ en:
       open_ai_gpt_5: OpenAI GPT-5
       open_ai_gpt_5_1: OpenAI GPT-5.1
       open_ai_gpt_5_2: OpenAI GPT-5.2
+      open_ai_gpt_5_3: OpenAI GPT-5.3
       open_ai_gpt_5_4: OpenAI GPT-5.4
       open_ai_gpt_5_4_mini: OpenAI GPT-5.4 Mini
       open_ai_gpt_5_4_nano: OpenAI GPT-5.4 Nano
@@ -119,6 +120,7 @@ en:
       open_ai_responses_gpt_5_1: OpenAI GPT-5.1 (Responses API)
       open_ai_responses_gpt_5_2: OpenAI GPT-5.2 (Responses API)
       open_ai_responses_gpt_5_2_pro: OpenAI GPT-5.2 Pro (Responses API)
+      open_ai_responses_gpt_5_3: OpenAI GPT-5.3 (Responses API)
       open_ai_responses_gpt_5_4: OpenAI GPT-5.4 (Responses API)
       open_ai_responses_gpt_5_4_mini: OpenAI GPT-5.4 Mini (Responses API)
       open_ai_responses_gpt_5_4_nano: OpenAI GPT-5.4 Nano (Responses API)
@@ -143,8 +145,10 @@ en:
       open_router_gemini_3_1_flash_lite_preview: Gemini 3.1 Flash-Lite Preview (via OpenRouter)
       open_router_gemini_3_1_pro_preview: Gemini 3.1 Pro Preview (via OpenRouter)
       open_router_gemini_3_pro_preview: Gemini 3 Pro Preview (via OpenRouter)
+      open_router_google_gemma_4_31b_it: Google Gemma 4 31B IT (via OpenRouter)
       open_router_grok_4: Grok 4 (via OpenRouter)
       open_router_grok_4_1_fast: Grok 4.1 Fast (via OpenRouter)
+      open_router_grok_4_20: Grok 4.20 (via OpenRouter)
       open_router_kimi_k2_5: Kimi K2.5 (via OpenRouter)
       open_router_kimi_k2_thinking: Kimi K2 Thinking (via OpenRouter)
       open_router_llama_3_1_8b_instruct: Meta Llama 3.1 8B Instruct (via OpenRouter)

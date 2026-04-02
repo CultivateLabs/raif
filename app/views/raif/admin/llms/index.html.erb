@@ -1,0 +1,110 @@
+<h1 class="my-4"><%= t("raif.admin.llms.index.title") %></h1>
+
+<div class="row">
+  <div class="col-12">
+    <%= form_tag raif.admin_llms_path, method: :get, class: "mb-4" do %>
+      <div class="row align-items-end">
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="names"><%= t("raif.admin.llms.index.name") %></label>
+            <%= select_tag "names[]",
+                  options_for_select(
+                    @llm_names.map { |n| [n, n] },
+                    @selected_names
+                  ),
+                  { id: "names", multiple: true, class: "form-select", data: { controller: "raif--tom-select" } } %>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="form-group">
+            <label for="providers"><%= t("raif.admin.llms.index.provider") %></label>
+            <%= select_tag "providers[]",
+                  options_for_select(
+                    @provider_names.map { |p| [p, p] },
+                    @selected_providers
+                  ),
+                  { id: "providers", multiple: true, class: "form-select", data: { controller: "raif--tom-select" } } %>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <%= submit_tag t("raif.admin.common.filter"), class: "btn btn-primary" %>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="card" data-controller="raif--table-search raif--sortable-table">
+      <div class="card-header bg-light">
+        <input type="text"
+               class="form-control form-control-sm"
+               placeholder="<%= t("raif.admin.llms.index.search_placeholder") %>"
+               data-raif--table-search-target="input"
+               autocomplete="off"
+               data-action="input->raif--table-search#filter">
+      </div>
+      <div class="card-body">
+        <% if @llms.any? %>
+          <table class="table table-sm table-hover mb-0">
+            <thead>
+              <tr>
+                <th role="button" data-action="click->raif--sortable-table#sort" data-raif--sortable-table-target="header" data-col-index="0" data-sort-type="string" style="cursor: pointer;">
+                  <%= t("raif.admin.llms.index.name") %>
+                </th>
+                <th role="button" data-action="click->raif--sortable-table#sort" data-raif--sortable-table-target="header" data-col-index="1" data-sort-type="string" style="cursor: pointer;">
+                  <%= t("raif.admin.llms.index.provider") %>
+                </th>
+                <th role="button" data-action="click->raif--sortable-table#sort" data-raif--sortable-table-target="header" data-col-index="2" data-sort-type="string" style="cursor: pointer;">
+                  <%= t("raif.admin.llms.index.api_name") %>
+                </th>
+                <th role="button" class="text-end" data-action="click->raif--sortable-table#sort" data-raif--sortable-table-target="header" data-col-index="3" data-sort-type="number" style="cursor: pointer;">
+                  <%= t("raif.admin.llms.index.input_cost") %>
+                </th>
+                <th role="button" class="text-end" data-action="click->raif--sortable-table#sort" data-raif--sortable-table-target="header" data-col-index="4" data-sort-type="number" style="cursor: pointer;">
+                  <%= t("raif.admin.llms.index.output_cost") %>
+                </th>
+                <th class="text-center"><%= t("raif.admin.common.default") %></th>
+              </tr>
+            </thead>
+            <tbody data-raif--sortable-table-target="body">
+              <% @llms.each do |llm| %>
+                <% input_cost = llm.input_token_cost.present? && llm.input_token_cost > 0 ? llm.input_token_cost * 1_000_000 : 0 %>
+                <% output_cost = llm.output_token_cost.present? && llm.output_token_cost > 0 ? llm.output_token_cost * 1_000_000 : 0 %>
+                <tr data-raif--table-search-target="row"
+                    data-searchable="<%= "#{llm.name} #{llm.class.name.demodulize} #{llm.api_name}".downcase %>">
+                  <td><%= llm.name %></td>
+                  <td><code><%= llm.class.name.demodulize %></code></td>
+                  <td><code><%= llm.api_name %></code></td>
+                  <td class="text-end" data-sort-value="<%= input_cost %>">
+                    <% if input_cost > 0 %>
+                      $<%= format("%.2f", input_cost) %>
+                    <% else %>
+                      <span class="text-muted">-</span>
+                    <% end %>
+                  </td>
+                  <td class="text-end" data-sort-value="<%= output_cost %>">
+                    <% if output_cost > 0 %>
+                      $<%= format("%.2f", output_cost) %>
+                    <% else %>
+                      <span class="text-muted">-</span>
+                    <% end %>
+                  </td>
+                  <td class="text-center">
+                    <% if llm.key.to_s == Raif.config.default_llm_model_key.to_s %>
+                      <span class="badge bg-primary"><%= t("raif.admin.llms.index.default_badge") %></span>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+          <p class="text-muted mt-3 mb-0">
+            <small><%= t("raif.admin.llms.index.cost_note") %></small>
+          </p>
+        <% else %>
+          <div class="alert alert-warning mb-0">
+            <%= t("raif.admin.llms.index.no_llms") %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
