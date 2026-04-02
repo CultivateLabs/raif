@@ -29,6 +29,9 @@ private
   end
 
   def bedrock_client
-    @bedrock_client ||= Aws::BedrockRuntime::Client.new(region: Raif.config.aws_bedrock_region)
+    @bedrock_client ||= Aws::BedrockRuntime::Client.new(
+      region: Raif.config.aws_bedrock_region,
+      max_attempts: 1
+    )
   end
 end
