@@ -29,11 +29,15 @@ private
   end
 
   def bedrock_client
-    @bedrock_client ||= Aws::BedrockRuntime::Client.new(
-      region: Raif.config.aws_bedrock_region,
-      max_attempts: 1,
-      http_read_timeout: Raif.config.request_read_timeout || 60,
-      http_open_timeout: Raif.config.request_open_timeout || 15,
-    )
+    @bedrock_client ||= begin
+      client_options = {
+        region: Raif.config.aws_bedrock_region
+      }
+
+      client_options[:http_read_timeout] = Raif.config.request_read_timeout if Raif.config.request_read_timeout
+      client_options[:http_open_timeout] = Raif.config.request_open_timeout if Raif.config.request_open_timeout
+
+      Aws::BedrockRuntime::Client.new(client_options)
+    end
   end
 end
