@@ -84,8 +84,12 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   end
 
   def calculate_costs
+    # Each retry resends the same prompt, so the provider charges input tokens
+    # for every attempt. Factor in retry_count to reflect actual billing.
+    total_attempts = (retry_count || 0) + 1
+
     if prompt_tokens.present? && llm_config[:input_token_cost].present?
-      self.prompt_token_cost = llm_config[:input_token_cost] * prompt_tokens
+      self.prompt_token_cost = llm_config[:input_token_cost] * prompt_tokens * total_attempts
     end
 
     if completion_tokens.present? && llm_config[:output_token_cost].present?
