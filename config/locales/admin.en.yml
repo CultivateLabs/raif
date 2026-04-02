@@ -24,6 +24,7 @@ en:
         count: Count
         created_at: Created At
         creator: Creator
+        default: default
         description: Description
         details: Details
         duration: Duration
@@ -46,6 +47,7 @@ en:
         invalid_json: Invalid JSON
         iterations: Iterations
         language: Language
+        llms: LLMs
         messages: Messages
         model: Model
         model_completion: Model Completion
@@ -124,6 +126,18 @@ en:
       layouts:
         admin:
           title: Raif Admin
+      llms:
+        index:
+          api_name: API Name
+          cost_note: Costs shown are per 1,000,000 tokens.
+          default_badge: default
+          input_cost: Input Cost (per 1M tokens)
+          name: Name
+          no_llms: No LLMs are currently registered.
+          output_cost: Output Cost (per 1M tokens)
+          provider: Provider
+          search_placeholder: Search by name, provider, or API name...
+          title: Registered LLMs
       model_completions:
         show:
           back_to_model_completions: Back to Model Completions
