@@ -145,6 +145,7 @@ en:
       open_router_gemini_3_1_flash_lite_preview: Gemini 3.1 Flash-Lite Preview (via OpenRouter)
       open_router_gemini_3_1_pro_preview: Gemini 3.1 Pro Preview (via OpenRouter)
       open_router_gemini_3_pro_preview: Gemini 3 Pro Preview (via OpenRouter)
+      open_router_google_gemma_4_31b_it: Google Gemma 4 31B IT (via OpenRouter)
       open_router_grok_4: Grok 4 (via OpenRouter)
       open_router_grok_4_1_fast: Grok 4.1 Fast (via OpenRouter)
       open_router_grok_4_20: Grok 4.20 (via OpenRouter)
@@ -161,5 +162,4 @@ en:
       open_router_mistral_small_3_2_24b: Mistral Small 3.2 24B (via OpenRouter)
       open_router_open_ai_gpt_oss_120b: OpenAI GPT-OSS 120B (via OpenRouter)
       open_router_open_ai_gpt_oss_20b: OpenAI GPT-OSS 20B (via OpenRouter)
-      open_router_google_gemma_4_31b_it: Google Gemma 4 31B IT (via OpenRouter)
       raif_test_llm: Raif Test LLM
