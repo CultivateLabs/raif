@@ -296,6 +296,31 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       ])
     end
 
+    it "memoizes the required tool within a single iteration" do
+      required_tool_calls = 0
+
+      allow(agent).to receive(:required_tool_for_iteration) do
+        required_tool_calls += 1
+        agent.send(:final_answer_tool)
+      end
+
+      stub_raif_agent(agent) do |_messages, model_completion|
+        model_completion.response_tool_calls = [
+          {
+            "provider_tool_call_id" => "call_123",
+            "name" => "agent_final_answer",
+            "arguments" => { "final_answer" => "Paris is the capital of France." }
+          }
+        ]
+
+        "Using the final answer tool now."
+      end
+
+      agent.max_iterations = 1
+      agent.run!
+
+      expect(required_tool_calls).to eq(1)
+    end
 
     it "retries when a required tool is missed and another iteration remains" do
       allow(agent).to receive(:required_tool_for_iteration) { agent.send(:final_answer_tool) }

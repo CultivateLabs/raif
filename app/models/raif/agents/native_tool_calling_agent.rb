@@ -95,7 +95,7 @@ module Raif
       end
 
       def before_iteration_llm_chat
-        required_tool = required_tool_for_iteration
+        required_tool = current_iteration_required_tool
         return if required_tool.blank?
 
         warning_message = Raif::Messages::UserMessage.new(
@@ -105,11 +105,11 @@ module Raif
       end
 
       def tool_choice_for_iteration
-        required_tool_for_iteration
+        current_iteration_required_tool
       end
 
       def process_iteration_model_completion(model_completion)
-        required_tool = required_tool_for_iteration
+        required_tool = current_iteration_required_tool
         assistant_response_message = model_completion.parsed_response if model_completion.parsed_response.present?
 
         # The model made no tool call in this completion. Tell it to make a tool call.
@@ -203,6 +203,14 @@ module Raif
         end
       end
 
+      def current_iteration_required_tool
+        if @required_tool_iteration_count != iteration_count
+          @required_tool_iteration_count = iteration_count
+          @current_iteration_required_tool = required_tool_for_iteration
+        end
+
+        @current_iteration_required_tool
+      end
 
       def handle_iteration_error(error_content, required_tool: nil)
         error_message = Raif::Messages::UserMessage.new(content: error_content)
