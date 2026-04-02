@@ -170,7 +170,7 @@ RSpec.describe Raif::Llm, type: :model do
       before do
         allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
 
-        stub_raif_llm(test_llm) do |messages|
+        stub_raif_llm(test_llm) do |_messages|
           "This is a test response"
         end
       end

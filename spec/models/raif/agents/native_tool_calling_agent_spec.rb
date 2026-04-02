@@ -284,7 +284,8 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         { "role" => "user", "content" => "What is the capital of France?" },
         {
           "role" => "user",
-          "content" => "Warning: This iteration requires the agent_final_answer tool. If you do not use it now, the next iteration will be your final chance."
+          "content" => "Warning: This iteration requires the agent_final_answer tool. " \
+            "If you do not use it now, the next iteration will be your final chance."
         },
         {
           "provider_tool_call_id" => "call_123",
@@ -350,7 +351,8 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         { "role" => "user", "content" => "What is the capital of France?" },
         {
           "role" => "user",
-          "content" => "Warning: This iteration requires the agent_final_answer tool. If you do not use it now, the next iteration will be your final chance."
+          "content" => "Warning: This iteration requires the agent_final_answer tool. " \
+            "If you do not use it now, the next iteration will be your final chance."
         },
         {
           "role" => "assistant",
@@ -358,7 +360,8 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         },
         {
           "role" => "user",
-          "content" => "Error: This iteration required the tool 'agent_final_answer', but the model response contained no tool call. Available tools: wikipedia_search, fetch_url, agent_final_answer"
+          "content" => "Error: This iteration required the tool 'agent_final_answer', but the model response " \
+            "contained no tool call. Available tools: wikipedia_search, fetch_url, agent_final_answer"
         },
         {
           "role" => "user",
@@ -387,7 +390,8 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(agent).to be_failed
       expect(agent).not_to be_completed
       expect(agent.failure_reason).to eq(
-        "Error: This iteration required the tool 'agent_final_answer', but the model response contained no tool call. Available tools: wikipedia_search, fetch_url, agent_final_answer"
+        "Error: This iteration required the tool 'agent_final_answer', but the model response " \
+          "contained no tool call. Available tools: wikipedia_search, fetch_url, agent_final_answer"
       )
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
@@ -401,7 +405,8 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         },
         {
           "role" => "user",
-          "content" => "Error: This iteration required the tool 'agent_final_answer', but the model response contained no tool call. Available tools: wikipedia_search, fetch_url, agent_final_answer"
+          "content" => "Error: This iteration required the tool 'agent_final_answer', but the model response " \
+            "contained no tool call. Available tools: wikipedia_search, fetch_url, agent_final_answer"
         }
       ])
     end

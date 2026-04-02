@@ -136,7 +136,8 @@ module Raif
             add_conversation_history_entry(assistant_message.to_h)
           end
 
-          error_content = "Error: Multiple tool calls received. Only one tool call is allowed per step. Please call exactly one tool at a time." # rubocop:disable Layout/LineLength
+          error_content = "Error: Multiple tool calls received. Only one tool call is allowed per step. " \
+            "Please call exactly one tool at a time."
           handle_iteration_error(error_content, required_tool:)
 
           return
