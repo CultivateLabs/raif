@@ -186,6 +186,35 @@ RSpec.describe "Admin::ModelToolInvocations", type: :feature do
       expect(page).to have_current_path(raif.admin_model_tool_invocations_path)
     end
 
+    context "when the tool triggers observations" do
+      before do
+        allow(Raif::TestModelTool).to receive(:triggers_observation_to_model?).and_return(true)
+      end
+
+      it "displays the observation sent to the model" do
+        visit raif.admin_model_tool_invocation_path(tool_invocation)
+
+        expect(page).to have_content(I18n.t("raif.admin.model_tool_invocations.show.observation_sent_to_model"))
+        expect(page).to have_content(I18n.t("raif.admin.model_tool_invocations.show.observation_disclaimer"))
+        expect(page).to have_content("Mock Observation for #{tool_invocation.id}. Result was: success")
+      end
+
+      context "when observation_for_invocation raises an error" do
+        before do
+          allow(Raif::TestModelTool).to receive(:observation_for_invocation).and_raise(StandardError, "data not found")
+        end
+
+        it "displays the error message gracefully" do
+          visit raif.admin_model_tool_invocation_path(tool_invocation)
+
+          expect(page).to have_content(I18n.t("raif.admin.model_tool_invocations.show.observation_sent_to_model"))
+          expect(page).to have_content(
+            I18n.t("raif.admin.model_tool_invocations.show.observation_unavailable", error: "data not found")
+          )
+        end
+      end
+    end
+
     context "with failed tool invocation" do
       let!(:failed_tool_invocation) do
         invocation = Raif::ModelToolInvocation.create!(

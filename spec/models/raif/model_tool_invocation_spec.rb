@@ -130,4 +130,42 @@ RSpec.describe Raif::ModelToolInvocation, type: :model do
       expect(invocation.as_tool_call_result_message).to eq(expected)
     end
   end
+
+  describe "admin observation display" do
+    let(:source) { FB.create(:raif_test_task) }
+    let(:invocation) do
+      described_class.create!(
+        source: source,
+        tool_type: "Raif::TestModelTool",
+        tool_arguments: { "items" => [{ "title" => "foo", "description" => "bar" }] },
+        result: { "status" => "success", "data" => "some data" }
+      ).tap(&:completed!)
+    end
+
+    context "when the tool triggers observations" do
+      before do
+        allow(Raif::TestModelTool).to receive(:triggers_observation_to_model?).and_return(true)
+      end
+
+      it "returns the formatted observation" do
+        expect(invocation.admin_observation).to eq("Mock Observation for #{invocation.id}. Result was: success")
+        expect(invocation.admin_observation_error).to be_nil
+        expect(invocation).to be_admin_observation_available
+      end
+
+      it "captures formatter errors for display" do
+        allow(Raif::TestModelTool).to receive(:observation_for_invocation).and_raise(StandardError, "data not found")
+
+        expect(invocation.admin_observation).to be_nil
+        expect(invocation.admin_observation_error).to eq("data not found")
+        expect(invocation).to be_admin_observation_available
+      end
+    end
+
+    it "returns nothing when the tool does not trigger observations" do
+      expect(invocation.admin_observation).to be_nil
+      expect(invocation.admin_observation_error).to be_nil
+      expect(invocation).not_to be_admin_observation_available
+    end
+  end
 end
