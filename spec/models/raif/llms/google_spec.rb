@@ -876,6 +876,37 @@ RSpec.describe Raif::Llms::Google, type: :model do
     end
   end
 
+  describe "#build_required_tool_choice" do
+    it "returns the correct format for requiring any tool" do
+      expect(llm.build_required_tool_choice).to eq({ mode: "ANY" })
+    end
+  end
+
+  describe "#build_request_parameters with required tool_choice" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        messages: [{ role: "user", content: "Hello" }],
+        llm_model_key: "google_gemini_2_0_flash",
+        model_api_name: "gemini-2.0-flash",
+        temperature: 0.8,
+        response_format: "text",
+        system_prompt: "You are a helpful assistant",
+        available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::AgentFinalAnswer],
+        tool_choice: "required"
+      )
+    end
+
+    let(:parameters) { llm.send(:build_request_parameters, model_completion) }
+
+    it "sets toolConfig to the required format" do
+      expect(parameters[:toolConfig]).to eq({ functionCallingConfig: { mode: "ANY" } })
+    end
+
+    it "does not include parallel_tool_calls" do
+      expect(parameters).not_to have_key(:parallel_tool_calls)
+    end
+  end
+
   describe "#extract_citations" do
     context "with grounding metadata in response" do
       it "extracts citations from grounding chunks" do
