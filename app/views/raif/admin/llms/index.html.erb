@@ -38,11 +38,11 @@
                class="form-control form-control-sm"
                placeholder="<%= t("raif.admin.llms.index.search_placeholder") %>"
                data-raif--table-search-target="input"
-               data-action="input->raif--table-search#filter" />
+               data-action="input->raif--table-search#filter">
       </div>
       <div class="card-body">
         <% if @llms.any? %>
-          <table class="table table-sm table-striped table-hover mb-0">
+          <table class="table table-sm table-hover mb-0">
             <thead>
               <tr>
                 <th role="button" data-action="click->raif--sortable-table#sort" data-raif--sortable-table-target="header" data-col-index="0" data-sort-type="string" style="cursor: pointer;">

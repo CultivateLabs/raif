@@ -56,6 +56,13 @@ module Raif
         model_provider_settings: { supports_temperature: false },
       },
       {
+        key: :open_ai_gpt_5_3,
+        api_name: "gpt-5.3",
+        input_token_cost: 1.75 / 1_000_000,
+        output_token_cost: 14.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
         key: :open_ai_gpt_5_1,
         api_name: "gpt-5.1",
         input_token_cost: 1.25 / 1_000_000,
@@ -644,6 +651,18 @@ module Raif
           api_name: "gpt-oss-20b",
           input_token_cost: 0.05 / 1_000_000,
           output_token_cost: 0.2 / 1_000_000,
+        },
+        {
+          key: :open_router_grok_4_20,
+          api_name: "x-ai/grok-4.20",
+          input_token_cost: 2.0 / 1_000_000,
+          output_token_cost: 6.0 / 1_000_000,
+        },
+        {
+          key: :open_router_google_gemma_4_31b_it,
+          api_name: "google/gemma-4-31b-it",
+          input_token_cost: 0.14 / 1_000_000,
+          output_token_cost: 0.40 / 1_000_000,
         },
       ],
       Raif::Llms::Google => [
