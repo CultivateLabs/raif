@@ -166,6 +166,50 @@ RSpec.describe Raif::Llm, type: :model do
       end
     end
 
+    context "with tool_choice: :required" do
+      before do
+        allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
+
+        stub_raif_llm(test_llm) do |messages|
+          "This is a test response"
+        end
+      end
+
+      it "raises an error when no available model tools are provided" do
+        expect do
+          test_llm.chat(messages: messages, tool_choice: :required)
+        end.to raise_error(ArgumentError, /tool_choice: :required requires at least one available model tool/)
+      end
+
+      it "accepts the symbol :required with tools present" do
+        result = test_llm.chat(
+          messages: messages,
+          tool_choice: :required,
+          available_model_tools: [Raif::ModelTools::WikipediaSearch]
+        )
+
+        expect(result).to be_a(Raif::ModelCompletion)
+        expect(result.tool_choice).to eq("required")
+      end
+
+      it "accepts the string 'required' with tools present" do
+        result = test_llm.chat(
+          messages: messages,
+          tool_choice: "required",
+          available_model_tools: [Raif::ModelTools::WikipediaSearch]
+        )
+
+        expect(result).to be_a(Raif::ModelCompletion)
+        expect(result.tool_choice).to eq("required")
+      end
+
+      it "raises an error when string 'required' is passed without tools" do
+        expect do
+          test_llm.chat(messages: messages, tool_choice: "required")
+        end.to raise_error(ArgumentError, /tool_choice: :required requires at least one available model tool/)
+      end
+    end
+
     context "with invalid response_format" do
       it "raises an error when response_format is not a symbol" do
         expect do
