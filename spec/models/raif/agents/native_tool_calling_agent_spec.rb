@@ -466,6 +466,123 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(agent).not_to be_completed
       expect(agent.failure_reason).to eq("Agent completed without calling agent_final_answer")
     end
+
+    it "defaults tool_choice to :required when no specific tool is required" do
+      tool_choices = []
+
+      stub_raif_agent(agent) do |messages, model_completion|
+        tool_choices << model_completion.tool_choice
+
+        if messages.length == 1
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_123",
+              "name" => "wikipedia_search",
+              "arguments" => { "query" => "capital of France" }
+            }
+          ]
+          "Let me search for that."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+          "The answer is Paris."
+        end
+      end
+
+      stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
+        .to_return(status: 200, body: { query: { search: [] } }.to_json)
+
+      agent.max_iterations = 5
+      agent.run!
+
+      expect(tool_choices.first).to eq("required")
+    end
+
+    it "handles multiple tool calls by returning an error" do
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_1",
+              "name" => "wikipedia_search",
+              "arguments" => { "query" => "capital of France" }
+            },
+            {
+              "provider_tool_call_id" => "call_2",
+              "name" => "fetch_url",
+              "arguments" => { "url" => "https://example.com" }
+            }
+          ]
+          "Let me search and fetch at the same time."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+          "Using the final answer tool now."
+        end
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      expect(agent.conversation_history).to eq([
+        { "role" => "user", "content" => "What is the capital of France?" },
+        {
+          "role" => "assistant",
+          "content" => "Let me search and fetch at the same time."
+        },
+        {
+          "role" => "user",
+          "content" => "Error: Multiple tool calls received. Only one tool call is allowed per step. Please call exactly one tool at a time."
+        },
+        {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
+        {
+          "provider_tool_call_id" => "call_456",
+          "name" => "agent_final_answer",
+          "arguments" => { "final_answer" => "Paris is the capital of France." },
+          "type" => "tool_call",
+          "assistant_message" => "Using the final answer tool now."
+        }
+      ])
+    end
+
+    it "fails when multiple tool calls are returned on the final required-tool attempt" do
+      stub_raif_agent(agent) do |_messages, model_completion|
+        model_completion.response_tool_calls = [
+          {
+            "provider_tool_call_id" => "call_1",
+            "name" => "agent_final_answer",
+            "arguments" => { "final_answer" => "Paris" }
+          },
+          {
+            "provider_tool_call_id" => "call_2",
+            "name" => "wikipedia_search",
+            "arguments" => { "query" => "France" }
+          }
+        ]
+        "Here's the answer and a search."
+      end
+
+      agent.max_iterations = 1
+      agent.run!
+
+      expect(agent).to be_failed
+      expect(agent.failure_reason).to eq(
+        "Error: Multiple tool calls received. Only one tool call is allowed per step. Please call exactly one tool at a time."
+      )
+    end
   end
 
   describe "failure handling" do

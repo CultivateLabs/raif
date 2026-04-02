@@ -27,7 +27,7 @@ http_interactions:
         a URL and return the page content as markdown","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
         URL to fetch content from"}},"required":["url"]}}}},{"toolSpec":{"name":"agent_final_answer","description":"Provide
         your final answer to the user''s question or task","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"final_answer":{"type":"string","description":"Your
-        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}}}]}}'
+        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}}}],"toolChoice":{"any":{}}}}'
     headers:
       Accept-Encoding:
       - ''
@@ -222,7 +222,7 @@ http_interactions:
         a URL and return the page content as markdown","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
         URL to fetch content from"}},"required":["url"]}}}},{"toolSpec":{"name":"agent_final_answer","description":"Provide
         your final answer to the user''s question or task","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"final_answer":{"type":"string","description":"Your
-        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}}}]}}'
+        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}}}],"toolChoice":{"any":{}}}}'
     headers:
       Accept-Encoding:
       - ''
@@ -1894,7 +1894,7 @@ http_interactions:
         a URL and return the page content as markdown","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
         URL to fetch content from"}},"required":["url"]}}}},{"toolSpec":{"name":"agent_final_answer","description":"Provide
         your final answer to the user''s question or task","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"final_answer":{"type":"string","description":"Your
-        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}}}]}}'
+        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}}}],"toolChoice":{"any":{}}}}'
     headers:
       Accept-Encoding:
       - ''

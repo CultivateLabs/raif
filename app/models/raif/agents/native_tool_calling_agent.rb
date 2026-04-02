@@ -105,7 +105,7 @@ module Raif
       end
 
       def tool_choice_for_iteration
-        current_iteration_required_tool
+        current_iteration_required_tool || :required
       end
 
       def process_iteration_model_completion(model_completion)
@@ -124,6 +124,19 @@ module Raif
           else
             "Error: Previous message contained no tool call. Make a tool call at each step. Available tools: #{available_model_tools_map.keys.join(", ")}" # rubocop:disable Layout/LineLength
           end
+          handle_iteration_error(error_content, required_tool:)
+
+          return
+        end
+
+        # The model returned multiple tool calls. We only allow one per step.
+        if model_completion.response_tool_calls.length > 1
+          if assistant_response_message.present?
+            assistant_message = Raif::Messages::AssistantMessage.new(content: assistant_response_message)
+            add_conversation_history_entry(assistant_message.to_h)
+          end
+
+          error_content = "Error: Multiple tool calls received. Only one tool call is allowed per step. Please call exactly one tool at a time." # rubocop:disable Layout/LineLength
           handle_iteration_error(error_content, required_tool:)
 
           return
