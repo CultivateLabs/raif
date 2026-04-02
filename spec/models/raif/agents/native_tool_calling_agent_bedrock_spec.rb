@@ -71,6 +71,45 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         allow_any_instance_of(Raif::Llms::Bedrock).to receive(:bedrock_client).and_return(client)
       end
 
+      it "sends a forced Bedrock tool choice when a required tool is activated before the final iteration" do
+        answer = "Paris is the capital of France."
+        response = Aws::BedrockRuntime::Types::ConverseResponse.new(
+          output: Aws::BedrockRuntime::Types::ConverseOutput::Message.new(
+            message: Aws::BedrockRuntime::Types::Message.new(
+              role: "assistant",
+              content: [
+                Aws::BedrockRuntime::Types::ContentBlock.new(text: "Using the final answer tool now."),
+                Aws::BedrockRuntime::Types::ContentBlock.new(
+                  tool_use: Aws::BedrockRuntime::Types::ToolUseBlock.new(
+                    tool_use_id: "tooluse_abc123",
+                    name: "agent_final_answer",
+                    input: { "final_answer" => answer }
+                  )
+                )
+              ]
+            )
+          ),
+          usage: Aws::BedrockRuntime::Types::TokenUsage.new(input_tokens: 10, output_tokens: 5, total_tokens: 15),
+          stop_reason: "tool_use"
+        )
+
+        mock_client = instance_double(Aws::BedrockRuntime::Client)
+        allow_any_instance_of(Raif::Llms::Bedrock).to receive(:bedrock_client).and_return(mock_client)
+        allow(agent).to receive(:required_tool_for_iteration) { agent.send(:final_answer_tool) }
+
+        expect(mock_client).to receive(:converse) do |params|
+          expect(params.dig(:tool_config, :tool_choice)).to eq(tool: { name: "agent_final_answer" })
+          response
+        end
+
+        agent.max_iterations = 2
+        agent.run!
+
+        expect(agent).to be_completed
+        expect(agent.final_answer).to eq(answer)
+        expect(agent.raif_model_completions.oldest_first.first.tool_choice).to eq("Raif::ModelTools::AgentFinalAnswer")
+      end
+
       it "processes multiple iterations until finding an answer",
         vcr: { cassette_name: "native_tool_calling_agent/bedrock", allow_playback_repeats: true } do
         expect(agent.started_at).to be_nil

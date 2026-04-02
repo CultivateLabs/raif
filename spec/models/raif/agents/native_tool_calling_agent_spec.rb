@@ -66,25 +66,33 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
     end
 
     it "handles a tool call with an unavailable tool" do
-      stub_raif_agent(agent) do |_messages, model_completion|
-        model_completion.response_tool_calls = [
-          {
-            "name" => "unavailable_tool",
-            "arguments" => { "query" => "capital of France" }
-          }
-        ]
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_tool_calls = [
+            {
+              "name" => "unavailable_tool",
+              "arguments" => { "query" => "capital of France" }
+            }
+          ]
 
-        "I'll try to use a non-existent tool."
+          "I'll try to use a non-existent tool."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+
+          "Using the final answer tool now."
+        end
       end
-      agent.max_iterations = 1
+      agent.max_iterations = 2
       agent.run!
 
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
-        {
-          "role" => "user",
-          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
-        },
         {
           "name" => "unavailable_tool",
           "arguments" => { "query" => "capital of France" },
@@ -94,6 +102,17 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         {
           "role" => "user",
           "content" => "Error: Tool 'unavailable_tool' is not a valid tool. Available tools: wikipedia_search, fetch_url, agent_final_answer"
+        },
+        {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
+        {
+          "provider_tool_call_id" => "call_456",
+          "name" => "agent_final_answer",
+          "arguments" => { "final_answer" => "Paris is the capital of France." },
+          "type" => "tool_call",
+          "assistant_message" => "Using the final answer tool now."
         }
       ])
     end
@@ -140,26 +159,34 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
     end
 
     it "handles a tool call with invalid tool arguments" do
-      stub_raif_agent(agent) do |_messages, model_completion|
-        model_completion.response_tool_calls = [
-          {
-            "name" => "wikipedia_search",
-            "arguments" => { "search_term" => "jingle bells" }
-          }
-        ]
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_tool_calls = [
+            {
+              "name" => "wikipedia_search",
+              "arguments" => { "search_term" => "jingle bells" }
+            }
+          ]
 
-        "I'll try to use Wikipedia search with wrong arguments."
+          "I'll try to use Wikipedia search with wrong arguments."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+
+          "Using the final answer tool now."
+        end
       end
 
-      agent.max_iterations = 1
+      agent.max_iterations = 2
       agent.run!
 
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
-        {
-          "role" => "user",
-          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
-        },
         {
           "name" => "wikipedia_search",
           "arguments" => {},
@@ -170,11 +197,159 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           "role" => "user",
           "content" =>
           "Error: Invalid tool arguments for the tool 'wikipedia_search'. Tool arguments schema: {\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"The query to search Wikipedia for\"}},\"required\":[\"query\"]}" # rubocop:disable Layout/LineLength
+        },
+        {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
+        {
+          "provider_tool_call_id" => "call_456",
+          "name" => "agent_final_answer",
+          "arguments" => { "final_answer" => "Paris is the capital of France." },
+          "type" => "tool_call",
+          "assistant_message" => "Using the final answer tool now."
         }
       ])
     end
 
     it "handles an iteration with no tool call" do
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_tool_calls = nil
+
+          "Maybe I'll just jabber instead of using a tool"
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+
+          "Using the final answer tool now."
+        end
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      expect(agent.conversation_history).to eq([
+        { "role" => "user", "content" => "What is the capital of France?" },
+        {
+          "role" => "assistant",
+          "content" => "Maybe I'll just jabber instead of using a tool"
+        },
+        {
+          "role" => "user",
+          "content" => "Error: Previous message contained no tool call. Make a tool call at each step. Available tools: wikipedia_search, fetch_url, agent_final_answer" # rubocop:disable Layout/LineLength
+        },
+        {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
+        {
+          "provider_tool_call_id" => "call_456",
+          "name" => "agent_final_answer",
+          "arguments" => { "final_answer" => "Paris is the capital of France." },
+          "type" => "tool_call",
+          "assistant_message" => "Using the final answer tool now."
+        }
+      ])
+    end
+
+    it "forces the required tool on an earlier iteration and adds a warning" do
+      tool_choices = []
+
+      allow(agent).to receive(:required_tool_for_iteration) { agent.send(:final_answer_tool) }
+
+      stub_raif_agent(agent) do |_messages, model_completion|
+        tool_choices << model_completion.tool_choice
+        model_completion.response_tool_calls = [
+          {
+            "provider_tool_call_id" => "call_123",
+            "name" => "agent_final_answer",
+            "arguments" => { "final_answer" => "Paris is the capital of France." }
+          }
+        ]
+
+        "Using the final answer tool now."
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      expect(tool_choices).to eq(["Raif::ModelTools::AgentFinalAnswer"])
+      expect(agent.conversation_history).to eq([
+        { "role" => "user", "content" => "What is the capital of France?" },
+        {
+          "role" => "user",
+          "content" => "Warning: This iteration requires the agent_final_answer tool. If you do not use it now, the next iteration will be your final chance."
+        },
+        {
+          "provider_tool_call_id" => "call_123",
+          "name" => "agent_final_answer",
+          "arguments" => { "final_answer" => "Paris is the capital of France." },
+          "type" => "tool_call",
+          "assistant_message" => "Using the final answer tool now."
+        }
+      ])
+    end
+
+
+    it "retries when a required tool is missed and another iteration remains" do
+      allow(agent).to receive(:required_tool_for_iteration) { agent.send(:final_answer_tool) }
+
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 2
+          model_completion.response_tool_calls = nil
+          "Maybe I'll just jabber instead of using a tool"
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+          "Using the final answer tool now."
+        end
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      expect(agent).to be_completed
+      expect(agent).not_to be_failed
+      expect(agent.conversation_history).to eq([
+        { "role" => "user", "content" => "What is the capital of France?" },
+        {
+          "role" => "user",
+          "content" => "Warning: This iteration requires the agent_final_answer tool. If you do not use it now, the next iteration will be your final chance."
+        },
+        {
+          "role" => "assistant",
+          "content" => "Maybe I'll just jabber instead of using a tool"
+        },
+        {
+          "role" => "user",
+          "content" => "Error: This iteration required the tool 'agent_final_answer', but the model response contained no tool call. Available tools: wikipedia_search, fetch_url, agent_final_answer"
+        },
+        {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
+        {
+          "provider_tool_call_id" => "call_456",
+          "name" => "agent_final_answer",
+          "arguments" => { "final_answer" => "Paris is the capital of France." },
+          "type" => "tool_call",
+          "assistant_message" => "Using the final answer tool now."
+        }
+      ])
+    end
+
+    it "fails when no tool call is returned on the final allowed required-tool attempt" do
       stub_raif_agent(agent) do |_messages, model_completion|
         model_completion.response_tool_calls = nil
 
@@ -184,6 +359,11 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       agent.max_iterations = 1
       agent.run!
 
+      expect(agent).to be_failed
+      expect(agent).not_to be_completed
+      expect(agent.failure_reason).to eq(
+        "Error: This iteration required the tool 'agent_final_answer', but the model response contained no tool call. Available tools: wikipedia_search, fetch_url, agent_final_answer"
+      )
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
         {
@@ -196,9 +376,93 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         },
         {
           "role" => "user",
-          "content" => "Error: Previous message contained no tool call. Make a tool call at each step. Available tools: wikipedia_search, fetch_url, agent_final_answer" # rubocop:disable Layout/LineLength
+          "content" => "Error: This iteration required the tool 'agent_final_answer', but the model response contained no tool call. Available tools: wikipedia_search, fetch_url, agent_final_answer"
         }
       ])
+    end
+
+    it "fails when a different tool is called on the final allowed required-tool attempt" do
+      stub_raif_agent(agent) do |_messages, model_completion|
+        model_completion.response_tool_calls = [
+          {
+            "name" => "wikipedia_search",
+            "arguments" => { "query" => "capital of France" }
+          }
+        ]
+
+        "I'll search instead of using the final answer tool."
+      end
+
+      agent.max_iterations = 1
+      agent.run!
+
+      expect(agent).to be_failed
+      expect(agent).not_to be_completed
+      expect(agent.failure_reason).to eq(
+        "Error: This iteration required the tool 'agent_final_answer', but the model called 'wikipedia_search' instead."
+      )
+      expect(agent.conversation_history).to eq([
+        { "role" => "user", "content" => "What is the capital of France?" },
+        {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
+        {
+          "name" => "wikipedia_search",
+          "arguments" => { "query" => "capital of France" },
+          "type" => "tool_call",
+          "assistant_message" => "I'll search instead of using the final answer tool."
+        },
+        {
+          "role" => "user",
+          "content" => "Error: This iteration required the tool 'agent_final_answer', but the model called 'wikipedia_search' instead."
+        }
+      ])
+    end
+
+    it "fails if it exhausts iterations without calling agent_final_answer" do
+      allow(agent).to receive(:required_tool_for_iteration).and_return(nil)
+
+      stub_raif_agent(agent) do |_messages, model_completion|
+        model_completion.response_tool_calls = [
+          {
+            "name" => "unavailable_tool",
+            "arguments" => { "query" => "capital of France" }
+          }
+        ]
+
+        "I'll try to use a non-existent tool."
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      expect(agent).to be_failed
+      expect(agent).not_to be_completed
+      expect(agent.failure_reason).to eq("Agent completed without calling agent_final_answer")
+    end
+  end
+
+  describe "failure handling" do
+    let(:agent) do
+      described_class.create!(
+        creator: creator,
+        source: creator,
+        task: "What is the capital of France?",
+        max_iterations: 1,
+        available_model_tools: [Raif::ModelTools::WikipediaSearch],
+        llm_model_key: "open_ai_responses_gpt_4_1"
+      )
+    end
+
+    it "preserves the first failure reason" do
+      agent.send(:fail_run!, "First failure")
+      first_failed_at = agent.failed_at
+
+      agent.send(:fail_run!, "Second failure")
+
+      expect(agent.failed_at).to eq(first_failed_at)
+      expect(agent.failure_reason).to eq("First failure")
     end
   end
 

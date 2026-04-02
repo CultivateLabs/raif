@@ -88,24 +88,28 @@ module Raif
         available_model_tools_map["agent_final_answer"]
       end
 
-      # Warn the agent that it must provide a final answer on the next iteration
+      def required_tool_for_iteration
+        return final_answer_tool if final_iteration?
+
+        nil
+      end
+
       def before_iteration_llm_chat
-        return unless final_iteration?
+        required_tool = required_tool_for_iteration
+        return if required_tool.blank?
 
         warning_message = Raif::Messages::UserMessage.new(
-          content: I18n.t("raif.agents.native_tool_calling_agent.final_answer_warning")
+          content: required_tool_warning_message(required_tool)
         )
         add_conversation_history_entry(warning_message.to_h)
       end
 
-      # On the final iteration, force the agent to use the agent_final_answer tool
       def tool_choice_for_iteration
-        return unless final_iteration?
-
-        final_answer_tool
+        required_tool_for_iteration
       end
 
       def process_iteration_model_completion(model_completion)
+        required_tool = required_tool_for_iteration
         assistant_response_message = model_completion.parsed_response if model_completion.parsed_response.present?
 
         # The model made no tool call in this completion. Tell it to make a tool call.
@@ -115,10 +119,12 @@ module Raif
             add_conversation_history_entry(assistant_message.to_h)
           end
 
-          error_message = Raif::Messages::UserMessage.new(
-            content: "Error: Previous message contained no tool call. Make a tool call at each step. Available tools: #{available_model_tools_map.keys.join(", ")}" # rubocop:disable Layout/LineLength
-          )
-          add_conversation_history_entry(error_message.to_h)
+          error_content = if required_tool.present?
+            "Error: This iteration required the tool '#{required_tool.tool_name}', but the model response contained no tool call. Available tools: #{available_model_tools_map.keys.join(", ")}" # rubocop:disable Layout/LineLength
+          else
+            "Error: Previous message contained no tool call. Make a tool call at each step. Available tools: #{available_model_tools_map.keys.join(", ")}" # rubocop:disable Layout/LineLength
+          end
+          handle_iteration_error(error_content, required_tool:)
 
           return
         end
@@ -143,12 +149,17 @@ module Raif
         )
         add_conversation_history_entry(tool_call_message.to_h)
 
+        if required_tool.present? && tool_name != required_tool.tool_name
+          error_content = "Error: This iteration required the tool '#{required_tool.tool_name}', but the model called '#{tool_name}' instead."
+          handle_iteration_error(error_content, required_tool:)
+          return
+        end
+
         # The model tried to use a tool that doesn't exist
         if tool_klass.blank?
           error_content = "Error: Tool '#{tool_name}' is not a valid tool. " \
             "Available tools: #{available_model_tools_map.keys.join(", ")}"
-          error_message = Raif::Messages::UserMessage.new(content: error_content)
-          add_conversation_history_entry(error_message.to_h)
+          handle_iteration_error(error_content, required_tool:)
           return
         end
 
@@ -156,8 +167,7 @@ module Raif
         unless JSON::Validator.validate(tool_klass.tool_arguments_schema, tool_arguments)
           error_content = "Error: Invalid tool arguments for the tool '#{tool_name}'. " \
             "Tool arguments schema: #{tool_klass.tool_arguments_schema.to_json}"
-          error_message = Raif::Messages::UserMessage.new(content: error_content)
-          add_conversation_history_entry(error_message.to_h)
+          handle_iteration_error(error_content, required_tool:)
           return
         end
 
@@ -173,6 +183,38 @@ module Raif
         else
           add_conversation_history_entry(tool_invocation.as_tool_call_result_message)
         end
+      end
+
+      def validate_successful_completion
+        return if failed? || final_answer.present?
+
+        fail_run!("Agent completed without calling agent_final_answer")
+      end
+
+      def required_tool_warning_message(required_tool)
+        if required_tool == final_answer_tool
+          if final_iteration?
+            I18n.t("raif.agents.native_tool_calling_agent.final_answer_warning")
+          else
+            "Warning: This iteration requires the agent_final_answer tool. If you do not use it now, the next iteration will be your final chance."
+          end
+        else
+          "Warning: This iteration requires the #{required_tool.tool_name} tool."
+        end
+      end
+
+
+      def handle_iteration_error(error_content, required_tool: nil)
+        error_message = Raif::Messages::UserMessage.new(content: error_content)
+        add_conversation_history_entry(error_message.to_h)
+
+        return if required_tool.blank? || retry_iteration_available?
+
+        fail_run!(error_content)
+      end
+
+      def retry_iteration_available?
+        iteration_count < max_iterations
       end
 
       def ensure_llm_supports_native_tool_use
