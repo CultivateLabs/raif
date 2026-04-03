@@ -215,11 +215,14 @@ en:
           created_before: Created Before
           current_prompt: Current Prompt
           current_system_prompt: Current System Prompt
+          estimated_cost: "~%{cost} (estimate)"
+          estimated_tokens: "~%{count} tokens (estimate)"
           no_instances: No instances found.
           original_prompt: Original Prompt
           original_system_prompt: Original System Prompt
           prompt_changed: Prompt Changed
           prompt_studio: Prompt Studio
+          prompt_tokens: "%{count} tokens"
           prompt_unchanged: Prompt Unchanged
           run_in_prompt_studio: Run in Prompt Studio
           runs_disabled: Prompt Studio runs are not enabled in this environment.
