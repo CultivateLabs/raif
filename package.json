@@ -9,7 +9,7 @@
     "nodemon": "^3.1.7",
     "postcss": "^8.5.8",
     "postcss-cli": "^11.0.0",
-    "sass": "^1.80.4"
+    "sass": "^1.99.0"
   },
   "scripts": {
     "build:css:compile:raif": "sass ./app/assets/stylesheets/raif.scss:./app/assets/builds/raif.css --no-source-map --load-path=node_modules --load-path=vendor/stylesheets",
