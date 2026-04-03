@@ -12,6 +12,7 @@ require "raif/json_schema_builder"
 require "raif/migration_checker"
 require "raif/messages"
 require "raif/prompt_studio_comparison_builder"
+require "raif/token_estimator"
 
 require "faraday"
 require "event_stream_parser"

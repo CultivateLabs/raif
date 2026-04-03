@@ -51,11 +51,31 @@
       <% if comparison[:prompt_changed] %>
         <div class="row">
           <div class="col-md-6">
-            <h6><%= t("raif.admin.prompt_studio.common.original_prompt") %></h6>
+            <h6 class="d-flex justify-content-between align-items-center">
+              <span><%= t("raif.admin.prompt_studio.common.original_prompt") %></span>
+              <span>
+                <% if comparison[:original_prompt_tokens].present? %>
+                  <span class="badge bg-secondary fw-normal"><%= t("raif.admin.prompt_studio.common.prompt_tokens", count: number_with_delimiter(comparison[:original_prompt_tokens])) %></span>
+                <% end %>
+                <% if comparison[:original_prompt_token_cost].present? %>
+                  <span class="badge bg-secondary fw-normal"><%= number_to_currency(comparison[:original_prompt_token_cost], precision: 4) %></span>
+                <% end %>
+              </span>
+            </h6>
             <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:original_prompt] %></pre>
           </div>
           <div class="col-md-6">
-            <h6><%= t("raif.admin.prompt_studio.common.current_prompt") %></h6>
+            <h6 class="d-flex justify-content-between align-items-center">
+              <span><%= t("raif.admin.prompt_studio.common.current_prompt") %></span>
+              <span>
+                <% if comparison[:current_prompt_token_estimate].present? %>
+                  <span class="badge bg-secondary fw-normal"><%= t("raif.admin.prompt_studio.common.estimated_tokens", count: number_with_delimiter(comparison[:current_prompt_token_estimate])) %></span>
+                <% end %>
+                <% if comparison[:current_prompt_cost_estimate].present? %>
+                  <span class="badge bg-secondary fw-normal"><%= t("raif.admin.prompt_studio.common.estimated_cost", cost: number_to_currency(comparison[:current_prompt_cost_estimate], precision: 4)) %></span>
+                <% end %>
+              </span>
+            </h6>
             <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:current_prompt] %></pre>
           </div>
         </div>
