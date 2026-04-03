@@ -804,7 +804,38 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
   describe "#build_forced_tool_choice" do
     it "returns the correct format for forcing a specific tool" do
       result = llm.build_forced_tool_choice("agent_final_answer")
-      expect(result).to eq({ "type" => "tool", "name" => "agent_final_answer" })
+      expect(result).to eq({ "type" => "tool", "name" => "agent_final_answer", "disable_parallel_tool_use" => true })
+    end
+  end
+
+  describe "#build_required_tool_choice" do
+    it "returns the correct format for requiring any tool" do
+      expect(llm.build_required_tool_choice).to eq({ "type" => "any", "disable_parallel_tool_use" => true })
+    end
+  end
+
+  describe "#build_request_parameters with required tool_choice" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        messages: [{ role: "user", content: "Hello" }],
+        llm_model_key: "anthropic_claude_4_sonnet",
+        model_api_name: "claude-sonnet-4-20250514",
+        temperature: 0.8,
+        response_format: "text",
+        system_prompt: "You are a helpful assistant",
+        available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::AgentFinalAnswer],
+        tool_choice: "required"
+      )
+    end
+
+    let(:parameters) { llm.send(:build_request_parameters, model_completion) }
+
+    it "sets tool_choice to the required format" do
+      expect(parameters[:tool_choice]).to eq({ "type" => "any", "disable_parallel_tool_use" => true })
+    end
+
+    it "does not include parallel_tool_calls" do
+      expect(parameters).not_to have_key(:parallel_tool_calls)
     end
   end
 

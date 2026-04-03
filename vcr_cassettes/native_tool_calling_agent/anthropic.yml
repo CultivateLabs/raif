@@ -28,7 +28,7 @@ http_interactions:
         a URL and return the page content as markdown","input_schema":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
         URL to fetch content from"}},"required":["url"]}},{"name":"agent_final_answer","description":"Provide
         your final answer to the user''s question or task","input_schema":{"type":"object","additionalProperties":false,"properties":{"final_answer":{"type":"string","description":"Your
-        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}]}'
+        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}],"tool_choice":{"type":"any","disable_parallel_tool_use":true}}'
     headers:
       Anthropic-Version:
       - '2023-06-01'
@@ -246,7 +246,7 @@ http_interactions:
         a URL and return the page content as markdown","input_schema":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
         URL to fetch content from"}},"required":["url"]}},{"name":"agent_final_answer","description":"Provide
         your final answer to the user''s question or task","input_schema":{"type":"object","additionalProperties":false,"properties":{"final_answer":{"type":"string","description":"Your
-        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}]}'
+        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}],"tool_choice":{"type":"any","disable_parallel_tool_use":true}}'
     headers:
       Anthropic-Version:
       - '2023-06-01'
@@ -1962,7 +1962,7 @@ http_interactions:
         a URL and return the page content as markdown","input_schema":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
         URL to fetch content from"}},"required":["url"]}},{"name":"agent_final_answer","description":"Provide
         your final answer to the user''s question or task","input_schema":{"type":"object","additionalProperties":false,"properties":{"final_answer":{"type":"string","description":"Your
-        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}]}'
+        complete and final answer to the user''s question or task"}},"required":["final_answer"]}}],"tool_choice":{"type":"any","disable_parallel_tool_use":true}}'
     headers:
       Anthropic-Version:
       - '2023-06-01'

@@ -91,7 +91,9 @@ private
       tools = build_tools_parameter(model_completion)
       params[:tool_config] = tools unless tools.blank?
 
-      if model_completion.tool_choice.present?
+      if model_completion.tool_choice == "required"
+        params[:tool_config][:tool_choice] = build_required_tool_choice
+      elsif model_completion.tool_choice.present?
         tool_klass = model_completion.tool_choice.constantize
         params[:tool_config][:tool_choice] = build_forced_tool_choice(tool_klass.tool_name)
       end
