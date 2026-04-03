@@ -119,6 +119,8 @@ module Raif
       token_estimate = current_prompt_token_estimate
       return unless token_estimate
 
+      return unless @record.llm_model_key.present?
+
       llm_config = Raif.llm_config(@record.llm_model_key.to_sym)
       return unless llm_config&.dig(:input_token_cost)
 
