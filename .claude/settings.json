@@ -24,5 +24,12 @@
     ],
     "defaultMode": "acceptEdits"
   },
-  "env_setup": ".claude/setup.sh"
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "bash .claude/setup.sh"
+      }
+    ]
+  }
 }

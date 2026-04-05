@@ -62,6 +62,17 @@ if ! command -v google-chrome &> /dev/null && command -v chromium &> /dev/null; 
   export BROWSER_PATH=$(which chromium)
 fi
 
+# Ensure correct bundler version is installed
+echo "==> Checking bundler version..."
+BUNDLED_WITH=$(grep -A1 "BUNDLED WITH" Gemfile.lock | tail -1 | tr -d ' ')
+if [ -n "$BUNDLED_WITH" ]; then
+  CURRENT_BUNDLER=$(bundle --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+  if [ "$CURRENT_BUNDLER" != "$BUNDLED_WITH" ]; then
+    echo "==> Installing bundler $BUNDLED_WITH (have $CURRENT_BUNDLER)..."
+    gem install bundler -v "$BUNDLED_WITH" || true
+  fi
+fi
+
 # Install Ruby dependencies
 echo "==> Installing Ruby dependencies..."
 bundle install --jobs=4
