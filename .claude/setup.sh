@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
+
+# Don't use set -e — we handle errors per-command with || true to avoid
+# the setup script aborting partway through in web environments.
 
 echo "==> Setting up Raif development environment"
 
@@ -13,12 +16,12 @@ if command -v apt-get &> /dev/null; then
   fi
 
   # MySQL client libs (needed to compile mysql2 gem)
-  if ! dpkg -s default-libmysqlclient-dev &> /dev/null; then
+  if ! dpkg -s default-libmysqlclient-dev &> /dev/null 2>&1; then
     PACKAGES_TO_INSTALL="$PACKAGES_TO_INSTALL default-libmysqlclient-dev"
   fi
 
   # Chrome (needed for Capybara/Cuprite feature specs)
-  if ! command -v google-chrome &> /dev/null && ! command -v chromium-browser &> /dev/null; then
+  if ! command -v google-chrome &> /dev/null && ! command -v chromium-browser &> /dev/null && ! command -v chromium &> /dev/null; then
     PACKAGES_TO_INSTALL="$PACKAGES_TO_INSTALL chromium"
   fi
 
@@ -29,8 +32,8 @@ if command -v apt-get &> /dev/null; then
 
   if [ -n "$PACKAGES_TO_INSTALL" ]; then
     echo "==> Installing system packages:$PACKAGES_TO_INSTALL"
-    sudo apt-get update -qq
-    sudo apt-get install -y --no-install-recommends $PACKAGES_TO_INSTALL
+    sudo apt-get update -qq || true
+    sudo apt-get install -y --no-install-recommends $PACKAGES_TO_INSTALL || true
   fi
 fi
 
@@ -69,7 +72,7 @@ yarn install
 
 # Build CSS assets
 echo "==> Building CSS..."
-yarn build:css
+yarn build:css || true
 
 # Set up test database
 echo "==> Setting up test database..."
@@ -86,6 +89,6 @@ else
   bin/rails app:db:create 2>/dev/null || true
 fi
 
-bin/rails app:db:migrate:reset 2>/dev/null || bin/rails app:db:migrate
+bin/rails app:db:migrate:reset 2>/dev/null || bin/rails app:db:migrate || true
 
 echo "==> Setup complete!"
