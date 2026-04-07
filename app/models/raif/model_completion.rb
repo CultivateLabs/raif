@@ -4,39 +4,41 @@
 #
 # Table name: raif_model_completions
 #
-#  id                        :bigint           not null, primary key
-#  available_model_tools     :jsonb            not null
-#  citations                 :jsonb
-#  completed_at              :datetime
-#  completion_tokens         :integer
-#  failed_at                 :datetime
-#  failure_error             :string
-#  failure_reason            :text
-#  llm_model_key             :string           not null
-#  max_completion_tokens     :integer
-#  messages                  :jsonb            not null
-#  model_api_name            :string           not null
-#  output_token_cost         :decimal(10, 6)
-#  prompt_token_cost         :decimal(10, 6)
-#  prompt_tokens             :integer
-#  raw_response              :text
-#  response_array            :jsonb
-#  response_format           :integer          default("text"), not null
-#  response_format_parameter :string
-#  response_tool_calls       :jsonb
-#  retry_count               :integer          default(0), not null
-#  source_type               :string
-#  started_at                :datetime
-#  stream_response           :boolean          default(FALSE), not null
-#  system_prompt             :text
-#  temperature               :decimal(5, 3)
-#  tool_choice               :string
-#  total_cost                :decimal(10, 6)
-#  total_tokens              :integer
-#  created_at                :datetime         not null
-#  updated_at                :datetime         not null
-#  response_id               :string
-#  source_id                 :bigint
+#  id                          :bigint           not null, primary key
+#  available_model_tools       :jsonb            not null
+#  cache_creation_input_tokens :integer
+#  cache_read_input_tokens     :integer
+#  citations                   :jsonb
+#  completed_at                :datetime
+#  completion_tokens           :integer
+#  failed_at                   :datetime
+#  failure_error               :string
+#  failure_reason              :text
+#  llm_model_key               :string           not null
+#  max_completion_tokens       :integer
+#  messages                    :jsonb            not null
+#  model_api_name              :string           not null
+#  output_token_cost           :decimal(10, 6)
+#  prompt_token_cost           :decimal(10, 6)
+#  prompt_tokens               :integer
+#  raw_response                :text
+#  response_array              :jsonb
+#  response_format             :integer          default("text"), not null
+#  response_format_parameter   :string
+#  response_tool_calls         :jsonb
+#  retry_count                 :integer          default(0), not null
+#  source_type                 :string
+#  started_at                  :datetime
+#  stream_response             :boolean          default(FALSE), not null
+#  system_prompt               :text
+#  temperature                 :decimal(5, 3)
+#  tool_choice                 :string
+#  total_cost                  :decimal(10, 6)
+#  total_tokens                :integer
+#  created_at                  :datetime         not null
+#  updated_at                  :datetime         not null
+#  response_id                 :string
+#  source_id                   :bigint
 #
 # Indexes
 #

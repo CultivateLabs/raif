@@ -71,6 +71,8 @@ private
     model_completion.completion_tokens = resp.usage.output_tokens
     model_completion.prompt_tokens = resp.usage.input_tokens
     model_completion.total_tokens = resp.usage.total_tokens
+    model_completion.cache_read_input_tokens = resp.usage.try(:cache_read_input_tokens)
+    model_completion.cache_creation_input_tokens = resp.usage.try(:cache_write_input_tokens)
     model_completion.save!
   end
 

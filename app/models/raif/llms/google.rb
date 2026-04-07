@@ -58,6 +58,7 @@ private
     model_completion.prompt_tokens = response_json&.dig("usageMetadata", "promptTokenCount")
     model_completion.total_tokens = response_json&.dig("usageMetadata", "totalTokenCount") ||
       (model_completion.completion_tokens.to_i + model_completion.prompt_tokens.to_i)
+    model_completion.cache_read_input_tokens = response_json&.dig("usageMetadata", "cachedContentTokenCount")
     model_completion.save!
   end
 

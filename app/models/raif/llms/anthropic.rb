@@ -49,6 +49,8 @@ private
     model_completion.completion_tokens = response_json&.dig("usage", "output_tokens")
     model_completion.prompt_tokens = response_json&.dig("usage", "input_tokens")
     model_completion.total_tokens = model_completion.completion_tokens.to_i + model_completion.prompt_tokens.to_i
+    model_completion.cache_read_input_tokens = response_json&.dig("usage", "cache_read_input_tokens")
+    model_completion.cache_creation_input_tokens = response_json&.dig("usage", "cache_creation_input_tokens")
     model_completion.save!
   end
 
