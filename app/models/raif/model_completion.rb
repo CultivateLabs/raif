@@ -91,7 +91,7 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     total_attempts = (retry_count || 0) + 1
 
     if prompt_tokens.present? && llm_config[:input_token_cost].present?
-      self.prompt_token_cost = llm_config[:input_token_cost] * prompt_tokens * total_attempts
+      self.prompt_token_cost = calculate_prompt_token_cost(total_attempts)
     end
 
     if completion_tokens.present? && llm_config[:output_token_cost].present?
@@ -111,6 +111,37 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   end
 
 private
+
+  def calculate_prompt_token_cost(total_attempts)
+    input_cost = llm_config[:input_token_cost]
+    llm_class = llm_config[:llm_class]
+    cache_read_multiplier = llm_class&.cache_read_input_token_cost_multiplier
+    cache_creation_multiplier = llm_class&.cache_creation_input_token_cost_multiplier
+    cached_reads = cache_read_input_tokens.to_i
+    cached_writes = cache_creation_input_tokens.to_i
+
+    if cached_reads > 0 && cache_read_multiplier.present?
+      cache_read_cost = input_cost * cache_read_multiplier
+
+      if llm_class.prompt_tokens_include_cached_tokens?
+        # OpenAI / Google / OpenRouter: cached tokens are a subset of prompt_tokens
+        non_cached = prompt_tokens - cached_reads
+        cost = (non_cached * input_cost) + (cached_reads * cache_read_cost)
+      else
+        # Anthropic / Bedrock: cached tokens are separate from prompt_tokens
+        cost = (prompt_tokens * input_cost) + (cached_reads * cache_read_cost)
+      end
+    else
+      cost = prompt_tokens * input_cost
+    end
+
+    # Cache creation surcharge (Anthropic / Bedrock)
+    if cached_writes > 0 && cache_creation_multiplier.present?
+      cost += cached_writes * input_cost * cache_creation_multiplier
+    end
+
+    cost * total_attempts
+  end
 
   def llm_config
     @llm_config ||= Raif.llm_config(llm_model_key.to_sym)

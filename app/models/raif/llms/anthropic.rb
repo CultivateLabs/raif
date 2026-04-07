@@ -5,6 +5,18 @@ class Raif::Llms::Anthropic < Raif::Llm
   include Raif::Concerns::Llms::Anthropic::ToolFormatting
   include Raif::Concerns::Llms::Anthropic::ResponseToolCalls
 
+  def self.prompt_tokens_include_cached_tokens?
+    false
+  end
+
+  def self.cache_read_input_token_cost_multiplier
+    0.1
+  end
+
+  def self.cache_creation_input_token_cost_multiplier
+    1.25
+  end
+
   def perform_model_completion!(model_completion, &block)
     params = build_request_parameters(model_completion)
     response = connection.post("messages") do |req|

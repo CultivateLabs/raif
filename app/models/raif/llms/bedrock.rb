@@ -5,6 +5,18 @@ class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
   include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
 
+  def self.prompt_tokens_include_cached_tokens?
+    false
+  end
+
+  def self.cache_read_input_token_cost_multiplier
+    0.1
+  end
+
+  def self.cache_creation_input_token_cost_multiplier
+    1.25
+  end
+
   def perform_model_completion!(model_completion, &block)
     model_completion.model_api_name = resolve_model_api_name(model_completion.model_api_name)
 

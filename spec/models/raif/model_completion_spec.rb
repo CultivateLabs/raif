@@ -202,6 +202,82 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         expect(model_completion.total_cost).to eq(expected_total_cost)
       end
 
+      context "with cached tokens (provider where prompt_tokens includes cached)" do
+        it "applies the cache read discount for OpenAI models" do
+          # OpenAI: prompt_tokens includes cached tokens as a subset
+          # Cache read multiplier is 0.5x for OpenAI
+          model_completion = described_class.new(
+            llm_model_key: "open_ai_gpt_4o",
+            model_api_name: "gpt-4o",
+            prompt_tokens: 1000,
+            cache_read_input_tokens: 600
+          )
+
+          input_cost = 2.5 / 1_000_000
+          # 400 non-cached tokens at full price + 600 cached tokens at 50% price
+          expected_cost = (400 * input_cost) + (600 * input_cost * 0.5)
+
+          model_completion.save(validate: false)
+          expect(model_completion.prompt_token_cost).to eq(expected_cost)
+        end
+      end
+
+      context "with cached tokens (provider where prompt_tokens excludes cached)" do
+        it "adds cache read and creation costs for Anthropic models" do
+          # Anthropic: prompt_tokens does NOT include cached tokens
+          # Cache read multiplier is 0.1x, cache creation multiplier is 1.25x
+          model_completion = described_class.new(
+            llm_model_key: "anthropic_claude_3_5_sonnet",
+            model_api_name: "claude-3-5-sonnet-latest",
+            prompt_tokens: 400,
+            cache_read_input_tokens: 600,
+            cache_creation_input_tokens: 200
+          )
+
+          input_cost = 3.0 / 1_000_000
+          # 400 non-cached at full price + 600 cached reads at 10% + 200 cache writes at 125%
+          expected_cost = (400 * input_cost) + (600 * input_cost * 0.1) + (200 * input_cost * 1.25)
+
+          model_completion.save(validate: false)
+          expect(model_completion.prompt_token_cost).to eq(expected_cost)
+        end
+      end
+
+      context "with cached tokens and retries" do
+        it "factors retry_count into cache-adjusted prompt_token_cost" do
+          model_completion = described_class.new(
+            llm_model_key: "open_ai_gpt_4o",
+            model_api_name: "gpt-4o",
+            prompt_tokens: 1000,
+            cache_read_input_tokens: 600,
+            retry_count: 1
+          )
+
+          input_cost = 2.5 / 1_000_000
+          # (400 full + 600 at 50%) * 2 attempts
+          expected_cost = ((400 * input_cost) + (600 * input_cost * 0.5)) * 2
+
+          model_completion.save(validate: false)
+          expect(model_completion.prompt_token_cost).to eq(expected_cost)
+        end
+      end
+
+      context "with zero cached tokens" do
+        it "calculates costs the same as without caching" do
+          model_completion = described_class.new(
+            llm_model_key: "open_ai_gpt_4o",
+            model_api_name: "gpt-4o",
+            prompt_tokens: 1000,
+            cache_read_input_tokens: 0
+          )
+
+          expected_cost = 2.5 / 1_000_000 * 1000
+
+          model_completion.save(validate: false)
+          expect(model_completion.prompt_token_cost).to eq(expected_cost)
+        end
+      end
+
       it "does not calculate costs for a model that doesn't have cost configs" do
         # Create a mock of Raif.llm_config that returns a config without cost data
         allow(Raif).to receive(:llm_config).and_return({

@@ -5,6 +5,10 @@ class Raif::Llms::Google < Raif::Llm
   include Raif::Concerns::Llms::Google::ToolFormatting
   include Raif::Concerns::Llms::Google::ResponseToolCalls
 
+  def self.cache_read_input_token_cost_multiplier
+    0.25
+  end
+
   def perform_model_completion!(model_completion, &block)
     params = build_request_parameters(model_completion)
     endpoint = build_endpoint(model_completion)
