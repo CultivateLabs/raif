@@ -3,6 +3,10 @@
 class Raif::Llms::OpenAiBase < Raif::Llm
   include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
 
+  def self.cache_read_input_token_cost_multiplier
+    0.5
+  end
+
   def perform_model_completion!(model_completion, &block)
     if supports_temperature?
       model_completion.temperature ||= default_temperature

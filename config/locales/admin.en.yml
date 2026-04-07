@@ -13,6 +13,8 @@ en:
         arguments_schema: Arguments Schema
         at: at
         available_tools: Available Tools
+        cache_creation_input_tokens: Cache Creation Tokens
+        cache_read_input_tokens: Cache Read Tokens
         citations: Citations
         completed: Completed
         completed_at: Completed At

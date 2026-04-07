@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_08_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_07_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -117,6 +117,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_08_000001) do
 
   create_table "raif_model_completions", force: :cascade do |t|
     t.jsonb "available_model_tools", null: false
+    t.integer "cache_creation_input_tokens"
+    t.integer "cache_read_input_tokens"
     t.jsonb "citations"
     t.datetime "completed_at"
     t.integer "completion_tokens"

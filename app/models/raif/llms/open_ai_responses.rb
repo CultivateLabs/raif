@@ -26,7 +26,8 @@ private
       citations: extract_citations(response_json),
       completion_tokens: response_json.dig("usage", "output_tokens"),
       prompt_tokens: response_json.dig("usage", "input_tokens"),
-      total_tokens: response_json.dig("usage", "total_tokens")
+      total_tokens: response_json.dig("usage", "total_tokens"),
+      cache_read_input_tokens: response_json.dig("usage", "input_tokens_details", "cached_tokens")
     )
   end
 
