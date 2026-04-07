@@ -508,6 +508,55 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(tool_choices.first).to eq("required")
     end
 
+    it "falls back from :required for Google when provider-managed tools are present" do
+      tool_choices = []
+      agent = described_class.new(
+        creator: creator,
+        source: creator,
+        task: task,
+        max_iterations: 2,
+        available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::ProviderManaged::WebSearch],
+        llm_model_key: "google_gemini_2_5_flash"
+      )
+
+      stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
+        .to_return(status: 200, body: { query: { search: [] } }.to_json)
+
+      call_count = 0
+      stub_raif_agent(agent) do |_messages, model_completion|
+        call_count += 1
+        tool_choices << model_completion.tool_choice
+
+        if call_count == 1
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_123",
+              "name" => "wikipedia_search",
+              "arguments" => { "query" => "capital of France" }
+            }
+          ]
+          "Let me search for that."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+          "Using the final answer tool now."
+        end
+      end
+
+      allow(Raif.logger).to receive(:warn)
+
+      agent.run!
+
+      expect(agent).to be_completed
+      expect(tool_choices).to eq([nil, "Raif::ModelTools::AgentFinalAnswer"])
+      expect(Raif.logger).to have_received(:warn).with(/falling back to runtime tool-call validation/).once
+    end
+
     it "handles multiple tool calls by returning an error" do
       stub_raif_agent(agent) do |messages, model_completion|
         if messages.length == 1

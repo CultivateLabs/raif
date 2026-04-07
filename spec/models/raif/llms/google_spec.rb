@@ -883,27 +883,73 @@ RSpec.describe Raif::Llms::Google, type: :model do
   end
 
   describe "#build_request_parameters with required tool_choice" do
-    let(:model_completion) do
-      Raif::ModelCompletion.new(
-        messages: [{ role: "user", content: "Hello" }],
-        llm_model_key: "google_gemini_2_0_flash",
-        model_api_name: "gemini-2.0-flash",
-        temperature: 0.8,
-        response_format: "text",
-        system_prompt: "You are a helpful assistant",
-        available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::AgentFinalAnswer],
-        tool_choice: "required"
-      )
-    end
-
     let(:parameters) { llm.send(:build_request_parameters, model_completion) }
 
-    it "sets toolConfig to the required format" do
-      expect(parameters[:toolConfig]).to eq({ functionCallingConfig: { mode: "ANY" } })
+    context "with only developer-managed tools" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "google_gemini_2_0_flash",
+          model_api_name: "gemini-2.0-flash",
+          temperature: 0.8,
+          response_format: "text",
+          system_prompt: "You are a helpful assistant",
+          available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::AgentFinalAnswer],
+          tool_choice: "required"
+        )
+      end
+
+      it "sets toolConfig to the required format" do
+        expect(parameters[:toolConfig]).to eq({ functionCallingConfig: { mode: "ANY" } })
+      end
+
+      it "does not include parallel_tool_calls" do
+        expect(parameters).not_to have_key(:parallel_tool_calls)
+      end
     end
 
-    it "does not include parallel_tool_calls" do
-      expect(parameters).not_to have_key(:parallel_tool_calls)
+    context "with only provider-managed tools" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "google_gemini_2_0_flash",
+          model_api_name: "gemini-2.0-flash",
+          temperature: 0.8,
+          response_format: "text",
+          system_prompt: "You are a helpful assistant",
+          available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+          tool_choice: "required"
+        )
+      end
+
+      it "omits toolConfig and logs a fallback warning" do
+        allow(Raif.logger).to receive(:warn)
+
+        expect(parameters).not_to have_key(:toolConfig)
+        expect(Raif.logger).to have_received(:warn).with(/cannot faithfully enforce tool_choice: :required/)
+      end
+    end
+
+    context "with mixed tool types" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "google_gemini_2_0_flash",
+          model_api_name: "gemini-2.0-flash",
+          temperature: 0.8,
+          response_format: "text",
+          system_prompt: "You are a helpful assistant",
+          available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::ProviderManaged::WebSearch],
+          tool_choice: "required"
+        )
+      end
+
+      it "omits toolConfig and logs a fallback warning" do
+        allow(Raif.logger).to receive(:warn)
+
+        expect(parameters).not_to have_key(:toolConfig)
+        expect(Raif.logger).to have_received(:warn).with(/cannot faithfully enforce tool_choice: :required/)
+      end
     end
   end
 

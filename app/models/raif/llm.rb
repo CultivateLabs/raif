@@ -177,6 +177,13 @@ module Raif
       raise NotImplementedError, "#{self.class.name} must implement #build_required_tool_choice"
     end
 
+    # Whether the provider can faithfully enforce tool_choice: :required for
+    # the given tool set. Override in subclasses when a provider can only
+    # enforce required tool use for some tool types.
+    def supports_faithful_required_tool_choice?(available_model_tools)
+      available_model_tools.present?
+    end
+
     def validate_provider_managed_tool_support!(tool)
       unless supports_provider_managed_tool?(tool)
         raise Raif::Errors::UnsupportedFeatureError,

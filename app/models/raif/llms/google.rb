@@ -25,6 +25,13 @@ class Raif::Llms::Google < Raif::Llm
     model_completion
   end
 
+  def supports_faithful_required_tool_choice?(available_model_tools)
+    super && Array(available_model_tools).none? do |tool|
+      tool_class = tool.is_a?(String) ? tool.constantize : tool
+      tool_class.provider_managed?
+    end
+  end
+
 private
 
   def connection
@@ -82,7 +89,11 @@ private
       params[:tools] = tools unless tools.blank?
 
       if model_completion.tool_choice == "required"
-        params[:toolConfig] = { functionCallingConfig: build_required_tool_choice }
+        if supports_faithful_required_tool_choice?(model_completion.available_model_tools)
+          params[:toolConfig] = { functionCallingConfig: build_required_tool_choice }
+        else
+          log_required_tool_choice_fallback(model_completion)
+        end
       elsif model_completion.tool_choice.present?
         tool_klass = model_completion.tool_choice.constantize
         params[:toolConfig] = { functionCallingConfig: build_forced_tool_choice(tool_klass.tool_name) }
@@ -90,6 +101,14 @@ private
     end
 
     params
+  end
+
+  def log_required_tool_choice_fallback(model_completion)
+    Raif.logger.warn(
+      "Google AI cannot faithfully enforce tool_choice: :required when provider-managed tools are present. " \
+        "Falling back to runtime validation for #{model_completion.model_api_name} " \
+        "(tools: #{model_completion.available_model_tools_map.keys.join(", ")})"
+    )
   end
 
   def build_generation_config(model_completion)
