@@ -24,7 +24,7 @@ class Raif::Llms::Google < Raif::Llm
 private
 
   def connection
-    @connection ||= Faraday.new(url: "https://generativelanguage.googleapis.com/v1beta") do |f|
+    @connection ||= Faraday.new(url: "https://generativelanguage.googleapis.com/v1beta", request: Raif.default_request_options) do |f|
       f.headers["x-goog-api-key"] = Raif.config.google_api_key
       f.request :json
       f.response :json
