@@ -5,6 +5,10 @@ class Raif::Llms::Google < Raif::Llm
   include Raif::Concerns::Llms::Google::ToolFormatting
   include Raif::Concerns::Llms::Google::ResponseToolCalls
 
+  def self.cache_read_input_token_cost_multiplier
+    0.25
+  end
+
   def perform_model_completion!(model_completion, &block)
     params = build_request_parameters(model_completion)
     endpoint = build_endpoint(model_completion)
@@ -24,7 +28,7 @@ class Raif::Llms::Google < Raif::Llm
 private
 
   def connection
-    @connection ||= Faraday.new(url: "https://generativelanguage.googleapis.com/v1beta") do |f|
+    @connection ||= Faraday.new(url: "https://generativelanguage.googleapis.com/v1beta", request: Raif.default_request_options) do |f|
       f.headers["x-goog-api-key"] = Raif.config.google_api_key
       f.request :json
       f.response :json
@@ -58,6 +62,7 @@ private
     model_completion.prompt_tokens = response_json&.dig("usageMetadata", "promptTokenCount")
     model_completion.total_tokens = response_json&.dig("usageMetadata", "totalTokenCount") ||
       (model_completion.completion_tokens.to_i + model_completion.prompt_tokens.to_i)
+    model_completion.cache_read_input_tokens = response_json&.dig("usageMetadata", "cachedContentTokenCount")
     model_completion.save!
   end
 

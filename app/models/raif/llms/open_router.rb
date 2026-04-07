@@ -54,7 +54,8 @@ private
       response_array: response_json["choices"],
       completion_tokens: response_json.dig("usage", "completion_tokens"),
       prompt_tokens: response_json.dig("usage", "prompt_tokens"),
-      total_tokens: response_json.dig("usage", "total_tokens")
+      total_tokens: response_json.dig("usage", "total_tokens"),
+      cache_read_input_tokens: response_json.dig("usage", "prompt_tokens_details", "cached_tokens")
     )
   end
 

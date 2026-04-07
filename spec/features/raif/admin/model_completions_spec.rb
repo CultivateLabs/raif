@@ -177,9 +177,9 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
       expect(page).to have_content("2")
 
       # Check token counts
-      expect(page).to have_content("2,500 (est. cost: $0.000375)") # prompt_tokens
+      expect(page).to have_content("2,500 (est. cost: $0.001125)") # prompt_tokens (cost multiplied by retry_count + 1 = 3)
       expect(page).to have_content("7,500 (est. cost: $0.004500)") # completion_tokens
-      expect(page).to have_content("10,000 (est. cost: $0.004875)") # total_tokens
+      expect(page).to have_content("10,000 (est. cost: $0.005625)") # total_tokens
 
       # Check messages section
       expect(page).to have_content(I18n.t("raif.admin.common.messages"))

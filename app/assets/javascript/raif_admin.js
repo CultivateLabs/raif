@@ -12,3 +12,9 @@ application.register("raif--cost-estimate", CostEstimateController)
 
 import TomSelectController from "raif/admin/tom_select_controller"
 application.register("raif--tom-select", TomSelectController)
+
+import TableSearchController from "raif/admin/table_search_controller"
+application.register("raif--table-search", TableSearchController)
+
+import SortableTableController from "raif/admin/sortable_table_controller"
+application.register("raif--sortable-table", SortableTableController)

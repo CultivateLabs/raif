@@ -21,7 +21,11 @@ module Raif
         prompt_changed: changed?(original_prompt, current_prompt),
         system_prompt_changed: changed?(original_system_prompt, current_system_prompt),
         has_stale_references: has_stale_references?,
-        warnings: warnings
+        warnings: warnings,
+        original_prompt_tokens: original_prompt_tokens,
+        original_prompt_token_cost: original_prompt_token_cost,
+        current_prompt_token_estimate: current_prompt_token_estimate,
+        current_prompt_cost_estimate: current_prompt_cost_estimate
       }
     end
 
@@ -91,6 +95,44 @@ module Raif
 
     def changed?(original, current)
       original.present? && current.present? && original.strip != current.strip
+    end
+
+    def original_prompt_tokens
+      return unless @record.respond_to?(:raif_model_completion)
+
+      @record.raif_model_completion&.prompt_tokens
+    end
+
+    def original_prompt_token_cost
+      return unless @record.respond_to?(:raif_model_completion)
+
+      @record.raif_model_completion&.prompt_token_cost
+    end
+
+    def current_prompt_token_estimate
+      return unless prompt_changed? || system_prompt_changed?
+
+      Raif::TokenEstimator.estimate_tokens(current_system_prompt, current_prompt)
+    end
+
+    def current_prompt_cost_estimate
+      token_estimate = current_prompt_token_estimate
+      return unless token_estimate
+
+      return unless @record.llm_model_key.present?
+
+      llm_config = Raif.llm_config(@record.llm_model_key.to_sym)
+      return unless llm_config&.dig(:input_token_cost)
+
+      llm_config[:input_token_cost] * token_estimate
+    end
+
+    def prompt_changed?
+      changed?(original_prompt, current_prompt)
+    end
+
+    def system_prompt_changed?
+      changed?(original_system_prompt, current_system_prompt)
     end
   end
 end

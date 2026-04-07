@@ -4,39 +4,41 @@
 #
 # Table name: raif_model_completions
 #
-#  id                        :bigint           not null, primary key
-#  available_model_tools     :jsonb            not null
-#  citations                 :jsonb
-#  completed_at              :datetime
-#  completion_tokens         :integer
-#  failed_at                 :datetime
-#  failure_error             :string
-#  failure_reason            :text
-#  llm_model_key             :string           not null
-#  max_completion_tokens     :integer
-#  messages                  :jsonb            not null
-#  model_api_name            :string           not null
-#  output_token_cost         :decimal(10, 6)
-#  prompt_token_cost         :decimal(10, 6)
-#  prompt_tokens             :integer
-#  raw_response              :text
-#  response_array            :jsonb
-#  response_format           :integer          default("text"), not null
-#  response_format_parameter :string
-#  response_tool_calls       :jsonb
-#  retry_count               :integer          default(0), not null
-#  source_type               :string
-#  started_at                :datetime
-#  stream_response           :boolean          default(FALSE), not null
-#  system_prompt             :text
-#  temperature               :decimal(5, 3)
-#  tool_choice               :string
-#  total_cost                :decimal(10, 6)
-#  total_tokens              :integer
-#  created_at                :datetime         not null
-#  updated_at                :datetime         not null
-#  response_id               :string
-#  source_id                 :bigint
+#  id                          :bigint           not null, primary key
+#  available_model_tools       :jsonb            not null
+#  cache_creation_input_tokens :integer
+#  cache_read_input_tokens     :integer
+#  citations                   :jsonb
+#  completed_at                :datetime
+#  completion_tokens           :integer
+#  failed_at                   :datetime
+#  failure_error               :string
+#  failure_reason              :text
+#  llm_model_key               :string           not null
+#  max_completion_tokens       :integer
+#  messages                    :jsonb            not null
+#  model_api_name              :string           not null
+#  output_token_cost           :decimal(10, 6)
+#  prompt_token_cost           :decimal(10, 6)
+#  prompt_tokens               :integer
+#  raw_response                :text
+#  response_array              :jsonb
+#  response_format             :integer          default("text"), not null
+#  response_format_parameter   :string
+#  response_tool_calls         :jsonb
+#  retry_count                 :integer          default(0), not null
+#  source_type                 :string
+#  started_at                  :datetime
+#  stream_response             :boolean          default(FALSE), not null
+#  system_prompt               :text
+#  temperature                 :decimal(5, 3)
+#  tool_choice                 :string
+#  total_cost                  :decimal(10, 6)
+#  total_tokens                :integer
+#  created_at                  :datetime         not null
+#  updated_at                  :datetime         not null
+#  response_id                 :string
+#  source_id                   :bigint
 #
 # Indexes
 #
@@ -178,6 +180,102 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
         model_completion.save(validate: false)
         expect(model_completion.total_cost).to eq(expected_output_cost)
+      end
+
+      it "factors retry_count into prompt_token_cost to reflect actual provider billing" do
+        model_completion = described_class.new(
+          llm_model_key: "open_ai_gpt_4o",
+          model_api_name: "gpt-4o",
+          prompt_tokens: 1000,
+          completion_tokens: 500,
+          retry_count: 3
+        )
+
+        # Each retry resends the same prompt, so input cost is multiplied by total attempts (retry_count + 1)
+        expected_prompt_cost = 2.5 / 1_000_000 * 1000 * 4
+        expected_output_cost = 10.0 / 1_000_000 * 500
+        expected_total_cost = expected_prompt_cost + expected_output_cost
+
+        model_completion.save(validate: false)
+        expect(model_completion.prompt_token_cost).to eq(expected_prompt_cost)
+        expect(model_completion.output_token_cost).to eq(expected_output_cost)
+        expect(model_completion.total_cost).to eq(expected_total_cost)
+      end
+
+      context "with cached tokens (provider where prompt_tokens includes cached)" do
+        it "applies the cache read discount for OpenAI models" do
+          # OpenAI: prompt_tokens includes cached tokens as a subset
+          # Cache read multiplier is 0.5x for OpenAI
+          model_completion = described_class.new(
+            llm_model_key: "open_ai_gpt_4o",
+            model_api_name: "gpt-4o",
+            prompt_tokens: 1000,
+            cache_read_input_tokens: 600
+          )
+
+          input_cost = 2.5 / 1_000_000
+          # 400 non-cached tokens at full price + 600 cached tokens at 50% price
+          expected_cost = (400 * input_cost) + (600 * input_cost * 0.5)
+
+          model_completion.save(validate: false)
+          expect(model_completion.prompt_token_cost).to eq(expected_cost)
+        end
+      end
+
+      context "with cached tokens (provider where prompt_tokens excludes cached)" do
+        it "adds cache read and creation costs for Anthropic models" do
+          # Anthropic: prompt_tokens does NOT include cached tokens
+          # Cache read multiplier is 0.1x, cache creation multiplier is 1.25x
+          model_completion = described_class.new(
+            llm_model_key: "anthropic_claude_3_5_sonnet",
+            model_api_name: "claude-3-5-sonnet-latest",
+            prompt_tokens: 400,
+            cache_read_input_tokens: 600,
+            cache_creation_input_tokens: 200
+          )
+
+          input_cost = 3.0 / 1_000_000
+          # 400 non-cached at full price + 600 cached reads at 10% + 200 cache writes at 125%
+          expected_cost = (400 * input_cost) + (600 * input_cost * 0.1) + (200 * input_cost * 1.25)
+
+          model_completion.save(validate: false)
+          expect(model_completion.prompt_token_cost).to eq(expected_cost)
+        end
+      end
+
+      context "with cached tokens and retries" do
+        it "factors retry_count into cache-adjusted prompt_token_cost" do
+          model_completion = described_class.new(
+            llm_model_key: "open_ai_gpt_4o",
+            model_api_name: "gpt-4o",
+            prompt_tokens: 1000,
+            cache_read_input_tokens: 600,
+            retry_count: 1
+          )
+
+          input_cost = 2.5 / 1_000_000
+          # (400 full + 600 at 50%) * 2 attempts
+          expected_cost = ((400 * input_cost) + (600 * input_cost * 0.5)) * 2
+
+          model_completion.save(validate: false)
+          expect(model_completion.prompt_token_cost).to eq(expected_cost)
+        end
+      end
+
+      context "with zero cached tokens" do
+        it "calculates costs the same as without caching" do
+          model_completion = described_class.new(
+            llm_model_key: "open_ai_gpt_4o",
+            model_api_name: "gpt-4o",
+            prompt_tokens: 1000,
+            cache_read_input_tokens: 0
+          )
+
+          expected_cost = 2.5 / 1_000_000 * 1000
+
+          model_completion.save(validate: false)
+          expect(model_completion.prompt_token_cost).to eq(expected_cost)
+        end
       end
 
       it "does not calculate costs for a model that doesn't have cost configs" do

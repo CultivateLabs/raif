@@ -346,6 +346,17 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
   end
 
+  describe "#retriable_exceptions" do
+    it "includes AWS SDK exceptions in addition to the default retriable exceptions" do
+      exceptions = llm.send(:retriable_exceptions)
+      expect(exceptions).to include(Aws::BedrockRuntime::Errors::ServiceError)
+      expect(exceptions).to include(Seahorse::Client::NetworkingError)
+      Raif.config.llm_request_retriable_exceptions.each do |exception|
+        expect(exceptions).to include(exception)
+      end
+    end
+  end
+
   describe "nil response handling" do
     it "raises BlankResponseError when the API returns nil" do
       mock_client = instance_double(Aws::BedrockRuntime::Client)

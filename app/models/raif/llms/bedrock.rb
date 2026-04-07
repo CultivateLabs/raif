@@ -5,6 +5,18 @@ class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
   include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
 
+  def self.prompt_tokens_include_cached_tokens?
+    false
+  end
+
+  def self.cache_read_input_token_cost_multiplier
+    0.1
+  end
+
+  def self.cache_creation_input_token_cost_multiplier
+    1.25
+  end
+
   def perform_model_completion!(model_completion, &block)
     model_completion.model_api_name = resolve_model_api_name(model_completion.model_api_name)
 
@@ -37,7 +49,24 @@ class Raif::Llms::Bedrock < Raif::Llm
 private
 
   def bedrock_client
-    @bedrock_client ||= Aws::BedrockRuntime::Client.new(region: Raif.config.aws_bedrock_region)
+    @bedrock_client ||= begin
+      client_options = {
+        region: Raif.config.aws_bedrock_region,
+        max_attempts: 1
+      }
+
+      client_options[:http_read_timeout] = Raif.config.request_read_timeout if Raif.config.request_read_timeout
+      client_options[:http_open_timeout] = Raif.config.request_open_timeout if Raif.config.request_open_timeout
+
+      Aws::BedrockRuntime::Client.new(client_options)
+    end
+  end
+
+  def retriable_exceptions
+    super + [
+      Aws::BedrockRuntime::Errors::ServiceError,
+      Seahorse::Client::NetworkingError
+    ]
   end
 
   def update_model_completion(model_completion, resp)
@@ -54,6 +83,8 @@ private
     model_completion.completion_tokens = resp.usage.output_tokens
     model_completion.prompt_tokens = resp.usage.input_tokens
     model_completion.total_tokens = resp.usage.total_tokens
+    model_completion.cache_read_input_tokens = resp.usage.try(:cache_read_input_tokens)
+    model_completion.cache_creation_input_tokens = resp.usage.try(:cache_write_input_tokens)
     model_completion.save!
   end
 

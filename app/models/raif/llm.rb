@@ -138,6 +138,26 @@ module Raif
       VALID_RESPONSE_FORMATS
     end
 
+    # Override in subclasses to indicate whether prompt_tokens reported by the
+    # provider already include cached tokens as a subset (OpenAI, Google,
+    # OpenRouter) or whether cached tokens are reported separately and are
+    # additive to prompt_tokens (Anthropic, Bedrock).
+    def self.prompt_tokens_include_cached_tokens?
+      true
+    end
+
+    # Multiplier applied to the base input_token_cost to derive the per-token
+    # cost for cache reads.  Return nil when the provider has no cache pricing.
+    def self.cache_read_input_token_cost_multiplier
+      nil
+    end
+
+    # Multiplier applied to the base input_token_cost to derive the per-token
+    # cost for cache creation writes.  Return nil when there is no write surcharge.
+    def self.cache_creation_input_token_cost_multiplier
+      nil
+    end
+
     def supports_provider_managed_tool?(tool_klass)
       supported_provider_managed_tools&.include?(tool_klass.to_s)
     end
