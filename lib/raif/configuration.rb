@@ -46,7 +46,9 @@ module Raif
       :task_creator_optional,
       :prompt_studio_runs_enabled,
       :task_system_prompt_intro,
-      :user_tool_types
+      :user_tool_types,
+      :x_ai_api_key,
+      :x_ai_models_enabled
 
     alias_method :anthropic_bedrock_models_enabled, :bedrock_models_enabled
     alias_method :anthropic_bedrock_models_enabled=, :bedrock_models_enabled=
@@ -109,6 +111,9 @@ module Raif
       @streaming_update_chunk_size_threshold = 25
       @task_creator_optional = true
       @user_tool_types = []
+      x_ai_api_key = ENV["XAI_API_KEY"].presence || ENV["X_AI_API_KEY"]
+      @x_ai_api_key = default_disable_llm_api_requests? ? "placeholder-x-ai-api-key" : x_ai_api_key
+      @x_ai_models_enabled = @x_ai_api_key.present?
     end
 
     def validate!
@@ -185,6 +190,11 @@ module Raif
       if google_embedding_models_enabled && google_api_key.blank?
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.google_api_key is required when Raif.config.google_embedding_models_enabled is true. Set it via Raif.config.google_api_key or ENV['GOOGLE_API_KEY']" # rubocop:disable Layout/LineLength
+      end
+
+      if x_ai_models_enabled && x_ai_api_key.blank?
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.x_ai_api_key is required when Raif.config.x_ai_models_enabled is true. Set it via Raif.config.x_ai_api_key or ENV['XAI_API_KEY']" # rubocop:disable Layout/LineLength
       end
     end
 
