@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bundle install*)",
+      "Bash(bundle exec rspec*)",
+      "Bash(bundle exec rubocop*)",
+      "Bash(bundle exec erb_lint*)",
+      "Bash(bundle exec i18n-tasks*)",
+      "Bash(bundle exec guard*)",
+      "Bash(bundle exec rake yard*)",
+      "Bash(bin/lint*)",
+      "Bash(bin/rails app:db:*)",
+      "Bash(bin/rails server*)",
+      "Bash(yarn install*)",
+      "Bash(yarn build:*)",
+      "Bash(yarn watch:*)",
+      "Bash(gh pr *)",
+      "Bash(gh issue *)",
+      "Bash(.claude/setup.sh)",
+      "Bash(sudo pg_ctlcluster*)",
+      "Bash(sudo -u postgres*)",
+      "Bash(pg_isready*)",
+      "WebSearch"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "bash .claude/setup.sh"
+      }
+    ]
+  }
+}
