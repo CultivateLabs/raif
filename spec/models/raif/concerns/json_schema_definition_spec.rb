@@ -37,6 +37,29 @@ RSpec.describe Raif::Concerns::JsonSchemaDefinition do
       "test"
     end
   end
+
+  # Test tool for dynamic (class-level, re-evaluated) schemas
+  class TestDynamicSchemaTool < Raif::ModelTool
+    cattr_accessor :include_optional_field, default: false
+
+    tool_arguments_schema dynamic: true do
+      string :query, description: "The search query"
+
+      if TestDynamicSchemaTool.include_optional_field
+        integer :max_results, description: "Maximum number of results"
+      end
+    end
+
+    tool_description { "A test tool with a dynamic schema" }
+
+    def self.example_model_invocation
+      { "name" => tool_name, "arguments" => { "query" => "test" } }
+    end
+
+    def self.process_invocation(tool_invocation)
+      tool_invocation.update!(result: {})
+    end
+  end
   describe "Raif::TestModelTool.tool_arguments_schema" do
     it "generates the correct schema" do
       expect(Raif::TestModelTool.tool_arguments_schema).to eq({
@@ -214,6 +237,42 @@ RSpec.describe Raif::Concerns::JsonSchemaDefinition do
         expect(schema1[:properties].keys).to eq(["name", "extra_field"])
         expect(schema2[:properties].keys).to eq(["name", "details"])
       end
+    end
+  end
+
+  describe "Dynamic schemas (class-level, re-evaluated)" do
+    after { TestDynamicSchemaTool.include_optional_field = false }
+
+    it "reports schema as defined" do
+      expect(TestDynamicSchemaTool.schema_defined?(:tool_arguments)).to be true
+    end
+
+    it "is not instance-dependent" do
+      expect(TestDynamicSchemaTool.instance_dependent_schema?(:tool_arguments)).to be false
+    end
+
+    it "returns schema at the class level without error" do
+      schema = TestDynamicSchemaTool.tool_arguments_schema
+      expect(schema[:type]).to eq("object")
+      expect(schema[:properties]).to have_key(:query)
+    end
+
+    it "re-evaluates the schema on each call" do
+      TestDynamicSchemaTool.include_optional_field = false
+      schema_without = TestDynamicSchemaTool.tool_arguments_schema
+      expect(schema_without[:properties]).not_to have_key(:max_results)
+      expect(schema_without[:required]).to eq(["query"])
+
+      TestDynamicSchemaTool.include_optional_field = true
+      schema_with = TestDynamicSchemaTool.tool_arguments_schema
+      expect(schema_with[:properties]).to have_key(:max_results)
+      expect(schema_with[:required]).to eq(["query", "max_results"])
+    end
+
+    it "works via the instance method" do
+      tool = TestDynamicSchemaTool.new
+      schema = tool.tool_arguments_schema
+      expect(schema[:properties]).to have_key(:query)
     end
   end
 end

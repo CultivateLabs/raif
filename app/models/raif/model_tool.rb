@@ -53,9 +53,9 @@ class Raif::ModelTool
       name.gsub("Raif::ModelTools::", "").underscore
     end
 
-    def tool_arguments_schema(&block)
+    def tool_arguments_schema(dynamic: false, &block)
       if block_given?
-        json_schema_definition(:tool_arguments, &block)
+        json_schema_definition(:tool_arguments, dynamic: dynamic, &block)
       elsif schema_defined?(:tool_arguments)
         schema_for(:tool_arguments)
       else
