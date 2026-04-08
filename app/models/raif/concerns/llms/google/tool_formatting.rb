@@ -49,6 +49,10 @@ module Raif::Concerns::Llms::Google::ToolFormatting
     { mode: "ANY", allowedFunctionNames: [tool_name] }
   end
 
+  def build_required_tool_choice
+    { mode: "ANY" }
+  end
+
 private
 
   # Google's API doesn't support additionalProperties in JSON schemas

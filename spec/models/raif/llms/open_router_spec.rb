@@ -578,4 +578,35 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       expect(result).to eq({ "type" => "function", "function" => { "name" => "agent_final_answer" } })
     end
   end
+
+  describe "#build_required_tool_choice" do
+    it "returns 'required'" do
+      expect(llm.build_required_tool_choice).to eq("required")
+    end
+  end
+
+  describe "#build_request_parameters with required tool_choice" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        messages: [{ role: "user", content: "Hello" }],
+        llm_model_key: "open_router_anthropic_claude_4_sonnet",
+        model_api_name: "anthropic/claude-sonnet-4-20250514",
+        temperature: 0.8,
+        response_format: "text",
+        system_prompt: "You are a helpful assistant",
+        available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::AgentFinalAnswer],
+        tool_choice: "required"
+      )
+    end
+
+    let(:parameters) { llm.send(:build_request_parameters, model_completion) }
+
+    it "sets tool_choice to 'required' without constantizing" do
+      expect(parameters[:tool_choice]).to eq("required")
+    end
+
+    it "disables parallel tool calls" do
+      expect(parameters[:parallel_tool_calls]).to eq(false)
+    end
+  end
 end

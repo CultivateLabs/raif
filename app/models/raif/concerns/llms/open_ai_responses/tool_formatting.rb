@@ -43,4 +43,8 @@ module Raif::Concerns::Llms::OpenAiResponses::ToolFormatting
   def build_forced_tool_choice(tool_name)
     { "type" => "function", "name" => tool_name }
   end
+
+  def build_required_tool_choice
+    "required"
+  end
 end

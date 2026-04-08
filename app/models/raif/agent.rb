@@ -140,14 +140,14 @@ module Raif
         DEBUG
 
         process_iteration_model_completion(model_completion)
-        break if final_answer.present?
+        break if final_answer.present? || failed?
       end
 
-      completed!
+      finalize_run!
       final_answer
     rescue StandardError => e
-      self.failed_at = Time.current
-      self.failure_reason = e.message
+      self.failed_at ||= Time.current
+      self.failure_reason ||= e.message
       save!
 
       raise
@@ -161,6 +161,17 @@ module Raif
 
     def populate_default_model_tools
       # no-op by default. Can be overridden by subclasses to add default model tools
+    end
+
+    def finalize_run!
+      validate_successful_completion
+      return if failed?
+
+      completed!
+    end
+
+    def validate_successful_completion
+      # no-op by default. Can be overridden by subclasses to enforce success criteria.
     end
 
     def process_iteration_model_completion(model_completion)
@@ -184,11 +195,25 @@ module Raif
       nil
     end
 
+    # Hook for subclasses to require a specific tool on the current iteration.
+    # Override to align prompt warnings and provider-level tool_choice.
+    # Overrides should be deterministic and side-effect free for a given iteration.
+    # @return [Class, nil] A model tool class, or nil if no specific tool is required.
+    def required_tool_for_iteration
+      nil
+    end
+
     def add_conversation_history_entry(entry)
       entry_stringified = entry.stringify_keys
       conversation_history << entry_stringified
       save!
       on_conversation_history_entry.call(entry_stringified) if on_conversation_history_entry.present?
+    end
+
+    def fail_run!(reason)
+      self.failed_at ||= Time.current
+      self.failure_reason ||= reason
+      save!
     end
 
     def build_system_prompt
