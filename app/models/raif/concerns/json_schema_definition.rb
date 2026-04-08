@@ -6,7 +6,7 @@ module Raif
       extend ActiveSupport::Concern
 
       class_methods do
-        def json_schema_definition(schema_name, &block)
+        def json_schema_definition(schema_name, dynamic: false, &block)
           raise ArgumentError, "A block must be provided to define the JSON schema" unless block_given?
 
           # Check if block expects an instance parameter (arity == 1)
@@ -16,6 +16,10 @@ module Raif
             # Store block for instance-dependent schema building
             @schema_blocks ||= {}
             @schema_blocks[schema_name] = block
+          elsif dynamic
+            # Store block for class-level dynamic schema (re-evaluated each call)
+            @dynamic_schema_blocks ||= {}
+            @dynamic_schema_blocks[schema_name] = block
           else
             # Build schema immediately for class-level (backward compatible)
             @schemas ||= {}
@@ -25,7 +29,9 @@ module Raif
         end
 
         def schema_defined?(schema_name)
-          @schemas&.dig(schema_name).present? || @schema_blocks&.dig(schema_name).present?
+          @schemas&.dig(schema_name).present? ||
+            @schema_blocks&.dig(schema_name).present? ||
+            @dynamic_schema_blocks&.dig(schema_name).present?
         end
 
         def schema_for(schema_name)
@@ -34,6 +40,13 @@ module Raif
             raise Raif::Errors::InstanceDependentSchemaError,
               "The schema '#{schema_name}' is instance-dependent and cannot be accessed at the class level. " \
                 "Call this method on an instance instead."
+          end
+
+          # Check if this is a dynamic schema (re-evaluate each call)
+          if @dynamic_schema_blocks&.dig(schema_name).present?
+            builder = Raif::JsonSchemaBuilder.new
+            builder.instance_eval(&@dynamic_schema_blocks[schema_name])
+            return builder.to_schema
           end
 
           @schemas[schema_name].to_schema
@@ -54,7 +67,7 @@ module Raif
           builder.build_with_instance(self, &block)
           builder.to_schema
         elsif self.class.schema_defined?(schema_name)
-          # Fall back to class-level schema
+          # Fall back to class-level schema (handles both static and dynamic)
           self.class.schema_for(schema_name)
         end
       end
