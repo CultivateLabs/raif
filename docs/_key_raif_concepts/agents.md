@@ -43,6 +43,8 @@ The conversation_history_entry will be a hash with "role" and "content" keys:
 }
 ```
 
+`Raif::Agents::NativeToolCallingAgent` prefers provider-side tool enforcement when the selected model can faithfully enforce it for the current tool set. For provider/tool combinations that cannot do that, Raif falls back to runtime validation in the agent loop and logs a warning instead of changing your caller API.
+
 # Creating Custom Agents
 
 You can create custom agents using the generator:

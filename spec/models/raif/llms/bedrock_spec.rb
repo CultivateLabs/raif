@@ -697,4 +697,35 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       expect(result).to eq({ tool: { name: "agent_final_answer" } })
     end
   end
+
+  describe "#build_required_tool_choice" do
+    it "returns the correct format for requiring any tool" do
+      expect(llm.build_required_tool_choice).to eq({ any: {} })
+    end
+  end
+
+  describe "#build_request_parameters with required tool_choice" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        messages: [{ role: "user", content: [{ text: "Hello" }] }],
+        llm_model_key: "bedrock_anthropic_claude_4_sonnet",
+        model_api_name: "us.anthropic.claude-sonnet-4-20250514-v1:0",
+        temperature: 0.8,
+        response_format: "text",
+        system_prompt: "You are a helpful assistant",
+        available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::AgentFinalAnswer],
+        tool_choice: "required"
+      )
+    end
+
+    let(:parameters) { llm.send(:build_request_parameters, model_completion) }
+
+    it "sets tool_config tool_choice to the required format" do
+      expect(parameters[:tool_config][:tool_choice]).to eq({ any: {} })
+    end
+
+    it "does not include parallel_tool_calls" do
+      expect(parameters).not_to have_key(:parallel_tool_calls)
+    end
+  end
 end

@@ -70,7 +70,15 @@ module Raif
         raise ArgumentError, "Raif::Llm#chat - You must provide either a message: or messages: argument, not both"
       end
 
-      if tool_choice.present? && !available_model_tools.map(&:to_s).include?(tool_choice.to_s)
+      # Normalize :required / "required" to the symbol form for validation
+      tool_choice = :required if tool_choice.to_s == "required"
+
+      if tool_choice == :required
+        if available_model_tools.blank?
+          raise ArgumentError,
+            "Raif::Llm#chat - tool_choice: :required requires at least one available model tool"
+        end
+      elsif tool_choice.present? && !available_model_tools.map(&:to_s).include?(tool_choice.to_s)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid tool choice: #{tool_choice} is not included in the available model tools: #{available_model_tools.join(", ")}"
       end
@@ -160,6 +168,20 @@ module Raif
     # @return [Hash] The tool_choice parameter for the provider's API
     def build_forced_tool_choice(tool_name)
       raise NotImplementedError, "#{self.class.name} must implement #build_forced_tool_choice"
+    end
+
+    # Build the tool_choice parameter to require the model to call any tool (but not a specific one).
+    # Each provider implements this to return the correct format.
+    # @return [Hash, String] The tool_choice parameter for the provider's API
+    def build_required_tool_choice
+      raise NotImplementedError, "#{self.class.name} must implement #build_required_tool_choice"
+    end
+
+    # Whether the provider can faithfully enforce tool_choice: :required for
+    # the given tool set. Override in subclasses when a provider can only
+    # enforce required tool use for some tool types.
+    def supports_faithful_required_tool_choice?(available_model_tools)
+      available_model_tools.present?
     end
 
     def validate_provider_managed_tool_support!(tool)

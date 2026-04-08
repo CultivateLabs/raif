@@ -38,4 +38,8 @@ module Raif::Concerns::Llms::Bedrock::ToolFormatting
   def build_forced_tool_choice(tool_name)
     { tool: { name: tool_name } }
   end
+
+  def build_required_tool_choice
+    { any: {} }
+  end
 end

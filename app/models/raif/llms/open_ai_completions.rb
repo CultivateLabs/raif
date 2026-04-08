@@ -54,9 +54,13 @@ private
       tools = build_tools_parameter(model_completion)
       parameters[:tools] = tools unless tools.blank?
 
-      if model_completion.tool_choice.present?
+      if model_completion.tool_choice == "required"
+        parameters[:tool_choice] = build_required_tool_choice
+        parameters[:parallel_tool_calls] = false unless tools.blank?
+      elsif model_completion.tool_choice.present?
         tool_klass = model_completion.tool_choice.constantize
         parameters[:tool_choice] = build_forced_tool_choice(tool_klass.tool_name)
+        parameters[:parallel_tool_calls] = false unless tools.blank?
       end
     end
 

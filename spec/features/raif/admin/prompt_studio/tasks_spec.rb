@@ -24,8 +24,10 @@ RSpec.describe "Admin::PromptStudio::Tasks", type: :feature do
 
       # Only completed tasks shown
       expect(page).to have_css("table tbody tr", count: 1)
-      expect(page).to have_content(completed_task.id.to_s)
-      expect(page).not_to have_content(incomplete_task.id.to_s)
+      within("table tbody") do
+        expect(page).to have_content(completed_task.id.to_s)
+        expect(page).not_to have_content(incomplete_task.id.to_s)
+      end
     end
 
     it "shows empty state when no instances exist for type" do

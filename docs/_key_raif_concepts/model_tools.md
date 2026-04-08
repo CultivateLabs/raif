@@ -152,6 +152,8 @@ model_completion = llm.chat(
 )
 ```
 
+Note for Google AI: Gemini's provider-side `"require any tool"` enforcement only applies to declared function tools. If you use `tool_choice: :required` with Google provider-managed tools, or mix provider-managed and developer-managed tools, Raif logs a warning and falls back to runtime validation instead of provider-enforced required-tool selection.
+
 ---
 
 **Read next:** [Web Admin](../learn_more/web_admin)

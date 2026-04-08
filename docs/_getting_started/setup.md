@@ -217,6 +217,8 @@ Currently included OpenRouter models:
 
 The Google AI adapter provides access to Google's Gemini models with support for [provider-managed tools](../key_raif_concepts/model_tools#provider-managed-tools) for web search and code execution.
 
+When `tool_choice: :required` is used, Google can provider-enforce it only for developer-managed function tools. Requests that include Google provider-managed tools fall back to runtime validation and emit a warning.
+
 ```ruby
 Raif.configure do |config|
   config.google_models_enabled = true
