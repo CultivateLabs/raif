@@ -99,7 +99,7 @@ module Raif
     # @param files [Array] Optional array of Raif::ModelFileInput objects to include with the prompt.
     # @param args [Hash] Additional arguments to pass to the instance of the task that is created.
     # @return [Raif::Task, nil] The task instance that was created and run.
-    def self.run(creator: nil, available_model_tools: [], llm_model_key: nil, images: [], files: [], **args)
+    def self.run(creator: nil, available_model_tools: [], llm_model_key: nil, images: [], files: [], **args, &block)
       task = new(
         creator: creator,
         llm_model_key: llm_model_key,
@@ -111,7 +111,7 @@ module Raif
       )
 
       task.save!
-      task.run
+      task.run(&block)
       task
     rescue StandardError => e
       task&.failed!
@@ -130,10 +130,17 @@ module Raif
       task
     end
 
-    def run(skip_prompt_population: false)
+    def run(skip_prompt_population: false, &block)
       update_columns(started_at: Time.current) if started_at.nil?
 
       populate_prompts unless skip_prompt_population
+
+      streaming_block = if block_given?
+        proc do |model_completion, delta, sse_event|
+          update_columns(raw_response: model_completion.raw_response, updated_at: Time.current)
+          block.call(model_completion, delta, sse_event)
+        end
+      end
 
       mc = llm.chat(
         messages: messages,
@@ -141,7 +148,8 @@ module Raif
         system_prompt: system_prompt,
         response_format: response_format.to_sym,
         available_model_tools: available_model_tools,
-        temperature: self.class.temperature
+        temperature: self.class.temperature,
+        &streaming_block
       )
 
       self.raif_model_completion = mc.becomes(Raif::ModelCompletion)
@@ -153,9 +161,9 @@ module Raif
       self
     end
 
-    def re_run
+    def re_run(&block)
       update_columns(started_at: Time.current)
-      run(skip_prompt_population: true)
+      run(skip_prompt_population: true, &block)
     end
 
     def messages
