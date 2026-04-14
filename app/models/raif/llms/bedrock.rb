@@ -113,6 +113,12 @@ private
       end
     end
 
+    if model_completion.bedrock_prompt_caching_enabled
+      cache_point = { cache_point: { type: "default" } }
+      params[:system] << cache_point if params[:system].present?
+      messages_param.last[:content] << cache_point.dup if messages_param.last.present?
+    end
+
     params
   end
 

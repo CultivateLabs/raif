@@ -704,6 +704,46 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
   end
 
+  describe "#build_request_parameters with prompt caching" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        messages: [{ role: "user", content: [{ text: "Hello" }] }],
+        llm_model_key: "bedrock_claude_3_5_sonnet",
+        model_api_name: "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        temperature: 0.8,
+        response_format: "text",
+        system_prompt: "You are a helpful assistant"
+      )
+    end
+
+    let(:parameters) { llm.send(:build_request_parameters, model_completion) }
+
+    context "when prompt caching is enabled" do
+      before { model_completion.bedrock_prompt_caching_enabled = true }
+
+      it "appends a cache_point to the system prompt" do
+        expect(parameters[:system]).to eq([
+          { text: "You are a helpful assistant" },
+          { cache_point: { type: "default" } }
+        ])
+      end
+
+      it "appends a cache_point to the last message content" do
+        expect(parameters[:messages].last[:content].last).to eq({ cache_point: { type: "default" } })
+      end
+    end
+
+    context "when prompt caching is not enabled" do
+      it "does not include cache_point in the system prompt" do
+        expect(parameters[:system]).to eq([{ text: "You are a helpful assistant" }])
+      end
+
+      it "does not include cache_point in the messages" do
+        expect(parameters[:messages].last[:content]).not_to include(hash_including(cache_point: anything))
+      end
+    end
+  end
+
   describe "#build_request_parameters with required tool_choice" do
     let(:model_completion) do
       Raif::ModelCompletion.new(
