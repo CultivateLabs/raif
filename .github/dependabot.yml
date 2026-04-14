@@ -4,19 +4,35 @@ updates:
   directory: "/"
   schedule:
     interval: weekly
-  open-pull-requests-limit: 5
+  open-pull-requests-limit: 1
+  groups:
+    all-dependencies:
+      patterns:
+        - "*"
 - package-ecosystem: bundler
   directory: "/docs"
   schedule:
     interval: weekly
-  open-pull-requests-limit: 5
+  open-pull-requests-limit: 1
+  groups:
+    all-dependencies:
+      patterns:
+        - "*"
 - package-ecosystem: npm
   directory: "/"
   schedule:
     interval: weekly
-  open-pull-requests-limit: 5
+  open-pull-requests-limit: 1
+  groups:
+    all-dependencies:
+      patterns:
+        - "*"
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
     interval: weekly
-  open-pull-requests-limit: 5
+  open-pull-requests-limit: 1
+  groups:
+    all-dependencies:
+      patterns:
+        - "*"
