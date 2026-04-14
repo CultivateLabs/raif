@@ -143,19 +143,11 @@
             <div class="border rounded p-2 mt-2 bg-light">
               <div><strong><%= t("raif.admin.common.tool_name") %>:</strong> <%= message["name"] %></div>
               <div><strong><%= t("raif.admin.common.arguments") %>:</strong></div>
-              <pre class="mb-0 mt-1"><%= begin
-                                           JSON.pretty_generate(JSON.parse(message["arguments"]))
-                                         rescue StandardError
-                                           message["arguments"]
-                                         end %></pre>
+              <pre class="mb-0 mt-1"><%= pretty_json(message["arguments"]) %></pre>
             </div>
           <% elsif message["type"] == "function_call_output" %>
             <strong><%= t("raif.admin.common.tool_result") %>:</strong>
-            <pre class="mt-2"><%= begin
-                                    JSON.pretty_generate(JSON.parse(message["output"]))
-                                  rescue StandardError
-                                    message["output"]
-                                  end %></pre>
+            <pre class="mt-2"><%= pretty_json(message["output"]) %></pre>
           <% else %>
             <% if message["role"].present? %>
               <strong><%= message["role"].titleize %>:</strong>
@@ -170,11 +162,7 @@
                   <div class="border rounded p-2 mb-2 bg-light">
                     <div><strong><%= t("raif.admin.common.tool_name") %>:</strong> <%= tool_call.dig("function", "name") %></div>
                     <div><strong><%= t("raif.admin.common.arguments") %>:</strong></div>
-                    <pre class="mb-0 mt-1"><%= begin
-                                                 JSON.pretty_generate(JSON.parse(tool_call.dig("function", "arguments")))
-                                               rescue StandardError
-                                                 tool_call.dig("function", "arguments")
-                                               end %></pre>
+                    <pre class="mb-0 mt-1"><%= pretty_json(tool_call.dig("function", "arguments")) %></pre>
                   </div>
                 <% end %>
               </div>
