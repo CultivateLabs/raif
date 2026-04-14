@@ -14,6 +14,12 @@ module Raif
       task.raw_response
     end
 
+    def pretty_json(value)
+      JSON.pretty_generate(JSON.parse(value))
+    rescue StandardError
+      value
+    end
+
     def llm_model_options(selected: nil)
       options = Raif.available_llm_keys.map do |key|
         label = I18n.t("raif.model_names.#{key}", default: key.to_s)
