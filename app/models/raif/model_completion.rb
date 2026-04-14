@@ -55,6 +55,8 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   include Raif::Concerns::ProviderManagedToolCalls
   include Raif::Concerns::BooleanTimestamp
 
+  attr_accessor :anthropic_prompt_caching_enabled, :bedrock_prompt_caching_enabled
+
   boolean_timestamp :started_at
   boolean_timestamp :completed_at
   boolean_timestamp :failed_at

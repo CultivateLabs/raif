@@ -43,6 +43,7 @@ module Raif
     include Raif::Concerns::HasRuntimeDuration
     include Raif::Concerns::InvokesModelTools
     include Raif::Concerns::AgentInferenceStats
+    include Raif::Concerns::LlmPromptCaching
     include Raif::Concerns::RunWith
 
     belongs_to :creator, polymorphic: true
@@ -125,7 +126,9 @@ module Raif
           source: self,
           system_prompt: system_prompt,
           available_model_tools: native_model_tools,
-          tool_choice: tool_choice_for_iteration
+          tool_choice: tool_choice_for_iteration,
+          anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
+          bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled
         )
 
         logger.debug <<~DEBUG

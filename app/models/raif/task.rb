@@ -49,6 +49,7 @@ module Raif
     include Raif::Concerns::InvokesModelTools
     include Raif::Concerns::LlmResponseParsing
     include Raif::Concerns::LlmTemperature
+    include Raif::Concerns::LlmPromptCaching
     include Raif::Concerns::JsonSchemaDefinition
     include Raif::Concerns::RunWith
 
@@ -149,6 +150,8 @@ module Raif
         response_format: response_format.to_sym,
         available_model_tools: available_model_tools,
         temperature: self.class.temperature,
+        anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
+        bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
         &streaming_block
       )
 

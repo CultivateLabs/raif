@@ -814,6 +814,35 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     end
   end
 
+  describe "#build_request_parameters with prompt caching" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        messages: [{ role: "user", content: "Hello" }],
+        llm_model_key: "anthropic_claude_4_sonnet",
+        model_api_name: "claude-sonnet-4-20250514",
+        temperature: 0.8,
+        response_format: "text",
+        system_prompt: "You are a helpful assistant"
+      )
+    end
+
+    let(:parameters) { llm.send(:build_request_parameters, model_completion) }
+
+    context "when prompt caching is enabled" do
+      before { model_completion.anthropic_prompt_caching_enabled = true }
+
+      it "includes cache_control in the request parameters" do
+        expect(parameters[:cache_control]).to eq({ type: "ephemeral" })
+      end
+    end
+
+    context "when prompt caching is not enabled" do
+      it "does not include cache_control in the request parameters" do
+        expect(parameters).not_to have_key(:cache_control)
+      end
+    end
+  end
+
   describe "#build_request_parameters with required tool_choice" do
     let(:model_completion) do
       Raif::ModelCompletion.new(

@@ -75,6 +75,7 @@ private
     }
 
     params[:system] = model_completion.system_prompt if model_completion.system_prompt.present?
+    params[:cache_control] = { type: "ephemeral" } if model_completion.anthropic_prompt_caching_enabled
 
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)

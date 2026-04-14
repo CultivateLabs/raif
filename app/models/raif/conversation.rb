@@ -35,6 +35,7 @@ class Raif::Conversation < Raif::ApplicationRecord
   include Raif::Concerns::HasRequestedLanguage
   include Raif::Concerns::HasAvailableModelTools
   include Raif::Concerns::LlmResponseParsing
+  include Raif::Concerns::LlmPromptCaching
 
   belongs_to :creator, polymorphic: true
   belongs_to :source, polymorphic: true, optional: true
@@ -105,6 +106,8 @@ class Raif::Conversation < Raif::ApplicationRecord
       response_format: response_format.to_sym,
       system_prompt: system_prompt,
       available_model_tools: available_model_tools,
+      anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
+      bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
       &block
     )
 

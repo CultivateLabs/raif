@@ -52,7 +52,7 @@ module Raif
     end
 
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
-      max_completion_tokens: nil, tool_choice: nil, &block)
+      max_completion_tokens: nil, tool_choice: nil, anthropic_prompt_caching_enabled: false, bedrock_prompt_caching_enabled: false, &block)
       unless response_format.is_a?(Symbol)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid response format: #{response_format}. Must be a symbol (you passed #{response_format.class}) and be one of: #{VALID_RESPONSE_FORMATS.join(", ")}" # rubocop:disable Layout/LineLength
@@ -106,6 +106,9 @@ module Raif
         tool_choice: tool_choice&.to_s,
         stream_response: block_given?
       )
+
+      model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled
+      model_completion.bedrock_prompt_caching_enabled = bedrock_prompt_caching_enabled
 
       model_completion.started!
 
