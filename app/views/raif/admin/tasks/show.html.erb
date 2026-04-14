@@ -140,6 +140,14 @@
         <% end %>
       </div>
     </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.cache_read_input_tokens") %>:</strong></div>
+      <div class="col-md-9"><%= @task.raif_model_completion.cache_read_input_tokens ? number_with_delimiter(@task.raif_model_completion.cache_read_input_tokens) : "-" %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.cache_creation_input_tokens") %>:</strong></div>
+      <div class="col-md-9"><%= @task.raif_model_completion.cache_creation_input_tokens ? number_with_delimiter(@task.raif_model_completion.cache_creation_input_tokens) : "-" %></div>
+    </div>
   </div>
 </div>
 <% end %>
