@@ -691,6 +691,77 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
   end
 
+  describe "#extract_response_tool_calls" do
+    let(:tool_use_block) do
+      Aws::BedrockRuntime::Types::ContentBlock.new(
+        tool_use: Aws::BedrockRuntime::Types::ToolUseBlock.new(
+          tool_use_id: "tooluse_abc123",
+          name: "fetch_url",
+          input: input_value
+        )
+      )
+    end
+
+    let(:response) do
+      message = Aws::BedrockRuntime::Types::Message.new(role: "assistant", content: [tool_use_block])
+      output = Aws::BedrockRuntime::Types::ConverseOutput::Message.new(message: message)
+      usage = Aws::BedrockRuntime::Types::TokenUsage.new(input_tokens: 1, output_tokens: 1, total_tokens: 2)
+      Aws::BedrockRuntime::Types::ConverseResponse.new(output: output, usage: usage, stop_reason: "tool_use")
+    end
+
+    context "when tool_use.input is already a Hash (the normal SDK-deserialized case)" do
+      let(:input_value) { { "url" => "https://www.wsj.com" } }
+
+      it "returns the Hash as-is" do
+        tool_calls = llm.extract_response_tool_calls(response)
+
+        expect(tool_calls).to eq([{
+          "provider_tool_call_id" => "tooluse_abc123",
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://www.wsj.com" }
+        }])
+      end
+    end
+
+    context "when tool_use.input defensively arrives as a well-formed JSON string" do
+      let(:input_value) { "{\"url\": \"https://www.wsj.com\"}" }
+
+      it "parses the JSON string into a Hash" do
+        tool_calls = llm.extract_response_tool_calls(response)
+
+        expect(tool_calls).to eq([{
+          "provider_tool_call_id" => "tooluse_abc123",
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://www.wsj.com" }
+        }])
+      end
+    end
+
+    context "when tool_use.input defensively arrives as a malformed JSON string" do
+      let(:input_value) { "{\n \" \"06    \" States president 202" }
+
+      it "leaves the raw String so downstream validation can reject it" do
+        tool_calls = llm.extract_response_tool_calls(response)
+
+        expect(tool_calls).to eq([{
+          "provider_tool_call_id" => "tooluse_abc123",
+          "name" => "fetch_url",
+          "arguments" => "{\n \" \"06    \" States president 202"
+        }])
+      end
+    end
+
+    it "returns nil when there are no tool_use blocks in the response" do
+      text_block = Aws::BedrockRuntime::Types::ContentBlock::Text.new(text: "Hello")
+      message = Aws::BedrockRuntime::Types::Message.new(role: "assistant", content: [text_block])
+      output = Aws::BedrockRuntime::Types::ConverseOutput::Message.new(message: message)
+      usage = Aws::BedrockRuntime::Types::TokenUsage.new(input_tokens: 1, output_tokens: 1, total_tokens: 2)
+      text_only_response = Aws::BedrockRuntime::Types::ConverseResponse.new(output: output, usage: usage, stop_reason: "end_turn")
+
+      expect(llm.extract_response_tool_calls(text_only_response)).to be_nil
+    end
+  end
+
   describe "#build_forced_tool_choice" do
     it "returns the correct format for forcing a specific tool" do
       result = llm.build_forced_tool_choice("agent_final_answer")
