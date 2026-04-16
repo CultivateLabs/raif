@@ -220,6 +220,12 @@ Raif.configure do |config|
   # Set to nil to include all entries. Each conversation can override this with its own llm_messages_max_length attribute.
   # config.conversation_llm_messages_max_length_default = 50
 
+  # The maximum number of times a Raif::ConversationEntry will re-prompt the model after it returns invalid
+  # developer-managed tool calls. On each retry, a synthetic user-role feedback message describing the
+  # validation failure (tool name, raw arguments, schema, available tools) is appended to that attempt's
+  # LLM request. Defaults to 2 (up to 3 ModelCompletion rows per entry: initial + 2 retries).
+  # config.conversation_entry_max_retries = 2
+
   # The method to call to get the current user. Defaults to :current_user
   # config.current_user_method = :current_user
 
