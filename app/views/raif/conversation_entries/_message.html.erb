@@ -7,7 +7,7 @@
     <% if content.present? %>
       <div class="mb-1 rounded-2 p-3 <%= message_type == :user ? "bg-primary text-white" : "border" %>">
         <% if message_type == :user %>
-          <%= simple_format content %>
+          <%= simple_format h(content), {}, sanitize: false %>
         <% else %>
           <% case local_assigns[:conversation_entry]&.response_format %>
           <% when "text" %>
