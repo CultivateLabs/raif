@@ -40,6 +40,29 @@ RSpec.describe Raif::ConversationEntry, type: :model do
     end.to change { conversation.reload.conversation_entries_count }.by(1)
   end
 
+  describe "#add_user_tool_invocation_to_user_message" do
+    let(:conversation) { FB.create(:raif_test_conversation, creator: creator) }
+
+    it "appends the tool invocation message with newlines" do
+      entry = conversation.entries.build(
+        creator: creator,
+        user_message: "Hello"
+      )
+
+      tool_invocation = instance_double(Raif::UserToolInvocation, as_user_message: "Tool result here")
+      allow(tool_invocation).to receive(:present?).and_return(true)
+      allow(entry).to receive(:raif_user_tool_invocation).and_return(tool_invocation)
+
+      entry.add_user_tool_invocation_to_user_message
+      expect(entry.user_message).to eq("Hello\n\nTool result here")
+    end
+
+    it "does not modify user_message when no tool invocation is present" do
+      entry = conversation.entries.create!(creator: creator, user_message: "Hello")
+      expect(entry.user_message).to eq("Hello")
+    end
+  end
+
   describe "#process_entry!" do
     let(:conversation) { FB.create(:raif_test_conversation, creator: creator) }
     let(:entry) { FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator) }
