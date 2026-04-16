@@ -59,8 +59,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   def add_user_tool_invocation_to_user_message
     return unless raif_user_tool_invocation.present?
 
-    separator = response_format == "html" ? "<br>" : "\n\n"
-    self.user_message = [user_message, raif_user_tool_invocation.as_user_message].join(separator)
+    self.user_message = [user_message, raif_user_tool_invocation.as_user_message].join("\n\n")
   end
 
   def response_format
