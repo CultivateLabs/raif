@@ -36,6 +36,8 @@
 module Raif
   module Agents
     class NativeToolCallingAgent < Raif::Agent
+      include Raif::Concerns::ToolCallValidation
+
       validate :ensure_llm_supports_native_tool_use
       validates :available_model_tools, length: {
         minimum: 2,
@@ -148,20 +150,19 @@ module Raif
         end
 
         tool_call = model_completion.response_tool_calls.first
-
         tool_name = tool_call["name"]
-        tool_arguments = tool_call["arguments"]
-        tool_klass = available_model_tools_map[tool_name]
+        validation = validate_tool_call(tool_call, available_model_tools_map)
+        tool_klass = validation.tool_klass
 
-        # Prepare tool arguments before recording to history so the history
-        # accurately reflects what was actually invoked
-        tool_arguments = tool_klass.prepare_tool_arguments(tool_arguments) if tool_klass.present?
+        # Prefer prepared arguments (Hash, extra keys stripped) when available
+        # so history accurately reflects what was/would be invoked.
+        history_arguments = validation.prepared_arguments || tool_call["arguments"]
 
         # Add the tool call to history (with prepared arguments if tool is known)
         tool_call_message = Raif::Messages::ToolCall.new(
           provider_tool_call_id: tool_call["provider_tool_call_id"],
           name: tool_call["name"],
-          arguments: tool_arguments,
+          arguments: history_arguments,
           assistant_message: assistant_response_message,
           provider_metadata: tool_call["provider_metadata"]
         )
@@ -173,16 +174,13 @@ module Raif
           return
         end
 
-        # The model tried to use a tool that doesn't exist
-        if tool_klass.blank?
+        case validation.status
+        when :unknown_tool
           error_content = "Error: Tool '#{tool_name}' is not a valid tool. " \
             "Available tools: #{available_model_tools_map.keys.join(", ")}"
           handle_iteration_error(error_content, required_tool:)
           return
-        end
-
-        # Make sure the tool arguments match the tool's schema
-        unless JSON::Validator.validate(tool_klass.tool_arguments_schema, tool_arguments)
+        when :non_hash_arguments, :schema_mismatch, :preparation_error
           error_content = "Error: Invalid tool arguments for the tool '#{tool_name}'. " \
             "Tool arguments schema: #{tool_klass.tool_arguments_schema.to_json}"
           handle_iteration_error(error_content, required_tool:)
@@ -192,7 +190,7 @@ module Raif
         # Process the tool invocation and add observation/result to history
         tool_invocation = tool_klass.invoke_tool(
           provider_tool_call_id: tool_call["provider_tool_call_id"],
-          tool_arguments: tool_arguments,
+          tool_arguments: validation.prepared_arguments,
           source: self
         )
 
