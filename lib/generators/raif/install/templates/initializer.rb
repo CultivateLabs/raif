@@ -242,6 +242,14 @@ Raif.configure do |config|
   # The chunk size threshold for streaming updates. Defaults to 25.
   # config.streaming_update_chunk_size_threshold = 25
 
+  # Raif model keys whose streaming path is unreliable. When a caller passes
+  # a block to Raif::Llm#chat for one of these models, Raif transparently
+  # falls back to the non-streaming path. Each entry may be a String, Symbol,
+  # or Regexp matched against the model key. Defaults to
+  # [/\Abedrock_gpt_oss_/] (Bedrock Converse streaming corrupts tool_use
+  # deltas for gpt-oss). Set to [] to disable the workaround.
+  # config.streaming_unsupported_model_keys = [/\Abedrock_gpt_oss_/]
+
   # Whether LLM API requests are enabled. Defaults to true.
   # Use this to globally disable requests to LLM APIs.
   # config.llm_api_requests_enabled = true

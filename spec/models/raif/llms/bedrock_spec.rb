@@ -184,6 +184,46 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         expect(deltas).to eq(["I'll help you fetch the content", " from the Wall Street Journal's", " homepage."])
       end
     end
+
+    context "when streaming is disabled for the model (known-broken on Bedrock Converse)" do
+      let(:gpt_oss_llm){ Raif.llm(:bedrock_gpt_oss_120b) }
+      let(:bedrock_double){ instance_double(Aws::BedrockRuntime::Client) }
+
+      let(:non_streaming_response) do
+        Aws::BedrockRuntime::Types::ConverseResponse.new(
+          output: Aws::BedrockRuntime::Types::ConverseOutput::Message.new(
+            message: Aws::BedrockRuntime::Types::Message.new(
+              role: "assistant",
+              content: [Aws::BedrockRuntime::Types::ContentBlock::Text.new(text: "Hi!")]
+            )
+          ),
+          usage: Aws::BedrockRuntime::Types::TokenUsage.new(
+            input_tokens: 5,
+            output_tokens: 2,
+            total_tokens: 7
+          ),
+          stop_reason: "end_turn"
+        )
+      end
+
+      before do
+        allow(gpt_oss_llm).to receive(:bedrock_client).and_return(bedrock_double)
+      end
+
+      it "takes the non-streaming path even when a streaming block is given" do
+        expect(bedrock_double).to receive(:converse).and_return(non_streaming_response)
+        expect(bedrock_double).not_to receive(:converse_stream)
+
+        deltas = []
+        model_completion = gpt_oss_llm.chat(messages: [{ role: "user", content: "Hello" }]) do |_mc, delta, _event|
+          deltas << delta
+        end
+
+        expect(model_completion.stream_response).to eq(false)
+        expect(model_completion.raw_response).to eq("Hi!")
+        expect(deltas).to be_empty
+      end
+    end
   end
 
   describe "#build_request_parameters" do
