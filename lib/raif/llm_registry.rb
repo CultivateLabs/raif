@@ -243,6 +243,7 @@ module Raif
           input_token_cost: 5.0 / 1_000_000,
           output_token_cost: 25.0 / 1_000_000,
           max_completion_tokens: 128_000,
+          model_provider_settings: { supports_temperature: false },
           supported_provider_managed_tools: [
             Raif::ModelTools::ProviderManaged::WebSearch,
             Raif::ModelTools::ProviderManaged::CodeExecution
