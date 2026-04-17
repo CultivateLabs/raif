@@ -1,0 +1,48 @@
+#!/usr/bin/env sh
+#
+# Probe whether a model's streaming path produces well-formed tool_use
+# arguments by running the same tool-call prompt against it in both streaming
+# and non-streaming modes and comparing parsed results.
+#
+# Useful for investigating reports of corrupt/empty/malformed tool arguments
+# from a particular provider+model combination. A consistent gap between the
+# two paths is strong evidence that the streaming transport (not the model
+# itself) is at fault — at which point bin/probe_bedrock_stream_transport (for
+# Bedrock) can confirm where in the stack the corruption originates.
+#
+# This probe temporarily clears Raif.config.streaming_unsupported_model_keys so
+# the streaming path is exercised even for models that are normally fenced off
+# from it.
+#
+# Usage:
+#   bin/probe_streaming_tool_calls [provider|model_key ...] [options]
+#
+# Options:
+#   -p, --prompt PROMPT       Tool-call prompt to send (default: a Wikipedia search question)
+#   -n, --iterations N        Iterations per model per path (default: 5)
+#   --list                    List all registered model keys and exit
+#
+# Selectors:
+#   anthropic                 All Anthropic (direct API) models
+#   bedrock                   All AWS Bedrock models
+#   open_ai                   All OpenAI Completions API models
+#   open_ai_responses         All OpenAI Responses API models
+#   open_router               All OpenRouter models
+#   google                    All Google models
+#   <model_key>               A specific model key (e.g. bedrock_gpt_oss_120b)
+#
+# Environment variables:
+#   ANTHROPIC_API_KEY         Required for Anthropic models
+#   OPENAI_API_KEY            Required for OpenAI models
+#   OPEN_ROUTER_API_KEY       Required for OpenRouter models (also accepts OPENROUTER_API_KEY)
+#   GOOGLE_AI_API_KEY         Required for Google models (also accepts GOOGLE_API_KEY)
+#   AWS_REGION                AWS region for Bedrock (default: us-east-1)
+#
+# Examples:
+#   bin/probe_streaming_tool_calls bedrock_gpt_oss_120b
+#   bin/probe_streaming_tool_calls bedrock_gpt_oss_120b anthropic_claude_4_6_sonnet --iterations 10
+#   bin/probe_streaming_tool_calls bedrock --prompt "Use wikipedia_search to look up Tokyo."
+
+set -eu
+
+bundle exec spec/dummy/bin/rails runner script/probe_streaming_tool_calls.rb "$@"
