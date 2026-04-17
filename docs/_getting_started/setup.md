@@ -125,6 +125,7 @@ end
 ```
 
 Currently supported Anthropic models:
+- `anthropic_claude_4_7_opus`
 - `anthropic_claude_4_6_opus`
 - `anthropic_claude_4_6_sonnet`
 - `anthropic_claude_4_5_opus`
@@ -151,6 +152,7 @@ end
 ```
 
 Currently supported Bedrock models:
+- `bedrock_claude_4_7_opus`
 - `bedrock_claude_4_6_opus`
 - `bedrock_claude_4_6_sonnet`
 - `bedrock_claude_4_5_opus`

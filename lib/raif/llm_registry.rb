@@ -238,6 +238,18 @@ module Raif
       Raif::Llms::OpenAiResponses => open_ai_responses_models,
       Raif::Llms::Anthropic => [
         {
+          key: :anthropic_claude_4_7_opus,
+          api_name: "claude-opus-4-7",
+          input_token_cost: 5.0 / 1_000_000,
+          output_token_cost: 25.0 / 1_000_000,
+          max_completion_tokens: 128_000,
+          model_provider_settings: { supports_temperature: false },
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
           key: :anthropic_claude_4_6_opus,
           api_name: "claude-opus-4-6",
           input_token_cost: 5.0 / 1_000_000,
@@ -367,6 +379,13 @@ module Raif
         },
       ],
       Raif::Llms::Bedrock => [
+        {
+          key: :bedrock_claude_4_7_opus,
+          api_name: "anthropic.claude-opus-4-7",
+          input_token_cost: 0.005 / 1000,
+          output_token_cost: 0.025 / 1000,
+          max_completion_tokens: 128_000
+        },
         {
           key: :bedrock_claude_4_6_opus,
           api_name: "anthropic.claude-opus-4-6-v1",

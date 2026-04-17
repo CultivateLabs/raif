@@ -69,10 +69,11 @@ private
   def build_request_parameters(model_completion)
     params = {
       model: model_completion.model_api_name,
-      messages: model_completion.messages,
-      temperature: (model_completion.temperature || default_temperature).to_f,
-      max_tokens: model_completion.max_completion_tokens || default_max_completion_tokens
+      messages: model_completion.messages
     }
+
+    params[:temperature] = (model_completion.temperature || default_temperature).to_f if supports_temperature?
+    params[:max_tokens] = model_completion.max_completion_tokens || default_max_completion_tokens
 
     params[:system] = model_completion.system_prompt if model_completion.system_prompt.present?
     params[:cache_control] = { type: "ephemeral" } if model_completion.anthropic_prompt_caching_enabled
@@ -92,6 +93,10 @@ private
     params[:stream] = true if model_completion.stream_response?
 
     params
+  end
+
+  def supports_temperature?
+    provider_settings.key?(:supports_temperature) ? provider_settings[:supports_temperature] : true
   end
 
   def extract_text_response(resp)
