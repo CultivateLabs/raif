@@ -105,6 +105,7 @@ Raif.configure do |config|
   #   open_ai_responses_o3_mini
   #   open_ai_responses_o1
   #   open_ai_responses_o1_pro
+  #   anthropic_claude_4_7_opus
   #   anthropic_claude_4_6_opus
   #   anthropic_claude_4_6_sonnet
   #   anthropic_claude_4_5_opus
@@ -117,6 +118,7 @@ Raif.configure do |config|
   #   anthropic_claude_3_5_sonnet
   #   anthropic_claude_3_5_haiku
   #   anthropic_claude_3_opus
+  #   bedrock_claude_4_7_opus
   #   bedrock_claude_4_6_opus
   #   bedrock_claude_4_6_sonnet
   #   bedrock_claude_4_5_opus

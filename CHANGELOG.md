@@ -13,6 +13,7 @@
 - Added tracking of cached input tokens and updated cost estimates to account for provider prompt caching. [#429](https://github.com/CultivateLabs/raif/pull/429)
 - Added `tool_choice: :required` support for native tool calling across OpenAI, Anthropic, Bedrock, Google, and OpenRouter, and hardened required-tool enforcement in `Raif::Agents::NativeToolCallingAgent`. [#410](https://github.com/CultivateLabs/raif/pull/410)
 - Added a `prepare_tool_arguments` hook to `Raif::ModelTool` to strip hallucinated LLM parameters before JSON schema validation. [#387](https://github.com/CultivateLabs/raif/pull/387)
+- Added support for Claude Opus 4.7 on Anthropic and AWS Bedrock.
 - Added support for the latest Anthropic models (Claude Opus 4.5, Sonnet 4.6, Opus 4.6). [#366](https://github.com/CultivateLabs/raif/pull/366)
 - Added support for OpenAI GPT-OSS 120B and 20B models via AWS Bedrock. [#364](https://github.com/CultivateLabs/raif/pull/364)
 - Added support for OpenAI GPT-5.4, GPT-5.4 mini, and GPT-5.4 nano models. [#378](https://github.com/CultivateLabs/raif/pull/378) [#388](https://github.com/CultivateLabs/raif/pull/388)
