@@ -42,6 +42,9 @@ it "stubs a streaming task" do
     "A streamed response from the LLM"
   end
 
+  user = FactoryBot.create(:user) # assumes you have a User model & factory
+  document = FactoryBot.create(:document) # assumes you have a Document model & factory
+
   deltas = []
   Raif::Tasks::DocumentSummarization.run(document: document, creator: user) do |model_completion, delta, sse_event|
     deltas << delta
