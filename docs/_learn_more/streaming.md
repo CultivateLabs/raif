@@ -28,9 +28,26 @@ end
 puts model_completion.raw_response
 ```
 
+## Streaming from Tasks
+
+`Raif::Task` subclasses also support streaming. Pass a block to `.run` and it will be called with the same `|model_completion, delta, sse_event|` arguments:
+
+```ruby
+Raif::Tasks::DocumentSummarization.run(document: document, creator: current_user) do |model_completion, delta, sse_event|
+  Turbo::StreamsChannel.broadcast_replace_to(
+    :my_channel,
+    target: "task-response",
+    partial: "my_partial_displaying_task_response",
+    locals: { model_completion: model_completion, delta: delta, sse_event: sse_event }
+  )
+end
+```
+
+The task's `raw_response` is kept in sync on each streaming update, so you can render it directly from the task record.
+
 ## Streaming Chunk Size Configuration
 
-By default, Raif will update the `Raif::ModelCompletion` and call the block after 25 characters have been accumulated from the streaming response. If you want this to happen more or less frequently, you can change the streaming_chunk_size configuration option in your initializer:
+By default, Raif will update the `Raif::ModelCompletion` and call the block after 25 characters have been accumulated from the streaming response. If you want this to happen more or less frequently, you can change the `streaming_update_chunk_size_threshold` configuration option in your initializer:
 
 ```ruby
 Raif.configure do |config|

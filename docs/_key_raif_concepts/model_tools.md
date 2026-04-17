@@ -77,6 +77,35 @@ When the LLM invokes your tool, it will include a JSON object of arguments. You 
 
 See [JSON Schemas](../learn_more/json_schemas) for more information about defining JSON schemas.
 
+### Dynamic Schemas
+
+If your tool's schema needs to vary based on runtime context (e.g. values that can change between process restarts), pass `dynamic: true`. The block is re-evaluated on each call to `tool_arguments_schema`:
+
+```ruby
+class Raif::ModelTools::DocumentSearch < Raif::ModelTool
+  tool_arguments_schema dynamic: true do
+    string :query, description: "The query to search for"
+    string :collection, description: "The collection to search", enum: Collection.pluck(:slug)
+  end
+end
+```
+
+## Preparing Tool Arguments
+
+Before a tool's arguments are validated against its schema, Raif calls `prepare_tool_arguments` on the tool class. The default implementation strips any keys the LLM returned that are not declared in `tool_arguments_schema` and logs a warning. This handles LLMs that occasionally hallucinate extra parameters and would otherwise fail strict schema validation.
+
+You can override `prepare_tool_arguments` in your tool to add type coercion or default injection:
+
+```ruby
+class Raif::ModelTools::DocumentSearch < Raif::ModelTool
+  def self.prepare_tool_arguments(arguments)
+    prepared = super # strips undeclared keys
+    prepared["max_results"] ||= 10
+    prepared
+  end
+end
+```
+
 ## Processing Model Tool Invocations
 
 When the LLM invokes your tool, Raif will call your tool's `process_invocation` method with a `Raif::ModelToolInvocation` record as an argument.

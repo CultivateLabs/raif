@@ -68,6 +68,21 @@ Raif.configure do |config|
 end
 ```
 
+# Prompt Caching
+
+Anthropic and AWS Bedrock support prompt caching on supported Claude models. Raif does not enable prompt caching by default. To enable it on a per-class basis, use the `enable_anthropic_prompt_caching` and/or `enable_bedrock_prompt_caching` class directives on your `Raif::Task`, `Raif::Conversation`, or `Raif::Agent` subclasses:
+
+```ruby
+class Raif::Tasks::DocumentSummarization < Raif::Task
+  enable_anthropic_prompt_caching
+  enable_bedrock_prompt_caching
+
+  # ...
+end
+```
+
+When enabled, Raif will set `cache_control: { type: "ephemeral" }` on the Anthropic request and add a `cache_point` to the system prompt and last message on Bedrock requests. Cached vs. fresh input tokens are tracked on `Raif::ModelCompletion` (as `cache_read_input_tokens` and `cache_creation_input_tokens`) and cost estimates in the admin account for the provider's cached-token pricing.
+
 # Adding LLM Models
 
 You can easily add new LLM models to Raif. The first argument is the [provider adapter class](https://github.com/CultivateLabs/raif/tree/main/app/models/raif/llms){:target="_blank"} to use and the second argument is a hash defining the specifics of the model:

@@ -45,6 +45,38 @@ The conversation_history_entry will be a hash with "role" and "content" keys:
 
 `Raif::Agents::NativeToolCallingAgent` prefers provider-side tool enforcement when the selected model can faithfully enforce it for the current tool set. For provider/tool combinations that cannot do that, Raif falls back to runtime validation in the agent loop and logs a warning instead of changing your caller API.
 
+## Requiring Tool Calls
+
+You can force the model to call a tool on a given iteration by overriding `tool_choice_for_iteration` and/or `required_tool_for_iteration` on your agent subclass:
+
+- Return a specific model tool class (e.g. `Raif::ModelTools::AgentFinalAnswer`) to require that exact tool.
+- Return `:required` to require that the model call *some* tool (any one of the agent's `available_model_tools`).
+- Return `nil` (the default) to leave tool use up to the model.
+
+```ruby
+class Raif::Agents::ResearchAgent < Raif::Agent
+  def tool_choice_for_iteration
+    # Force a final answer on the last iteration
+    return Raif::ModelTools::AgentFinalAnswer if iteration_count >= max_iterations - 1
+
+    # Otherwise require that the model calls some tool
+    :required
+  end
+end
+```
+
+Under the hood this maps to each provider's native "required tool" API (OpenAI `"required"`, Anthropic `{ type: "any" }`, Bedrock `{ any: {} }`, Google `{ mode: "ANY" }`, OpenRouter via OpenAI). When a specific tool is required, Raif retries on misses and fails the run if the model still does not comply on the final allowed attempt.
+
+The same `tool_choice:` kwarg is also supported directly on `Raif::Llm#chat`:
+
+```ruby
+llm.chat(
+  messages: messages,
+  available_model_tools: [Raif::ModelTools::WikipediaSearch],
+  tool_choice: :required
+)
+```
+
 # Creating Custom Agents
 
 You can create custom agents using the generator:
