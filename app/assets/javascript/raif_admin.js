@@ -18,3 +18,6 @@ application.register("raif--table-search", TableSearchController)
 
 import SortableTableController from "raif/admin/sortable_table_controller"
 application.register("raif--sortable-table", SortableTableController)
+
+import CopyToClipboardController from "raif/admin/copy_to_clipboard_controller"
+application.register("raif--copy-to-clipboard", CopyToClipboardController)
