@@ -78,6 +78,14 @@
         <div class="col-md-9"><%= @task.requested_language_key %></div>
       </div>
     <% end %>
+    <% if @task.run_with.present? %>
+      <div class="row mb-3">
+        <div class="col-md-3"><strong><%= t("raif.admin.common.run_with") %>:</strong></div>
+        <div class="col-md-9">
+          <pre class="pre-wrap mb-0"><%= JSON.pretty_generate(@task.run_with) %></pre>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>
 
