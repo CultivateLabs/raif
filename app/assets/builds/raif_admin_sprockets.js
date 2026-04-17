@@ -2682,13 +2682,17 @@
     showFeedback(button, succeeded) {
       const originalHTML = button.innerHTML;
       const originalTitle = button.getAttribute("title");
+      const originalAriaLabel = button.getAttribute("aria-label");
+      const message = succeeded ? "Copied" : "Copy failed";
       button.innerHTML = succeeded ? CHECK_ICON : "!";
-      button.setAttribute("title", succeeded ? "Copied" : "Copy failed");
+      button.setAttribute("title", message);
+      button.setAttribute("aria-label", message);
       button.classList.add(succeeded ? "raif-copy-btn-success" : "raif-copy-btn-error");
       clearTimeout(button._raifCopyTimer);
       button._raifCopyTimer = setTimeout(() => {
         button.innerHTML = originalHTML;
         button.setAttribute("title", originalTitle || "Copy to clipboard");
+        button.setAttribute("aria-label", originalAriaLabel || "Copy to clipboard");
         button.classList.remove("raif-copy-btn-success", "raif-copy-btn-error");
       }, 1500);
     }
