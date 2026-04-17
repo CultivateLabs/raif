@@ -7,7 +7,7 @@ PATH
       faraday (>= 2.0)
       json-schema (>= 5.0)
       loofah (>= 2.21)
-      pagy (< 10.0)
+      pagy (< 44.0)
       rails (>= 7.1)
       reverse_markdown (>= 2.0)
       turbo-rails (>= 2.0)
@@ -290,7 +290,10 @@ GEM
       nenv (~> 0.1)
       shellany (~> 0.0)
     openssl (4.0.1)
-    pagy (9.4.0)
+    pagy (43.5.1)
+      json
+      uri
+      yaml
     parallel (1.27.0)
     parser (3.3.11.1)
       ast (~> 2.4.1)
@@ -318,7 +321,7 @@ GEM
       date
       stringio
     public_suffix (7.0.5)
-    puma (7.2.0)
+    puma (8.0.0)
       nio4r (~> 2.0)
     racc (1.8.1)
     rack (3.2.6)
@@ -448,7 +451,8 @@ GEM
     websocket-extensions (0.1.5)
     xpath (3.2.0)
       nokogiri (~> 1.8)
-    yard (0.9.38)
+    yaml (0.4.0)
+    yard (0.9.41)
     zeitwerk (2.7.5)
 
 PLATFORMS

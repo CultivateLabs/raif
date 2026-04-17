@@ -28,7 +28,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday", ">= 2.0"
   spec.add_dependency "json-schema", ">= 5.0"
   spec.add_dependency "loofah", ">= 2.21"
-  spec.add_dependency "pagy", "<10.0"
+  spec.add_dependency "pagy", "<44.0"
   spec.add_dependency "rails", ">= 7.1"
   spec.add_dependency "reverse_markdown", ">= 2.0"
   spec.add_dependency "turbo-rails", ">= 2.0"
