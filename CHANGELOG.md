@@ -1,4 +1,4 @@
-## v1.5.0-pre
+## v1.5.0
 
 - Add runtime durations to admin pages [#357](https://github.com/CultivateLabs/raif/pull/357)
 - Add support for DeepSeek R1 and v3.2 models via AWS Bedrock. [#358](https://github.com/CultivateLabs/raif/pull/358)
