@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Retries failed specs from a prior rspec run.
+# Reads spec/examples.txt (RSpec's example_status_persistence_file_path) to
+# find failed examples, then re-runs them with --only-failures.
+# Exits 0 if retry passes, 1 if it fails or there are too many failures.
+#
+# Environment:
+#   MAX_RETRY_FILES - max number of failed spec files to retry (default: 5)
+
+MAX_RETRY_FILES="${MAX_RETRY_FILES:-5}"
+EXAMPLES_FILE="spec/examples.txt"
+
+if [ ! -f "$EXAMPLES_FILE" ]; then
+  echo "No $EXAMPLES_FILE found — cannot determine failed specs."
+  exit 1
+fi
+
+FAILED_FILES=$(awk -F'|' '$2 ~ /failed/ { split($1, a, "["); print a[1] }' "$EXAMPLES_FILE" \
+  | sed 's/ *$//' \
+  | sort -u)
+
+if [ -z "$FAILED_FILES" ]; then
+  echo "No failed specs recorded in $EXAMPLES_FILE — nothing to retry."
+  exit 1
+fi
+
+FILE_COUNT=$(echo "$FAILED_FILES" | wc -l | tr -d ' ')
+if [ "$FILE_COUNT" -gt "$MAX_RETRY_FILES" ]; then
+  echo "$FILE_COUNT spec files failed — too many to retry, likely not flaky."
+  exit 1
+fi
+
+echo "Retrying failed spec(s) in $FILE_COUNT file(s):"
+echo "$FAILED_FILES" | sed 's/^/  /'
+
+bundle exec rspec --only-failures

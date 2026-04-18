@@ -1,8 +1,5 @@
-## v1.5.0-pre
+## v1.6.0-pre
 
-- Add runtime durations to admin pages [#357](https://github.com/CultivateLabs/raif/pull/357)
-- Add support for DeepSeek R1 and v3.2 models via AWS Bedrock. [#358](https://github.com/CultivateLabs/raif/pull/358)
-- Fix conversation tool continuations to send `observation_for_invocation` back to the model, treat blank completions as failures, and normalize consecutive same-role messages for Bedrock, Anthropic, and Google.
 - Added a tool-call repair loop to `Raif::ConversationEntry`. When a tool call is malformed (unknown tool name, non-hash arguments, schema mismatch, `prepare_tool_arguments` raises), Raif re-prompts the model with synthetic user-role corrective feedback up to `Raif.config.conversation_entry_max_retries` times (default: 2) before marking the entry as failed. Each attempt produces a new `Raif::ModelCompletion` attached to the same entry and is visible in the web admin.
 - Added `Raif::Concerns::ToolCallValidation`, a shared validator used by both `Raif::ConversationEntry` and `Raif::Agents::NativeToolCallingAgent`.
 - Added `Raif::Conversation#on_entry_finalized(entry:)` hook, called exactly once per entry after the model response has been saved, tool calls validated and invoked, and the entry transitioned to `completed`. This is the correct location for persistent side effects (DB writes, broadcasts, enqueuing jobs). Side effects must not live in `process_model_response_message`, which is invoked on every streaming chunk and every retry attempt.
@@ -11,6 +8,42 @@
 - **Breaking Change**: `Raif::Conversation#prompt_model_for_entry_response` now accepts an `extra_messages:` keyword argument and the gem always passes it. Subclasses that override this method must accept the new kwarg (or `**kwargs`) or they will raise `ArgumentError` on upgrade. The documented extension points (`before_prompt_model_for_entry_response`, `system_prompt_intro`, `process_model_response_message`, etc.) are unaffected.
 - **Behavior Change**: `Raif::ConversationEntry` can now produce multiple `Raif::ModelCompletion` records per entry (one per repair-loop attempt). The existing `has_one :raif_model_completion` association has been scoped to return the newest attempt. A new `has_many :raif_model_completions` association exposes the full history. Set `Raif.config.conversation_entry_max_retries = 0` to restore the prior one-completion-per-entry behavior.
 - **Behavior Change**: Streaming callers for Bedrock gpt-oss models now transparently fall back to non-streaming (see `streaming_unsupported_model_keys` above). Users who want the previous behavior can set `Raif.config.streaming_unsupported_model_keys = []`.
+
+## v1.5.0
+
+- Add runtime durations to admin pages [#357](https://github.com/CultivateLabs/raif/pull/357)
+- Add support for DeepSeek R1 and v3.2 models via AWS Bedrock. [#358](https://github.com/CultivateLabs/raif/pull/358)
+- Fix conversation tool continuations to send `observation_for_invocation` back to the model, treat blank completions as failures, and normalize consecutive same-role messages for Bedrock, Anthropic, and Google. [#391](https://github.com/CultivateLabs/raif/pull/391)
+- Added the Prompt Studio admin interface for running and comparing tasks, conversations, and agents from saved prompt templates, including batch runs and LLM judges. [#371](https://github.com/CultivateLabs/raif/pull/371)
+- Consolidated how host app attributes are passed into tasks in Prompt Studio. [#372](https://github.com/CultivateLabs/raif/pull/372)
+- Show estimated token counts in Prompt Studio when the host app has `tiktoken_ruby` installed. [#423](https://github.com/CultivateLabs/raif/pull/423)
+- Added streaming support to `Raif::Task`. [#432](https://github.com/CultivateLabs/raif/pull/432)
+- `stub_raif_task` now accepts a streaming block for testing streamed task responses. [#433](https://github.com/CultivateLabs/raif/pull/433)
+- `Raif::ModelTool` subclasses can now define dynamic tool argument schemas using runtime context. [#431](https://github.com/CultivateLabs/raif/pull/431)
+- Added the ability to enable prompt caching on Anthropic and AWS Bedrock models (off by default). [#440](https://github.com/CultivateLabs/raif/pull/440)
+- Added tracking of cached input tokens and updated cost estimates to account for provider prompt caching. [#429](https://github.com/CultivateLabs/raif/pull/429)
+- Added `tool_choice: :required` support for native tool calling across OpenAI, Anthropic, Bedrock, Google, and OpenRouter, and hardened required-tool enforcement in `Raif::Agents::NativeToolCallingAgent`. [#410](https://github.com/CultivateLabs/raif/pull/410)
+- Added a `prepare_tool_arguments` hook to `Raif::ModelTool` to strip hallucinated LLM parameters before JSON schema validation. [#387](https://github.com/CultivateLabs/raif/pull/387)
+- Added support for Claude Opus 4.7 on Anthropic and AWS Bedrock.
+- Added support for the latest Anthropic models (Claude Opus 4.5, Sonnet 4.6, Opus 4.6). [#366](https://github.com/CultivateLabs/raif/pull/366)
+- Added support for OpenAI GPT-OSS 120B and 20B models via AWS Bedrock. [#364](https://github.com/CultivateLabs/raif/pull/364)
+- Added support for OpenAI GPT-5.4, GPT-5.4 mini, and GPT-5.4 nano models. [#378](https://github.com/CultivateLabs/raif/pull/378) [#388](https://github.com/CultivateLabs/raif/pull/388)
+- Added support for Gemini 3.1 and new Google embedding models. [#381](https://github.com/CultivateLabs/raif/pull/381)
+- Added Gemini 3.1 Pro and Flash-Lite via OpenRouter. [#384](https://github.com/CultivateLabs/raif/pull/384)
+- Added DeepSeek V3.2, MiniMax M2.1, MiniMax M2.5, and Kimi K2.5 via OpenRouter, and updated DeepSeek Chat V3 pricing. [#380](https://github.com/CultivateLabs/raif/pull/380)
+- Updated `max_completion_tokens` values and adjusted input/output token costs across providers. [#379](https://github.com/CultivateLabs/raif/pull/379)
+- Updated the docs and the install generator's initializer template to list all registered LLM models. [#382](https://github.com/CultivateLabs/raif/pull/382)
+- Added an admin page listing the LLM registry with pricing. [#411](https://github.com/CultivateLabs/raif/pull/411)
+- Added Tom Select-enhanced dropdowns and task filtering to admin pages. [#374](https://github.com/CultivateLabs/raif/pull/374) [#377](https://github.com/CultivateLabs/raif/pull/377) [#402](https://github.com/CultivateLabs/raif/pull/402)
+- Allow filtering admin pages by model. [#407](https://github.com/CultivateLabs/raif/pull/407)
+- Admin model completion pages now display tool calls, tool results, and provider-managed tool calls. [#403](https://github.com/CultivateLabs/raif/pull/403) [#441](https://github.com/CultivateLabs/raif/pull/441)
+- Admin model tool invocation pages now display the observation that was sent back to the LLM. [#408](https://github.com/CultivateLabs/raif/pull/408)
+- Added a copy-to-clipboard button to `<pre>` blocks in the admin interface. [#446](https://github.com/CultivateLabs/raif/pull/446)
+- Sanitize HTML content in `Raif::Conversation` messages. [#444](https://github.com/CultivateLabs/raif/pull/444)
+- Better handling of blank responses from OpenRouter and Bedrock, and added `Raif::Errors::BlankResponseError` to the default `llm_request_retriable_exceptions`. [#406](https://github.com/CultivateLabs/raif/pull/406)
+- Disable the AWS Bedrock SDK's automatic retries (Raif handles retries and tracks associated cost), align Bedrock request timeouts with other adapters, and make cost estimates retry-aware. [#409](https://github.com/CultivateLabs/raif/pull/409)
+- Added default request options for the Google adapter. [#428](https://github.com/CultivateLabs/raif/pull/428)
+- Bugfixes for using DeepSeek models on AWS Bedrock. [#393](https://github.com/CultivateLabs/raif/pull/393)
 
 ## v1.4.0
 

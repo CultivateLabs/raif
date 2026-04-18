@@ -19,3 +19,6 @@ application.register("raif--cost-estimate", CostEstimateController)
 
 import TomSelectController from "./raif/admin/tom_select_controller"
 application.register("raif--tom-select", TomSelectController)
+
+import CopyToClipboardController from "./raif/admin/copy_to_clipboard_controller"
+application.register("raif--copy-to-clipboard", CopyToClipboardController)
