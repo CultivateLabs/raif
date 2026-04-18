@@ -103,11 +103,13 @@ This schema would expect the LLM to return a JSON object like:
 
 # Instance-Dependent Schemas
 
-Raif supports defining schemas that vary based on the instance state of a task or model tool. This is useful when you want different schema structures based on configuration, parameters, or other instance attributes.
+For `Raif::Task` subclasses, schemas can vary based on the task's own instance state. This is useful when you want different schema structures based on configuration, parameters, or other instance attributes.
+
+> **Note:** On `Raif::ModelTool` subclasses, an arity-1 schema block means something different — it receives the *caller* (typically the invoking agent), not the tool instance, and the schema is treated as dynamic. See [Source-Aware Schemas](../key_raif_concepts/model_tools#source-aware-schemas) for details.
 
 ## Defining an Instance-Dependent Schema
 
-To create an instance-dependent schema, define your schema block with a parameter that represents the instance:
+To create an instance-dependent schema, define your schema block with a parameter that represents the task instance:
 
 ```ruby
 class AnalysisTask < Raif::Task

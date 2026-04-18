@@ -20,8 +20,12 @@ module Raif::Concerns::ToolCallValidation
   # @param tool_call [Hash] A tool call Hash as returned by `ModelCompletion#response_tool_calls`.
   #   Expected shape: { "name" => String, "arguments" => anything, "provider_tool_call_id" => String? }
   # @param available_model_tools_map [Hash{String => Class}] Map of tool name to tool class.
+  # @param source [Object, nil] The caller validating the tool call (agent or
+  #   conversation entry). Threaded through `prepare_tool_arguments` and
+  #   `tool_arguments_schema` so source-aware tool schemas are evaluated
+  #   against the same context the model saw when choosing the tool.
   # @return [ValidationResult]
-  def validate_tool_call(tool_call, available_model_tools_map)
+  def validate_tool_call(tool_call, available_model_tools_map, source: nil)
     tool_name = tool_call["name"]
     raw_arguments = tool_call["arguments"]
     tool_klass = available_model_tools_map[tool_name]
@@ -42,7 +46,7 @@ module Raif::Concerns::ToolCallValidation
     # so the retry loop sees a structured :preparation_error rather than
     # exploding out of validation.
     begin
-      prepared = tool_klass.prepare_tool_arguments(raw_arguments)
+      prepared = tool_klass.prepare_tool_arguments_for_source(raw_arguments, source)
     rescue StandardError => e
       return ValidationResult.new(
         status: :preparation_error,
@@ -65,7 +69,8 @@ module Raif::Concerns::ToolCallValidation
       )
     end
 
-    validation_errors = JSON::Validator.fully_validate(tool_klass.tool_arguments_schema, prepared)
+    schema = tool_klass.tool_arguments_schema_for_source(source)
+    validation_errors = JSON::Validator.fully_validate(schema, prepared)
     if validation_errors.any?
       return ValidationResult.new(
         status: :schema_mismatch,

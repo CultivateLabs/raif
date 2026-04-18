@@ -9,13 +9,14 @@ module Raif::Concerns::Llms::OpenAiResponses::ToolFormatting
         format_provider_managed_tool(tool)
       else
         # It's a developer-managed tool
-        validate_json_schema!(tool.tool_arguments_schema)
+        schema = tool.tool_arguments_schema_for_source(model_completion.source)
+        validate_json_schema!(schema)
 
         {
           type: "function",
           name: tool.tool_name,
           description: tool.tool_description,
-          parameters: tool.tool_arguments_schema
+          parameters: schema
         }
       end
     end

@@ -151,7 +151,7 @@ module Raif
 
         tool_call = model_completion.response_tool_calls.first
         tool_name = tool_call["name"]
-        validation = validate_tool_call(tool_call, available_model_tools_map)
+        validation = validate_tool_call(tool_call, available_model_tools_map, source: self)
         tool_klass = validation.tool_klass
 
         # Prefer prepared arguments (Hash, extra keys stripped) when available

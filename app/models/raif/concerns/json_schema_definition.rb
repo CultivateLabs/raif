@@ -9,19 +9,24 @@ module Raif
         def json_schema_definition(schema_name, dynamic: false, &block)
           raise ArgumentError, "A block must be provided to define the JSON schema" unless block_given?
 
-          # Check if block expects an instance parameter (arity == 1)
-          # arity == 0: no parameters (class-level schema)
-          # arity == 1: one parameter (instance-dependent schema)
-          if block.arity == 1
-            # Store block for instance-dependent schema building
+          # Dispatch by arity × dynamic flag:
+          #   - arity 1, dynamic: false → instance-dependent schema. `self` inside
+          #     the block is the builder (so DSL methods work); the calling
+          #     instance is passed as the block's single parameter. Used by
+          #     e.g. Raif::Task subclasses to gate fields on their own state.
+          #   - arity 1, dynamic: true  → source-aware dynamic schema. Same
+          #     evaluation, but the block's parameter is the caller `source`
+          #     (typically an agent). Re-evaluated on each read.
+          #   - arity 0, dynamic: true  → dynamic schema re-evaluated on each
+          #     read, no context passed in.
+          #   - arity 0, dynamic: false → static class-level schema built once.
+          if block.arity == 1 && !dynamic
             @schema_blocks ||= {}
             @schema_blocks[schema_name] = block
           elsif dynamic
-            # Store block for class-level dynamic schema (re-evaluated each call)
             @dynamic_schema_blocks ||= {}
             @dynamic_schema_blocks[schema_name] = block
           else
-            # Build schema immediately for class-level (backward compatible)
             @schemas ||= {}
             @schemas[schema_name] = Raif::JsonSchemaBuilder.new
             @schemas[schema_name].instance_eval(&block)
@@ -34,7 +39,12 @@ module Raif
             @dynamic_schema_blocks&.dig(schema_name).present?
         end
 
-        def schema_for(schema_name)
+        # @param schema_name [Symbol] The schema to look up
+        # @param source [Object, nil] Optional caller context (e.g. the agent or
+        #   conversation triggering schema evaluation). Forwarded into dynamic
+        #   schema blocks whose block accepts a single argument. Static schemas
+        #   and arity-0 dynamic schemas ignore it.
+        def schema_for(schema_name, source: nil)
           # Check if this is an instance-dependent schema
           if @schema_blocks&.dig(schema_name).present?
             raise Raif::Errors::InstanceDependentSchemaError,
@@ -43,9 +53,13 @@ module Raif
           end
 
           # Check if this is a dynamic schema (re-evaluate each call)
-          if @dynamic_schema_blocks&.dig(schema_name).present?
+          if (block = @dynamic_schema_blocks&.dig(schema_name)).present?
             builder = Raif::JsonSchemaBuilder.new
-            builder.instance_eval(&@dynamic_schema_blocks[schema_name])
+            if block.arity == 1
+              builder.instance_exec(source, &block)
+            else
+              builder.instance_eval(&block)
+            end
             return builder.to_schema
           end
 
