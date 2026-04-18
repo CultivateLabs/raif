@@ -23,7 +23,7 @@ module Raif::Concerns::Llms::Bedrock::ToolFormatting
         {
           name: tool.tool_name,
           description: tool.tool_description,
-          input_schema: { json: tool.tool_arguments_schema }
+          input_schema: { json: tool.tool_arguments_schema_for_source(model_completion.source) }
         }
       end
     end

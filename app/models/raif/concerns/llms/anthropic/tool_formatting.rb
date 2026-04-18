@@ -24,7 +24,7 @@ module Raif::Concerns::Llms::Anthropic::ToolFormatting
           {
             name: tool.tool_name,
             description: tool.tool_description,
-            input_schema: tool.tool_arguments_schema
+            input_schema: tool.tool_arguments_schema_for_source(model_completion.source)
           }
         end
       end

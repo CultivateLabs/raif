@@ -17,7 +17,7 @@ module Raif::Concerns::Llms::Google::ToolFormatting
           function_declarations << {
             name: tool.tool_name,
             description: tool.tool_description,
-            parameters: sanitize_schema_for_google(tool.tool_arguments_schema)
+            parameters: sanitize_schema_for_google(tool.tool_arguments_schema_for_source(model_completion.source))
           }
         end
       end

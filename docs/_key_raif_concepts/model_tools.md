@@ -90,21 +90,70 @@ class Raif::ModelTools::DocumentSearch < Raif::ModelTool
 end
 ```
 
+### Source-Aware Schemas
+
+When your tool's schema depends on *who's calling it* (typically the agent or conversation invoking it), declare the schema block with a single parameter. The block receives the calling `source` — usually the agent — on every evaluation, so you can gate fields on per-run state without reading thread-local or global variables.
+
+```ruby
+class Raif::ModelTools::FinalAnswer < Raif::ModelTool
+  tool_arguments_schema do |source|
+    string :summary
+
+    # Only expose `relevant_documents` when the calling agent has a
+    # document-returning tool in its toolset. This prevents the model
+    # from hallucinating document IDs when no search tool was available.
+    if source.respond_to?(:document_search_available?) && source.document_search_available?
+      array :relevant_documents do
+        object do
+          integer :document_id
+          string :relevance, enum: ["high", "medium", "low"]
+          string :rationale
+        end
+      end
+    end
+  end
+end
+```
+
+`dynamic: true` is implied for arity-1 tool schema blocks, since a source-dependent schema must re-evaluate on every read.
+
+Source is threaded through every call path that renders or validates the schema: all LLM tool formatters, the shared tool-call validator used by agents and conversation entries, and `ModelToolInvocation`'s schema lookup — so the schema the model sees matches the schema the caller validates against.
+
+The same arity-1 form is supported on `example_model_invocation`:
+
+```ruby
+example_model_invocation do |source|
+  args = { "summary" => "…" }
+
+  if source.respond_to?(:document_search_available?) && source.document_search_available?
+    args["relevant_documents"] = [{ "document_id" => 1234, "relevance" => "high" }]
+  end
+
+  { "name" => tool_name, "arguments" => args }
+end
+```
+
+Source-aware blocks should tolerate a `nil` source — the schema is still rendered in admin views and in class-level introspection where no caller exists. Treat nil as "least-privilege" and don't expose optional fields.
+
+**Back-compat for legacy overrides.** Tools whose class-method overrides predate the `source:` keyword (e.g. `def self.tool_arguments_schema; {...}; end`, `def self.prepare_tool_arguments(arguments); ...; end`) continue to work unchanged. Raif's internals route through compat helpers (`tool_arguments_schema_for_source`, `prepare_tool_arguments_for_source`, `example_model_invocation_for_source`) that inspect the tool's method signature and pass `source:` only when the override accepts it.
+
 ## Preparing Tool Arguments
 
 Before a tool's arguments are validated against its schema, Raif calls `prepare_tool_arguments` on the tool class. The default implementation strips any keys the LLM returned that are not declared in `tool_arguments_schema` and logs a warning. This handles LLMs that occasionally hallucinate extra parameters and would otherwise fail strict schema validation.
 
-You can override `prepare_tool_arguments` in your tool to add type coercion or default injection:
+You can override `prepare_tool_arguments` in your tool to add type coercion or default injection. To opt into the caller `source`, accept it as a keyword argument:
 
 ```ruby
 class Raif::ModelTools::DocumentSearch < Raif::ModelTool
-  def self.prepare_tool_arguments(arguments)
-    prepared = super # strips undeclared keys
+  def self.prepare_tool_arguments(arguments, source: nil)
+    prepared = super # strips undeclared keys, using the source-aware schema
     prepared["max_results"] ||= 10
     prepared
   end
 end
 ```
+
+Overrides that use the legacy signature `def self.prepare_tool_arguments(arguments)` continue to work — Raif's compat helper calls them without the `source:` kwarg.
 
 ## Processing Model Tool Invocations
 

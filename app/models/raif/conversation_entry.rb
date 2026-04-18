@@ -111,7 +111,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
       end
 
       tool_calls = model_completion.response_tool_calls || []
-      validations = tool_calls.map { |tc| validate_tool_call(tc, available_model_tools_map) }
+      validations = tool_calls.map { |tc| validate_tool_call(tc, available_model_tools_map, source: self) }
       invalid_validations = validations.reject(&:ok?)
 
       if invalid_validations.empty?
