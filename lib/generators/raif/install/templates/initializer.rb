@@ -222,6 +222,12 @@ Raif.configure do |config|
   # Set to nil to include all entries. Each conversation can override this with its own llm_messages_max_length attribute.
   # config.conversation_llm_messages_max_length_default = 50
 
+  # The maximum number of times a Raif::ConversationEntry will re-prompt the model after it returns invalid
+  # developer-managed tool calls. On each retry, a synthetic user-role feedback message describing the
+  # validation failure (tool name, raw arguments, schema, available tools) is appended to that attempt's
+  # LLM request. Defaults to 2 (up to 3 ModelCompletion rows per entry: initial + 2 retries).
+  # config.conversation_entry_max_retries = 2
+
   # The method to call to get the current user. Defaults to :current_user
   # config.current_user_method = :current_user
 
@@ -237,6 +243,14 @@ Raif.configure do |config|
 
   # The chunk size threshold for streaming updates. Defaults to 25.
   # config.streaming_update_chunk_size_threshold = 25
+
+  # Raif model keys whose streaming path is unreliable. When a caller passes
+  # a block to Raif::Llm#chat for one of these models, Raif transparently
+  # falls back to the non-streaming path. Each entry may be a String, Symbol,
+  # or Regexp matched against the model key. Defaults to
+  # [/\Abedrock_gpt_oss_/] (Bedrock Converse streaming corrupts tool_use
+  # deltas for gpt-oss). Set to [] to disable the workaround.
+  # config.streaming_unsupported_model_keys = [/\Abedrock_gpt_oss_/]
 
   # Whether LLM API requests are enabled. Defaults to true.
   # Use this to globally disable requests to LLM APIs.

@@ -58,6 +58,36 @@ Raif.configure do |config|
 end
 ```
 
+## Unreliable Streaming Endpoints {#streaming-unsupported-model-keys}
+
+Some provider + model combinations have streaming endpoints that are known to be unreliable — for example, Bedrock's Converse streaming API delivers corrupted/truncated `tool_use` deltas for the `openai.gpt-oss-*` models (the streamed chunks do not reconstruct to valid JSON even when the non-streaming path returns a well-formed tool call for the same prompt).
+
+Raif maintains a list of model keys whose streaming path should be treated as broken via the `streaming_unsupported_model_keys` configuration option. When a caller passes a block to `Raif::Llm#chat` for a model key matching the list, Raif transparently falls back to the non-streaming path (the block is never invoked, and `ModelCompletion#stream_response` is `false` on the resulting record). This sidesteps provider streaming bugs without requiring callers to special-case them.
+
+Each entry in the list may be a `String`, `Symbol`, or `Regexp` matched against the Raif model key:
+
+```ruby
+Raif.configure do |config|
+  # Default — fences off both Bedrock gpt-oss-120b and gpt-oss-20b.
+  config.streaming_unsupported_model_keys = [/\Abedrock_gpt_oss_/]
+
+  # Add an individual model:
+  config.streaming_unsupported_model_keys += [:some_other_broken_model]
+
+  # Or disable the workaround entirely:
+  config.streaming_unsupported_model_keys = []
+end
+```
+
+### Diagnosing streaming issues
+
+Two diagnostic scripts are shipped with Raif for investigating suspected streaming problems with a given model:
+
+- `bin/probe_streaming_tool_calls` — runs the same tool-call prompt through one or more models in both streaming and non-streaming modes and reports per-model failure rates. Temporarily clears `streaming_unsupported_model_keys` so the streaming path is always exercised.
+- `bin/probe_bedrock_stream_transport` — bypasses Raif entirely, hits Bedrock's Converse + ConverseStream APIs directly via the AWS SDK, and reports whether the reconstructed tool_use buffer is JSON-parseable. Useful for determining whether streaming corruption originates at the AWS service/SDK layer (below Raif's accumulator).
+
+Both scripts print usage details when invoked without arguments.
+
 ---
 
 **Read next:** [Images/Files/PDFs](images_files_pdfs)

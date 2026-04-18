@@ -91,7 +91,14 @@ class Raif::Conversation < Raif::ApplicationRecord
     "raif/conversations/initial_chat_message"
   end
 
-  def prompt_model_for_entry_response(entry:, &block)
+  # @param entry [Raif::ConversationEntry]
+  # @param extra_messages [Array<Hash>] Additional in-memory messages appended to
+  #   this attempt's LLM request only. These are captured on the resulting
+  #   `ModelCompletion.messages` for admin/debugging, but they are NOT persisted
+  #   as `ConversationEntry` history — the user never sees them in chat UI. Used
+  #   by the conversation entry retry loop to feed synthetic corrective feedback
+  #   to the model after an invalid tool call.
+  def prompt_model_for_entry_response(entry:, extra_messages: [], &block)
     self.class.before_prompt_model_for_entry_response_blocks.each do |callback_block|
       instance_exec(entry, &callback_block)
     end
@@ -100,8 +107,11 @@ class Raif::Conversation < Raif::ApplicationRecord
     self.generating_entry_response = true
     save!
 
+    messages = llm_messages
+    messages.concat(extra_messages) if extra_messages.present?
+
     model_completion = llm.chat(
-      messages: llm_messages,
+      messages: messages,
       source: entry,
       response_format: response_format.to_sym,
       system_prompt: system_prompt,
@@ -137,8 +147,30 @@ class Raif::Conversation < Raif::ApplicationRecord
 
   def process_model_response_message(message:, entry:)
     # no-op by default.
-    # Override in subclasses for type-specific processing of the model response message
+    # Override in subclasses for type-specific processing of the model response message.
+    #
+    # IMPORTANT: this method is invoked on every streaming chunk and on every
+    # retry attempt made by {Raif::ConversationEntry#process_entry!}. Do NOT
+    # put persistent side effects (DB writes, broadcasts, external calls) in
+    # here — those belong in {#on_entry_finalized}, which runs exactly once
+    # per entry after validation and tool invocation have succeeded.
     message
+  end
+
+  # Called exactly once per {Raif::ConversationEntry} immediately after the
+  # entry has been successfully finalized (model response saved, all developer-
+  # managed tool calls validated and invoked, entry transitioned to
+  # `completed!`). This is the correct place for per-entry side effects such
+  # as creating dependent records, enqueuing follow-up work, or broadcasting
+  # UI updates tied to the final response — anything you do NOT want
+  # re-executing for attempts that were discarded by the retry loop, or for
+  # intermediate streaming callbacks.
+  #
+  # No-op by default. Subclasses may override.
+  #
+  # @param entry [Raif::ConversationEntry] the freshly-finalized entry.
+  def on_entry_finalized(entry:)
+    # no-op by default.
   end
 
   def llm_messages

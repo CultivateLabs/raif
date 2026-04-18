@@ -17,8 +17,23 @@
 
     <small class="text-muted"><%= entry.created_at.rfc822 %></small>
 
-    <% if entry.raif_model_completion.present? %>
-      <%= link_to t("raif.admin.common.model_completion"), raif.admin_model_completion_path(entry.raif_model_completion) %>
+    <% if entry.raif_model_completions.any? %>
+      <div class="d-flex flex-column align-items-end">
+        <% if entry.raif_model_completions.length > 1 %>
+          <small class="text-muted"><%= t("raif.admin.common.attempts") %>: <%= entry.raif_model_completions.length %></small>
+        <% end %>
+        <div class="d-flex gap-2 flex-wrap justify-content-end">
+          <% entry.raif_model_completions.each_with_index do |mc, index| %>
+            <%= link_to raif.admin_model_completion_path(mc) do %>
+              <% if entry.raif_model_completions.length > 1 %>
+                <%= t("raif.admin.common.attempt") %> #<%= index + 1 %>
+              <% else %>
+                <%= t("raif.admin.common.model_completion") %>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
     <% end %>
   </div>
 

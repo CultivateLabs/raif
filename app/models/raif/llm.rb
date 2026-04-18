@@ -51,6 +51,26 @@ module Raif
       I18n.t("raif.model_names.#{key}", default: display_name || key.to_s.humanize)
     end
 
+    # Whether streaming is supported for the given Raif model key. A model key
+    # is considered unsupported if it matches any entry in
+    # Raif.config.streaming_unsupported_model_keys (each entry may be a
+    # String, Symbol, or Regexp). Used by #chat to transparently fall back to
+    # the non-streaming path for models with known-broken streaming endpoints.
+    def self.streaming_supported_for_key?(model_key)
+      entries = Array(Raif.config.streaming_unsupported_model_keys)
+      key_str = model_key.to_s
+      entries.none? do |entry|
+        case entry
+        when Regexp then entry.match?(key_str)
+        else entry.to_s == key_str
+        end
+      end
+    end
+
+    def streaming_supported?
+      self.class.streaming_supported_for_key?(key)
+    end
+
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
       max_completion_tokens: nil, tool_choice: nil, anthropic_prompt_caching_enabled: false, bedrock_prompt_caching_enabled: false, &block)
       unless response_format.is_a?(Symbol)
@@ -93,6 +113,14 @@ module Raif
       temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
 
+      stream_response = block_given? && streaming_supported?
+      if block_given? && !stream_response
+        Raif.logger.info(
+          "Raif::Llm#chat: streaming requested but disabled for model key #{key.inspect} " \
+            "via Raif.config.streaming_unsupported_model_keys; falling back to non-streaming."
+        )
+      end
+
       model_completion = Raif::ModelCompletion.create!(
         messages: format_messages(messages),
         system_prompt: system_prompt,
@@ -104,7 +132,7 @@ module Raif
         max_completion_tokens: max_completion_tokens,
         available_model_tools: available_model_tools,
         tool_choice: tool_choice&.to_s,
-        stream_response: block_given?
+        stream_response: stream_response
       )
 
       model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled

@@ -1,3 +1,14 @@
+## v1.6.0-pre
+
+- Added a tool-call repair loop to `Raif::ConversationEntry`. When a tool call is malformed (unknown tool name, non-hash arguments, schema mismatch, `prepare_tool_arguments` raises), Raif re-prompts the model with synthetic user-role corrective feedback up to `Raif.config.conversation_entry_max_retries` times (default: 2) before marking the entry as failed. Each attempt produces a new `Raif::ModelCompletion` attached to the same entry and is visible in the web admin.
+- Added `Raif::Concerns::ToolCallValidation`, a shared validator used by both `Raif::ConversationEntry` and `Raif::Agents::NativeToolCallingAgent`.
+- Added `Raif::Conversation#on_entry_finalized(entry:)` hook, called exactly once per entry after the model response has been saved, tool calls validated and invoked, and the entry transitioned to `completed`. This is the correct location for persistent side effects (DB writes, broadcasts, enqueuing jobs). Side effects must not live in `process_model_response_message`, which is invoked on every streaming chunk and every retry attempt.
+- Added `Raif.config.streaming_unsupported_model_keys`. When a caller passes a block to `Raif::Llm#chat` for a model key matching the list (entries may be `String`, `Symbol`, or `Regexp`), Raif transparently falls back to the non-streaming path. Default is `[/\Abedrock_gpt_oss_/]`, since Bedrock's Converse streaming endpoint delivers corrupted `tool_use` deltas for `openai.gpt-oss-*`. Set to `[]` to disable.
+- Added `bin/probe_streaming_tool_calls` and `bin/probe_bedrock_stream_transport` diagnostic scripts for investigating suspected streaming issues with a given provider+model combination.
+- **Breaking Change**: `Raif::Conversation#prompt_model_for_entry_response` now accepts an `extra_messages:` keyword argument and the gem always passes it. Subclasses that override this method must accept the new kwarg (or `**kwargs`) or they will raise `ArgumentError` on upgrade. The documented extension points (`before_prompt_model_for_entry_response`, `system_prompt_intro`, `process_model_response_message`, etc.) are unaffected.
+- **Behavior Change**: `Raif::ConversationEntry` can now produce multiple `Raif::ModelCompletion` records per entry (one per repair-loop attempt). The existing `has_one :raif_model_completion` association has been scoped to return the newest attempt. A new `has_many :raif_model_completions` association exposes the full history. Set `Raif.config.conversation_entry_max_retries = 0` to restore the prior one-completion-per-entry behavior.
+- **Behavior Change**: Streaming callers for Bedrock gpt-oss models now transparently fall back to non-streaming (see `streaming_unsupported_model_keys` above). Users who want the previous behavior can set `Raif.config.streaming_unsupported_model_keys = []`.
+
 ## v1.5.0
 
 - Add runtime durations to admin pages [#357](https://github.com/CultivateLabs/raif/pull/357)

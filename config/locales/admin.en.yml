@@ -12,6 +12,8 @@ en:
         arguments: Arguments
         arguments_schema: Arguments Schema
         at: at
+        attempt: Attempt
+        attempts: Attempts
         available_tools: Available Tools
         cache_creation_input_tokens: Cache Creation Tokens
         cache_read_input_tokens: Cache Read Tokens

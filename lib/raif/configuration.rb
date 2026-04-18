@@ -12,6 +12,7 @@ module Raif
       :aws_bedrock_region,
       :bedrock_embedding_models_enabled,
       :conversation_entries_controller,
+      :conversation_entry_max_retries,
       :conversation_llm_messages_max_length_default,
       :conversation_system_prompt_intro,
       :conversation_types,
@@ -42,6 +43,7 @@ module Raif
       :request_open_timeout,
       :request_read_timeout,
       :request_write_timeout,
+      :streaming_unsupported_model_keys,
       :streaming_update_chunk_size_threshold,
       :task_creator_optional,
       :prompt_studio_runs_enabled,
@@ -66,6 +68,7 @@ module Raif
       @bedrock_embedding_models_enabled = false
       @task_system_prompt_intro = "You are a helpful assistant."
       @conversation_entries_controller = "Raif::ConversationEntriesController"
+      @conversation_entry_max_retries = 2
       @conversation_llm_messages_max_length_default = 50
       @conversation_system_prompt_intro = "You are a helpful assistant who is collaborating with a teammate."
       @conversation_types = Set.new(["Raif::Conversation"])
@@ -106,6 +109,15 @@ module Raif
       @request_open_timeout = nil
       @request_read_timeout = nil
       @request_write_timeout = nil
+      # Raif model keys whose streaming path is known to be unreliable. When a
+      # caller passes a block to Raif::Llm#chat for one of these models, Raif
+      # transparently falls back to the non-streaming path. Each entry may be
+      # a String, Symbol, or Regexp matched against the model key.
+      #
+      # Default covers Bedrock gpt-oss, whose Converse streaming endpoint
+      # delivers corrupted/truncated tool_use deltas. Set to [] to disable
+      # the workaround.
+      @streaming_unsupported_model_keys = [/\Abedrock_gpt_oss_/]
       @streaming_update_chunk_size_threshold = 25
       @task_creator_optional = true
       @user_tool_types = []

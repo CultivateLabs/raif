@@ -1,0 +1,37 @@
+#!/usr/bin/env sh
+#
+# Bypass Raif and hit Bedrock's Converse + ConverseStream APIs directly via
+# the AWS SDK to determine whether the streaming transport itself corrupts
+# tool_use deltas for a given Bedrock model.
+#
+# This is the lower-level companion to bin/probe_streaming_tool_calls. If that
+# probe shows streaming/non-streaming divergence inside the Raif stack, this
+# one tells you whether the corruption is happening at the AWS SDK / service
+# layer (i.e. before Raif's accumulator runs).
+#
+# For each iteration this script:
+#   1. Calls Converse (non-streaming) and reports the parsed tool_use.input.
+#   2. Calls ConverseStream, prints every content_block_delta tool_use chunk,
+#      concatenates them, and tries to JSON.parse the result.
+#
+# A NO from JSON.parse on a buffer that came directly off the SDK proves the
+# bug is below Raif and is worth filing with AWS support.
+#
+# Usage:
+#   bin/probe_bedrock_stream_transport bedrock_model_key [bedrock_model_key ...] [options]
+#
+# Options:
+#   -p, --prompt PROMPT       Tool-call prompt to send (default: a Wikipedia search question)
+#   -n, --iterations N        Iterations per model (default: 1)
+#
+# Environment variables:
+#   AWS_REGION                AWS region for Bedrock (default: us-east-1)
+#   Standard AWS credential resolution (AWS_PROFILE, AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, IAM role).
+#
+# Examples:
+#   bin/probe_bedrock_stream_transport bedrock_gpt_oss_120b
+#   bin/probe_bedrock_stream_transport bedrock_gpt_oss_120b bedrock_claude_4_6_sonnet --iterations 5
+
+set -eu
+
+bundle exec spec/dummy/bin/rails runner script/probe_bedrock_stream_transport.rb "$@"
