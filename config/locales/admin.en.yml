@@ -49,6 +49,7 @@ en:
         input: Input
         input_token_cost: Input Token Cost
         invalid_json: Invalid JSON
+        invocations: Invocations
         iterations: Iterations
         language: Language
         llms: LLMs

@@ -8,7 +8,12 @@
     <% else %>
       <div class="accordion" id="modelToolsAccordion">
         <% model_tools.each_with_index do |(tool_name, tool_class), index| %>
-          <%= render partial: "raif/admin/model_tools/model_tool", locals: { tool_name: tool_name, tool_class: tool_class, index: index } %>
+          <%= render partial: "raif/admin/model_tools/model_tool", locals: {
+                tool_name: tool_name,
+                tool_class: tool_class,
+                index: index,
+                invocation_count: local_assigns[:invocation_counts]&.dig(tool_class.name)
+              } %>
         <% end %>
       </div>
     <% end %>

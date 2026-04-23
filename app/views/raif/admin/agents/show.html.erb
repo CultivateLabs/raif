@@ -96,7 +96,9 @@
   </div>
 </div>
 
-<%= render "raif/admin/model_tools/list", model_tools: @agent.available_model_tools_map %>
+<%= render "raif/admin/model_tools/list",
+      model_tools: @agent.available_model_tools_map,
+      invocation_counts: @agent.raif_model_tool_invocations.group(:tool_type).count %>
 
 <div class="card mb-4">
   <div class="card-header">
