@@ -7,7 +7,7 @@ PATH
       faraday (>= 2.0)
       json-schema (>= 5.0)
       loofah (>= 2.21)
-      pagy (< 10.0)
+      pagy (< 44.0)
       rails (>= 7.1)
       reverse_markdown (>= 2.0)
       turbo-rails (>= 2.0)

@@ -11,4 +11,6 @@
 # Pagy::DEFAULT.freeze
 
 # Add the pagy backend to a controller or to an object that includes it
-require "pagy/extras/bootstrap"
+# Pagy >= 10 dropped the extras system; the bootstrap helpers live on the
+# paginator instance (e.g. `pagy.series_nav(:bootstrap)`).
+require "pagy/extras/bootstrap" if defined?(Pagy::Frontend)

@@ -3,8 +3,6 @@
 module Raif
   module Admin
     class ModelToolInvocationsController < Raif::Admin::ApplicationController
-      include Pagy::Backend
-
       def index
         @tool_types = Raif::ModelToolInvocation.distinct.pluck(:tool_type)
         @selected_type = params[:tool_types].present? && @tool_types.include?(params[:tool_types]) ? params[:tool_types] : "all"
