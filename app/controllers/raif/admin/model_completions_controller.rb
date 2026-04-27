@@ -3,8 +3,6 @@
 module Raif
   module Admin
     class ModelCompletionsController < Raif::Admin::ApplicationController
-      include Pagy::Backend
-
       def index
         @selected_status = params[:status].present? ? params[:status].to_sym : :all
         @selected_llm_model_key = params[:llm_model_key].presence

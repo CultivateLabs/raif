@@ -3,8 +3,6 @@
 module Raif
   module Admin
     class TasksController < Raif::Admin::ApplicationController
-      include Pagy::Backend
-
       def index
         @task_types = Raif::Task.distinct.pluck(:type)
         @selected_type = params[:task_types].present? ? params[:task_types] : "all"

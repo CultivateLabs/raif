@@ -2,7 +2,17 @@
 
 module Raif
   module ApplicationHelper
-    include Pagy::Frontend
+    include Pagy::Frontend if defined?(Pagy::Frontend)
+
+    def raif_pagy_nav(pagy)
+      html = if pagy.respond_to?(:series_nav)
+        pagy.series_nav(:bootstrap)
+      else
+        pagy_bootstrap_nav(pagy)
+      end
+
+      html.respond_to?(:html_safe) ? html.html_safe : html
+    end
 
     def format_task_response(task)
       if task.response_format_json? && task.raw_response.present?
