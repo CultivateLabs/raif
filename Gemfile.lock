@@ -290,7 +290,7 @@ GEM
       nenv (~> 0.1)
       shellany (~> 0.0)
     openssl (4.0.1)
-    pagy (43.5.1)
+    pagy (43.5.3)
       json
       uri
       yaml
@@ -321,7 +321,7 @@ GEM
       date
       stringio
     public_suffix (7.0.5)
-    puma (8.0.0)
+    puma (8.0.1)
       nio4r (~> 2.0)
     racc (1.8.1)
     rack (3.2.6)
