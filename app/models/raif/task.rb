@@ -218,7 +218,7 @@ module Raif
     # @param custom_request_id [String, nil]
     # @return [Raif::ModelCompletion]
     def prepare_for_batch!(batch:, custom_request_id: nil)
-      send(:populate_prompts)
+      send(:populate_prompts) if prompt.blank? && system_prompt.blank?
       save! if changed?
 
       effective_custom_request_id = custom_request_id.presence || "raif_task_#{id}"

@@ -90,12 +90,16 @@ RSpec.describe "Raif::Task batch preparation" do
       task.save!
 
       task.prepare_for_batch!(batch: batch)
-      first_prompt = task.prompt
 
-      # Calling it a second time on an already-prepared task must not error and
-      # must not change the prompt (no re-randomization etc.).
+      # Mutate the persisted prompts so we can detect any unwanted re-population
+      # by build_prompt/build_system_prompt on the second call.
+      sentinel_prompt = "FROZEN_PROMPT_SENTINEL"
+      sentinel_system_prompt = "FROZEN_SYSTEM_PROMPT_SENTINEL"
+      task.update!(prompt: sentinel_prompt, system_prompt: sentinel_system_prompt)
+
       task.prepare_for_batch!(batch: batch)
-      expect(task.prompt).to eq(first_prompt)
+      expect(task.prompt).to eq(sentinel_prompt)
+      expect(task.system_prompt).to eq(sentinel_system_prompt)
     end
   end
 end

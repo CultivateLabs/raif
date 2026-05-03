@@ -122,7 +122,8 @@ class Raif::Llms::OpenAiBase < Raif::Llm
     # batch expired mid-flight or was canceled) is left as a failed completion
     # so the workflow can advance.
     completions_by_id.each_value do |mc|
-      next unless mc.reload.pending?
+      mc.reload
+      next if mc.completed? || mc.failed?
 
       mc.failure_error = "OpenAI batch entry missing"
       mc.failure_reason = "Result not present in output_file or error_file (batch ##{batch.id})"

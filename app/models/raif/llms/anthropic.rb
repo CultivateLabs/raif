@@ -123,6 +123,19 @@ class Raif::Llms::Anthropic < Raif::Llm
       apply_batch_result(mc, raw)
     end
 
+    # Anything that was never reported in the results stream (rare; possible if
+    # the batch expired mid-flight or was canceled) is force-failed so the
+    # workflow can advance.
+    completions_by_id.each_value do |mc|
+      mc.reload
+      next if mc.completed? || mc.failed?
+
+      mc.failure_error = "Anthropic batch entry missing"
+      mc.failure_reason = "Result not present in results stream (batch ##{batch.id})"
+      mc.update_columns(started_at: batch.started_at) if mc.started_at.nil?
+      mc.failed!
+    end
+
     batch.recalculate_costs!
     batch
   end

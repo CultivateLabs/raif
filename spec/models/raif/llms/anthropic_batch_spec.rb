@@ -251,5 +251,32 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       batch.update!(provider_response: batch.provider_response.merge("results_url" => nil))
       expect { llm.fetch_batch_results!(batch) }.to raise_error(Raif::Errors::InvalidBatchError)
     end
+
+    it "fails any child completion that doesn't appear in the results stream" do
+      partial_jsonl = [
+        {
+          custom_id: "win",
+          result: {
+            type: "succeeded",
+            message: {
+              id: "msg_aaa",
+              type: "message",
+              role: "assistant",
+              content: [{ type: "text", text: "ok" }],
+              usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
+            }
+          }
+        }
+      ].map(&:to_json).join("\n")
+
+      stub_request(:get, results_url).to_return(status: 200, body: partial_jsonl)
+
+      llm.fetch_batch_results!(batch)
+
+      lose_mc = task_failure.raif_model_completion.reload
+      expect(lose_mc.failed?).to be(true)
+      expect(lose_mc.failure_error).to include("missing")
+      expect(lose_mc.failure_reason).to include("not present in results stream")
+    end
   end
 end
