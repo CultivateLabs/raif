@@ -29,9 +29,9 @@ module Raif
       batch = Raif::ModelCompletionBatch.find_by(id: batch_id)
       return if batch.nil? || batch.terminal?
 
-      new_status = batch.fetch_status!
+      batch.fetch_status!
 
-      if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status)
+      if batch.terminal?
         handle_terminal_batch!(batch)
         batch.dispatch_completion_handler!
         return
