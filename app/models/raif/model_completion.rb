@@ -117,6 +117,8 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     if prompt_token_cost.present? || output_token_cost.present?
       self.total_cost = (prompt_token_cost || 0) + (output_token_cost || 0)
     end
+
+    apply_batch_inference_discount if raif_model_completion_batch_id.present?
   end
 
   def record_failure!(exception)
@@ -161,5 +163,18 @@ private
 
   def llm_config
     @llm_config ||= Raif.llm_config(llm_model_key.to_sym)
+  end
+
+  # When this completion was resolved through a provider Batch API, apply the
+  # provider's batch-tier multiplier (typically 0.5 for both Anthropic and
+  # OpenAI today) to the per-token costs. Total recomputed from parts so it
+  # tracks any rounding consistently.
+  def apply_batch_inference_discount
+    multiplier = llm_config[:llm_class]&.batch_inference_cost_multiplier
+    return unless multiplier && multiplier != 1.0
+
+    self.prompt_token_cost = ((prompt_token_cost || 0) * multiplier) if prompt_token_cost.present?
+    self.output_token_cost = ((output_token_cost || 0) * multiplier) if output_token_cost.present?
+    self.total_cost = ((prompt_token_cost || 0) + (output_token_cost || 0))
   end
 end
