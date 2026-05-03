@@ -81,6 +81,26 @@ module Raif
       Raif.llm(llm_model_key.to_sym)
     end
 
+    # Consumer-facing API: ask the batch to do its provider's work.
+    #
+    # Each method delegates to the LLM provider's SupportsBatchInference
+    # implementation. The provider-side methods (Raif::Llm#submit_batch!,
+    # #fetch_batch_status!, #fetch_batch_results!) are the contract every
+    # batch-capable provider implements; these façades are how callers
+    # actually invoke them.
+
+    def submit!
+      llm.submit_batch!(self)
+    end
+
+    def fetch_status!
+      llm.fetch_batch_status!(self)
+    end
+
+    def fetch_results!
+      llm.fetch_batch_results!(self)
+    end
+
     # Resolves and invokes the batch's completion handler, if one is configured.
     # The handler class must implement `.handle_batch_completion(batch)`.
     def dispatch_completion_handler!

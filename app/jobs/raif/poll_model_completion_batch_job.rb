@@ -29,12 +29,10 @@ module Raif
       batch = Raif::ModelCompletionBatch.find_by(id: batch_id)
       return if batch.nil? || batch.terminal?
 
-      llm = batch.llm
-
-      new_status = llm.fetch_batch_status!(batch)
+      new_status = batch.fetch_status!
 
       if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status)
-        handle_terminal_batch!(batch, llm)
+        handle_terminal_batch!(batch)
         batch.dispatch_completion_handler!
         return
       end
@@ -68,9 +66,9 @@ module Raif
     # terminal statuses there are no results to fetch, so we mark every
     # still-pending child completion as failed with the batch's terminal
     # status as the failure reason.
-    def handle_terminal_batch!(batch, llm)
+    def handle_terminal_batch!(batch)
       if batch.successful?
-        llm.fetch_batch_results!(batch)
+        batch.fetch_results!
       else
         force_fail!(batch, reason: "Batch ended with status: #{batch.status}")
       end

@@ -150,6 +150,33 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
     end
   end
 
+  describe "consumer-facing façade (#submit! / #fetch_status! / #fetch_results!)" do
+    let(:batch) { FB.create(:raif_model_completion_batch_anthropic) }
+    let(:llm_double) { instance_double(Raif::Llms::Anthropic) }
+
+    before do
+      allow(batch).to receive(:llm).and_return(llm_double)
+    end
+
+    it "#submit! delegates to llm.submit_batch!(self)" do
+      allow(llm_double).to receive(:submit_batch!)
+      batch.submit!
+      expect(llm_double).to have_received(:submit_batch!).with(batch)
+    end
+
+    it "#fetch_status! delegates to llm.fetch_batch_status!(self)" do
+      allow(llm_double).to receive(:fetch_batch_status!).and_return("in_progress")
+      expect(batch.fetch_status!).to eq("in_progress")
+      expect(llm_double).to have_received(:fetch_batch_status!).with(batch)
+    end
+
+    it "#fetch_results! delegates to llm.fetch_batch_results!(self)" do
+      allow(llm_double).to receive(:fetch_batch_results!)
+      batch.fetch_results!
+      expect(llm_double).to have_received(:fetch_batch_results!).with(batch)
+    end
+  end
+
   describe "Raif::Llm.supports_batch_inference?" do
     it "defaults to false" do
       expect(Raif::Llm.supports_batch_inference?).to be(false)
