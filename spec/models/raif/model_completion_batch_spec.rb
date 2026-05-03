@@ -52,7 +52,7 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
 
     it "persists Raif::ModelCompletionBatches::OpenAi and exposes its provider accessors" do
       batch = FB.create(
-        :raif_model_completion_batch_open_ai,
+        :raif_model_completion_batch_open_ai_responses,
         provider_response: {
           "input_file_id" => "file_in",
           "output_file_id" => "file_out",
