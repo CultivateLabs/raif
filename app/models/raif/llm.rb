@@ -189,6 +189,20 @@ module Raif
       nil
     end
 
+    # Whether this provider supports submitting model completions via a Batch API.
+    # Override in subclasses by including Raif::Concerns::Llms::SupportsBatchInference,
+    # which sets this to true.
+    def self.supports_batch_inference?
+      false
+    end
+
+    # Multiplier applied to per-token costs when a model completion was resolved
+    # through this provider's Batch API. Defaults to 0.5 (50% discount), which is
+    # what both Anthropic and OpenAI charge for batch requests today.
+    def self.batch_inference_cost_multiplier
+      0.5
+    end
+
     def supports_provider_managed_tool?(tool_klass)
       supported_provider_managed_tools&.include?(tool_klass.to_s)
     end

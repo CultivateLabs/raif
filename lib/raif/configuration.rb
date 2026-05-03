@@ -4,6 +4,7 @@ module Raif
   class Configuration
     attr_accessor :agent_types,
       :anthropic_api_key,
+      :anthropic_message_batches_beta_header,
       :bedrock_models_enabled,
       :anthropic_models_enabled,
       :authorize_admin_controller_action,
@@ -28,8 +29,11 @@ module Raif
       :llm_api_requests_enabled,
       :llm_request_max_retries,
       :llm_request_retriable_exceptions,
+      :model_completion_batch_max_age,
+      :model_completion_batch_poll_schedule,
       :model_superclass,
       :open_ai_api_key,
+      :open_ai_batch_completion_window,
       :open_ai_api_version,
       :open_ai_auth_header_style,
       :open_ai_base_url,
@@ -59,6 +63,7 @@ module Raif
     def initialize
       @agent_types = Set.new(["Raif::Agents::NativeToolCallingAgent"])
       @anthropic_api_key = default_disable_llm_api_requests? ? "placeholder-anthropic-api-key" : ENV["ANTHROPIC_API_KEY"]
+      @anthropic_message_batches_beta_header = "message-batches-2024-09-24"
       @bedrock_models_enabled = false
       @anthropic_models_enabled = ENV["ANTHROPIC_API_KEY"].present?
       @authorize_admin_controller_action = ->{ false }
@@ -92,9 +97,22 @@ module Raif
         Net::OpenTimeout,
         Raif::Errors::BlankResponseError,
       ]
+      # Schedule for the self-rescheduling Raif::PollModelCompletionBatchJob.
+      # The Nth poll waits poll_schedule[N] (clamped to the last entry once exhausted).
+      @model_completion_batch_poll_schedule = [
+        60.seconds,
+        2.minutes,
+        5.minutes,
+        10.minutes,
+        30.minutes
+      ]
+      # Hard ceiling for any non-terminal Raif::ModelCompletionBatch. Older batches
+      # are force-failed by the hourly safety sweep so the workflow can advance.
+      @model_completion_batch_max_age = 26.hours
       @model_superclass = "ApplicationRecord"
       @open_ai_api_key = default_disable_llm_api_requests? ? "placeholder-open-ai-api-key" : ENV["OPENAI_API_KEY"]
       @open_ai_api_version = nil
+      @open_ai_batch_completion_window = "24h"
       @open_ai_auth_header_style = :bearer
       @open_ai_base_url = "https://api.openai.com/v1"
       @open_ai_embedding_base_url = "https://api.openai.com/v1"
