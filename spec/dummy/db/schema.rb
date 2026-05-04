@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_07_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_02_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -115,6 +115,38 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_07_000000) do
     t.index ["source_type", "source_id"], name: "index_raif_conversations_on_source"
   end
 
+  create_table "raif_model_completion_batches", force: :cascade do |t|
+    t.string "completion_handler_class_name"
+    t.datetime "created_at", null: false
+    t.bigint "creator_id"
+    t.string "creator_type"
+    t.datetime "ended_at"
+    t.datetime "failed_at"
+    t.string "failure_error"
+    t.text "failure_reason"
+    t.string "llm_model_key", null: false
+    t.jsonb "metadata"
+    t.string "model_api_name", null: false
+    t.datetime "next_poll_at"
+    t.decimal "output_token_cost", precision: 10, scale: 6
+    t.decimal "prompt_token_cost", precision: 10, scale: 6
+    t.string "provider_batch_id"
+    t.jsonb "provider_response"
+    t.jsonb "request_counts"
+    t.datetime "started_at"
+    t.string "status", default: "pending", null: false
+    t.datetime "submitted_at"
+    t.decimal "total_cost", precision: 10, scale: 6
+    t.string "type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["creator_type", "creator_id"], name: "index_raif_model_completion_batches_on_creator"
+    t.index ["next_poll_at"], name: "index_raif_model_completion_batches_on_next_poll_at"
+    t.index ["provider_batch_id"], name: "index_raif_model_completion_batches_on_provider_batch_id"
+    t.index ["status"], name: "index_raif_model_completion_batches_on_status"
+    t.index ["submitted_at"], name: "index_raif_model_completion_batches_on_submitted_at"
+    t.index ["type"], name: "index_raif_model_completion_batches_on_type"
+  end
+
   create_table "raif_model_completions", force: :cascade do |t|
     t.jsonb "available_model_tools", null: false
     t.integer "cache_creation_input_tokens"
@@ -133,6 +165,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_07_000000) do
     t.decimal "output_token_cost", precision: 10, scale: 6
     t.decimal "prompt_token_cost", precision: 10, scale: 6
     t.integer "prompt_tokens"
+    t.string "provider_request_id"
+    t.bigint "raif_model_completion_batch_id"
     t.text "raw_response"
     t.jsonb "response_array"
     t.integer "response_format", default: 0, null: false
@@ -153,6 +187,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_07_000000) do
     t.index ["completed_at"], name: "index_raif_model_completions_on_completed_at"
     t.index ["created_at"], name: "index_raif_model_completions_on_created_at"
     t.index ["failed_at"], name: "index_raif_model_completions_on_failed_at"
+    t.index ["provider_request_id"], name: "index_raif_model_completions_on_provider_request_id"
+    t.index ["raif_model_completion_batch_id"], name: "index_raif_model_completions_on_batch"
     t.index ["source_type", "source_id"], name: "index_raif_model_completions_on_source"
     t.index ["started_at"], name: "index_raif_model_completions_on_started_at"
   end
@@ -253,6 +289,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_07_000000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "raif_conversation_entries", "raif_conversations"
+  add_foreign_key "raif_model_completions", "raif_model_completion_batches"
   add_foreign_key "raif_prompt_studio_batch_run_items", "raif_prompt_studio_batch_runs", column: "batch_run_id"
   add_foreign_key "raif_prompt_studio_batch_run_items", "raif_tasks", column: "judge_task_id"
   add_foreign_key "raif_prompt_studio_batch_run_items", "raif_tasks", column: "result_task_id"

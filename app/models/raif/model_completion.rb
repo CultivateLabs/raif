@@ -27,6 +27,7 @@
 #  response_format_parameter   :string
 #  response_tool_calls         :jsonb
 #  retry_count                 :integer          default(0), not null
+#  provider_request_id         :string
 #  source_type                 :string
 #  started_at                  :datetime
 #  stream_response             :boolean          default(FALSE), not null
@@ -37,16 +38,19 @@
 #  total_tokens                :integer
 #  created_at                  :datetime         not null
 #  updated_at                  :datetime         not null
+#  raif_model_completion_batch_id :bigint
 #  response_id                 :string
 #  source_id                   :bigint
 #
 # Indexes
 #
-#  index_raif_model_completions_on_completed_at  (completed_at)
-#  index_raif_model_completions_on_created_at    (created_at)
-#  index_raif_model_completions_on_failed_at     (failed_at)
-#  index_raif_model_completions_on_source        (source_type,source_id)
-#  index_raif_model_completions_on_started_at    (started_at)
+#  index_raif_model_completions_on_batch          (raif_model_completion_batch_id)
+#  index_raif_model_completions_on_completed_at   (completed_at)
+#  index_raif_model_completions_on_created_at     (created_at)
+#  index_raif_model_completions_on_failed_at      (failed_at)
+#  index_raif_model_completions_on_provider_req   (provider_request_id)
+#  index_raif_model_completions_on_source         (source_type,source_id)
+#  index_raif_model_completions_on_started_at     (started_at)
 #
 class Raif::ModelCompletion < Raif::ApplicationRecord
   include Raif::Concerns::LlmResponseParsing
@@ -62,9 +66,19 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   boolean_timestamp :failed_at
 
   belongs_to :source, polymorphic: true, optional: true
+  belongs_to :raif_model_completion_batch,
+    class_name: "Raif::ModelCompletionBatch",
+    inverse_of: :raif_model_completions,
+    optional: true
 
   validates :llm_model_key, presence: true, inclusion: { in: ->{ Raif.available_llm_keys.map(&:to_s) } }
   validates :model_api_name, presence: true
+
+  scope :pending, -> { where(started_at: nil, completed_at: nil, failed_at: nil) }
+
+  def pending?
+    started_at.nil? && completed_at.nil? && failed_at.nil?
+  end
 
   # Scope to find completions that have response tool calls
   scope :with_response_tool_calls, -> { where_json_not_blank(:response_tool_calls) }
@@ -103,6 +117,8 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     if prompt_token_cost.present? || output_token_cost.present?
       self.total_cost = (prompt_token_cost || 0) + (output_token_cost || 0)
     end
+
+    apply_batch_inference_discount if raif_model_completion_batch_id.present?
   end
 
   def record_failure!(exception)
@@ -147,5 +163,18 @@ private
 
   def llm_config
     @llm_config ||= Raif.llm_config(llm_model_key.to_sym)
+  end
+
+  # When this completion was resolved through a provider Batch API, apply the
+  # provider's batch-tier multiplier (typically 0.5 for both Anthropic and
+  # OpenAI today) to the per-token costs. Total recomputed from parts so it
+  # tracks any rounding consistently.
+  def apply_batch_inference_discount
+    multiplier = llm_config[:llm_class]&.batch_inference_cost_multiplier
+    return unless multiplier && multiplier != 1.0
+
+    self.prompt_token_cost = ((prompt_token_cost || 0) * multiplier) if prompt_token_cost.present?
+    self.output_token_cost = ((output_token_cost || 0) * multiplier) if output_token_cost.present?
+    self.total_cost = ((prompt_token_cost || 0) + (output_token_cost || 0))
   end
 end

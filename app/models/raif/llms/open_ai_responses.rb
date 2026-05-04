@@ -5,6 +5,10 @@ class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
   include Raif::Concerns::Llms::OpenAiResponses::ToolFormatting
   include Raif::Concerns::Llms::OpenAiResponses::ResponseToolCalls
 
+  def batch_endpoint_path
+    "/v1/responses"
+  end
+
 private
 
   def api_path

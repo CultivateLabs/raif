@@ -2,6 +2,7 @@
 
 class Raif::Llms::OpenAiBase < Raif::Llm
   include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
+  include Raif::Concerns::Llms::OpenAi::BatchInference
 
   def self.cache_read_input_token_cost_multiplier
     0.5
