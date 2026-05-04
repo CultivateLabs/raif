@@ -69,9 +69,10 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
         request_counts: body["request_counts"] || {}
       )
 
-      completions.each do |mc|
-        mc.update_columns(started_at: submitted_at) if mc.started_at.nil?
-      end
+      # Single UPDATE for all children that don't already have a started_at,
+      # filtered in SQL so we can't stomp a started_at that was set by another
+      # process between when we loaded `completions` and now.
+      batch.raif_model_completions.where(started_at: nil).update_all(started_at: submitted_at)
     end
 
     batch
