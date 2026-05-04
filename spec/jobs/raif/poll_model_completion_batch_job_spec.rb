@@ -146,5 +146,40 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
       expect(reloaded.status).to eq("failed")
       expect(mc.reload.failed?).to be(true)
     end
+
+    it "reschedules itself (without raising) when the provider raises a transient/retriable error" do
+      allow(llm_double).to receive(:fetch_batch_status!).and_raise(Faraday::ConnectionFailed.new("boom"))
+      allow(Raif.config).to receive(:model_completion_batch_poll_schedule).and_return([60.seconds, 2.minutes])
+      allow(Raif.config).to receive(:model_completion_batch_max_age).and_return(26.hours)
+
+      expect do
+        described_class.perform_now(batch.id, attempt: 1)
+      end.to have_enqueued_job(described_class).with(batch.id, attempt: 2)
+
+      expect(batch.reload.next_poll_at).to be_within(5.seconds).of(60.seconds.from_now)
+    end
+
+    it "re-raises a non-transient error so the host's job adapter surfaces it" do
+      allow(llm_double).to receive(:fetch_batch_status!).and_raise(StandardError, "non-transient")
+
+      expect do
+        expect do
+          described_class.perform_now(batch.id, attempt: 1)
+        end.to raise_error(StandardError, "non-transient")
+      end.not_to have_enqueued_job(described_class)
+    end
+
+    it "does not reschedule on transient error if the batch reloaded into a terminal status" do
+      allow(llm_double).to receive(:fetch_batch_status!) do |b|
+        # Simulate a separate process having force-failed the batch concurrently:
+        # the in-memory batch is non-terminal, but the DB row is now terminal.
+        Raif::ModelCompletionBatch.where(id: b.id).update_all(status: "failed", failed_at: Time.current)
+        raise Faraday::TimeoutError, "transient"
+      end
+
+      expect do
+        described_class.perform_now(batch.id, attempt: 1)
+      end.not_to have_enqueued_job(described_class)
+    end
   end
 end
