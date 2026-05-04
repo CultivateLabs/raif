@@ -6,7 +6,11 @@ require "rails_helper"
 #
 # These specs hit a real controller in the dummy app to verify the negotiated
 # format symbol can never be one of Raif's internal template formats,
-# regardless of which content-type string the client sends.
+# regardless of which Accept header media type the client sends.
+#
+# We hit `/up` (the Rails health endpoint) so the request returns without
+# relying on template lookup, which keeps the spec focused on the Accept
+# header negotiation rather than view resolution.
 RSpec.describe "Mime negotiation for HTTP requests", type: :request do
   HOSTILE_ACCEPT_HEADERS = [
     "text/plain",
@@ -16,7 +20,7 @@ RSpec.describe "Mime negotiation for HTTP requests", type: :request do
 
   HOSTILE_ACCEPT_HEADERS.each do |accept|
     it "does not resolve Accept: #{accept} to a Raif internal template format" do
-      get "/agents", headers: { "Accept" => accept }
+      get "/up", headers: { "Accept" => accept }
 
       expect(request.format.symbol).not_to eq(:prompt)
       expect(request.format.symbol).not_to eq(:system_prompt)
