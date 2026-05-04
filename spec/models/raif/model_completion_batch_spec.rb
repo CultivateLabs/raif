@@ -242,7 +242,7 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
       # them out via update_columns (skipping callbacks).
       mc.update_columns(prompt_token_cost: nil, output_token_cost: nil, total_cost: nil)
 
-      expect(Raif.logger).to receive(:warn).with(a_string_matching(/aggregate cost columns are all NULL/))
+      expect(Raif.logger).to receive(:warn).with(a_string_matching(/NULL or zero/))
       batch.recalculate_costs!
 
       reloaded = batch.reload

@@ -125,9 +125,9 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
       mc.reload
       next if mc.completed? || mc.failed?
 
+      mc.started_at ||= batch.started_at
       mc.failure_error = "Anthropic batch entry missing"
       mc.failure_reason = "Result not present in results stream (batch ##{batch.id})"
-      mc.update_columns(started_at: batch.started_at) if mc.started_at.nil?
       mc.failed!
     end
 
@@ -143,19 +143,20 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
   # Raif::ModelCompletion#calculate_costs (because raif_model_completion_batch_id is set).
   def apply_batch_result(mc, raw_result)
     result = raw_result["result"] || {}
-    started_fallback = mc.raif_model_completion_batch&.started_at || Time.current
+
+    # Set started_at in-memory before any save below, so update_model_completion's
+    # save (or mc.failed!'s save) persists it in a single round-trip.
+    mc.started_at ||= mc.raif_model_completion_batch&.started_at || Time.current
 
     case result["type"]
     when "succeeded"
       update_model_completion(mc, result["message"])
-      mc.update_columns(started_at: started_fallback) if mc.started_at.nil?
       mc.completed!
     else
       type = result["type"].to_s
       error = result["error"] || {}
       mc.failure_error = "Anthropic batch entry #{type.presence || "failed"}"
       mc.failure_reason = (error["message"].presence || type.presence || "unknown failure").to_s.truncate(255)
-      mc.update_columns(started_at: started_fallback) if mc.started_at.nil?
       mc.failed!
     end
 

@@ -128,9 +128,9 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
       mc.reload
       next if mc.completed? || mc.failed?
 
+      mc.started_at ||= batch.started_at
       mc.failure_error = "OpenAI batch entry missing"
       mc.failure_reason = "Result not present in output_file or error_file (batch ##{batch.id})"
-      mc.update_columns(started_at: batch.started_at) if mc.started_at.nil?
       mc.failed!
     end
 
@@ -149,8 +149,9 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
     response_envelope = raw_result["response"]
     error_envelope = raw_result["error"]
 
-    started_fallback = mc.raif_model_completion_batch&.started_at || Time.current
-    mc.update_columns(started_at: started_fallback) if mc.started_at.nil?
+    # Set started_at in-memory before any save below, so update_model_completion's
+    # save (or mc.failed!'s save) persists it in a single round-trip.
+    mc.started_at ||= mc.raif_model_completion_batch&.started_at || Time.current
 
     if response_envelope.is_a?(Hash) && (response_envelope["status_code"] || 200).to_i.between?(200, 299)
       update_model_completion(mc, response_envelope["body"])

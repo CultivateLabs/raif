@@ -101,13 +101,13 @@ module Raif
     # @param args [Hash] Additional arguments to pass to the instance of the task that is created.
     # @return [Raif::Task, nil] The task instance that was created and run.
     def self.run(creator: nil, available_model_tools: [], llm_model_key: nil, images: [], files: [], **args, &block)
-      task = new(
+      task = build_task_instance(
         creator: creator,
-        llm_model_key: llm_model_key,
         available_model_tools: available_model_tools,
-        started_at: Time.current,
+        llm_model_key: llm_model_key,
         images: images,
         files: files,
+        started_at: Time.current,
         **args
       )
 
@@ -203,10 +203,10 @@ module Raif
     # @return [Raif::Task]
     def self.build_for_batch(batch:, batch_custom_id: nil, creator: nil, available_model_tools: [],
       llm_model_key: nil, images: [], files: [], **args)
-      task = new(
+      task = build_task_instance(
         creator: creator,
-        llm_model_key: llm_model_key,
         available_model_tools: available_model_tools,
+        llm_model_key: llm_model_key,
         images: images,
         files: files,
         **args
@@ -216,6 +216,25 @@ module Raif
       task.prepare_for_batch!(batch: batch, batch_custom_id: batch_custom_id)
       task
     end
+
+    # Shared (unsaved) instance builder used by both .run (sync) and
+    # .build_for_batch (batch). Owns the kwarg -> new(...) wiring so a future
+    # attribute only has to be added in one place. Each caller is responsible
+    # for its own save! so they can keep their rescue semantics: in particular,
+    # .run wants the local `task` var assigned even if save! raises so that the
+    # rescue clause can still mark it failed and return it.
+    def self.build_task_instance(creator:, available_model_tools:, llm_model_key:, images:, files:, started_at: nil, **args)
+      new(
+        creator: creator,
+        llm_model_key: llm_model_key,
+        available_model_tools: available_model_tools,
+        images: images,
+        files: files,
+        started_at: started_at,
+        **args
+      )
+    end
+    private_class_method :build_task_instance
 
     # Populates this task's prompts (if not already populated) and creates the
     # pending Raif::ModelCompletion that will be sent through the batch. Safe to

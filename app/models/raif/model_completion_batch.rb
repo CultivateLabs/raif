@@ -179,17 +179,20 @@ module Raif
         return
       end
 
-      sums = raif_model_completions.pick(
-        Arel.sql("SUM(prompt_token_cost)"),
-        Arel.sql("SUM(output_token_cost)"),
-        Arel.sql("SUM(total_cost)")
-      )
+      # Three .sum calls instead of one Arel-flavored pick. The dataset is bounded
+      # by batch size and these only run once per batch finalization, so the extra
+      # round-trips are immaterial and the call is much easier to read.
+      prompt_sum = raif_model_completions.sum(:prompt_token_cost)
+      output_sum = raif_model_completions.sum(:output_token_cost)
+      total_sum = raif_model_completions.sum(:total_cost)
 
-      prompt_sum, output_sum, total_sum = sums
-      if [prompt_sum, output_sum, total_sum].all?(&:nil?)
+      # ActiveRecord's .sum returns 0 (not nil) when every row's column is NULL.
+      # Skip the write if everything is zero so we don't null-out manually-set
+      # batch-level cost values from the host (rare, but cheap to guard).
+      if prompt_sum.zero? && output_sum.zero? && total_sum.zero?
         Raif.logger.warn(
-          "Raif::ModelCompletionBatch ##{id}#recalculate_costs! skipped: aggregate cost columns are all NULL " \
-            "(no child completion has populated prompt_token_cost / output_token_cost / total_cost yet)"
+          "Raif::ModelCompletionBatch ##{id}#recalculate_costs! skipped: every child completion's " \
+            "prompt_token_cost / output_token_cost / total_cost is NULL or zero"
         )
         return
       end
