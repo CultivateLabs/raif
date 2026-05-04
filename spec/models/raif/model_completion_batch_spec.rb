@@ -189,4 +189,66 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
       expect(klass.supports_batch_inference?).to be(true)
     end
   end
+
+  describe "#force_fail! transactional rollback" do
+    it "rolls back the batch-status update if a child completion write raises mid-loop" do
+      batch = FB.create(:raif_model_completion_batch_anthropic, status: "in_progress", started_at: 1.minute.ago)
+      mc = FB.create(
+        :raif_model_completion,
+        raif_model_completion_batch: batch,
+        batch_custom_id: "x1",
+        model_api_name: "claude-3-5-haiku-latest",
+        llm_model_key: "anthropic_claude_3_5_haiku"
+      )
+
+      # Simulate a child write blowing up mid-iteration. With the transaction
+      # in place, the batch-row update should also roll back so a future
+      # poll/sweep can re-enter this code path.
+      allow_any_instance_of(Raif::ModelCompletion).to receive(:failed!).and_raise(StandardError, "synthetic")
+
+      expect do
+        batch.force_fail!(reason: "synthetic")
+      end.to raise_error(StandardError, "synthetic")
+
+      expect(batch.reload.status).to eq("in_progress")
+      expect(batch.failed_at).to be_nil
+      expect(mc.reload).not_to be_failed
+    end
+  end
+
+  describe "#recalculate_costs!" do
+    it "logs and skips when there are no child completions" do
+      batch = FB.create(:raif_model_completion_batch_anthropic)
+      expect(Raif.logger).to receive(:warn).with(a_string_matching(/no child raif_model_completions/))
+      expect { batch.recalculate_costs! }.not_to(change { batch.reload.attributes.slice("prompt_token_cost", "output_token_cost", "total_cost") })
+    end
+
+    it "logs and skips when all aggregate cost columns are NULL (so existing values aren't nulled out)" do
+      batch = FB.create(
+        :raif_model_completion_batch_anthropic,
+        prompt_token_cost: 0.001,
+        output_token_cost: 0.002,
+        total_cost: 0.003
+      )
+      mc = FB.create(
+        :raif_model_completion,
+        raif_model_completion_batch: batch,
+        batch_custom_id: "x1",
+        model_api_name: "claude-3-5-haiku-latest",
+        llm_model_key: "anthropic_claude_3_5_haiku"
+      )
+      # Make sure the child completion has NULL cost columns. The factory's
+      # prompt_tokens/completion_tokens trigger calculate_costs, so we null
+      # them out via update_columns (skipping callbacks).
+      mc.update_columns(prompt_token_cost: nil, output_token_cost: nil, total_cost: nil)
+
+      expect(Raif.logger).to receive(:warn).with(a_string_matching(/aggregate cost columns are all NULL/))
+      batch.recalculate_costs!
+
+      reloaded = batch.reload
+      expect(reloaded.prompt_token_cost.to_f).to eq(0.001)
+      expect(reloaded.output_token_cost.to_f).to eq(0.002)
+      expect(reloaded.total_cost.to_f).to eq(0.003)
+    end
+  end
 end

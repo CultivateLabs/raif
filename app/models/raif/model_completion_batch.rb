@@ -143,21 +143,28 @@ module Raif
     # Marks every non-terminal child completion as failed and sets the batch to
     # `failed` (preserving an already-terminal status, e.g. `canceled`). Idempotent:
     # children already completed or failed are skipped.
+    #
+    # Wrapped in a transaction so a partial failure mid-iteration rolls back the
+    # batch-status update too. Without this, an exception while flipping
+    # children would leave the batch terminal and prevent the polling/expire
+    # jobs from re-entering this path on a future run.
     def force_fail!(reason:)
       reason_str = reason.to_s.truncate(255)
 
-      unless terminal?
-        update!(status: "failed", failed_at: Time.current, failure_reason: reason_str)
-      end
+      transaction do
+        unless terminal?
+          update!(status: "failed", failed_at: Time.current, failure_reason: reason_str)
+        end
 
-      raif_model_completions.each do |mc|
-        mc.reload
-        next if mc.completed? || mc.failed?
+        raif_model_completions.each do |mc|
+          mc.reload
+          next if mc.completed? || mc.failed?
 
-        mc.failure_error = "Raif::ModelCompletionBatch ##{id} #{status}"
-        mc.failure_reason = reason_str
-        mc.update_columns(started_at: started_at) if mc.started_at.nil? && started_at.present?
-        mc.failed!
+          mc.failure_error = "Raif::ModelCompletionBatch ##{id} #{status}"
+          mc.failure_reason = reason_str
+          mc.update_columns(started_at: started_at) if mc.started_at.nil? && started_at.present?
+          mc.failed!
+        end
       end
     end
 
@@ -165,14 +172,28 @@ module Raif
     # after results have been applied. Should be called by the polling job once
     # all children have been finalized.
     def recalculate_costs!
+      if raif_model_completions.empty?
+        Raif.logger.warn(
+          "Raif::ModelCompletionBatch ##{id}#recalculate_costs! skipped: no child raif_model_completions to aggregate"
+        )
+        return
+      end
+
       sums = raif_model_completions.pick(
-        Arel.sql("SUM(prompt_token_cost) AS prompt_sum"),
-        Arel.sql("SUM(output_token_cost) AS output_sum"),
-        Arel.sql("SUM(total_cost) AS total_sum")
+        Arel.sql("SUM(prompt_token_cost)"),
+        Arel.sql("SUM(output_token_cost)"),
+        Arel.sql("SUM(total_cost)")
       )
-      return unless sums
 
       prompt_sum, output_sum, total_sum = sums
+      if [prompt_sum, output_sum, total_sum].all?(&:nil?)
+        Raif.logger.warn(
+          "Raif::ModelCompletionBatch ##{id}#recalculate_costs! skipped: aggregate cost columns are all NULL " \
+            "(no child completion has populated prompt_token_cost / output_token_cost / total_cost yet)"
+        )
+        return
+      end
+
       update_columns(
         prompt_token_cost: prompt_sum,
         output_token_cost: output_sum,

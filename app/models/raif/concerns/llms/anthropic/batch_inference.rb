@@ -19,6 +19,10 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
   # Submits all child Raif::ModelCompletion records of the batch as a single
   # Anthropic Messages Batch. Each entry's `params` body is identical to what
   # the synchronous /v1/messages endpoint would receive.
+  #
+  # The batch + child writes happen in a transaction so a partial failure
+  # (e.g. the network call succeeds but the child started_at update raises)
+  # leaves no submitted-but-unstamped state behind.
   def submit_batch!(batch)
     completions = batch.raif_model_completions.to_a
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
@@ -37,20 +41,23 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
 
     body = response.body
     submitted_at = Time.current
-    batch.update!(
-      provider_batch_id: body["id"],
-      status: map_processing_status(body["processing_status"]) || "submitted",
-      submitted_at: submitted_at,
-      started_at: submitted_at,
-      provider_response: (batch.provider_response || {}).merge(
-        "results_url" => body["results_url"],
-        "cancel_url" => body["cancel_url"]
-      ),
-      request_counts: body["request_counts"] || {}
-    )
 
-    completions.each do |mc|
-      mc.update_columns(started_at: submitted_at) if mc.started_at.nil?
+    Raif::ModelCompletionBatch.transaction do
+      batch.update!(
+        provider_batch_id: body["id"],
+        status: map_processing_status(body["processing_status"]) || "submitted",
+        submitted_at: submitted_at,
+        started_at: submitted_at,
+        provider_response: (batch.provider_response || {}).merge(
+          "results_url" => body["results_url"],
+          "cancel_url" => body["cancel_url"]
+        ),
+        request_counts: body["request_counts"] || {}
+      )
+
+      completions.each do |mc|
+        mc.update_columns(started_at: submitted_at) if mc.started_at.nil?
+      end
     end
 
     batch
@@ -61,19 +68,28 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
     body = response.body
     new_status = map_processing_status(body["processing_status"])
 
-    updates = {
-      status: new_status,
-      request_counts: body["request_counts"] || {},
-      provider_response: (batch.provider_response || {}).merge(
-        "results_url" => body["results_url"],
-        "cancel_url" => body["cancel_url"]
-      )
-    }
-    if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
-      updates[:ended_at] = Time.current
+    # Re-acquire a row-level lock + reload so we don't overwrite a status another
+    # process (e.g. ExpireStuckModelCompletionBatchesJob) just transitioned to
+    # terminal. Without this guard, a stale instance can stomp a `failed`
+    # decision back to whatever the provider currently reports.
+    batch.with_lock do
+      return batch.status if batch.terminal?
+
+      updates = {
+        status: new_status,
+        request_counts: body["request_counts"] || {},
+        provider_response: (batch.provider_response || {}).merge(
+          "results_url" => body["results_url"],
+          "cancel_url" => body["cancel_url"]
+        )
+      }
+      if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
+        updates[:ended_at] = Time.current
+      end
+
+      batch.update!(updates)
     end
 
-    batch.update!(updates)
     new_status
   end
 
@@ -181,7 +197,13 @@ private
     when "ended" then "ended"
     when "canceled" then "canceled"
     when "expired" then "expired"
-    else "in_progress"
+    else
+      Raif.logger.warn(
+        "Raif::Concerns::Llms::Anthropic::BatchInference: unknown Anthropic batch processing_status " \
+          "#{processing_status.inspect}; treating as in_progress. The provider may have introduced a new " \
+          "status that Raif doesn't yet recognize."
+      )
+      "in_progress"
     end
   end
 end

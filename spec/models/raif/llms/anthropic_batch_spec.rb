@@ -147,6 +147,36 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       expect(reloaded.results_url).to eq("https://api.anthropic.com/v1/messages/batches/msgbatch_def456/results")
       expect(reloaded.ended_at).to be_present
     end
+
+    it "logs a warning for an unknown processing_status and treats it as in_progress" do
+      stub_request(:get, "https://api.anthropic.com/v1/messages/batches/msgbatch_def456")
+        .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: {
+          id: "msgbatch_def456",
+          processing_status: "queued_in_some_new_state",
+          request_counts: {}
+        }.to_json)
+
+      expect(Raif.logger).to receive(:warn).with(a_string_matching(/unknown Anthropic batch processing_status "queued_in_some_new_state"/))
+      expect(llm.fetch_batch_status!(running_batch)).to eq("in_progress")
+    end
+
+    it "leaves an already-terminal batch alone even if the provider reports a non-terminal status (race guard)" do
+      # Simulates the race where ExpireStuckModelCompletionBatchesJob force-failed
+      # the batch between when this poll loaded it and when fetch_batch_status!
+      # got the provider response back. Without the guard the failure would be
+      # stomped back to whatever the provider reports.
+      running_batch.update!(status: "failed", failed_at: Time.current, failure_reason: "max_age exceeded")
+
+      stub_request(:get, "https://api.anthropic.com/v1/messages/batches/msgbatch_def456")
+        .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: {
+          id: "msgbatch_def456",
+          processing_status: "in_progress",
+          request_counts: { processing: 1, succeeded: 0, errored: 0, canceled: 0, expired: 0 }
+        }.to_json)
+
+      expect(llm.fetch_batch_status!(running_batch)).to eq("failed")
+      expect(running_batch.reload.status).to eq("failed")
+    end
   end
 
   describe "#fetch_batch_results! / #apply_batch_result" do
@@ -244,8 +274,9 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
         body: { custom_id: "ghost", result: { type: "succeeded", message: { id: "x", content: [], usage: {} } } }.to_json
       )
 
-      expect(Raif.logger).to receive(:warn).with(a_string_matching(/did not match/))
+      allow(Raif.logger).to receive(:warn)
       expect { llm.fetch_batch_results!(batch) }.not_to raise_error
+      expect(Raif.logger).to have_received(:warn).with(a_string_matching(/did not match/))
     end
 
     it "raises when the batch has no results_url yet" do

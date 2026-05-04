@@ -32,6 +32,10 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
   # Submits all child Raif::ModelCompletion records as a single OpenAI batch.
   # Three-step flow: build the JSONL string, upload it as a file with
   # purpose=batch, then create the batch referencing the file.
+  #
+  # The batch + child writes happen in a transaction so a partial failure
+  # (e.g. the network call succeeds but the child started_at update raises)
+  # leaves no submitted-but-unstamped state behind.
   def submit_batch!(batch)
     completions = batch.raif_model_completions.to_a
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
@@ -49,20 +53,23 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
 
     body = response.body
     submitted_at = Time.current
-    batch.update!(
-      provider_batch_id: body["id"],
-      status: map_batch_status(body["status"]) || "submitted",
-      submitted_at: submitted_at,
-      started_at: submitted_at,
-      provider_response: (batch.provider_response || {}).merge(
-        "input_file_id" => input_file_id,
-        "endpoint" => batch_endpoint_path
-      ),
-      request_counts: body["request_counts"] || {}
-    )
 
-    completions.each do |mc|
-      mc.update_columns(started_at: submitted_at) if mc.started_at.nil?
+    Raif::ModelCompletionBatch.transaction do
+      batch.update!(
+        provider_batch_id: body["id"],
+        status: map_batch_status(body["status"]) || "submitted",
+        submitted_at: submitted_at,
+        started_at: submitted_at,
+        provider_response: (batch.provider_response || {}).merge(
+          "input_file_id" => input_file_id,
+          "endpoint" => batch_endpoint_path
+        ),
+        request_counts: body["request_counts"] || {}
+      )
+
+      completions.each do |mc|
+        mc.update_columns(started_at: submitted_at) if mc.started_at.nil?
+      end
     end
 
     batch
@@ -73,21 +80,30 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
     body = response.body
     new_status = map_batch_status(body["status"])
 
-    provider_response_updates = (batch.provider_response || {}).merge(
-      "output_file_id" => body["output_file_id"],
-      "error_file_id" => body["error_file_id"]
-    )
+    # Re-acquire a row-level lock + reload so we don't overwrite a status another
+    # process (e.g. ExpireStuckModelCompletionBatchesJob) just transitioned to
+    # terminal. Without this guard, a stale instance can stomp a `failed`
+    # decision back to whatever the provider currently reports.
+    batch.with_lock do
+      return batch.status if batch.terminal?
 
-    updates = {
-      status: new_status,
-      request_counts: body["request_counts"] || {},
-      provider_response: provider_response_updates
-    }
-    if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
-      updates[:ended_at] = Time.current
+      provider_response_updates = (batch.provider_response || {}).merge(
+        "output_file_id" => body["output_file_id"],
+        "error_file_id" => body["error_file_id"]
+      )
+
+      updates = {
+        status: new_status,
+        request_counts: body["request_counts"] || {},
+        provider_response: provider_response_updates
+      }
+      if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
+        updates[:ended_at] = Time.current
+      end
+
+      batch.update!(updates)
     end
 
-    batch.update!(updates)
     new_status
   end
 
@@ -266,7 +282,13 @@ private
     when "failed" then "failed"
     when "expired" then "expired"
     when "cancelled" then "canceled"
-    else "in_progress"
+    else
+      Raif.logger.warn(
+        "Raif::Concerns::Llms::OpenAi::BatchInference: unknown OpenAI batch status " \
+          "#{provider_status.inspect}; treating as in_progress. The provider may have introduced a new " \
+          "status that Raif doesn't yet recognize."
+      )
+      "in_progress"
     end
   end
 

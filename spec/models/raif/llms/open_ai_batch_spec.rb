@@ -170,20 +170,40 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
       expect(reloaded.ended_at).to be_present
     end
 
-    it "maps cancelled -> canceled and expired -> expired" do
+    it "logs a warning for an unknown OpenAI batch status and treats it as in_progress" do
+      stub_request(:get, "#{base_url}/batches/batch_zzz").to_return(
+        status: 200,
+        body: { id: "batch_zzz", status: "queued_in_some_new_state", request_counts: {} }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+      expect(Raif.logger).to receive(:warn).with(a_string_matching(/unknown OpenAI batch status "queued_in_some_new_state"/))
+      expect(llm.fetch_batch_status!(batch)).to eq("in_progress")
+    end
+
+    it "maps cancelled -> canceled" do
       stub_request(:get, "#{base_url}/batches/batch_zzz").to_return(
         status: 200,
         body: { id: "batch_zzz", status: "cancelled", request_counts: {} }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
       expect(llm.fetch_batch_status!(batch)).to eq("canceled")
+    end
 
-      stub_request(:get, "#{base_url}/batches/batch_zzz").to_return(
+    it "maps expired -> expired" do
+      other_batch = FB.create(
+        :raif_model_completion_batch_open_ai_responses,
+        provider_batch_id: "batch_expired",
+        status: "submitted",
+        submitted_at: 1.minute.ago
+      )
+
+      stub_request(:get, "#{base_url}/batches/batch_expired").to_return(
         status: 200,
-        body: { id: "batch_zzz", status: "expired", request_counts: {} }.to_json,
+        body: { id: "batch_expired", status: "expired", request_counts: {} }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
-      expect(llm.fetch_batch_status!(batch)).to eq("expired")
+      expect(llm.fetch_batch_status!(other_batch)).to eq("expired")
     end
   end
 
@@ -297,8 +317,9 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
         ].join("\n")
       )
 
-      expect(Raif.logger).to receive(:warn).with(a_string_matching(/did not match/))
+      allow(Raif.logger).to receive(:warn)
       expect { llm.fetch_batch_results!(batch) }.not_to raise_error
+      expect(Raif.logger).to have_received(:warn).with(a_string_matching(/did not match/))
     end
   end
 
