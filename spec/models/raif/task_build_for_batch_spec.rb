@@ -120,19 +120,27 @@ RSpec.describe "Raif::Task batch preparation" do
   end
 
   describe "#prepare_for_batch!" do
-    it "is idempotent on prompt population" do
+    it "rebuilds prompts via #build_prompt / #build_system_prompt by default" do
       task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_3_5_haiku")
       task.save!
+      task.update!(prompt: "stale-caller-prompt", system_prompt: "stale-caller-system-prompt")
 
       task.prepare_for_batch!(batch: batch)
 
-      # Mutate the persisted prompts so we can detect any unwanted re-population
-      # by build_prompt/build_system_prompt on the second call.
+      expect(task.prompt).to eq("Tell me a joke")
+      expect(task.system_prompt).to include("You are also good at telling jokes.")
+    end
+
+    it "preserves caller-set prompts when skip_prompt_population: true" do
+      task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_3_5_haiku")
+      task.save!
+
       sentinel_prompt = "FROZEN_PROMPT_SENTINEL"
       sentinel_system_prompt = "FROZEN_SYSTEM_PROMPT_SENTINEL"
       task.update!(prompt: sentinel_prompt, system_prompt: sentinel_system_prompt)
 
-      task.prepare_for_batch!(batch: batch)
+      task.prepare_for_batch!(batch: batch, skip_prompt_population: true)
+
       expect(task.prompt).to eq(sentinel_prompt)
       expect(task.system_prompt).to eq(sentinel_system_prompt)
     end

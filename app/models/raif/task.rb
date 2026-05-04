@@ -236,9 +236,11 @@ module Raif
     end
     private_class_method :build_task_instance
 
-    # Populates this task's prompts (if not already populated) and creates the
-    # pending Raif::ModelCompletion that will be sent through the batch. Safe to
-    # call on a task whose prompts haven't been built yet.
+    # Populates this task's prompts and creates the pending Raif::ModelCompletion
+    # that will be sent through the batch. Mirrors Raif::Task#run's default
+    # behavior: prompts are rebuilt every call unless skip_prompt_population: true
+    # is passed (e.g. for re-prepare flows where the caller has hand-set prompts
+    # and wants them preserved).
     #
     # The default batch_custom_id is "raif_task_<task.id>" — a task-specific
     # identifier. Other producers (non-task) should pass an explicit
@@ -248,9 +250,11 @@ module Raif
     #
     # @param batch [Raif::ModelCompletionBatch]
     # @param batch_custom_id [String, nil]
+    # @param skip_prompt_population [Boolean] preserve any pre-set prompts on this
+    #   task instead of rebuilding via #build_prompt / #build_system_prompt
     # @return [Raif::ModelCompletion]
-    def prepare_for_batch!(batch:, batch_custom_id: nil)
-      populate_prompts if prompt.blank? && system_prompt.blank?
+    def prepare_for_batch!(batch:, batch_custom_id: nil, skip_prompt_population: false)
+      populate_prompts unless skip_prompt_population
       save! if changed?
 
       effective_batch_custom_id = batch_custom_id.presence || "raif_task_#{id}"
