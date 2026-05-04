@@ -158,10 +158,25 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
       allow(batch).to receive(:llm).and_return(llm_double)
     end
 
-    it "#submit! delegates to llm.submit_batch!(self)" do
+    it "#submit! delegates to llm.submit_batch!(self) and auto-enqueues the polling job" do
       allow(llm_double).to receive(:submit_batch!)
-      batch.submit!
+
+      expect do
+        batch.submit!
+      end.to have_enqueued_job(Raif::PollModelCompletionBatchJob).with(batch.id)
+
       expect(llm_double).to have_received(:submit_batch!).with(batch)
+      expect(batch.reload.next_poll_at).to be_within(5.seconds).of(60.seconds.from_now)
+    end
+
+    it "#submit!(enqueue_poll: false) skips the polling-job auto-enqueue" do
+      allow(llm_double).to receive(:submit_batch!)
+
+      expect do
+        batch.submit!(enqueue_poll: false)
+      end.not_to have_enqueued_job(Raif::PollModelCompletionBatchJob)
+
+      expect(batch.reload.next_poll_at).to be_nil
     end
 
     it "#fetch_status! delegates to llm.fetch_batch_status!(self)" do

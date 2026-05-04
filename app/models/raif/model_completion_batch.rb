@@ -85,12 +85,31 @@ module Raif
     #
     # Each method delegates to the LLM provider's SupportsBatchInference
     # implementation. The provider-side methods (Raif::Llm#submit_batch!,
-    # #fetch_batch_status!, #fetch_batch_results!) are the contract every
-    # batch-capable provider implements; these façades are how callers
-    # actually invoke them.
+    # #fetch_batch_status!, #fetch_batch_results!, #cancel_batch!) are the
+    # contract every batch-capable provider implements; these façades are
+    # how callers actually invoke them.
 
-    def submit!
-      llm.submit_batch!(self)
+    # Submits the batch to the provider and (by default) enqueues
+    # Raif::PollModelCompletionBatchJob so the polling chain starts on its
+    # own. Pass enqueue_poll: false if your host app is driving its own
+    # poll scheduler off the Raif::ModelCompletionBatch.due_for_poll scope.
+    #
+    # @param enqueue_poll [Boolean] whether to auto-enqueue the polling job
+    # @return [Raif::ModelCompletionBatch] self
+    def submit!(enqueue_poll: true)
+      result = llm.submit_batch!(self)
+      enqueue_first_poll! if enqueue_poll
+      result
+    end
+
+    # Stamps next_poll_at and enqueues the first Raif::PollModelCompletionBatchJob
+    # using the first entry of Raif.config.model_completion_batch_poll_schedule.
+    # Called by #submit! by default; can also be invoked manually if a host
+    # opted out of auto-enqueue and wants to start polling later.
+    def enqueue_first_poll!
+      delay = Array(Raif.config.model_completion_batch_poll_schedule).first || 1.minute
+      update_column(:next_poll_at, delay.from_now)
+      Raif::PollModelCompletionBatchJob.set(wait: delay).perform_later(id)
     end
 
     def fetch_status!
