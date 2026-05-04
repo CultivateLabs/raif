@@ -33,7 +33,7 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
     let!(:task1) do
       Raif::TestTask.build_for_batch(
         batch: batch,
-        custom_request_id: "task_1",
+        batch_custom_id: "task_1",
         creator: creator,
         llm_model_key: "anthropic_claude_3_5_haiku"
       )
@@ -42,7 +42,7 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
     let!(:task2) do
       Raif::TestTask.build_for_batch(
         batch: batch,
-        custom_request_id: "task_2",
+        batch_custom_id: "task_2",
         creator: creator,
         llm_model_key: "anthropic_claude_3_5_haiku"
       )
@@ -99,9 +99,9 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       end
     end
 
-    it "raises if a child completion has a blank provider_request_id" do
+    it "raises if a child completion has a blank batch_custom_id" do
       bad = batch.raif_model_completions.first
-      bad.update_columns(provider_request_id: nil)
+      bad.update_columns(batch_custom_id: nil)
 
       stub_request(:post, "https://api.anthropic.com/v1/messages/batches").to_return(status: 200, body: "{}")
 
@@ -153,7 +153,7 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
     let!(:task_success) do
       Raif::TestTask.build_for_batch(
         batch: batch,
-        custom_request_id: "win",
+        batch_custom_id: "win",
         creator: creator,
         llm_model_key: "anthropic_claude_3_5_haiku"
       )
@@ -162,7 +162,7 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
     let!(:task_failure) do
       Raif::TestTask.build_for_batch(
         batch: batch,
-        custom_request_id: "lose",
+        batch_custom_id: "lose",
         creator: creator,
         llm_model_key: "anthropic_claude_3_5_haiku"
       )

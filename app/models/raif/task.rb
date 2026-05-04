@@ -188,13 +188,13 @@ module Raif
     #
     # The task is persisted with started_at: nil (state :pending). The pending
     # ModelCompletion has raif_model_completion_batch_id pointing at the batch
-    # and provider_request_id set to the value used as the provider's custom_id
+    # and batch_custom_id set to the value used as the provider's custom_id
     # in the batch payload.
     #
     # @param batch [Raif::ModelCompletionBatch]
-    # @param custom_request_id [String, nil] the provider custom_id; defaults to "raif_task_<task.id>"
+    # @param batch_custom_id [String, nil] the provider custom_id; defaults to "raif_task_<task.id>"
     # @return [Raif::Task]
-    def self.build_for_batch(batch:, custom_request_id: nil, creator: nil, available_model_tools: [],
+    def self.build_for_batch(batch:, batch_custom_id: nil, creator: nil, available_model_tools: [],
       llm_model_key: nil, images: [], files: [], **args)
       task = new(
         creator: creator,
@@ -206,7 +206,7 @@ module Raif
       )
 
       task.save!
-      task.prepare_for_batch!(batch: batch, custom_request_id: custom_request_id)
+      task.prepare_for_batch!(batch: batch, batch_custom_id: batch_custom_id)
       task
     end
 
@@ -215,13 +215,13 @@ module Raif
     # call on a task whose prompts haven't been built yet.
     #
     # @param batch [Raif::ModelCompletionBatch]
-    # @param custom_request_id [String, nil]
+    # @param batch_custom_id [String, nil]
     # @return [Raif::ModelCompletion]
-    def prepare_for_batch!(batch:, custom_request_id: nil)
+    def prepare_for_batch!(batch:, batch_custom_id: nil)
       populate_prompts if prompt.blank? && system_prompt.blank?
       save! if changed?
 
-      effective_custom_request_id = custom_request_id.presence || "raif_task_#{id}"
+      effective_batch_custom_id = batch_custom_id.presence || "raif_task_#{id}"
 
       mc = llm.build_pending_model_completion(
         messages: messages,
@@ -233,7 +233,7 @@ module Raif
         anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
         bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
         raif_model_completion_batch: batch,
-        provider_request_id: effective_custom_request_id
+        batch_custom_id: effective_batch_custom_id
       )
 
       self.raif_model_completion = mc

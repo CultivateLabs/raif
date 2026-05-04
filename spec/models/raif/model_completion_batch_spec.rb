@@ -100,14 +100,14 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
       mc = FB.create(
         :raif_model_completion,
         raif_model_completion_batch: batch,
-        provider_request_id: "task_42",
+        batch_custom_id: "task_42",
         model_api_name: "claude-3-5-haiku-latest",
         llm_model_key: "anthropic_claude_3_5_haiku"
       )
 
       expect(batch.reload.raif_model_completions).to include(mc)
       expect(mc.reload.raif_model_completion_batch).to eq(batch)
-      expect(mc.provider_request_id).to eq("task_42")
+      expect(mc.batch_custom_id).to eq("task_42")
     end
 
     it "Raif::ModelCompletion#pending? is true when no started_at/completed_at/failed_at is set" do

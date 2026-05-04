@@ -171,7 +171,7 @@ module Raif
     def build_pending_model_completion(messages:, response_format: :text, available_model_tools: [], source: nil,
       system_prompt: nil, temperature: nil, max_completion_tokens: nil, tool_choice: nil,
       stream_response: false, anthropic_prompt_caching_enabled: false, bedrock_prompt_caching_enabled: false,
-      raif_model_completion_batch: nil, provider_request_id: nil)
+      raif_model_completion_batch: nil, batch_custom_id: nil)
       temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
 
@@ -188,7 +188,7 @@ module Raif
         tool_choice: tool_choice&.to_s,
         stream_response: stream_response,
         raif_model_completion_batch: raif_model_completion_batch,
-        provider_request_id: provider_request_id
+        batch_custom_id: batch_custom_id
       )
 
       model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled

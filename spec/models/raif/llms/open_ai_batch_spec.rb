@@ -47,7 +47,7 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
     let!(:task1) do
       Raif::TestTask.build_for_batch(
         batch: batch,
-        custom_request_id: "task_a",
+        batch_custom_id: "task_a",
         creator: creator,
         llm_model_key: "open_ai_responses_gpt_4o"
       )
@@ -56,7 +56,7 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
     let!(:task2) do
       Raif::TestTask.build_for_batch(
         batch: batch,
-        custom_request_id: "task_b",
+        batch_custom_id: "task_b",
         creator: creator,
         llm_model_key: "open_ai_responses_gpt_4o"
       )
@@ -208,7 +208,7 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
     let!(:task_success) do
       Raif::TestTask.build_for_batch(
         batch: batch,
-        custom_request_id: "ok_id",
+        batch_custom_id: "ok_id",
         creator: creator,
         llm_model_key: "open_ai_responses_gpt_4o"
       )
@@ -217,7 +217,7 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
     let!(:task_failure) do
       Raif::TestTask.build_for_batch(
         batch: batch,
-        custom_request_id: "bad_id",
+        batch_custom_id: "bad_id",
         creator: creator,
         llm_model_key: "open_ai_responses_gpt_4o"
       )
@@ -315,7 +315,7 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
     let!(:task) do
       Raif::TestTask.build_for_batch(
         batch: batch,
-        custom_request_id: "comp_a",
+        batch_custom_id: "comp_a",
         creator: creator,
         llm_model_key: "open_ai_gpt_4o"
       )

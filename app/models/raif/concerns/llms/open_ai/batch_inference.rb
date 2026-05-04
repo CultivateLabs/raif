@@ -92,7 +92,7 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
   end
 
   def fetch_batch_results!(batch)
-    completions_by_id = batch.raif_model_completions.index_by(&:provider_request_id)
+    completions_by_id = batch.raif_model_completions.index_by(&:batch_custom_id)
 
     if batch.output_file_id.present?
       apply_batch_jsonl(batch, batch.output_file_id, completions_by_id)
@@ -223,8 +223,8 @@ private
   # The body matches what the synchronous endpoint would receive verbatim.
   def build_batch_jsonl(completions)
     completions.map do |mc|
-      if mc.provider_request_id.blank?
-        raise Raif::Errors::InvalidBatchError, "Raif::ModelCompletion ##{mc.id} has blank provider_request_id"
+      if mc.batch_custom_id.blank?
+        raise Raif::Errors::InvalidBatchError, "Raif::ModelCompletion ##{mc.id} has blank batch_custom_id"
       end
 
       # Mirror perform_model_completion!'s temperature-coercion semantics so
@@ -233,7 +233,7 @@ private
       mc.temperature = nil unless supports_temperature?
 
       {
-        custom_id: mc.provider_request_id,
+        custom_id: mc.batch_custom_id,
         method: "POST",
         url: batch_endpoint_path,
         body: build_request_parameters(mc)

@@ -165,7 +165,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_000001) do
     t.decimal "output_token_cost", precision: 10, scale: 6
     t.decimal "prompt_token_cost", precision: 10, scale: 6
     t.integer "prompt_tokens"
-    t.string "provider_request_id"
+    t.string "batch_custom_id"
     t.bigint "raif_model_completion_batch_id"
     t.text "raw_response"
     t.jsonb "response_array"
@@ -187,7 +187,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_000001) do
     t.index ["completed_at"], name: "index_raif_model_completions_on_completed_at"
     t.index ["created_at"], name: "index_raif_model_completions_on_created_at"
     t.index ["failed_at"], name: "index_raif_model_completions_on_failed_at"
-    t.index ["provider_request_id"], name: "index_raif_model_completions_on_provider_request_id"
+    t.index ["batch_custom_id"], name: "index_raif_model_completions_on_batch_custom_id"
     t.index ["raif_model_completion_batch_id"], name: "index_raif_model_completions_on_batch"
     t.index ["source_type", "source_id"], name: "index_raif_model_completions_on_source"
     t.index ["started_at"], name: "index_raif_model_completions_on_started_at"

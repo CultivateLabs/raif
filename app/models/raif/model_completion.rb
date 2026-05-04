@@ -27,7 +27,7 @@
 #  response_format_parameter   :string
 #  response_tool_calls         :jsonb
 #  retry_count                 :integer          default(0), not null
-#  provider_request_id         :string
+#  batch_custom_id             :string
 #  source_type                 :string
 #  started_at                  :datetime
 #  stream_response             :boolean          default(FALSE), not null
@@ -48,7 +48,7 @@
 #  index_raif_model_completions_on_completed_at   (completed_at)
 #  index_raif_model_completions_on_created_at     (created_at)
 #  index_raif_model_completions_on_failed_at      (failed_at)
-#  index_raif_model_completions_on_provider_req   (provider_request_id)
+#  index_raif_model_completions_on_batch_custom   (batch_custom_id)
 #  index_raif_model_completions_on_source         (source_type,source_id)
 #  index_raif_model_completions_on_started_at     (started_at)
 #

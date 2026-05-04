@@ -40,25 +40,25 @@ RSpec.describe "Raif::Task batch preparation" do
       expect(mc.messages).to eq([{ "role" => "user", "content" => [{ "type" => "text", "text" => "Tell me a joke" }] }])
     end
 
-    it "defaults provider_request_id to raif_task_<id>" do
+    it "defaults batch_custom_id to raif_task_<id>" do
       task = Raif::TestTask.build_for_batch(
         batch: batch,
         creator: creator,
         llm_model_key: "anthropic_claude_3_5_haiku"
       )
 
-      expect(task.raif_model_completion.provider_request_id).to eq("raif_task_#{task.id}")
+      expect(task.raif_model_completion.batch_custom_id).to eq("raif_task_#{task.id}")
     end
 
-    it "honors a caller-supplied custom_request_id" do
+    it "honors a caller-supplied batch_custom_id" do
       task = Raif::TestTask.build_for_batch(
         batch: batch,
-        custom_request_id: "explicit-custom-id",
+        batch_custom_id: "explicit-custom-id",
         creator: creator,
         llm_model_key: "anthropic_claude_3_5_haiku"
       )
 
-      expect(task.raif_model_completion.provider_request_id).to eq("explicit-custom-id")
+      expect(task.raif_model_completion.batch_custom_id).to eq("explicit-custom-id")
     end
 
     it "propagates anthropic_prompt_caching_enabled from the task class" do

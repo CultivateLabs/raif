@@ -24,11 +24,11 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
 
     requests = completions.map do |mc|
-      if mc.provider_request_id.blank?
-        raise Raif::Errors::InvalidBatchError, "Raif::ModelCompletion ##{mc.id} has blank provider_request_id"
+      if mc.batch_custom_id.blank?
+        raise Raif::Errors::InvalidBatchError, "Raif::ModelCompletion ##{mc.id} has blank batch_custom_id"
       end
 
-      { custom_id: mc.provider_request_id, params: build_request_parameters(mc) }
+      { custom_id: mc.batch_custom_id, params: build_request_parameters(mc) }
     end
 
     response = batch_connection.post("messages/batches") do |req|
@@ -80,7 +80,7 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
   def fetch_batch_results!(batch)
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no results_url" if batch.results_url.blank?
 
-    completions_by_id = batch.raif_model_completions.index_by(&:provider_request_id)
+    completions_by_id = batch.raif_model_completions.index_by(&:batch_custom_id)
 
     response = batch_results_connection.get(batch.results_url)
     body = response.body.to_s

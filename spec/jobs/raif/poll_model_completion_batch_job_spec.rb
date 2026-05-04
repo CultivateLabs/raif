@@ -107,7 +107,7 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
       mc = FB.create(
         :raif_model_completion,
         raif_model_completion_batch: batch,
-        provider_request_id: "x1",
+        batch_custom_id: "x1",
         model_api_name: "claude-3-5-haiku-latest",
         llm_model_key: "anthropic_claude_3_5_haiku"
       )
@@ -133,7 +133,7 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
       mc = FB.create(
         :raif_model_completion,
         raif_model_completion_batch: batch,
-        provider_request_id: "x1",
+        batch_custom_id: "x1",
         model_api_name: "claude-3-5-haiku-latest",
         llm_model_key: "anthropic_claude_3_5_haiku"
       )
