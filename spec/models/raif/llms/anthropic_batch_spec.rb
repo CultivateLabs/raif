@@ -203,7 +203,8 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       ].map(&:to_json).join("\n")
     end
 
-    it "parses JSONL, populates the success completion, marks the failure completion failed, applies the 50% discount, and recalculates batch costs" do
+    it "parses JSONL, populates the success completion, marks the failure completion failed, " \
+      "applies the 50% discount, and recalculates batch costs" do
       stub_request(:get, results_url).to_return(status: 200, body: jsonl_body)
 
       llm.fetch_batch_results!(batch)

@@ -16,9 +16,7 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
 
   let(:llm_double) do
     instance_double(Raif::Llms::Anthropic).tap do |dbl|
-      allow(dbl).to receive(:fetch_batch_status!) do |b|
-        b.status
-      end
+      allow(dbl).to receive(:fetch_batch_status!, &:status)
       allow(dbl).to receive(:fetch_batch_results!)
     end
   end
