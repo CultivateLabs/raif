@@ -43,6 +43,7 @@ Layout/LineLength:
   Max: 150
   Exclude:
     - 'lib/generators/raif/install/templates/initializer.rb'
+    - 'spec/dummy/db/schema.rb'
 
 Lint/RequireRangeParentheses: 
   # new in 1.32 

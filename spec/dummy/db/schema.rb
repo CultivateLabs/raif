@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_02_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_04_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -188,6 +188,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_02_000001) do
     t.index ["created_at"], name: "index_raif_model_completions_on_created_at"
     t.index ["failed_at"], name: "index_raif_model_completions_on_failed_at"
     t.index ["batch_custom_id"], name: "index_raif_model_completions_on_batch_custom_id"
+    t.index ["raif_model_completion_batch_id", "batch_custom_id"], name: "index_raif_model_completions_on_batch_id_and_custom_id", unique: true, where: "(raif_model_completion_batch_id IS NOT NULL)"
     t.index ["raif_model_completion_batch_id"], name: "index_raif_model_completions_on_batch"
     t.index ["source_type", "source_id"], name: "index_raif_model_completions_on_source"
     t.index ["started_at"], name: "index_raif_model_completions_on_started_at"

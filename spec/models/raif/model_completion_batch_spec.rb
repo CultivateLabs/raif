@@ -211,6 +211,72 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
     end
   end
 
+  describe "(raif_model_completion_batch_id, batch_custom_id) uniqueness" do
+    let(:batch) { FB.create(:raif_model_completion_batch_anthropic) }
+
+    it "rejects a second child completion with a duplicate batch_custom_id within the same batch" do
+      FB.create(
+        :raif_model_completion,
+        raif_model_completion_batch: batch,
+        batch_custom_id: "dup",
+        model_api_name: "claude-3-5-haiku-latest",
+        llm_model_key: "anthropic_claude_3_5_haiku"
+      )
+
+      expect do
+        FB.create(
+          :raif_model_completion,
+          raif_model_completion_batch: batch,
+          batch_custom_id: "dup",
+          model_api_name: "claude-3-5-haiku-latest",
+          llm_model_key: "anthropic_claude_3_5_haiku"
+        )
+      end.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+
+    it "permits the same batch_custom_id across different batches" do
+      other_batch = FB.create(:raif_model_completion_batch_anthropic)
+
+      FB.create(
+        :raif_model_completion,
+        raif_model_completion_batch: batch,
+        batch_custom_id: "shared",
+        model_api_name: "claude-3-5-haiku-latest",
+        llm_model_key: "anthropic_claude_3_5_haiku"
+      )
+
+      expect do
+        FB.create(
+          :raif_model_completion,
+          raif_model_completion_batch: other_batch,
+          batch_custom_id: "shared",
+          model_api_name: "claude-3-5-haiku-latest",
+          llm_model_key: "anthropic_claude_3_5_haiku"
+        )
+      end.not_to raise_error
+    end
+
+    it "permits multiple non-batch completions with NULL batch_custom_id (the partial-index NULL escape)" do
+      FB.create(
+        :raif_model_completion,
+        raif_model_completion_batch: nil,
+        batch_custom_id: nil,
+        model_api_name: "claude-3-5-haiku-latest",
+        llm_model_key: "anthropic_claude_3_5_haiku"
+      )
+
+      expect do
+        FB.create(
+          :raif_model_completion,
+          raif_model_completion_batch: nil,
+          batch_custom_id: nil,
+          model_api_name: "claude-3-5-haiku-latest",
+          llm_model_key: "anthropic_claude_3_5_haiku"
+        )
+      end.not_to raise_error
+    end
+  end
+
   describe "#assert_submittable! (re-submit guard)" do
     it "permits a fresh pending batch with no provider_batch_id" do
       batch = FB.build(:raif_model_completion_batch_anthropic, status: "pending", provider_batch_id: nil)
