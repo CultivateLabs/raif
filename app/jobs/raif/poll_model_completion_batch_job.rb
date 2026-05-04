@@ -19,10 +19,11 @@ module Raif
   #    has elapsed since the batch was submitted, after which the batch is
   #    force-failed and the handler is dispatched.
   #
-  # When this job runs inside a Sidekiq batch (e.g. spawned by a workflow
-  # step), the chained `perform_later(wait: ...)` self-reschedule is
-  # auto-enrolled in the same Sidekiq batch, which keeps the batch open
-  # across the polling chain so downstream workflow steps wait for completion.
+  # The self-reschedule uses `perform_later(wait: ...)`, so the configured
+  # ActiveJob queue adapter must support scheduled jobs. If the host app's
+  # queue adapter exposes a job-grouping primitive that auto-enrolls jobs
+  # enqueued from within a running job, the polling chain will participate
+  # in that grouping transparently.
   class PollModelCompletionBatchJob < ApplicationJob
 
     def perform(batch_id, attempt: 1)
@@ -32,13 +33,13 @@ module Raif
       batch.fetch_status!
 
       if batch.terminal?
-        handle_terminal_batch!(batch)
+        batch.finalize!
         batch.dispatch_completion_handler!
         return
       end
 
-      if max_age_exceeded?(batch)
-        force_fail!(batch, reason: "Batch exceeded Raif.config.model_completion_batch_max_age (#{Raif.config.model_completion_batch_max_age})")
+      if batch.max_age_exceeded?
+        batch.force_fail!(reason: "Batch exceeded Raif.config.model_completion_batch_max_age (#{Raif.config.model_completion_batch_max_age})")
         batch.dispatch_completion_handler!
         return
       end
@@ -61,41 +62,6 @@ module Raif
     end
 
   private
-
-    # On `ended`, fetch per-entry results from the provider; on the other
-    # terminal statuses there are no results to fetch, so we mark every
-    # still-pending child completion as failed with the batch's terminal
-    # status as the failure reason.
-    def handle_terminal_batch!(batch)
-      if batch.successful?
-        batch.fetch_results!
-      else
-        force_fail!(batch, reason: "Batch ended with status: #{batch.status}")
-      end
-    end
-
-    def force_fail!(batch, reason:)
-      batch.raif_model_completions.each do |mc|
-        next unless mc.reload.pending? || mc.started_at.present? && mc.completed_at.blank? && mc.failed_at.blank?
-
-        mc.failure_error = "Raif::ModelCompletionBatch ##{batch.id} #{batch.status}"
-        mc.failure_reason = reason.to_s.truncate(255)
-        mc.update_columns(started_at: batch.started_at) if mc.started_at.nil?
-        mc.failed!
-      end
-
-      unless batch.terminal?
-        batch.update!(status: "failed", failed_at: Time.current, failure_reason: reason.to_s.truncate(255))
-      end
-    end
-
-    def max_age_exceeded?(batch)
-      submitted = batch.submitted_at
-      return false if submitted.blank?
-
-      max_age = Raif.config.model_completion_batch_max_age
-      Time.current - submitted >= max_age
-    end
 
     def next_poll_delay(attempt)
       schedule = Array(Raif.config.model_completion_batch_poll_schedule)

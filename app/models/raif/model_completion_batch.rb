@@ -118,6 +118,49 @@ module Raif
       handler.handle_batch_completion(self)
     end
 
+    # True once submitted_at is older than Raif.config.model_completion_batch_max_age.
+    # Used by the polling and expire-stuck jobs to decide when to force-fail a batch
+    # that the provider hasn't finalized in time.
+    def max_age_exceeded?
+      return false if submitted_at.blank?
+
+      Time.current - submitted_at >= Raif.config.model_completion_batch_max_age
+    end
+
+    # Called by the polling job once the batch reaches a terminal status. On
+    # `ended` (successful), fetches per-entry results from the provider. On the
+    # other terminal statuses (canceled / expired / failed), force-fails every
+    # still-pending child completion since there are no per-entry results to
+    # collect.
+    def finalize!
+      if successful?
+        fetch_results!
+      else
+        force_fail!(reason: "Batch ended with status: #{status}")
+      end
+    end
+
+    # Marks every non-terminal child completion as failed and sets the batch to
+    # `failed` (preserving an already-terminal status, e.g. `canceled`). Idempotent:
+    # children already completed or failed are skipped.
+    def force_fail!(reason:)
+      reason_str = reason.to_s.truncate(255)
+
+      unless terminal?
+        update!(status: "failed", failed_at: Time.current, failure_reason: reason_str)
+      end
+
+      raif_model_completions.each do |mc|
+        mc.reload
+        next if mc.completed? || mc.failed?
+
+        mc.failure_error = "Raif::ModelCompletionBatch ##{id} #{status}"
+        mc.failure_reason = reason_str
+        mc.update_columns(started_at: started_at) if mc.started_at.nil? && started_at.present?
+        mc.failed!
+      end
+    end
+
     # Aggregates total_cost / prompt_token_cost / output_token_cost from child completions
     # after results have been applied. Should be called by the polling job once
     # all children have been finalized.
