@@ -104,7 +104,7 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
       expect(multipart_body).to include('name="file"')
       expect(multipart_body).to include('filename="batch.jsonl"')
 
-      jsonl_section = multipart_body[%r{Content-Type: application/jsonl\s*\r?\n\r?\n(.+?)(?=\r?\n----)}m, 1]
+      jsonl_section = multipart_body[/Content-Disposition: form-data; name="file".*?\r\n\r\n(.+?)\r\n--/m, 1]
       expect(jsonl_section).to be_present
 
       lines = jsonl_section.strip.lines.map(&:strip).reject(&:blank?)
@@ -338,7 +338,7 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
       upload_signature = WebMock::RequestRegistry.instance.requested_signatures.hash.keys.find do |sig|
         sig.uri.to_s.end_with?("/files") && sig.method == :post
       end
-      jsonl = upload_signature.body[%r{Content-Type: application/jsonl\s*\r?\n\r?\n(.+?)(?=\r?\n----)}m, 1].to_s.strip
+      jsonl = upload_signature.body[/Content-Disposition: form-data; name="file".*?\r\n\r\n(.+?)\r\n--/m, 1].to_s.strip
 
       parsed = JSON.parse(jsonl.lines.first.strip)
       expect(parsed["url"]).to eq("/v1/chat/completions")

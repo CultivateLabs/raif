@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "faraday/multipart"
+require "stringio"
+
 # OpenAI Batches API support for Raif::Llms::OpenAiBase.
 # Implements the Raif::Concerns::Llms::SupportsBatchInference contract on top
 # of /v1/batches and the JSONL input/output file flow.
@@ -170,6 +173,24 @@ private
     end
   end
 
+  # Faraday connection for /v1/files JSONL uploads. Uses faraday-multipart so we
+  # can pass a Faraday::Multipart::FilePart and let the middleware handle
+  # boundary generation and content-disposition framing.
+  def batch_files_upload_connection
+    @batch_files_upload_connection ||= begin
+      conn = Faraday.new(url: Raif.config.open_ai_base_url, request: Raif.default_request_options) do |f|
+        configure_open_ai_batch_auth!(f)
+        f.request :multipart
+        f.request :url_encoded
+        f.response :json
+        f.response :raise_error
+      end
+
+      conn.params["api-version"] = Raif.config.open_ai_api_version if Raif.config.open_ai_api_version.present?
+      conn
+    end
+  end
+
   # File downloads from /v1/files/:id/content return JSONL plain bytes (or
   # an arbitrary file payload), so this connection deliberately omits the
   # JSON parser middleware.
@@ -221,40 +242,19 @@ private
   end
 
   # Uploads a JSONL string to /v1/files with purpose=batch and returns the
-  # resulting file id. Builds the multipart/form-data body inline to avoid
-  # depending on faraday-multipart.
+  # resulting file id.
   def upload_batch_input_file!(jsonl_string)
-    boundary = "----RaifBatchUpload#{SecureRandom.hex(16)}"
-    body = build_multipart_batch_body(boundary: boundary, jsonl_string: jsonl_string)
+    file_part = Faraday::Multipart::FilePart.new(
+      StringIO.new(jsonl_string),
+      "application/jsonl",
+      "batch.jsonl"
+    )
 
-    response = batch_files_download_connection.post("files") do |req|
-      req.headers["Content-Type"] = "multipart/form-data; boundary=#{boundary}"
-      req.body = body
+    response = batch_files_upload_connection.post("files") do |req|
+      req.body = { purpose: "batch", file: file_part }
     end
 
-    parsed = response.body.is_a?(String) ? JSON.parse(response.body) : response.body
-    parsed.fetch("id")
-  end
-
-  def build_multipart_batch_body(boundary:, jsonl_string:)
-    crlf = "\r\n"
-    parts = []
-
-    parts << "--#{boundary}"
-    parts << 'Content-Disposition: form-data; name="purpose"'
-    parts << ""
-    parts << "batch"
-
-    parts << "--#{boundary}"
-    parts << 'Content-Disposition: form-data; name="file"; filename="batch.jsonl"'
-    parts << "Content-Type: application/jsonl"
-    parts << ""
-    parts << jsonl_string
-
-    parts << "--#{boundary}--"
-    parts << ""
-
-    parts.join(crlf)
+    response.body.fetch("id")
   end
 
   # OpenAI batch.status -> Raif::ModelCompletionBatch::STATUSES.
