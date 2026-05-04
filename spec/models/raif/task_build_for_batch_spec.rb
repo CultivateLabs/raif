@@ -84,6 +84,41 @@ RSpec.describe "Raif::Task batch preparation" do
     end
   end
 
+  describe "#process_completion!" do
+    it "marks the task failed (not completed) when the model completion failed" do
+      task = Raif::TestTask.build_for_batch(
+        batch: batch,
+        creator: creator,
+        llm_model_key: "anthropic_claude_3_5_haiku"
+      )
+      mc = task.raif_model_completion
+      mc.failure_error = "Anthropic batch entry errored"
+      mc.failure_reason = "synthetic"
+      mc.failed!
+
+      task.process_completion!(mc.reload)
+
+      expect(task.reload).to be_failed
+      expect(task).not_to be_completed
+    end
+
+    it "marks the task completed when the model completion succeeded" do
+      task = Raif::TestTask.build_for_batch(
+        batch: batch,
+        creator: creator,
+        llm_model_key: "anthropic_claude_3_5_haiku"
+      )
+      mc = task.raif_model_completion
+      mc.update!(raw_response: "joke!")
+      mc.completed!
+
+      task.process_completion!(mc.reload)
+
+      expect(task.reload).to be_completed
+      expect(task.raw_response).to eq("joke!")
+    end
+  end
+
   describe "#prepare_for_batch!" do
     it "is idempotent on prompt population" do
       task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_3_5_haiku")

@@ -166,8 +166,9 @@ module Raif
     # Wires a (possibly batch-resolved) Raif::ModelCompletion back into this task:
     # links it as the task's raif_model_completion, mirrors raw_response onto the
     # task, processes any tool calls the model made, and transitions the task to
-    # completed. Called by both the synchronous #run path and the batch
-    # completion handler after the provider's per-entry result has been applied.
+    # completed (or failed, if the underlying completion failed). Called by both
+    # the synchronous #run path and the batch completion handler after the
+    # provider's per-entry result has been applied.
     #
     # @param model_completion [Raif::ModelCompletion]
     # @return [self]
@@ -176,8 +177,14 @@ module Raif
 
       update(raw_response: raif_model_completion.raw_response)
 
-      process_model_tool_invocations
-      completed!
+      if raif_model_completion.failed?
+        # Failure detail (failure_error / failure_reason) lives on the model
+        # completion; the task's `failed_at` is just a state marker.
+        failed!
+      else
+        process_model_tool_invocations
+        completed!
+      end
       self
     end
 
