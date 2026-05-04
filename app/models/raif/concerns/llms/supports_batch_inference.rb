@@ -7,9 +7,20 @@
 # (1) submit a Raif::ModelCompletionBatch holding pending Raif::ModelCompletion children,
 # (2) poll the provider for status, (3) fetch and apply per-entry results, and
 # (4) name the Raif::ModelCompletionBatches subclass that should back its batches.
+# Provider-side cancellation (#cancel_batch!) is opt-in.
 #
-# Submission, polling, and dispatch are orchestrated by Raif::PollModelCompletionBatchJob;
-# providers only need to implement the four primitives below.
+# Submission orchestration: Raif::ModelCompletionBatch#submit! enqueues
+# Raif::PollModelCompletionBatchJob automatically; the job self-reschedules
+# until the batch reaches a terminal status, at which point it dispatches
+# the batch's completion handler.
+#
+# Producers: in v1, Raif::Task is the only built-in producer for batch entries
+# (via Raif::Task.build_for_batch / Raif::Task#prepare_for_batch!). The
+# pipeline itself (poll, finalize, dispatch handler) is producer-agnostic.
+# Other call sites that want to attach Raif::ModelCompletion records to a
+# batch can call Raif::Llm#build_pending_model_completion directly with
+# batch_custom_id: set to a unique-within-batch identifier; the rest of the
+# pipeline does not care where the completion came from.
 module Raif::Concerns::Llms::SupportsBatchInference
   extend ActiveSupport::Concern
 

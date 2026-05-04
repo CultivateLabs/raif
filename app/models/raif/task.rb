@@ -240,6 +240,12 @@ module Raif
     # pending Raif::ModelCompletion that will be sent through the batch. Safe to
     # call on a task whose prompts haven't been built yet.
     #
+    # The default batch_custom_id is "raif_task_<task.id>" — a task-specific
+    # identifier. Other producers (non-task) should pass an explicit
+    # batch_custom_id when building their own pending completions via
+    # Raif::Llm#build_pending_model_completion; the only requirement is
+    # uniqueness within the batch.
+    #
     # @param batch [Raif::ModelCompletionBatch]
     # @param batch_custom_id [String, nil]
     # @return [Raif::ModelCompletion]
