@@ -106,11 +106,13 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
         "canceled"
       end
 
-      mc = FB.create(:raif_model_completion,
+      mc = FB.create(
+        :raif_model_completion,
         raif_model_completion_batch: batch,
         provider_request_id: "x1",
         model_api_name: "claude-3-5-haiku-latest",
-        llm_model_key: "anthropic_claude_3_5_haiku")
+        llm_model_key: "anthropic_claude_3_5_haiku"
+      )
 
       described_class.perform_now(batch.id)
 
@@ -130,11 +132,13 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
       allow(Raif.config).to receive(:model_completion_batch_poll_schedule).and_return([60.seconds])
       batch.update!(submitted_at: 2.hours.ago)
 
-      mc = FB.create(:raif_model_completion,
+      mc = FB.create(
+        :raif_model_completion,
         raif_model_completion_batch: batch,
         provider_request_id: "x1",
         model_api_name: "claude-3-5-haiku-latest",
-        llm_model_key: "anthropic_claude_3_5_haiku")
+        llm_model_key: "anthropic_claude_3_5_haiku"
+      )
 
       expect do
         described_class.perform_now(batch.id)

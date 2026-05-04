@@ -20,28 +20,36 @@ RSpec.describe Raif::ExpireStuckModelCompletionBatchesJob, type: :job do
       end
     end)
 
-    stuck = FB.create(:raif_model_completion_batch_anthropic,
+    stuck = FB.create(
+      :raif_model_completion_batch_anthropic,
       status: "in_progress",
       submitted_at: 30.hours.ago,
       started_at: 30.hours.ago,
-      completion_handler_class_name: "ExpireHandlerStub")
+      completion_handler_class_name: "ExpireHandlerStub"
+    )
 
-    fresh = FB.create(:raif_model_completion_batch_anthropic,
+    fresh = FB.create(
+      :raif_model_completion_batch_anthropic,
       status: "in_progress",
       submitted_at: 5.minutes.ago,
       started_at: 5.minutes.ago,
-      completion_handler_class_name: "ExpireHandlerStub")
+      completion_handler_class_name: "ExpireHandlerStub"
+    )
 
-    already_done = FB.create(:raif_model_completion_batch_anthropic,
+    already_done = FB.create(
+      :raif_model_completion_batch_anthropic,
       status: "ended",
       submitted_at: 30.hours.ago,
-      ended_at: 6.hours.ago)
+      ended_at: 6.hours.ago
+    )
 
-    stuck_mc = FB.create(:raif_model_completion,
+    stuck_mc = FB.create(
+      :raif_model_completion,
       raif_model_completion_batch: stuck,
       provider_request_id: "stuck1",
       model_api_name: "claude-3-5-haiku-latest",
-      llm_model_key: "anthropic_claude_3_5_haiku")
+      llm_model_key: "anthropic_claude_3_5_haiku"
+    )
 
     described_class.perform_now
 
