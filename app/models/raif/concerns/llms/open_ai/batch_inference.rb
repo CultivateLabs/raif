@@ -107,6 +107,41 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
     new_status
   end
 
+  # Sends a cancel request to OpenAI's Batches API. Cancellation is
+  # asynchronous on OpenAI's side: the provider transitions to status
+  # "cancelling" first, then to "cancelled" (mapped to "canceled") once
+  # in-flight entries finish. Returns the (possibly transitional) Raif status.
+  def cancel_batch!(batch)
+    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no provider_batch_id" if batch.provider_batch_id.blank?
+    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} is already terminal (status=#{batch.status})" if batch.terminal?
+
+    response = batch_connection.post("batches/#{batch.provider_batch_id}/cancel")
+    body = response.body
+    new_status = map_batch_status(body["status"])
+
+    batch.with_lock do
+      return batch.status if batch.terminal?
+
+      provider_response_updates = (batch.provider_response || {}).merge(
+        "output_file_id" => body["output_file_id"],
+        "error_file_id" => body["error_file_id"]
+      )
+
+      updates = {
+        status: new_status,
+        request_counts: body["request_counts"] || batch.request_counts,
+        provider_response: provider_response_updates
+      }
+      if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
+        updates[:ended_at] = Time.current
+      end
+
+      batch.update!(updates)
+    end
+
+    new_status
+  end
+
   def fetch_batch_results!(batch)
     completions_by_id = batch.raif_model_completions.index_by(&:batch_custom_id)
 

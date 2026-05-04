@@ -175,6 +175,12 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
       batch.fetch_results!
       expect(llm_double).to have_received(:fetch_batch_results!).with(batch)
     end
+
+    it "#cancel! delegates to llm.cancel_batch!(self)" do
+      allow(llm_double).to receive(:cancel_batch!).and_return("in_progress")
+      expect(batch.cancel!).to eq("in_progress")
+      expect(llm_double).to have_received(:cancel_batch!).with(batch)
+    end
   end
 
   describe "Raif::Llm.supports_batch_inference?" do

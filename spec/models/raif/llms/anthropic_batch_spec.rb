@@ -179,6 +179,41 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
     end
   end
 
+  describe "#cancel_batch!" do
+    let!(:running_batch) do
+      FB.create(
+        :raif_model_completion_batch_anthropic,
+        provider_batch_id: "msgbatch_cancel_target",
+        status: "in_progress",
+        submitted_at: 1.minute.ago,
+        started_at: 1.minute.ago
+      )
+    end
+
+    it "POSTs to /messages/batches/:id/cancel and updates status from the response" do
+      stub = stub_request(:post, "https://api.anthropic.com/v1/messages/batches/msgbatch_cancel_target/cancel")
+        .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: {
+          id: "msgbatch_cancel_target",
+          processing_status: "canceling",
+          request_counts: { processing: 1, succeeded: 0, errored: 0, canceled: 0, expired: 0 }
+        }.to_json)
+
+      expect(llm.cancel_batch!(running_batch)).to eq("in_progress")
+      expect(stub).to have_been_requested
+      expect(running_batch.reload.status).to eq("in_progress")
+    end
+
+    it "raises if the batch has no provider_batch_id (not yet submitted)" do
+      pending_batch = FB.create(:raif_model_completion_batch_anthropic, status: "pending")
+      expect { llm.cancel_batch!(pending_batch) }.to raise_error(Raif::Errors::InvalidBatchError, /no provider_batch_id/)
+    end
+
+    it "raises if the batch is already terminal" do
+      running_batch.update!(status: "ended", ended_at: Time.current)
+      expect { llm.cancel_batch!(running_batch) }.to raise_error(Raif::Errors::InvalidBatchError, /already terminal/)
+    end
+  end
+
   describe "#fetch_batch_results! / #apply_batch_result" do
     let!(:task_success) do
       Raif::TestTask.build_for_batch(

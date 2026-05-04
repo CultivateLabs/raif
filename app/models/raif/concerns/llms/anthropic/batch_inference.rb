@@ -93,6 +93,39 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
     new_status
   end
 
+  # Sends a cancel request to Anthropic's Messages Batches API. Cancellation
+  # is asynchronous on Anthropic's side: the provider transitions to
+  # processing_status "canceling" first, then to "canceled" once in-flight
+  # entries finish. Returns the (possibly transitional) Raif status.
+  def cancel_batch!(batch)
+    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no provider_batch_id" if batch.provider_batch_id.blank?
+    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} is already terminal (status=#{batch.status})" if batch.terminal?
+
+    response = batch_connection.post("messages/batches/#{batch.provider_batch_id}/cancel")
+    body = response.body
+    new_status = map_processing_status(body["processing_status"])
+
+    batch.with_lock do
+      return batch.status if batch.terminal?
+
+      updates = {
+        status: new_status,
+        request_counts: body["request_counts"] || batch.request_counts,
+        provider_response: (batch.provider_response || {}).merge(
+          "results_url" => body["results_url"],
+          "cancel_url" => body["cancel_url"]
+        )
+      }
+      if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
+        updates[:ended_at] = Time.current
+      end
+
+      batch.update!(updates)
+    end
+
+    new_status
+  end
+
   def fetch_batch_results!(batch)
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no results_url" if batch.results_url.blank?
 

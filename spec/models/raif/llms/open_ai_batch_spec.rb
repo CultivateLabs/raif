@@ -207,6 +207,41 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
     end
   end
 
+  describe "#cancel_batch!" do
+    let(:llm) { Raif.llm(:open_ai_responses_gpt_4o) }
+    let!(:batch) do
+      FB.create(
+        :raif_model_completion_batch_open_ai_responses,
+        provider_batch_id: "batch_cancel_target",
+        status: "in_progress",
+        submitted_at: 1.minute.ago
+      )
+    end
+
+    it "POSTs to /v1/batches/:id/cancel and updates status from the response" do
+      stub = stub_request(:post, "#{base_url}/batches/batch_cancel_target/cancel")
+        .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: {
+          id: "batch_cancel_target",
+          status: "cancelling",
+          request_counts: { total: 1, completed: 0, failed: 0 }
+        }.to_json)
+
+      expect(llm.cancel_batch!(batch)).to eq("in_progress")
+      expect(stub).to have_been_requested
+      expect(batch.reload.status).to eq("in_progress")
+    end
+
+    it "raises if the batch has no provider_batch_id (not yet submitted)" do
+      pending_batch = FB.create(:raif_model_completion_batch_open_ai_responses, status: "pending")
+      expect { llm.cancel_batch!(pending_batch) }.to raise_error(Raif::Errors::InvalidBatchError, /no provider_batch_id/)
+    end
+
+    it "raises if the batch is already terminal" do
+      batch.update!(status: "ended", ended_at: Time.current)
+      expect { llm.cancel_batch!(batch) }.to raise_error(Raif::Errors::InvalidBatchError, /already terminal/)
+    end
+  end
+
   describe "#fetch_batch_results! / #apply_batch_result (Responses)" do
     let(:llm) { Raif.llm(:open_ai_responses_gpt_4o) }
     let(:batch) do

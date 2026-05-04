@@ -101,6 +101,15 @@ module Raif
       llm.fetch_batch_results!(self)
     end
 
+    # Asks the provider to cancel the batch. Cancellation is asynchronous on
+    # both Anthropic and OpenAI: the provider acknowledges with a transitional
+    # status and the next poll picks up the final canceled state. The polling
+    # job then routes the canceled batch through the same finalize/dispatch
+    # path as any other terminal status, force-failing remaining children.
+    def cancel!
+      llm.cancel_batch!(self)
+    end
+
     # Resolves and invokes the batch's completion handler, if one is configured.
     # The handler class must implement `.handle_batch_completion(batch)`.
     def dispatch_completion_handler!

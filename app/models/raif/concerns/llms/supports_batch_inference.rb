@@ -75,4 +75,22 @@ module Raif::Concerns::Llms::SupportsBatchInference
   def apply_batch_result(model_completion, raw_result)
     raise NotImplementedError, "#{self.class.name} must implement #apply_batch_result"
   end
+
+  # Optional. Requests cancellation of a batch from the provider.
+  #
+  # Cancellation is typically asynchronous: the provider acknowledges with a
+  # transitional status (e.g. "canceling" / "cancelling"), and the next poll
+  # picks up the final "canceled" state. Implementations should send the
+  # cancel request, update batch.status from the response, and return the
+  # new (possibly transitional) status.
+  #
+  # Implementations should refuse to cancel a batch that's already terminal
+  # or that hasn't been submitted yet (no provider_batch_id) by raising
+  # Raif::Errors::InvalidBatchError.
+  #
+  # @param batch [Raif::ModelCompletionBatch]
+  # @return [String] the batch's new status (one of Raif::ModelCompletionBatch::STATUSES)
+  def cancel_batch!(batch)
+    raise NotImplementedError, "#{self.class.name} must implement #cancel_batch!"
+  end
 end
