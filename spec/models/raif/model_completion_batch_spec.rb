@@ -211,6 +211,32 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
     end
   end
 
+  describe "#assert_submittable! (re-submit guard)" do
+    it "permits a fresh pending batch with no provider_batch_id" do
+      batch = FB.build(:raif_model_completion_batch_anthropic, status: "pending", provider_batch_id: nil)
+      expect { batch.assert_submittable! }.not_to raise_error
+    end
+
+    it "raises if the batch already has a provider_batch_id" do
+      batch = FB.build(
+        :raif_model_completion_batch_anthropic,
+        status: "pending",
+        provider_batch_id: "msgbatch_already_submitted"
+      )
+      expect { batch.assert_submittable! }.to raise_error(Raif::Errors::InvalidBatchError, /not submittable/)
+    end
+
+    it "raises if the batch has moved past `pending`" do
+      Raif::ModelCompletionBatch::STATUSES.each do |status|
+        next if status == "pending"
+
+        batch = FB.build(:raif_model_completion_batch_anthropic, status: status, provider_batch_id: nil)
+        expect { batch.assert_submittable! }.to raise_error(Raif::Errors::InvalidBatchError, /not submittable/),
+          "expected status=#{status} to be rejected"
+      end
+    end
+  end
+
   describe "#force_fail! transactional rollback" do
     it "rolls back the batch-status update if a child completion write raises mid-loop" do
       batch = FB.create(:raif_model_completion_batch_anthropic, status: "in_progress", started_at: 1.minute.ago)

@@ -126,6 +126,16 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
       expect(batch.input_file_id).to eq("file-input-abc")
       expect(batch.endpoint).to eq("/v1/responses")
     end
+
+    it "raises (without uploading or POSTing) if the batch was already submitted" do
+      batch.update!(status: "submitted", provider_batch_id: "batch_already_submitted", submitted_at: 1.minute.ago)
+      file_stub = stub_request(:post, "#{base_url}/files")
+      batch_stub = stub_request(:post, "#{base_url}/batches")
+
+      expect { llm.submit_batch!(batch) }.to raise_error(Raif::Errors::InvalidBatchError, /not submittable/)
+      expect(file_stub).not_to have_been_requested
+      expect(batch_stub).not_to have_been_requested
+    end
   end
 
   describe "#fetch_batch_status!" do

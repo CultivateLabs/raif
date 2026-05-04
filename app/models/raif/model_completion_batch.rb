@@ -129,6 +129,20 @@ module Raif
       llm.cancel_batch!(self)
     end
 
+    # Idempotency guard for batch submission. Raises Raif::Errors::InvalidBatchError
+    # if the batch already has a provider_batch_id or has moved past `pending`,
+    # so a duplicate batch.submit! / llm.submit_batch!(batch) call cannot create
+    # a second provider-side batch and orphan the first one. Called by every
+    # provider's #submit_batch! at the top of the method.
+    def assert_submittable!
+      return if status == "pending" && provider_batch_id.blank?
+
+      raise Raif::Errors::InvalidBatchError,
+        "Raif::ModelCompletionBatch ##{id} is not submittable: status=#{status}, " \
+          "provider_batch_id=#{provider_batch_id.inspect}. submit! / submit_batch! " \
+          "is single-shot; use #cancel! and create a new batch if you need to retry."
+    end
+
     # Resolves and invokes the batch's completion handler, if one is configured.
     # The handler class must implement `.handle_batch_completion(batch)`.
     def dispatch_completion_handler!

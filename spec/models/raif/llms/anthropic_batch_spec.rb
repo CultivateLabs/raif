@@ -107,6 +107,14 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
 
       expect { llm.submit_batch!(batch) }.to raise_error(Raif::Errors::InvalidBatchError)
     end
+
+    it "raises (without making a network call) if the batch was already submitted" do
+      batch.update!(status: "submitted", provider_batch_id: "msgbatch_already_submitted", submitted_at: 1.minute.ago)
+      stub = stub_request(:post, "https://api.anthropic.com/v1/messages/batches")
+
+      expect { llm.submit_batch!(batch) }.to raise_error(Raif::Errors::InvalidBatchError, /not submittable/)
+      expect(stub).not_to have_been_requested
+    end
   end
 
   describe "#fetch_batch_status!" do
