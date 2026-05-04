@@ -12,4 +12,6 @@
 *.gem
 .erb_lint_cache/
 .claude/settings.local.json
+/.envrc.local
+/.envrc
 llm_outputs/
