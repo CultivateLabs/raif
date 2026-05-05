@@ -5,6 +5,7 @@ PATH
       aws-sdk-bedrockruntime
       event_stream_parser (>= 1.0)
       faraday (>= 2.0)
+      faraday-multipart (>= 1.0)
       json-schema (>= 5.0)
       loofah (>= 2.21)
       pagy (< 44.0)
@@ -162,6 +163,8 @@ GEM
       faraday-net_http (>= 2.0, < 3.5)
       json
       logger
+    faraday-multipart (1.2.0)
+      multipart-post (~> 2.0)
     faraday-net_http (3.4.2)
       net-http (~> 0.5)
     ferrum (0.17.1)
@@ -251,6 +254,7 @@ GEM
     mini_mime (1.1.5)
     minitest (6.0.1)
       prism (~> 1.5)
+    multipart-post (2.4.1)
     mysql2 (0.5.7)
       bigdecimal
     nenv (0.3.0)

@@ -5,6 +5,10 @@ class Raif::Llms::OpenAiCompletions < Raif::Llms::OpenAiBase
   include Raif::Concerns::Llms::OpenAiCompletions::ToolFormatting
   include Raif::Concerns::Llms::OpenAiCompletions::ResponseToolCalls
 
+  def batch_endpoint_path
+    "/v1/chat/completions"
+  end
+
 private
 
   def api_path

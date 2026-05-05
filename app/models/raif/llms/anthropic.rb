@@ -4,6 +4,7 @@ class Raif::Llms::Anthropic < Raif::Llm
   include Raif::Concerns::Llms::Anthropic::MessageFormatting
   include Raif::Concerns::Llms::Anthropic::ToolFormatting
   include Raif::Concerns::Llms::Anthropic::ResponseToolCalls
+  include Raif::Concerns::Llms::Anthropic::BatchInference
 
   def self.prompt_tokens_include_cached_tokens?
     false

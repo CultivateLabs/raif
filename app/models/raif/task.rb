@@ -101,13 +101,13 @@ module Raif
     # @param args [Hash] Additional arguments to pass to the instance of the task that is created.
     # @return [Raif::Task, nil] The task instance that was created and run.
     def self.run(creator: nil, available_model_tools: [], llm_model_key: nil, images: [], files: [], **args, &block)
-      task = new(
+      task = build_task_instance(
         creator: creator,
-        llm_model_key: llm_model_key,
         available_model_tools: available_model_tools,
-        started_at: Time.current,
+        llm_model_key: llm_model_key,
         images: images,
         files: files,
+        started_at: Time.current,
         **args
       )
 
@@ -155,18 +155,125 @@ module Raif
         &streaming_block
       )
 
-      self.raif_model_completion = mc.becomes(Raif::ModelCompletion)
-
-      update(raw_response: raif_model_completion.raw_response)
-
-      process_model_tool_invocations
-      completed!
-      self
+      process_completion!(mc)
     end
 
     def re_run(&block)
       update_columns(started_at: Time.current)
       run(skip_prompt_population: true, &block)
+    end
+
+    # Wires a (possibly batch-resolved) Raif::ModelCompletion back into this task:
+    # links it as the task's raif_model_completion, mirrors raw_response onto the
+    # task, processes any tool calls the model made, and transitions the task to
+    # completed (or failed, if the underlying completion failed). Called by both
+    # the synchronous #run path and the batch completion handler after the
+    # provider's per-entry result has been applied.
+    #
+    # @param model_completion [Raif::ModelCompletion]
+    # @return [self]
+    def process_completion!(model_completion)
+      self.raif_model_completion = model_completion.becomes(Raif::ModelCompletion)
+
+      update(raw_response: raif_model_completion.raw_response)
+
+      if raif_model_completion.failed?
+        # Failure detail (failure_error / failure_reason) lives on the model
+        # completion; the task's `failed_at` is just a state marker.
+        failed!
+      else
+        process_model_tool_invocations
+        completed!
+      end
+      self
+    end
+
+    # Builds a Raif::Task and a pending Raif::ModelCompletion attached to the
+    # given Raif::ModelCompletionBatch, without performing the LLM request. The
+    # provider's batch-submission code reads the pending completion's request
+    # fields when constructing its per-entry batch payload.
+    #
+    # The task is persisted with started_at: nil (state :pending). The pending
+    # ModelCompletion has raif_model_completion_batch_id pointing at the batch
+    # and batch_custom_id set to the value used as the provider's custom_id
+    # in the batch payload.
+    #
+    # @param batch [Raif::ModelCompletionBatch]
+    # @param batch_custom_id [String, nil] the provider custom_id; defaults to "raif_task_<task.id>"
+    # @return [Raif::Task]
+    def self.build_for_batch(batch:, batch_custom_id: nil, creator: nil, available_model_tools: [],
+      llm_model_key: nil, images: [], files: [], **args)
+      task = build_task_instance(
+        creator: creator,
+        available_model_tools: available_model_tools,
+        llm_model_key: llm_model_key,
+        images: images,
+        files: files,
+        **args
+      )
+
+      task.save!
+      task.prepare_for_batch!(batch: batch, batch_custom_id: batch_custom_id)
+      task
+    end
+
+    # Shared (unsaved) instance builder used by both .run (sync) and
+    # .build_for_batch (batch). Owns the kwarg -> new(...) wiring so a future
+    # attribute only has to be added in one place. Each caller is responsible
+    # for its own save! so they can keep their rescue semantics: in particular,
+    # .run wants the local `task` var assigned even if save! raises so that the
+    # rescue clause can still mark it failed and return it.
+    def self.build_task_instance(creator:, available_model_tools:, llm_model_key:, images:, files:, started_at: nil, **args)
+      new(
+        creator: creator,
+        llm_model_key: llm_model_key,
+        available_model_tools: available_model_tools,
+        images: images,
+        files: files,
+        started_at: started_at,
+        **args
+      )
+    end
+    private_class_method :build_task_instance
+
+    # Populates this task's prompts and creates the pending Raif::ModelCompletion
+    # that will be sent through the batch. Mirrors Raif::Task#run's default
+    # behavior: prompts are rebuilt every call unless skip_prompt_population: true
+    # is passed (e.g. for re-prepare flows where the caller has hand-set prompts
+    # and wants them preserved).
+    #
+    # The default batch_custom_id is "raif_task_<task.id>" — a task-specific
+    # identifier. Other producers (non-task) should pass an explicit
+    # batch_custom_id when building their own pending completions via
+    # Raif::Llm#build_pending_model_completion; the only requirement is
+    # uniqueness within the batch.
+    #
+    # @param batch [Raif::ModelCompletionBatch]
+    # @param batch_custom_id [String, nil]
+    # @param skip_prompt_population [Boolean] preserve any pre-set prompts on this
+    #   task instead of rebuilding via #build_prompt / #build_system_prompt
+    # @return [Raif::ModelCompletion]
+    def prepare_for_batch!(batch:, batch_custom_id: nil, skip_prompt_population: false)
+      populate_prompts unless skip_prompt_population
+      save! if changed?
+
+      effective_batch_custom_id = batch_custom_id.presence || "raif_task_#{id}"
+
+      mc = llm.build_pending_model_completion(
+        messages: messages,
+        source: self,
+        system_prompt: system_prompt,
+        response_format: response_format.to_sym,
+        available_model_tools: available_model_tools,
+        temperature: self.class.temperature,
+        anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
+        bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
+        raif_model_completion_batch: batch,
+        batch_custom_id: effective_batch_custom_id
+      )
+
+      self.raif_model_completion = mc
+      mc
     end
 
     def messages
