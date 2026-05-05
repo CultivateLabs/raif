@@ -81,6 +81,39 @@ module Raif
       Raif.llm(llm_model_key.to_sym)
     end
 
+    # Convenience accessor for batches whose children were produced via
+    # Raif::Task.build_for_batch (the typical case). Returns the Raif::Task
+    # records attached to this batch through their child Raif::ModelCompletions.
+    #
+    # Heterogeneous batches that mix Raif::Task producers with raw
+    # Raif::Llm#build_pending_model_completion producers will see only the
+    # Raif::Task subset here; use raif_model_completions for full coverage.
+    def tasks
+      Raif::Task.where(
+        id: raif_model_completions.where(source_type: "Raif::Task").select(:source_id)
+      )
+    end
+
+    # Attaches an existing Raif::Task to this batch as a pending child
+    # completion. The task is persisted if not already, then routed through
+    # Raif::Task#prepare_for_batch! to populate prompts and build the pending
+    # Raif::ModelCompletion.
+    #
+    # Pair with Raif::Llm#create_batch when the producer constructs tasks
+    # outside of the batch (composing them in a loop, in a service object,
+    # etc.). For the one-call shortcut – build + save + attach in a single
+    # call – use Raif::Task.build_for_batch instead.
+    #
+    # @param task [Raif::Task]
+    # @param batch_custom_id [String, nil] unique-within-batch identifier;
+    #   defaults to "raif_task_<task.id>".
+    # @return [Raif::Task] the same task, now attached to this batch.
+    def add_task(task, batch_custom_id: nil)
+      task.save! if task.new_record?
+      task.prepare_for_batch!(batch: self, batch_custom_id: batch_custom_id)
+      task
+    end
+
     # Consumer-facing API: ask the batch to do its provider's work.
     #
     # Each method delegates to the LLM provider's SupportsBatchInference
