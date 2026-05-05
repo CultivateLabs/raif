@@ -215,6 +215,39 @@ module Raif
       end
     end
 
+    # Used by the expiry paths (the polling job's max_age_exceeded? branch and
+    # Raif::ExpireStuckModelCompletionBatchesJob) when *we* decide to give up
+    # on a batch the provider hasn't finalized yet. Distinct from
+    # #force_fail!, which only flips local state -- this method also issues a
+    # best-effort provider-side cancel so we don't keep paying for batch
+    # results we've stopped reading and don't keep occupying the provider's
+    # per-org concurrent-batch quota.
+    #
+    # Cancellation is best-effort: if it fails (5xx, network, auth, etc.) we
+    # log and continue, because the local force-fail still has to happen so
+    # any waiting workflow can advance. A still-running provider-side batch
+    # will eventually self-finalize via the provider's own timer; the worst
+    # case is paying for results we discard.
+    #
+    # Skips the cancel call entirely when the batch is already terminal (the
+    # provider's done with it) or hasn't been submitted yet (no
+    # provider_batch_id to cancel).
+    def expire!(reason:)
+      if !terminal? && provider_batch_id.present?
+        begin
+          llm.cancel_batch!(self)
+        rescue StandardError => e
+          Raif.logger.warn(
+            "Raif::ModelCompletionBatch ##{id} best-effort provider-side cancel failed " \
+              "while expiring: #{e.class}: #{e.message}. Continuing with local force-fail; " \
+              "the provider-side batch may still complete and be billed."
+          )
+        end
+      end
+
+      force_fail!(reason: reason)
+    end
+
     # Marks every non-terminal child completion as failed and sets the batch to
     # `failed` (preserving an already-terminal status, e.g. `canceled`). Idempotent:
     # children already completed or failed are skipped.
@@ -223,6 +256,10 @@ module Raif
     # batch-status update too. Without this, an exception while flipping
     # children would leave the batch terminal and prevent the polling/expire
     # jobs from re-entering this path on a future run.
+    #
+    # Local-only: does not touch the provider. Use #expire! when expiring a
+    # batch the provider hasn't finalized yet, so the provider-side batch is
+    # canceled on a best-effort basis.
     def force_fail!(reason:)
       reason_str = reason.to_s.truncate(255)
 

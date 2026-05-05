@@ -7,7 +7,7 @@ RSpec.describe Raif::ExpireStuckModelCompletionBatchesJob, type: :job do
     allow(Raif.config).to receive(:model_completion_batch_max_age).and_return(26.hours)
   end
 
-  it "force-fails non-terminal batches whose submitted_at is older than the max age and dispatches their handler" do
+  it "expires non-terminal batches whose submitted_at is older than the max age, attempting a provider-side cancel, then dispatches their handler" do
     stub_const("ExpireHandlerStub", Class.new do
       @batches = []
 
@@ -23,6 +23,7 @@ RSpec.describe Raif::ExpireStuckModelCompletionBatchesJob, type: :job do
     stuck = FB.create(
       :raif_model_completion_batch_anthropic,
       status: "in_progress",
+      provider_batch_id: "msgbatch_stuck",
       submitted_at: 30.hours.ago,
       started_at: 30.hours.ago,
       completion_handler_class_name: "ExpireHandlerStub"
@@ -31,6 +32,7 @@ RSpec.describe Raif::ExpireStuckModelCompletionBatchesJob, type: :job do
     fresh = FB.create(
       :raif_model_completion_batch_anthropic,
       status: "in_progress",
+      provider_batch_id: "msgbatch_fresh",
       submitted_at: 5.minutes.ago,
       started_at: 5.minutes.ago,
       completion_handler_class_name: "ExpireHandlerStub"
@@ -39,6 +41,7 @@ RSpec.describe Raif::ExpireStuckModelCompletionBatchesJob, type: :job do
     already_done = FB.create(
       :raif_model_completion_batch_anthropic,
       status: "ended",
+      provider_batch_id: "msgbatch_done",
       submitted_at: 30.hours.ago,
       ended_at: 6.hours.ago
     )
@@ -50,6 +53,11 @@ RSpec.describe Raif::ExpireStuckModelCompletionBatchesJob, type: :job do
       model_api_name: "claude-3-5-haiku-latest",
       llm_model_key: "anthropic_claude_3_5_haiku"
     )
+
+    cancel_called_for = []
+    allow_any_instance_of(Raif::Llms::Anthropic).to receive(:cancel_batch!) do |_llm, batch|
+      cancel_called_for << batch.id
+    end
 
     described_class.perform_now
 
@@ -63,6 +71,34 @@ RSpec.describe Raif::ExpireStuckModelCompletionBatchesJob, type: :job do
     expect(fresh.reload.status).to eq("in_progress")
     expect(already_done.reload.status).to eq("ended")
 
+    # Best-effort provider-side cancel was issued only for the stuck batch.
+    # Fresh batches aren't expired; already-terminal batches are skipped by
+    # the `non_terminal` scope and wouldn't receive a cancel even if reached.
+    expect(cancel_called_for).to eq([stuck.id])
+
     expect(ExpireHandlerStub.batches).to contain_exactly(stuck)
+  end
+
+  it "still expires the batch locally when the provider-side cancel raises" do
+    stub_const("ExpireHandlerStub", Class.new do
+      def self.handle_batch_completion(_batch); end
+    end)
+
+    stuck = FB.create(
+      :raif_model_completion_batch_anthropic,
+      status: "in_progress",
+      provider_batch_id: "msgbatch_stuck",
+      submitted_at: 30.hours.ago,
+      started_at: 30.hours.ago,
+      completion_handler_class_name: "ExpireHandlerStub"
+    )
+
+    allow_any_instance_of(Raif::Llms::Anthropic).to receive(:cancel_batch!).and_raise(StandardError, "anthropic 503")
+    allow(Raif.logger).to receive(:warn)
+
+    described_class.perform_now
+
+    expect(stuck.reload.status).to eq("failed")
+    expect(Raif.logger).to have_received(:warn).with(a_string_matching(/best-effort provider-side cancel failed/))
   end
 end

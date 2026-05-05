@@ -106,8 +106,14 @@ module Raif
         10.minutes,
         30.minutes
       ]
-      # Hard ceiling for any non-terminal Raif::ModelCompletionBatch. Older batches
-      # are force-failed by the hourly safety sweep so the workflow can advance.
+      # Hard ceiling for any non-terminal Raif::ModelCompletionBatch. Older
+      # batches are expired by the hourly safety sweep
+      # (Raif::ExpireStuckModelCompletionBatchesJob) and the polling job's
+      # max_age_exceeded? branch: a best-effort provider-side cancel is issued
+      # via batch.cancel! before the batch is force-failed locally, so the
+      # workflow can advance and we stop paying for completions we won't read.
+      # If the cancel fails (network, 5xx, etc.), the local force-fail still
+      # happens and the provider-side batch may continue and be billed.
       @model_completion_batch_max_age = 26.hours
       @model_superclass = "ApplicationRecord"
       @open_ai_api_key = default_disable_llm_api_requests? ? "placeholder-open-ai-api-key" : ENV["OPENAI_API_KEY"]

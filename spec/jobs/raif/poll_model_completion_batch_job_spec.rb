@@ -121,11 +121,12 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
       expect(llm_double).not_to have_received(:fetch_batch_results!)
     end
 
-    it "force-fails when submitted_at is older than the configured max age" do
+    it "expires the batch when submitted_at is older than the configured max age (best-effort provider cancel + local fail)" do
       allow(llm_double).to receive(:fetch_batch_status!) do |b|
         b.update!(status: "in_progress")
         "in_progress"
       end
+      allow(llm_double).to receive(:cancel_batch!)
       allow(Raif.config).to receive(:model_completion_batch_max_age).and_return(1.hour)
       allow(Raif.config).to receive(:model_completion_batch_poll_schedule).and_return([60.seconds])
       batch.update!(submitted_at: 2.hours.ago)
@@ -145,6 +146,7 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
       reloaded = batch.reload
       expect(reloaded.status).to eq("failed")
       expect(mc.reload.failed?).to be(true)
+      expect(llm_double).to have_received(:cancel_batch!).with(batch)
     end
 
     it "reschedules itself (without raising) when the provider raises a transient/retriable error" do

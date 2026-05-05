@@ -46,7 +46,7 @@ module Raif
       end
 
       if batch.max_age_exceeded?
-        batch.force_fail!(reason: "Batch exceeded Raif.config.model_completion_batch_max_age (#{Raif.config.model_completion_batch_max_age})")
+        batch.expire!(reason: "Batch exceeded Raif.config.model_completion_batch_max_age (#{Raif.config.model_completion_batch_max_age})")
         batch.dispatch_completion_handler!
         return
       end

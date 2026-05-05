@@ -153,6 +153,62 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
     end
   end
 
+  describe "#expire!" do
+    let(:batch) do
+      FB.create(
+        :raif_model_completion_batch_anthropic,
+        status: "submitted",
+        provider_batch_id: "msgbatch_test",
+        submitted_at: 30.hours.ago
+      )
+    end
+
+    it "issues a best-effort provider-side cancel before force-failing locally" do
+      cancel_called = false
+      allow_any_instance_of(Raif::Llms::Anthropic).to receive(:cancel_batch!) do |_llm, b|
+        cancel_called = true
+        expect(b).to eq(batch)
+      end
+
+      batch.expire!(reason: "spec expiry")
+
+      expect(cancel_called).to be(true)
+      expect(batch.reload.status).to eq("failed")
+      expect(batch.failure_reason).to eq("spec expiry")
+    end
+
+    it "still force-fails locally when the provider-side cancel raises" do
+      allow_any_instance_of(Raif::Llms::Anthropic).to receive(:cancel_batch!).and_raise(StandardError, "anthropic 503")
+      allow(Raif.logger).to receive(:warn)
+
+      batch.expire!(reason: "spec expiry")
+
+      expect(batch.reload.status).to eq("failed")
+      expect(batch.failure_reason).to eq("spec expiry")
+      expect(Raif.logger).to have_received(:warn).with(a_string_matching(/best-effort provider-side cancel failed/))
+    end
+
+    it "skips the cancel call for already-terminal batches" do
+      batch.update!(status: "ended", ended_at: Time.current)
+
+      expect_any_instance_of(Raif::Llms::Anthropic).not_to receive(:cancel_batch!)
+      batch.expire!(reason: "spec expiry")
+
+      # Already-terminal batches keep their original terminal status; force_fail!
+      # only flips non-terminal batches to "failed".
+      expect(batch.reload.status).to eq("ended")
+    end
+
+    it "skips the cancel call for batches that were never submitted (no provider_batch_id)" do
+      batch.update!(provider_batch_id: nil, status: "pending", submitted_at: nil)
+
+      expect_any_instance_of(Raif::Llms::Anthropic).not_to receive(:cancel_batch!)
+      batch.expire!(reason: "spec expiry")
+
+      expect(batch.reload.status).to eq("failed")
+    end
+  end
+
   describe "#add_task" do
     let(:creator) { FB.build(:raif_test_user) }
     let(:batch) { FB.create(:raif_model_completion_batch_anthropic) }
