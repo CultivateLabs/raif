@@ -90,4 +90,4 @@ Both scripts print usage details when invoked without arguments.
 
 ---
 
-**Read next:** [Images/Files/PDFs](images_files_pdfs)
+**Read next:** [Task Batching](task_batching)
