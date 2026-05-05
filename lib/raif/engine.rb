@@ -21,6 +21,20 @@ module Raif
       Mime::Type.register("application/x-raif-system-prompt", :system_prompt, [], [], true) unless Mime::Type.lookup_by_extension(:system_prompt)
     end
 
+    # Prompt templates are plain-text LLM input, not HTML. Without this,
+    # `<%= some_method %>` in a .prompt.erb / .system_prompt.erb would
+    # HTML-escape the result (e.g. " => &quot;, ' => &#39;), corrupting
+    # the prompt sent to the model. Rails' ERB handler skips escaping only
+    # for mime types in `escape_ignore_list`, which defaults to ["text/plain"].
+    initializer "raif.prompt_template_escape_ignore", after: "raif.prompt_template_formats" do
+      ActiveSupport.on_load(:action_view) do
+        ActionView::Template::Handlers::ERB.escape_ignore_list += [
+          "application/x-raif-prompt",
+          "application/x-raif-system-prompt"
+        ]
+      end
+    end
+
     # If the host app is using FactoryBot, add the factories to the host app so they can be used in host apptests
     if defined?(FactoryBotRails)
       config.factory_bot.definition_file_paths += [File.expand_path("../../../spec/factories/shared", __FILE__)]
