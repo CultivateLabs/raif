@@ -350,6 +350,40 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       expect { llm.fetch_batch_results!(batch) }.to raise_error(Raif::Errors::InvalidBatchError)
     end
 
+    it "skips a malformed JSONL line, logs the error, and still applies later well-formed lines" do
+      bad_jsonl = [
+        # success entry, applied normally
+        {
+          custom_id: "win",
+          result: {
+            type: "succeeded",
+            message: {
+              id: "msg_aaa",
+              type: "message",
+              role: "assistant",
+              content: [{ type: "text", text: "ok" }],
+              usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
+            }
+          }
+        }.to_json,
+        "{not valid json", # malformed: must not poison the rest of the stream
+        # failure entry for the second task, applied normally
+        {
+          custom_id: "lose",
+          result: { type: "errored", error: { message: "synthetic" } }
+        }.to_json
+      ].join("\n")
+
+      stub_request(:get, results_url).to_return(status: 200, body: bad_jsonl)
+      allow(Raif.logger).to receive(:error)
+
+      expect { llm.fetch_batch_results!(batch) }.not_to raise_error
+
+      expect(task_success.raif_model_completion.reload.completed?).to be(true)
+      expect(task_failure.raif_model_completion.reload.failed?).to be(true)
+      expect(Raif.logger).to have_received(:error).with(a_string_matching(/skipping malformed JSONL/))
+    end
+
     it "fails any child completion that doesn't appear in the results stream" do
       partial_jsonl = [
         {

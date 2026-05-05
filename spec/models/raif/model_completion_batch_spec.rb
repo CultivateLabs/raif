@@ -361,7 +361,11 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
     end
 
     it "#submit! delegates to llm.submit_batch!(self) and auto-enqueues the polling job" do
-      allow(llm_double).to receive(:submit_batch!)
+      # Mirror real provider behavior: submit_batch! populates provider_batch_id and
+      # transitions status, so the subsequent enqueue_first_poll! guard passes.
+      allow(llm_double).to receive(:submit_batch!) do |b|
+        b.update!(provider_batch_id: "msgbatch_stub", status: "submitted", submitted_at: Time.current)
+      end
 
       expect do
         batch.submit!
@@ -372,7 +376,9 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
     end
 
     it "#submit!(enqueue_poll: false) skips the polling-job auto-enqueue" do
-      allow(llm_double).to receive(:submit_batch!)
+      allow(llm_double).to receive(:submit_batch!) do |b|
+        b.update!(provider_batch_id: "msgbatch_stub", status: "submitted", submitted_at: Time.current)
+      end
 
       expect do
         batch.submit!(enqueue_poll: false)
@@ -476,6 +482,48 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
           llm_model_key: "anthropic_claude_3_5_haiku"
         )
       end.not_to raise_error
+    end
+  end
+
+  describe "#enqueue_first_poll! (poll-schedule guard)" do
+    it "raises when the batch has no provider_batch_id (never submitted)" do
+      batch = FB.create(:raif_model_completion_batch_anthropic, status: "pending", provider_batch_id: nil)
+
+      expect do
+        batch.enqueue_first_poll!
+      end.to raise_error(Raif::Errors::InvalidBatchError, /requires provider_batch_id/)
+
+      expect(batch.reload.next_poll_at).to be_nil
+      expect(enqueued_jobs).to be_empty
+    end
+
+    it "raises when the batch is already terminal" do
+      Raif::ModelCompletionBatch::TERMINAL_STATUSES.each do |status|
+        batch = FB.create(
+          :raif_model_completion_batch_anthropic,
+          status: status,
+          provider_batch_id: "msgbatch_#{status}"
+        )
+
+        expect do
+          batch.enqueue_first_poll!
+        end.to raise_error(Raif::Errors::InvalidBatchError, /terminal batch/),
+          "expected status=#{status} to be rejected"
+      end
+    end
+
+    it "schedules the poll when the batch has a provider_batch_id and is non-terminal" do
+      batch = FB.create(
+        :raif_model_completion_batch_anthropic,
+        status: "submitted",
+        provider_batch_id: "msgbatch_ready"
+      )
+
+      expect do
+        batch.enqueue_first_poll!
+      end.to have_enqueued_job(Raif::PollModelCompletionBatchJob).with(batch.id)
+
+      expect(batch.reload.next_poll_at).to be_within(5.seconds).of(60.seconds.from_now)
     end
   end
 

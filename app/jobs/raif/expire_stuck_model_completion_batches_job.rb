@@ -27,6 +27,24 @@ module Raif
         .find_each do |batch|
           batch.expire!(reason: "Batch exceeded Raif.config.model_completion_batch_max_age (#{max_age})")
           batch.dispatch_completion_handler!
+        rescue StandardError => e
+          # Per-batch rescue so a single bad handler (or a transient DB hiccup
+          # mid-force_fail!) doesn't block expiry of every later batch in the
+          # sweep. The next hourly tick re-enters and retries any batch that's
+          # still non-terminal; a batch that expired locally but whose handler
+          # raised will be picked up by the polling job's handler-retry path
+          # via handler_dispatched_at gating.
+          Raif.logger.error(
+            "Raif::ExpireStuckModelCompletionBatchesJob: failed to expire batch ##{batch.id}: #{e.class}: #{e.message}"
+          )
+          Raif.logger.error(e.backtrace.first(20).join("\n")) if e.backtrace.present?
+
+          if defined?(Airbrake)
+            notice = Airbrake.build_notice(e)
+            notice[:context][:component] = "raif_expire_stuck_model_completion_batches_job"
+            notice[:params] = { batch_id: batch.id }
+            Airbrake.notify(notice)
+          end
         end
     end
 

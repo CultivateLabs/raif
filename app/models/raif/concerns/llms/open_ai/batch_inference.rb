@@ -339,7 +339,19 @@ private
       line = line.strip
       next if line.blank?
 
-      raw = JSON.parse(line)
+      begin
+        raw = JSON.parse(line)
+      rescue JSON::ParserError => e
+        # One bad line shouldn't poison the rest of the batch. Skip it; any
+        # child completion that never gets matched falls through to the
+        # missing-entry sweep in fetch_batch_results! and is force-failed there.
+        Raif.logger.error(
+          "OpenAI batch ##{batch.id} results: skipping malformed JSONL line " \
+            "(#{e.class}: #{e.message}): #{line.inspect}"
+        )
+        next
+      end
+
       custom_id = raw["custom_id"]
       mc = completions_by_id[custom_id]
       if mc.nil?

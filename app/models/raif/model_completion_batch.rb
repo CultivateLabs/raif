@@ -139,8 +139,27 @@ module Raif
     # Stamps next_poll_at and enqueues the first Raif::PollModelCompletionBatchJob
     # using the first entry of Raif.config.model_completion_batch_poll_schedule.
     # Called by #submit! by default; can also be invoked manually if a host
-    # opted out of auto-enqueue and wants to start polling later.
+    # opted out of auto-enqueue (#submit!(enqueue_poll: false)) and wants to
+    # start polling later.
+    #
+    # Guards against being called on a batch that hasn't been submitted yet
+    # (no provider_batch_id, so the polling job's fetch_batch_status! would
+    # 404 and burn the entire poll schedule until max_age expiry) or that's
+    # already terminal (nothing to poll for). Raises Raif::Errors::InvalidBatchError
+    # so a misordered call surfaces immediately instead of silently scheduling
+    # a doomed poll chain.
     def enqueue_first_poll!
+      if provider_batch_id.blank?
+        raise Raif::Errors::InvalidBatchError,
+          "Raif::ModelCompletionBatch ##{id}#enqueue_first_poll! requires provider_batch_id; " \
+            "call submit! (or llm.submit_batch!(batch)) first."
+      end
+      if terminal?
+        raise Raif::Errors::InvalidBatchError,
+          "Raif::ModelCompletionBatch ##{id}#enqueue_first_poll! refusing to schedule a poll " \
+            "for a terminal batch (status=#{status})."
+      end
+
       delay = Array(Raif.config.model_completion_batch_poll_schedule).first || 1.minute
       update_column(:next_poll_at, delay.from_now)
       Raif::PollModelCompletionBatchJob.set(wait: delay).perform_later(id)

@@ -366,6 +366,38 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
       expect { llm.fetch_batch_results!(batch) }.not_to raise_error
       expect(Raif.logger).to have_received(:warn).with(a_string_matching(/did not match/))
     end
+
+    it "skips a malformed JSONL line, logs the error, and still applies later well-formed lines" do
+      bad_jsonl = [
+        {
+          id: "batch_req_1",
+          custom_id: "ok_id",
+          response: {
+            status_code: 200,
+            body: {
+              id: "resp_abc",
+              output: [{ type: "message", content: [{ type: "output_text", text: "ok" }] }],
+              usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }
+            }
+          }
+        }.to_json,
+        "{not valid json",
+        {
+          id: "batch_req_2",
+          custom_id: "bad_id",
+          response: { status_code: 400, body: { error: { message: "synthetic" } } }
+        }.to_json
+      ].join("\n")
+
+      stub_request(:get, "#{base_url}/files/file-out/content").to_return(status: 200, body: bad_jsonl)
+      allow(Raif.logger).to receive(:error)
+
+      expect { llm.fetch_batch_results!(batch) }.not_to raise_error
+
+      expect(task_success.raif_model_completion.reload.completed?).to be(true)
+      expect(task_failure.raif_model_completion.reload.failed?).to be(true)
+      expect(Raif.logger).to have_received(:error).with(a_string_matching(/skipping malformed JSONL/))
+    end
   end
 
   describe "JSONL body shape (Completions)" do
