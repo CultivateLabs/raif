@@ -1,5 +1,44 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: raif_model_completion_batches
+#
+#  id                            :bigint           not null, primary key
+#  completion_handler_class_name :string
+#  creator_type                  :string
+#  ended_at                      :datetime
+#  failed_at                     :datetime
+#  failure_error                 :string
+#  failure_reason                :text
+#  handler_dispatched_at         :datetime
+#  llm_model_key                 :string           not null
+#  metadata                      :jsonb
+#  model_api_name                :string           not null
+#  next_poll_at                  :datetime
+#  output_token_cost             :decimal(10, 6)
+#  prompt_token_cost             :decimal(10, 6)
+#  provider_response             :jsonb
+#  request_counts                :jsonb
+#  started_at                    :datetime
+#  status                        :string           default("pending"), not null
+#  submitted_at                  :datetime
+#  total_cost                    :decimal(10, 6)
+#  type                          :string           not null
+#  created_at                    :datetime         not null
+#  updated_at                    :datetime         not null
+#  creator_id                    :bigint
+#  provider_batch_id             :string
+#
+# Indexes
+#
+#  index_raif_model_completion_batches_on_creator            (creator_type,creator_id)
+#  index_raif_model_completion_batches_on_next_poll_at       (next_poll_at)
+#  index_raif_model_completion_batches_on_provider_batch_id  (provider_batch_id)
+#  index_raif_model_completion_batches_on_status             (status)
+#  index_raif_model_completion_batches_on_submitted_at       (submitted_at)
+#  index_raif_model_completion_batches_on_type               (type)
+#
 require "rails_helper"
 
 RSpec.describe Raif::ModelCompletionBatch, type: :model do
@@ -248,7 +287,7 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
       expect { batch.dispatch_completion_handler! }.not_to raise_error
     end
 
-    it "calls handle_batch_completion on the resolved class" do
+    it "calls handle_batch_completion on the resolved class and stamps handler_dispatched_at" do
       stub_const("BatchCompletionHandlerStub", Class.new do
         def self.handle_batch_completion(batch)
           @last_batch = batch
@@ -260,14 +299,56 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
       end)
 
       batch.update!(completion_handler_class_name: "BatchCompletionHandlerStub")
+      expect(batch.handler_dispatched_at).to be_nil
+
       batch.dispatch_completion_handler!
+
       expect(BatchCompletionHandlerStub.last_batch).to eq(batch)
+      expect(batch.reload.handler_dispatched_at).to be_within(2.seconds).of(Time.current)
+    end
+
+    it "is idempotent: a second call after a successful dispatch does not re-run the handler" do
+      stub_const("CountedHandlerStub", Class.new do
+        @calls = 0
+        class << self
+          attr_accessor :calls
+        end
+
+        def self.handle_batch_completion(_batch)
+          self.calls += 1
+        end
+      end)
+
+      batch.update!(completion_handler_class_name: "CountedHandlerStub")
+
+      batch.dispatch_completion_handler!
+      first_dispatched_at = batch.reload.handler_dispatched_at
+      batch.dispatch_completion_handler!
+
+      expect(CountedHandlerStub.calls).to eq(1)
+      expect(batch.reload.handler_dispatched_at).to eq(first_dispatched_at)
+    end
+
+    it "leaves handler_dispatched_at NULL when the handler raises so a future call can retry" do
+      stub_const("RaisingHandlerStub", Class.new do
+        def self.handle_batch_completion(_batch)
+          raise "synthetic-failure"
+        end
+      end)
+
+      batch.update!(completion_handler_class_name: "RaisingHandlerStub")
+
+      expect { batch.dispatch_completion_handler! }.to raise_error("synthetic-failure")
+      expect(batch.reload.handler_dispatched_at).to be_nil
     end
 
     it "logs and skips when the class name does not resolve" do
       batch.update!(completion_handler_class_name: "NoSuchHandlerClassXYZ")
       expect(Raif.logger).to receive(:error).with(a_string_matching(/could not be resolved/))
       expect { batch.dispatch_completion_handler! }.not_to raise_error
+      # Misconfigured handler -- no work was done, so leave the flag NULL in
+      # case the host fixes the class name and re-dispatches.
+      expect(batch.reload.handler_dispatched_at).to be_nil
     end
   end
 

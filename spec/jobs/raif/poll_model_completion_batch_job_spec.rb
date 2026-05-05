@@ -171,17 +171,100 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
       end.not_to have_enqueued_job(described_class)
     end
 
-    it "does not reschedule on transient error if the batch reloaded into a terminal status" do
+    it "does not reschedule on transient error if the batch reloaded into terminal + handler already dispatched" do
       allow(llm_double).to receive(:fetch_batch_status!) do |b|
-        # Simulate a separate process having force-failed the batch concurrently:
-        # the in-memory batch is non-terminal, but the DB row is now terminal.
-        Raif::ModelCompletionBatch.where(id: b.id).update_all(status: "failed", failed_at: Time.current)
+        # Simulate a separate process having fully finalized the batch concurrently:
+        # in-memory batch is non-terminal, but the DB row is terminal AND
+        # handler_dispatched_at is set (the safety sweep ran expire! +
+        # dispatch_completion_handler! while we were in flight). No reason to
+        # reschedule: the work is done.
+        Raif::ModelCompletionBatch.where(id: b.id).update_all(
+          status: "failed", failed_at: Time.current, handler_dispatched_at: Time.current
+        )
         raise Faraday::TimeoutError, "transient"
       end
 
       expect do
         described_class.perform_now(batch.id, attempt: 1)
       end.not_to have_enqueued_job(described_class)
+    end
+
+    it "reschedules on transient error if the batch reloaded into terminal but handler is still pending" do
+      # Mirrors the race where another process force-failed the batch but had
+      # not yet dispatched the handler when our fetch_status! errored. The
+      # rescheduled job's terminal-batch path will pick up the handler dispatch.
+      allow(llm_double).to receive(:fetch_batch_status!) do |b|
+        Raif::ModelCompletionBatch.where(id: b.id).update_all(status: "failed", failed_at: Time.current)
+        raise Faraday::TimeoutError, "transient"
+      end
+      allow(Raif.config).to receive(:model_completion_batch_poll_schedule).and_return([60.seconds])
+
+      expect do
+        described_class.perform_now(batch.id, attempt: 1)
+      end.to have_enqueued_job(described_class).with(batch.id, attempt: 2)
+    end
+
+    describe "terminal-batch handler retry" do
+      it "re-dispatches the handler on a subsequent run when handler_dispatched_at is still NULL" do
+        stub_const("RetryHandlerStub", Class.new do
+          @calls = 0
+          class << self
+            attr_accessor :calls
+            attr_accessor :raise_on_call
+          end
+
+          def self.handle_batch_completion(_batch)
+            self.calls += 1
+            raise "synthetic-handler-error" if @raise_on_call
+          end
+        end)
+
+        batch.update!(status: "failed", failed_at: Time.current, completion_handler_class_name: "RetryHandlerStub")
+
+        # First run: handler raises -> handler_dispatched_at stays NULL.
+        RetryHandlerStub.raise_on_call = true
+        expect do
+          described_class.perform_now(batch.id)
+        end.to raise_error("synthetic-handler-error")
+
+        expect(RetryHandlerStub.calls).to eq(1)
+        expect(batch.reload.handler_dispatched_at).to be_nil
+
+        # Second run (host's job adapter retried us): handler succeeds and the
+        # timestamp is set. Despite the batch already being terminal, the
+        # job re-enters dispatch instead of short-circuiting.
+        RetryHandlerStub.raise_on_call = false
+        described_class.perform_now(batch.id)
+
+        expect(RetryHandlerStub.calls).to eq(2)
+        expect(batch.reload.handler_dispatched_at).to be_present
+      end
+
+      it "is a no-op for a terminal batch whose handler already ran successfully" do
+        stub_const("AlreadyDispatchedHandlerStub", Class.new do
+          @calls = 0
+          class << self
+            attr_accessor :calls
+          end
+
+          def self.handle_batch_completion(_batch)
+            self.calls += 1
+          end
+        end)
+
+        batch.update!(
+          status: "ended",
+          completion_handler_class_name: "AlreadyDispatchedHandlerStub",
+          handler_dispatched_at: 1.minute.ago
+        )
+
+        described_class.perform_now(batch.id)
+
+        # Handler is gated on handler_dispatched_at; the second perform call
+        # must not re-run it.
+        expect(AlreadyDispatchedHandlerStub.calls).to eq(0)
+        expect(llm_double).not_to have_received(:fetch_batch_status!)
+      end
     end
   end
 end

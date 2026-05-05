@@ -21,6 +21,7 @@ class CreateRaifModelCompletionBatches < ActiveRecord::Migration[7.1]
       t.datetime :ended_at
       t.datetime :failed_at
       t.datetime :next_poll_at
+      t.datetime :handler_dispatched_at
       t.send json_column_type, :request_counts
       t.send json_column_type, :provider_response
       t.send json_column_type, :metadata

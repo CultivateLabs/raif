@@ -35,7 +35,21 @@ module Raif
 
     def perform(batch_id, attempt: 1)
       batch = Raif::ModelCompletionBatch.find_by(id: batch_id)
-      return if batch.nil? || batch.terminal?
+      return if batch.nil?
+
+      # If the batch is already terminal at the top of perform, this run
+      # exists either to retry a handler that raised on a previous attempt
+      # (host's job adapter retried us, or the safety sweep beat us to the
+      # terminal transition) or because the polling chain raced with another
+      # finalize path. dispatch_completion_handler! is gated on
+      # handler_dispatched_at, so it's a no-op when the handler already ran
+      # successfully -- otherwise the early return here would silently
+      # swallow handler errors and the consumer's on_batch_completion block
+      # would never run.
+      if batch.terminal?
+        batch.dispatch_completion_handler!
+        return
+      end
 
       batch.fetch_status!
 
@@ -57,13 +71,18 @@ module Raif
 
       if transient_error?(e)
         # Reload (the batch may have been transitioned by another process while
-        # we were in flight). If it's gone or now terminal there's nothing to
-        # reschedule against; the polling chain naturally ends here.
+        # we were in flight). Three cases after reload:
+        # 1. Batch missing -> nothing to reschedule against, end of chain.
+        # 2. Batch terminal AND handler already dispatched -> nothing to do.
+        # 3. Batch terminal but handler NOT dispatched -> reschedule so the
+        #    next run can call dispatch_completion_handler! (the error may
+        #    have come from the handler itself, e.g. a host downstream blip).
+        # 4. Batch non-terminal -> reschedule to pick up polling.
         batch&.reload
-        if batch.nil? || batch.terminal?
+        if batch.nil? || (batch.terminal? && batch.handler_dispatched_at.present?)
           Raif.logger.info(
             "Raif::PollModelCompletionBatchJob ##{batch_id}: not rescheduling after transient error " \
-              "(#{e.class}); batch is missing or already terminal."
+              "(#{e.class}); batch is missing or already finalized + handler dispatched."
           )
           return
         end

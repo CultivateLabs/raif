@@ -124,6 +124,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_04_000000) do
     t.datetime "failed_at"
     t.string "failure_error"
     t.text "failure_reason"
+    t.datetime "handler_dispatched_at"
     t.string "llm_model_key", null: false
     t.jsonb "metadata"
     t.string "model_api_name", null: false
@@ -149,6 +150,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_04_000000) do
 
   create_table "raif_model_completions", force: :cascade do |t|
     t.jsonb "available_model_tools", null: false
+    t.string "batch_custom_id"
     t.integer "cache_creation_input_tokens"
     t.integer "cache_read_input_tokens"
     t.jsonb "citations"
@@ -165,7 +167,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_04_000000) do
     t.decimal "output_token_cost", precision: 10, scale: 6
     t.decimal "prompt_token_cost", precision: 10, scale: 6
     t.integer "prompt_tokens"
-    t.string "batch_custom_id"
     t.bigint "raif_model_completion_batch_id"
     t.text "raw_response"
     t.jsonb "response_array"
@@ -184,12 +185,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_04_000000) do
     t.decimal "total_cost", precision: 10, scale: 6
     t.integer "total_tokens"
     t.datetime "updated_at", null: false
+    t.index ["batch_custom_id"], name: "index_raif_model_completions_on_batch_custom_id"
     t.index ["completed_at"], name: "index_raif_model_completions_on_completed_at"
     t.index ["created_at"], name: "index_raif_model_completions_on_created_at"
     t.index ["failed_at"], name: "index_raif_model_completions_on_failed_at"
-    t.index ["batch_custom_id"], name: "index_raif_model_completions_on_batch_custom_id"
     t.index ["raif_model_completion_batch_id", "batch_custom_id"], name: "index_raif_model_completions_on_batch_id_and_custom_id", unique: true, where: "(raif_model_completion_batch_id IS NOT NULL)"
-    t.index ["raif_model_completion_batch_id"], name: "index_raif_model_completions_on_batch"
+    t.index ["raif_model_completion_batch_id"], name: "index_raif_model_completions_on_raif_model_completion_batch_id"
     t.index ["source_type", "source_id"], name: "index_raif_model_completions_on_source"
     t.index ["started_at"], name: "index_raif_model_completions_on_started_at"
   end

@@ -4,30 +4,31 @@
 #
 # Table name: raif_model_completion_batches
 #
-#  id                             :bigint           not null, primary key
-#  completion_handler_class_name  :string
-#  creator_type                   :string
-#  ended_at                       :datetime
-#  failed_at                      :datetime
-#  failure_error                  :string
-#  failure_reason                 :text
-#  llm_model_key                  :string           not null
-#  metadata                       :jsonb
-#  model_api_name                 :string           not null
-#  next_poll_at                   :datetime
-#  output_token_cost              :decimal(10, 6)
-#  prompt_token_cost              :decimal(10, 6)
-#  provider_batch_id              :string
-#  provider_response              :jsonb
-#  request_counts                 :jsonb
-#  started_at                     :datetime
-#  status                         :string           default("pending"), not null
-#  submitted_at                   :datetime
-#  total_cost                     :decimal(10, 6)
-#  type                           :string           not null
-#  created_at                     :datetime         not null
-#  updated_at                     :datetime         not null
-#  creator_id                     :bigint
+#  id                            :bigint           not null, primary key
+#  completion_handler_class_name :string
+#  creator_type                  :string
+#  ended_at                      :datetime
+#  failed_at                     :datetime
+#  failure_error                 :string
+#  failure_reason                :text
+#  handler_dispatched_at         :datetime
+#  llm_model_key                 :string           not null
+#  metadata                      :jsonb
+#  model_api_name                :string           not null
+#  next_poll_at                  :datetime
+#  output_token_cost             :decimal(10, 6)
+#  prompt_token_cost             :decimal(10, 6)
+#  provider_response             :jsonb
+#  request_counts                :jsonb
+#  started_at                    :datetime
+#  status                        :string           default("pending"), not null
+#  submitted_at                  :datetime
+#  total_cost                    :decimal(10, 6)
+#  type                          :string           not null
+#  created_at                    :datetime         not null
+#  updated_at                    :datetime         not null
+#  creator_id                    :bigint
+#  provider_batch_id             :string
 #
 # Indexes
 #
@@ -178,7 +179,16 @@ module Raif
 
     # Resolves and invokes the batch's completion handler, if one is configured.
     # The handler class must implement `.handle_batch_completion(batch)`.
+    #
+    # Idempotent via handler_dispatched_at: once a successful run finishes, future
+    # callers (the polling job's terminal-batch path, the safety sweep, an
+    # ActiveJob retry of either) skip the dispatch. If the handler raises,
+    # handler_dispatched_at stays NULL so a future caller can re-dispatch --
+    # without that retry path the polling job's `return if batch.terminal?`
+    # guard would silently swallow handler-raised errors and the consumer's
+    # on_batch_completion block would never run.
     def dispatch_completion_handler!
+      return if handler_dispatched_at.present?
       return if completion_handler_class_name.blank?
 
       handler = completion_handler_class_name.safe_constantize
@@ -191,6 +201,7 @@ module Raif
       end
 
       handler.handle_batch_completion(self)
+      update_column(:handler_dispatched_at, Time.current)
     end
 
     # True once submitted_at is older than Raif.config.model_completion_batch_max_age.
