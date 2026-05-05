@@ -243,4 +243,109 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
       expect(task.reload).to be_failed
     end
   end
+
+  describe "on_batch_success / on_batch_failure" do
+    def build_handler(&body)
+      Class.new(Raif::TaskBatchCompletionHandler).tap do |klass|
+        klass.cattr_accessor :calls
+        klass.calls = []
+        klass.class_eval(&body)
+      end
+    end
+
+    def attach_completed_task!
+      task = Raif::TestTask.build_for_batch(
+        batch: batch, batch_custom_id: "ok", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+      )
+      task.raif_model_completion.update!(raw_response: "ok")
+      task.raif_model_completion.completed!
+      task
+    end
+
+    it "fires on_batch_success when status is 'ended' and skips on_batch_failure" do
+      attach_completed_task!
+      batch.update!(status: "ended", ended_at: Time.current)
+
+      handler = build_handler do
+        on_batch_success { self.class.calls << :success }
+        on_batch_failure { self.class.calls << :failure }
+      end
+
+      handler.handle_batch_completion(batch)
+
+      expect(handler.calls).to eq([:success])
+    end
+
+    %w[canceled expired failed].each do |terminal_status|
+      it "fires on_batch_failure when status is '#{terminal_status}' and skips on_batch_success" do
+        batch.update!(status: terminal_status, failed_at: terminal_status == "failed" ? Time.current : nil)
+
+        handler = build_handler do
+          on_batch_success { self.class.calls << :success }
+          on_batch_failure { self.class.calls << :failure }
+        end
+
+        handler.handle_batch_completion(batch)
+
+        expect(handler.calls).to eq([:failure])
+      end
+    end
+
+    it "fires on_batch_completion first, then exactly one of success/failure" do
+      attach_completed_task!
+      batch.update!(status: "ended", ended_at: Time.current)
+
+      handler = build_handler do
+        on_batch_completion { self.class.calls << :completion }
+        on_batch_success    { self.class.calls << :success }
+        on_batch_failure    { self.class.calls << :failure }
+      end
+
+      handler.handle_batch_completion(batch)
+
+      expect(handler.calls).to eq([:completion, :success])
+    end
+
+    it "does nothing extra when only on_batch_completion is registered (current behavior preserved)" do
+      attach_completed_task!
+      batch.update!(status: "ended", ended_at: Time.current)
+
+      handler = build_handler do
+        on_batch_completion { self.class.calls << :completion }
+      end
+
+      handler.handle_batch_completion(batch)
+
+      expect(handler.calls).to eq([:completion])
+    end
+
+    it "is a no-op when only on_batch_success is registered and the batch failed" do
+      batch.update!(status: "canceled", ended_at: Time.current)
+
+      handler = build_handler do
+        on_batch_success { self.class.calls << :success }
+      end
+
+      handler.handle_batch_completion(batch)
+
+      expect(handler.calls).to eq([])
+    end
+
+    it "exposes batch and tasks readers inside on_batch_failure (tasks reflects the force-failed children)" do
+      task = Raif::TestTask.build_for_batch(
+        batch: batch, batch_custom_id: "ff", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+      )
+      task.raif_model_completion.update!(failure_error: "x", failure_reason: "y")
+      task.raif_model_completion.failed!
+      batch.update!(status: "failed", failed_at: Time.current, failure_reason: "synthetic")
+
+      handler = build_handler do
+        on_batch_failure { self.class.calls << [batch.failure_reason, tasks.size, tasks.first&.failed?] }
+      end
+
+      handler.handle_batch_completion(batch)
+
+      expect(handler.calls).to eq([["synthetic", 1, true]])
+    end
+  end
 end

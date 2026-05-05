@@ -4,25 +4,41 @@ module Raif
   # Default completion handler for batches whose child Raif::ModelCompletions
   # were created via Raif::Task.build_for_batch / Raif::Task#prepare_for_batch!.
   #
-  # The typical pattern is to subclass and register a completion block:
+  # The typical pattern is to subclass and register one or more lifecycle
+  # blocks. Three are available:
+  #
+  #   - on_batch_completion fires for every terminal status (ended, canceled,
+  #     expired, failed). Use it for unconditional teardown / observability,
+  #     or as a one-block catchall when you don't need to branch on outcome.
+  #   - on_batch_success fires only when batch.successful? (status == "ended").
+  #     The tasks array is populated with hydrated Raif::Tasks whose results
+  #     were applied from the provider response.
+  #   - on_batch_failure fires only when the batch reached a non-success
+  #     terminal status (canceled / expired / failed). The per-entry fetch was
+  #     skipped, so tasks are all in `failed` state with no useful
+  #     parsed_response; the meaningful state is on the batch itself
+  #     (failure_reason, failure_error, status, metadata).
+  #
+  # Any combination is valid: just the catchall, just success+failure, or all
+  # three (e.g. log + branch). When all three are registered, on_batch_completion
+  # fires first, then exactly one of on_batch_success or on_batch_failure.
   #
   #   class MyConsumer::BatchHandler < Raif::TaskBatchCompletionHandler
-  #     on_batch_completion do
-  #       # Inside the block, `batch` and `tasks` are available:
-  #       #   batch -> the Raif::ModelCompletionBatch (terminal status)
-  #       #   tasks -> Array<Raif::Task> already hydrated via #process_completion!
-  #       # Plus any helper methods you define on the subclass.
+  #     on_batch_success do
   #       successful = tasks.select(&:completed?)
   #       MyConsumer::Aggregator.combine(successful)
+  #     end
+  #
+  #     on_batch_failure do
+  #       MyConsumer::FailureNotifier.notify(batch.failure_reason, batch.metadata)
   #     end
   #   end
   #
   # Then point the batch at the handler when you create it:
   #
-  #   batch = Raif::ModelCompletionBatches::Anthropic.create!(
-  #     llm_model_key: ...,
-  #     model_api_name: ...,
-  #     completion_handler_class_name: "MyConsumer::BatchHandler"
+  #   batch = llm.create_batch(
+  #     completion_handler_class_name: "MyConsumer::BatchHandler",
+  #     metadata: { ... }
   #   )
   #
   # Lifecycle when Raif::PollModelCompletionBatchJob fires the handler:
@@ -30,32 +46,52 @@ module Raif
   #      Raif::Task#process_completion!, which mirrors the synchronous path's
   #      success/failure transitions. Idempotent: tasks already in a terminal
   #      state are skipped (safe for replays).
-  #   2. The registered on_batch_completion block runs.
+  #   2. The registered blocks run in order: on_batch_completion (if any),
+  #      then on_batch_success or on_batch_failure (whichever applies).
   #
   # Per-task hydration errors are caught and logged so one bad task doesn't
-  # block the rest of the batch. Errors raised from the on_batch_completion
-  # block propagate to the caller (typically Raif::PollModelCompletionBatchJob).
+  # block the rest of the batch. Errors raised from a registered block
+  # propagate to the caller (typically Raif::PollModelCompletionBatchJob).
   #
-  # Inside the block, use `next` for early exits -- `return` would try to
+  # Inside any block, use `next` for early exits -- `return` would try to
   # return from the enclosing method scope and raise LocalJumpError.
   class TaskBatchCompletionHandler
 
     class_attribute :batch_completion_block, instance_writer: false, instance_accessor: false
+    class_attribute :batch_success_block,    instance_writer: false, instance_accessor: false
+    class_attribute :batch_failure_block,    instance_writer: false, instance_accessor: false
 
     class << self
-      # DSL: registers the block to run after hydration. The block is
-      # evaluated against an instance of the handler with `batch` and `tasks`
-      # exposed as readers.
+      # DSL: registers a block to run after hydration for every terminal
+      # status. The block is evaluated against an instance of the handler
+      # with `batch` and `tasks` exposed as readers.
       def on_batch_completion(&block)
         self.batch_completion_block = block
+      end
+
+      # DSL: registers a block to run after hydration when the batch reached
+      # the `ended` terminal status (per-entry results applied to each child).
+      def on_batch_success(&block)
+        self.batch_success_block = block
+      end
+
+      # DSL: registers a block to run after hydration when the batch reached
+      # a non-success terminal status (canceled / expired / failed).
+      def on_batch_failure(&block)
+        self.batch_failure_block = block
       end
 
       # Entry point invoked by Raif::ModelCompletionBatch#dispatch_completion_handler!.
       def handle_batch_completion(batch)
         tasks = hydrate_tasks(batch)
+        instance = new(batch, tasks)
 
-        if batch_completion_block
-          new(batch, tasks).instance_exec(&batch_completion_block)
+        instance.instance_exec(&batch_completion_block) if batch_completion_block
+
+        if batch.successful?
+          instance.instance_exec(&batch_success_block) if batch_success_block
+        elsif batch_failure_block
+          instance.instance_exec(&batch_failure_block)
         end
       end
 

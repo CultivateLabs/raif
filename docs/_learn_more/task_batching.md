@@ -99,37 +99,61 @@ expire_stuck_model_completion_batches:
 
 # Consuming a batch
 
-Subclass `Raif::TaskBatchCompletionHandler` and register a completion block. Inside the block, `batch` and `tasks` are exposed as readers.
+Subclass `Raif::TaskBatchCompletionHandler` and register one or more lifecycle blocks. Inside any block, `batch` and `tasks` are exposed as readers, plus any helper methods you define on the subclass.
+
+Three macros are available:
+
+- `on_batch_success` fires only when `batch.successful?` (status is `"ended"`). Tasks have been hydrated with real provider results — `parsed_response` populated, tool invocations processed. This is where you aggregate.
+- `on_batch_failure` fires only when the batch reached a non-success terminal status (`canceled` / `expired` / `failed`). The per-entry fetch was skipped, so tasks are all in `failed` state with no useful `parsed_response` — the meaningful state is on the batch itself: `batch.failure_reason`, `batch.failure_error`, `batch.status`, `batch.metadata`.
+- `on_batch_completion` fires for every terminal status. Use it for unconditional logging or as a one-block catchall when you don't need to branch on outcome.
+
+When all three are registered, `on_batch_completion` fires first, then exactly one of `on_batch_success` / `on_batch_failure`.
 
 ```ruby
 class MyApp::DocumentSummaryBatchHandler < Raif::TaskBatchCompletionHandler
-  on_batch_completion do
+  on_batch_success do
     campaign = Campaign.find_by(id: batch.metadata["campaign_id"])
     next unless campaign
 
-    successful = tasks.select(&:completed?)
-    failed = tasks.reject(&:completed?)
-
-    successful.each do |task|
+    tasks.select(&:completed?).each do |task|
       campaign.summaries.create!(
         document_id: task.run_with["document"].id,
         text: task.parsed_response["summary"]
       )
     end
+  end
 
-    Airbrake.notify("Document summary batch had #{failed.size} failures") if failed.any?
+  on_batch_failure do
+    campaign = Campaign.find_by(id: batch.metadata["campaign_id"])
+    next unless campaign
+
+    Airbrake.notify(
+      "Document summary batch ##{batch.id} failed: #{batch.status}",
+      params: { campaign_id: campaign.id, failure_reason: batch.failure_reason }
+    )
   end
 end
 ```
 
-Things to know about the handler:
+If your success and failure paths share most of their work, the catchall is fine too — the macros are independent and you can use any subset:
 
-- The base class hydrates each child `Raif::ModelCompletion` through its source `Raif::Task#process_completion!` *before* your block runs. By the time the block executes, every task is in its terminal state (`completed?` or `failed?`), `parsed_response` is populated, and any model tool invocations have been processed. You filter, you don't transition.
-- The block is `instance_exec`'d on a handler instance, so any helper methods you define on the subclass are callable directly:
+```ruby
+class MyApp::SimpleBatchHandler < Raif::TaskBatchCompletionHandler
+  on_batch_completion do
+    next unless batch.successful?
+    # ... aggregate ...
+  end
+end
+```
+
+Things to know about the handlers:
+
+- The base class hydrates each child `Raif::ModelCompletion` through its source `Raif::Task#process_completion!` *before* any block runs. By the time blocks execute, every task is in its terminal state (`completed?` or `failed?`).
+- Blocks are `instance_exec`'d on a handler instance, so helper methods on the subclass are reachable:
 
   ```ruby
   class MyApp::DocumentSummaryBatchHandler < Raif::TaskBatchCompletionHandler
-    on_batch_completion do
+    on_batch_success do
       next if successful_tasks.empty?
       persist!(successful_tasks)
     end
@@ -144,11 +168,10 @@ Things to know about the handler:
   end
   ```
 
-- Use `next` (not `return`) for early exit. The block is defined at class-body scope, so `return` would raise `LocalJumpError`.
-- Per-task hydration errors are caught and logged so one bad task doesn't block the rest of the batch. Errors raised from inside your `on_batch_completion` block propagate to `Raif::PollModelCompletionBatchJob` – handle them yourself if you need different semantics.
-- The handler runs for whole-batch failures too. Check `batch.successful?` (true only when `status == "ended"`) before assuming you have results to aggregate. `batch.failure_reason` carries the provider-side detail when available.
+- Use `next` (not `return`) for early exit. Blocks are defined at class-body scope, so `return` would raise `LocalJumpError`.
+- Per-task hydration errors are caught and logged so one bad task doesn't block the rest of the batch. Errors raised from inside a registered block propagate to `Raif::PollModelCompletionBatchJob` – handle them yourself if you need different semantics.
 
-If you're attaching non-task completions to a batch via `Raif::Llm#build_pending_model_completion` directly, override `handle_batch_completion(batch)` instead of using `on_batch_completion` – you'll skip the task hydration step and read children off `batch.raif_model_completions`.
+If you're attaching non-task completions to a batch via `Raif::Llm#build_pending_model_completion` directly, override `handle_batch_completion(batch)` instead of using these macros – you'll skip the task hydration step and read children off `batch.raif_model_completions`.
 
 # Cancellation
 
