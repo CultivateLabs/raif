@@ -14,6 +14,8 @@
 #  failed_at                   :datetime
 #  failure_error               :string
 #  failure_reason              :text
+#  failure_response_body       :text
+#  failure_response_status     :integer
 #  llm_model_key               :string           not null
 #  max_completion_tokens       :integer
 #  messages                    :jsonb            not null
@@ -105,10 +107,32 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     end
   end
 
+  # Maximum number of characters of an upstream HTTP body we persist on
+  # failure. The body usually carries the provider's actual error reason
+  # (e.g. OpenAI/Anthropic structured error JSON), which `failure_reason`
+  # cannot fit in 255 chars. 4 KB is enough to capture realistic error
+  # payloads without bloating storage.
+  FAILURE_RESPONSE_BODY_MAX_CHARS = 4_000
+
   def record_failure!(exception)
     self.failed_at = Time.current
     self.failure_error = exception.class.name
     self.failure_reason = exception.message.truncate(255)
+    # Always clear before re-populating so a second call with a different
+    # exception kind doesn't leave stale response metadata attached.
+    self.failure_response_status = nil
+    self.failure_response_body = nil
+
+    # Faraday errors carry the provider's HTTP status and response body —
+    # the latter is where the actual provider-side error reason lives. Both
+    # are nil when the failure happened before a response was received
+    # (DNS/connection refused/timeout).
+    if exception.is_a?(Faraday::Error)
+      self.failure_response_status = exception.response_status
+      body = exception.response_body
+      self.failure_response_body = body.to_s.first(FAILURE_RESPONSE_BODY_MAX_CHARS) if body.present?
+    end
+
     save!
   end
 

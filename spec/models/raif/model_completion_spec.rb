@@ -567,6 +567,75 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         expect(reloaded.failure_error).to eq("StandardError")
         expect(reloaded.failure_reason).to eq("Test error")
       end
+
+      context "when the exception is a Faraday::Error with a response" do
+        let(:body) { '{"error":{"message":"Invalid request: input tokens exceed max"}}' }
+        let(:exception) do
+          Faraday::BadRequestError.new(
+            "the server responded with status 400",
+            { status: 400, headers: {}, body: body }
+          )
+        end
+
+        it "stores the response status and body" do
+          model_completion.record_failure!(exception)
+
+          expect(model_completion.failure_error).to eq("Faraday::BadRequestError")
+          expect(model_completion.failure_response_status).to eq(400)
+          expect(model_completion.failure_response_body).to eq(body)
+        end
+
+        it "truncates a body longer than FAILURE_RESPONSE_BODY_MAX_CHARS" do
+          long_body = "x" * (described_class::FAILURE_RESPONSE_BODY_MAX_CHARS + 1_000)
+          exception = Faraday::BadRequestError.new(
+            "the server responded with status 400",
+            { status: 400, headers: {}, body: long_body }
+          )
+
+          model_completion.record_failure!(exception)
+
+          expect(model_completion.failure_response_body.length).to eq(described_class::FAILURE_RESPONSE_BODY_MAX_CHARS)
+        end
+      end
+
+      context "when the exception is a Faraday::Error with no response (e.g. ConnectionFailed)" do
+        it "leaves failure_response_status and failure_response_body nil" do
+          exception = Faraday::ConnectionFailed.new("Connection refused")
+
+          model_completion.record_failure!(exception)
+
+          expect(model_completion.failure_error).to eq("Faraday::ConnectionFailed")
+          expect(model_completion.failure_response_status).to be_nil
+          expect(model_completion.failure_response_body).to be_nil
+        end
+      end
+
+      context "when the exception is not a Faraday::Error" do
+        it "leaves failure_response_status and failure_response_body nil" do
+          model_completion.record_failure!(StandardError.new("kaboom"))
+
+          expect(model_completion.failure_response_status).to be_nil
+          expect(model_completion.failure_response_body).to be_nil
+        end
+      end
+
+      context "when called twice with different exception kinds" do
+        it "clears stale response metadata from a prior Faraday failure" do
+          first = Faraday::BadRequestError.new(
+            "the server responded with status 400",
+            { status: 400, headers: {}, body: '{"error":"first"}' }
+          )
+          model_completion.record_failure!(first)
+          expect(model_completion.failure_response_status).to eq(400)
+          expect(model_completion.failure_response_body).to eq('{"error":"first"}')
+
+          model_completion.record_failure!(StandardError.new("subsequent failure"))
+
+          expect(model_completion.failure_error).to eq("StandardError")
+          expect(model_completion.failure_response_status).to be_nil
+          expect(model_completion.failure_response_body).to be_nil
+        end
+      end
     end
   end
 
