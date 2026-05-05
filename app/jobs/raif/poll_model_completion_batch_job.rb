@@ -85,6 +85,10 @@ module Raif
       delay = next_poll_delay(attempt)
       batch.update_column(:next_poll_at, delay.from_now)
       self.class.set(wait: delay).perform_later(batch.id, attempt: attempt + 1)
+      Raif.logger.info(
+        "Raif::PollModelCompletionBatchJob ##{batch.id}: rescheduling next poll in #{delay.inspect} " \
+          "(attempt=#{attempt + 1}, status=#{batch.status}, provider_batch_id=#{batch.provider_batch_id.inspect})"
+      )
     end
 
     def next_poll_delay(attempt)
