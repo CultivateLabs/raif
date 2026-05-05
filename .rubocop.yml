@@ -44,6 +44,13 @@ Layout/LineLength:
   Exclude:
     - 'lib/generators/raif/install/templates/initializer.rb'
     - 'spec/dummy/db/schema.rb'
+  # annotate_models writes one line per index in the schema header; partial
+  # unique indexes with WHERE clauses (e.g.
+  # index_raif_model_completions_on_batch_id_and_custom_id) routinely exceed
+  # the 150-char cap. Skip any "#  index_..." line in those auto-generated
+  # blocks rather than rewrap them by hand on every annotation refresh.
+  AllowedPatterns:
+    - '^#\s+index_'
 
 Lint/RequireRangeParentheses: 
   # new in 1.32 

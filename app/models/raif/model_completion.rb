@@ -4,53 +4,58 @@
 #
 # Table name: raif_model_completions
 #
-#  id                          :bigint           not null, primary key
-#  available_model_tools       :jsonb            not null
-#  cache_creation_input_tokens :integer
-#  cache_read_input_tokens     :integer
-#  citations                   :jsonb
-#  completed_at                :datetime
-#  completion_tokens           :integer
-#  failed_at                   :datetime
-#  failure_error               :string
-#  failure_reason              :text
-#  llm_model_key               :string           not null
-#  max_completion_tokens       :integer
-#  messages                    :jsonb            not null
-#  model_api_name              :string           not null
-#  output_token_cost           :decimal(10, 6)
-#  prompt_token_cost           :decimal(10, 6)
-#  prompt_tokens               :integer
-#  raw_response                :text
-#  response_array              :jsonb
-#  response_format             :integer          default("text"), not null
-#  response_format_parameter   :string
-#  response_tool_calls         :jsonb
-#  retry_count                 :integer          default(0), not null
-#  batch_custom_id             :string
-#  source_type                 :string
-#  started_at                  :datetime
-#  stream_response             :boolean          default(FALSE), not null
-#  system_prompt               :text
-#  temperature                 :decimal(5, 3)
-#  tool_choice                 :string
-#  total_cost                  :decimal(10, 6)
-#  total_tokens                :integer
-#  created_at                  :datetime         not null
-#  updated_at                  :datetime         not null
+#  id                             :bigint           not null, primary key
+#  available_model_tools          :jsonb            not null
+#  cache_creation_input_tokens    :integer
+#  cache_read_input_tokens        :integer
+#  citations                      :jsonb
+#  completed_at                   :datetime
+#  completion_tokens              :integer
+#  failed_at                      :datetime
+#  failure_error                  :string
+#  failure_reason                 :text
+#  llm_model_key                  :string           not null
+#  max_completion_tokens          :integer
+#  messages                       :jsonb            not null
+#  model_api_name                 :string           not null
+#  output_token_cost              :decimal(10, 6)
+#  prompt_token_cost              :decimal(10, 6)
+#  prompt_tokens                  :integer
+#  raw_response                   :text
+#  response_array                 :jsonb
+#  response_format                :integer          default("text"), not null
+#  response_format_parameter      :string
+#  response_tool_calls            :jsonb
+#  retry_count                    :integer          default(0), not null
+#  source_type                    :string
+#  started_at                     :datetime
+#  stream_response                :boolean          default(FALSE), not null
+#  system_prompt                  :text
+#  temperature                    :decimal(5, 3)
+#  tool_choice                    :string
+#  total_cost                     :decimal(10, 6)
+#  total_tokens                   :integer
+#  created_at                     :datetime         not null
+#  updated_at                     :datetime         not null
+#  batch_custom_id                :string
 #  raif_model_completion_batch_id :bigint
-#  response_id                 :string
-#  source_id                   :bigint
+#  response_id                    :string
+#  source_id                      :bigint
 #
 # Indexes
 #
-#  index_raif_model_completions_on_batch          (raif_model_completion_batch_id)
-#  index_raif_model_completions_on_completed_at   (completed_at)
-#  index_raif_model_completions_on_created_at     (created_at)
-#  index_raif_model_completions_on_failed_at      (failed_at)
-#  index_raif_model_completions_on_batch_custom   (batch_custom_id)
-#  index_raif_model_completions_on_source         (source_type,source_id)
-#  index_raif_model_completions_on_started_at     (started_at)
+#  index_raif_model_completions_on_batch_custom_id                 (batch_custom_id)
+#  index_raif_model_completions_on_batch_id_and_custom_id          (raif_model_completion_batch_id,batch_custom_id) UNIQUE WHERE (raif_model_completion_batch_id IS NOT NULL)
+#  index_raif_model_completions_on_completed_at                    (completed_at)
+#  index_raif_model_completions_on_created_at                      (created_at)
+#  index_raif_model_completions_on_failed_at                       (failed_at)
+#  index_raif_model_completions_on_raif_model_completion_batch_id  (raif_model_completion_batch_id)
+#  index_raif_model_completions_on_source                          (source_type,source_id)
+#  index_raif_model_completions_on_started_at                      (started_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (raif_model_completion_batch_id => raif_model_completion_batches.id)
 #
 class Raif::ModelCompletion < Raif::ApplicationRecord
   include Raif::Concerns::LlmResponseParsing
@@ -175,6 +180,13 @@ private
 
     self.prompt_token_cost = ((prompt_token_cost || 0) * multiplier) if prompt_token_cost.present?
     self.output_token_cost = ((output_token_cost || 0) * multiplier) if output_token_cost.present?
-    self.total_cost = ((prompt_token_cost || 0) + (output_token_cost || 0))
+
+    # Mirror calculate_costs's guard so a fresh batch completion (no tokens
+    # recorded yet) doesn't get total_cost coerced from NULL to 0 -- otherwise
+    # batch completions diverge from non-batch completions in the time
+    # between persist and result-application.
+    if prompt_token_cost.present? || output_token_cost.present?
+      self.total_cost = (prompt_token_cost || 0) + (output_token_cost || 0)
+    end
   end
 end
