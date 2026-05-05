@@ -29,6 +29,29 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
     end
   end
 
+  describe "#create_batch" do
+    it "creates a persisted batch on the right STI subclass with the LLM's key and api_name pre-populated" do
+      batch = llm.create_batch(
+        completion_handler_class_name: "MyHandler",
+        metadata: { "campaign_id" => 42 }
+      )
+
+      expect(batch).to be_a(Raif::ModelCompletionBatches::Anthropic)
+      expect(batch).to be_persisted
+      expect(batch.llm_model_key).to eq(llm.key.to_s)
+      expect(batch.model_api_name).to eq(llm.api_name)
+      expect(batch.completion_handler_class_name).to eq("MyHandler")
+      expect(batch.metadata).to eq("campaign_id" => 42)
+      expect(batch.status).to eq("pending")
+    end
+
+    it "forwards arbitrary attributes (e.g. creator) to the underlying record" do
+      user = FB.create(:raif_test_user)
+      batch = llm.create_batch(creator: user)
+      expect(batch.creator).to eq(user)
+    end
+  end
+
   describe "#submit_batch!" do
     let!(:task1) do
       Raif::TestTask.build_for_batch(

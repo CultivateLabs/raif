@@ -227,6 +227,13 @@ module Raif
       false
     end
 
+    # Instance-level shortcut for the class-level predicate so callers can use the
+    # idiomatic Raif.llm(:some_key).supports_batch_inference? form instead of
+    # reaching through to the class.
+    def supports_batch_inference?
+      self.class.supports_batch_inference?
+    end
+
     # Multiplier applied to per-token costs when a model completion was resolved
     # through this provider's Batch API. Defaults to 0.5 (50% discount), which is
     # what both Anthropic and OpenAI charge for batch requests today.

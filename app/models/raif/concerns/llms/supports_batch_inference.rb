@@ -36,6 +36,22 @@ module Raif::Concerns::Llms::SupportsBatchInference
     raise NotImplementedError, "#{self.class.name} must implement #batch_class"
   end
 
+  # Convenience: creates and persists a Raif::ModelCompletionBatch sized to this
+  # LLM. Saves callers from having to know the provider's batch subclass or
+  # repeat the LLM model key / api_name.
+  #
+  # All other batch attributes (creator, completion_handler_class_name,
+  # metadata, ...) are forwarded.
+  #
+  # @return [Raif::ModelCompletionBatch] a persisted batch in the `pending` state
+  def create_batch(**attrs)
+    batch_class.create!(
+      llm_model_key: key.to_s,
+      model_api_name: api_name,
+      **attrs
+    )
+  end
+
   # Submits a Raif::ModelCompletionBatch (with its child Raif::ModelCompletion records already
   # built and persisted) to the provider's Batch API. Should populate provider_batch_id,
   # provider_response, status, and submitted_at on the batch.
