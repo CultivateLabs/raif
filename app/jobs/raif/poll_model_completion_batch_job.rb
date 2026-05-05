@@ -35,7 +35,16 @@ module Raif
 
     def perform(batch_id, attempt: 1)
       batch = Raif::ModelCompletionBatch.find_by(id: batch_id)
-      return if batch.nil?
+      if batch.nil?
+        Raif.logger.info("Raif::PollModelCompletionBatchJob ##{batch_id}: batch not found; skipping.")
+        return
+      end
+
+      Raif.logger.info(
+        "Raif::PollModelCompletionBatchJob ##{batch.id}: polling " \
+          "(attempt=#{attempt}, provider=#{batch.class.name}, llm_model_key=#{batch.llm_model_key.inspect}, " \
+          "provider_batch_id=#{batch.provider_batch_id.inspect}, status=#{batch.status})"
+      )
 
       # If the batch is already terminal at the top of perform, this run
       # exists either to retry a handler that raised on a previous attempt
@@ -47,19 +56,37 @@ module Raif
       # swallow handler errors and the consumer's on_batch_completion block
       # would never run.
       if batch.terminal?
+        Raif.logger.info(
+          "Raif::PollModelCompletionBatchJob ##{batch.id}: batch already terminal " \
+            "(status=#{batch.status}, handler_dispatched_at=#{batch.handler_dispatched_at&.iso8601 || "nil"}); " \
+            "dispatching completion handler and returning."
+        )
         batch.dispatch_completion_handler!
         return
       end
 
-      batch.fetch_status!
+      previous_status = batch.status
+      new_status = batch.fetch_status!
+      Raif.logger.info(
+        "Raif::PollModelCompletionBatchJob ##{batch.id}: provider returned status=#{new_status.inspect} " \
+          "(was #{previous_status.inspect}, request_counts=#{batch.request_counts.inspect})"
+      )
 
       if batch.terminal?
+        Raif.logger.info(
+          "Raif::PollModelCompletionBatchJob ##{batch.id}: terminal status reached (#{batch.status}); " \
+            "finalizing and dispatching completion handler."
+        )
         batch.finalize!
         batch.dispatch_completion_handler!
         return
       end
 
       if batch.max_age_exceeded?
+        Raif.logger.warn(
+          "Raif::PollModelCompletionBatchJob ##{batch.id}: max_age exceeded " \
+            "(submitted_at=#{batch.submitted_at&.iso8601}, max_age=#{Raif.config.model_completion_batch_max_age}); expiring."
+        )
         batch.expire!(reason: "Batch exceeded Raif.config.model_completion_batch_max_age (#{Raif.config.model_completion_batch_max_age})")
         batch.dispatch_completion_handler!
         return
