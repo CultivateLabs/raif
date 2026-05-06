@@ -32,7 +32,7 @@ end
 
 PROBE_TASK_CLASS = ProbeStructuredOutputsTask
 PROBE_PROMPT = "Tell me a joke. Reply with a JSON object that has a 'joke' key " \
-               "and an 'answer' key. Both values must be non-empty strings."
+  "and an 'answer' key. Both values must be non-empty strings."
 PROBE_REQUIRED_KEYS = %w[joke answer].freeze
 
 SELECTORS = {
