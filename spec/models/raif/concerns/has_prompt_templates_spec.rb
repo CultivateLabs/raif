@@ -14,6 +14,15 @@ RSpec.describe Raif::Concerns::HasPromptTemplates do
         task = Raif::TestTemplateTask.new
         expect(task.build_prompt).to eq("Tell me a joke about the topic of pirates.")
       end
+
+      # Regression: prompt templates are plain-text LLM input, so `<%= %>`
+      # output must not be HTML-escaped. Without escape_ignore_list covering
+      # the raif prompt mime types, " becomes &quot; and ' becomes &#39;,
+      # corrupting the prompt sent to the model.
+      it "does not HTML-escape interpolated content with quotes or apostrophes" do
+        task = Raif::TestTemplateTask.new(topic: %q(cats "and" dogs's))
+        expect(task.build_prompt).to eq(%q(Tell me a joke about the topic of cats "and" dogs's.))
+      end
     end
 
     context "when no template exists but build_prompt is overridden" do

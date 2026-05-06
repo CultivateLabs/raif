@@ -1,0 +1,258 @@
+# frozen_string_literal: true
+
+# Anthropic Messages Batches API support for Raif::Llms::Anthropic.
+# Implements the Raif::Concerns::Llms::SupportsBatchInference contract on top
+# of /v1/messages/batches and the JSONL results stream.
+#
+# The host LLM class is expected to provide #build_request_parameters and
+# #update_model_completion -- these are reused verbatim from the synchronous
+# path so prompt caching, tool definitions, and response shape carry over.
+module Raif::Concerns::Llms::Anthropic::BatchInference
+  extend ActiveSupport::Concern
+
+  include Raif::Concerns::Llms::SupportsBatchInference
+
+  def batch_class
+    Raif::ModelCompletionBatches::Anthropic
+  end
+
+  # Submits all child Raif::ModelCompletion records of the batch as a single
+  # Anthropic Messages Batch. Each entry's `params` body is identical to what
+  # the synchronous /v1/messages endpoint would receive.
+  #
+  # The batch + child writes happen in a transaction so a partial failure
+  # (e.g. the network call succeeds but the child started_at update raises)
+  # leaves no submitted-but-unstamped state behind.
+  def submit_batch!(batch)
+    batch.assert_submittable!
+
+    completions = batch.raif_model_completions.to_a
+    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
+
+    requests = completions.map do |mc|
+      if mc.batch_custom_id.blank?
+        raise Raif::Errors::InvalidBatchError, "Raif::ModelCompletion ##{mc.id} has blank batch_custom_id"
+      end
+
+      { custom_id: mc.batch_custom_id, params: build_request_parameters(mc) }
+    end
+
+    response = batch_connection.post("messages/batches") do |req|
+      req.body = { requests: requests }
+    end
+
+    body = response.body
+    submitted_at = Time.current
+
+    Raif::ModelCompletionBatch.transaction do
+      batch.update!(
+        provider_batch_id: body["id"],
+        status: map_processing_status(body["processing_status"]) || "submitted",
+        submitted_at: submitted_at,
+        started_at: submitted_at,
+        provider_response: (batch.provider_response || {}).merge(
+          "results_url" => body["results_url"],
+          "cancel_url" => body["cancel_url"]
+        ),
+        request_counts: body["request_counts"] || {}
+      )
+
+      # Single UPDATE for all children that don't already have a started_at,
+      # filtered in SQL so we can't stomp a started_at that was set by another
+      # process between when we loaded `completions` and now.
+      batch.raif_model_completions.where(started_at: nil).update_all(started_at: submitted_at)
+    end
+
+    batch
+  end
+
+  def fetch_batch_status!(batch)
+    response = batch_connection.get("messages/batches/#{batch.provider_batch_id}")
+    body = response.body
+    new_status = map_processing_status(body["processing_status"])
+
+    # Re-acquire a row-level lock + reload so we don't overwrite a status another
+    # process (e.g. ExpireStuckModelCompletionBatchesJob) just transitioned to
+    # terminal. Without this guard, a stale instance can stomp a `failed`
+    # decision back to whatever the provider currently reports.
+    batch.with_lock do
+      return batch.status if batch.terminal?
+
+      updates = {
+        status: new_status,
+        request_counts: body["request_counts"] || {},
+        provider_response: (batch.provider_response || {}).merge(
+          "results_url" => body["results_url"],
+          "cancel_url" => body["cancel_url"]
+        )
+      }
+      if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
+        updates[:ended_at] = Time.current
+      end
+
+      batch.update!(updates)
+    end
+
+    new_status
+  end
+
+  # Sends a cancel request to Anthropic's Messages Batches API. Cancellation
+  # is asynchronous on Anthropic's side: the provider transitions to
+  # processing_status "canceling" first, then to "canceled" once in-flight
+  # entries finish. Returns the (possibly transitional) Raif status.
+  def cancel_batch!(batch)
+    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no provider_batch_id" if batch.provider_batch_id.blank?
+    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} is already terminal (status=#{batch.status})" if batch.terminal?
+
+    response = batch_connection.post("messages/batches/#{batch.provider_batch_id}/cancel")
+    body = response.body
+    new_status = map_processing_status(body["processing_status"])
+
+    batch.with_lock do
+      return batch.status if batch.terminal?
+
+      updates = {
+        status: new_status,
+        request_counts: body["request_counts"] || batch.request_counts,
+        provider_response: (batch.provider_response || {}).merge(
+          "results_url" => body["results_url"],
+          "cancel_url" => body["cancel_url"]
+        )
+      }
+      if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
+        updates[:ended_at] = Time.current
+      end
+
+      batch.update!(updates)
+    end
+
+    new_status
+  end
+
+  def fetch_batch_results!(batch)
+    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no results_url" if batch.results_url.blank?
+
+    completions_by_id = batch.raif_model_completions.index_by(&:batch_custom_id)
+
+    response = batch_results_connection.get(batch.results_url)
+    body = response.body.to_s
+
+    body.each_line do |line|
+      line = line.strip
+      next if line.blank?
+
+      begin
+        raw = JSON.parse(line)
+      rescue JSON::ParserError => e
+        # One bad line shouldn't poison the rest of the batch. Skip it; any
+        # child completion that never gets matched falls through to the
+        # missing-entry sweep below and is force-failed there.
+        Raif.logger.error(
+          "Anthropic batch ##{batch.id} results: skipping malformed JSONL line " \
+            "(#{e.class}: #{e.message}): #{line.inspect}"
+        )
+        next
+      end
+
+      custom_id = raw["custom_id"]
+      mc = completions_by_id[custom_id]
+      if mc.nil?
+        Raif.logger.warn(
+          "Anthropic batch results: custom_id #{custom_id.inspect} did not match any child completion in batch ##{batch.id}"
+        )
+        next
+      end
+
+      apply_batch_result(mc, raw)
+    end
+
+    # Anything that was never reported in the results stream (rare; possible if
+    # the batch expired mid-flight or was canceled) is force-failed so the
+    # workflow can advance.
+    completions_by_id.each_value do |mc|
+      mc.reload
+      next if mc.completed? || mc.failed?
+
+      mc.started_at ||= batch.started_at
+      mc.failure_error = "Anthropic batch entry missing"
+      mc.failure_reason = "Result not present in results stream (batch ##{batch.id})"
+      mc.failed!
+    end
+
+    batch.recalculate_costs!
+    batch
+  end
+
+  # Applies one per-entry batch result to a Raif::ModelCompletion. The success
+  # path feeds the embedded `message` payload through update_model_completion --
+  # the same parser used by the synchronous and streaming paths -- so token
+  # counts, tool calls, citations, and response shape are populated identically.
+  # The 50% Anthropic batch discount is applied automatically by
+  # Raif::ModelCompletion#calculate_costs (because raif_model_completion_batch_id is set).
+  def apply_batch_result(mc, raw_result)
+    result = raw_result["result"] || {}
+
+    # Set started_at in-memory before any save below, so update_model_completion's
+    # save (or mc.failed!'s save) persists it in a single round-trip.
+    mc.started_at ||= mc.raif_model_completion_batch&.started_at || Time.current
+
+    case result["type"]
+    when "succeeded"
+      update_model_completion(mc, result["message"])
+      mc.completed!
+    else
+      type = result["type"].to_s
+      error = result["error"] || {}
+      mc.failure_error = "Anthropic batch entry #{type.presence || "failed"}"
+      mc.failure_reason = (error["message"].presence || type.presence || "unknown failure").to_s.truncate(255)
+      mc.failed!
+    end
+
+    mc
+  end
+
+private
+
+  def batch_connection
+    @batch_connection ||= Faraday.new(url: "https://api.anthropic.com/v1", request: Raif.default_request_options) do |f|
+      f.headers["x-api-key"] = Raif.config.anthropic_api_key
+      f.headers["anthropic-version"] = "2023-06-01"
+      if Raif.config.anthropic_message_batches_beta_header.present?
+        f.headers["anthropic-beta"] = Raif.config.anthropic_message_batches_beta_header
+      end
+      f.request :json
+      f.response :json
+      f.response :raise_error
+    end
+  end
+
+  # The results_url returned by the batches API serves JSONL, not JSON, and may
+  # be served from a different host than /v1. Use a connection that does NOT
+  # auto-parse the response body.
+  def batch_results_connection
+    @batch_results_connection ||= Faraday.new(request: Raif.default_request_options) do |f|
+      f.headers["x-api-key"] = Raif.config.anthropic_api_key
+      f.headers["anthropic-version"] = "2023-06-01"
+      if Raif.config.anthropic_message_batches_beta_header.present?
+        f.headers["anthropic-beta"] = Raif.config.anthropic_message_batches_beta_header
+      end
+      f.response :raise_error
+    end
+  end
+
+  def map_processing_status(processing_status)
+    case processing_status
+    when "in_progress", "canceling" then "in_progress"
+    when "ended" then "ended"
+    when "canceled" then "canceled"
+    when "expired" then "expired"
+    else
+      Raif.logger.warn(
+        "Raif::Concerns::Llms::Anthropic::BatchInference: unknown Anthropic batch processing_status " \
+          "#{processing_status.inspect}; treating as in_progress. The provider may have introduced a new " \
+          "status that Raif doesn't yet recognize."
+      )
+      "in_progress"
+    end
+  end
+end

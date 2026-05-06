@@ -77,6 +77,8 @@ task = Raif::Tasks::DocumentSummarization.run(document: document, creator: user)
 summary = task.parsed_response
 ```
 
+For the asynchronous batched alternative – submit many tasks at once through a provider Batch API in exchange for a ~50% discount, with results returned minutes-to-hours later – see [Task Batching](../learn_more/task_batching).
+
 # JSON Response Format Tasks
 
 If you want the LLM to return a JSON response, use `llm_response_format :json` in your task. 
