@@ -93,6 +93,25 @@ RSpec.describe Raif::Llm, type: :model do
         expect(mc.failure_reason).to eq("Connection failed")
       end
 
+      it "persists upstream HTTP status and response body when a Faraday::Error carries a response" do
+        allow(Raif.config).to receive(:llm_request_retriable_exceptions).and_return([])
+        body = '{"error":{"message":"input tokens exceed maximum","type":"invalid_request_error"}}'
+        faraday_error = Faraday::BadRequestError.new(
+          "the server responded with status 400",
+          { status: 400, headers: {}, body: body }
+        )
+        allow(test_llm).to receive(:perform_model_completion!).and_raise(faraday_error)
+
+        expect do
+          test_llm.chat(messages: messages, system_prompt: system_prompt)
+        end.to raise_error(Faraday::BadRequestError)
+
+        mc = Raif::ModelCompletion.newest_first.first
+        expect(mc.failed?).to be true
+        expect(mc.failure_response_status).to eq(400)
+        expect(mc.failure_response_body).to eq(body)
+      end
+
       it "records failure when StandardError occurs" do
         allow(Raif.config).to receive(:llm_request_retriable_exceptions).and_return([])
         allow(test_llm).to receive(:perform_model_completion!).and_raise(StandardError.new("Unexpected error"))

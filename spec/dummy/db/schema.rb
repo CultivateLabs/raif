@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_04_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_05_174900) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -160,6 +160,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_04_000000) do
     t.datetime "failed_at"
     t.string "failure_error"
     t.text "failure_reason"
+    t.text "failure_response_body"
+    t.integer "failure_response_status"
     t.string "llm_model_key", null: false
     t.integer "max_completion_tokens"
     t.jsonb "messages", null: false
