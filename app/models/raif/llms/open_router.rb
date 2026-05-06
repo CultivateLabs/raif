@@ -74,20 +74,6 @@ private
 
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
-
-      if model_completion.json_response_schema.present?
-        validate_json_schema!(model_completion.json_response_schema)
-
-        tools << {
-          type: "function",
-          function: {
-            name: "json_response",
-            description: "Generate a structured JSON response based on the provided schema.",
-            parameters: model_completion.json_response_schema
-          }
-        }
-      end
-
       params[:tools] = tools unless tools.blank?
 
       if model_completion.tool_choice == "required"
@@ -106,9 +92,27 @@ private
       params[:stream_options] = { include_usage: true }
     end
 
-    # OpenRouter will sometimes complain about combining response_format json and tool calling.
-    # If we're telling it to use the json_response tool, then the json_object response_format should be irrelevant.
-    if model_completion.response_format_json? && params[:tools].blank?
+    if model_completion.json_response_schema.present?
+      # Use OpenRouter's documented structured-output mechanism. With
+      # `provider.require_parameters: true` OpenRouter routes only to providers
+      # that honor `response_format`, so models that previously needed the
+      # `json_response` function-tool workaround (Grok in particular) get the
+      # schema enforced provider-side instead of relying on prompt compliance.
+      # See https://openrouter.ai/docs/guides/features/structured-outputs and
+      # https://openrouter.ai/docs/guides/routing/provider-selection.
+      validate_json_schema!(model_completion.json_response_schema)
+      params[:response_format] = {
+        type: "json_schema",
+        json_schema: {
+          name: "json_response_schema",
+          strict: true,
+          schema: model_completion.json_response_schema,
+        },
+      }
+      params[:provider] = { require_parameters: true }
+      model_completion.response_format_parameter = "json_schema"
+    elsif model_completion.response_format_json?
+      # Fallback for `response_format: :json` callers without a schema.
       params[:response_format] = { type: "json_object" }
       model_completion.response_format_parameter = "json_object"
     end
