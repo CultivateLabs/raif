@@ -1,0 +1,45 @@
+#!/usr/bin/env sh
+#
+# Probe whether each registered model honors structured outputs (JSON-schema
+# enforcement) by sending a small fixed schema-bearing request via Raif and
+# checking that the response is valid JSON conforming to the schema.
+#
+# Useful before flipping consumers (e.g. Arc) to rely on structured outputs,
+# any time we add a new model key, or to quickly sanity-check a provider
+# after a documented behavior change. The unit specs verify Raif sends the
+# right request shape; this probe verifies real providers honor it.
+#
+# Usage:
+#   bin/probe_structured_outputs [ALL|provider|model_key ...] [options]
+#
+# Options:
+#   --list                       List all registered model keys and exit
+#
+# Selectors:
+#   ALL                          Probe every registered model
+#   anthropic                    All Anthropic (direct API) models
+#   bedrock                      All AWS Bedrock models
+#   open_ai                      All OpenAI Completions API models
+#   open_ai_responses            All OpenAI Responses API models
+#   open_router                  All OpenRouter models
+#   google                       All Google models
+#   <model_key>                  A specific model key (e.g. open_router_grok_4_20)
+#
+# Environment variables:
+#   ANTHROPIC_API_KEY            Required for Anthropic models
+#   OPENAI_API_KEY               Required for OpenAI models
+#   OPEN_ROUTER_API_KEY          Required for OpenRouter models (also accepts OPENROUTER_API_KEY)
+#   GOOGLE_AI_API_KEY            Required for Google models (also accepts GOOGLE_API_KEY)
+#   AWS_REGION                   AWS region for Bedrock (default: us-east-1)
+#   RAIF_PROBE_MODELS            Comma-separated selectors (used when no arguments are given)
+#
+# Examples:
+#   bin/probe_structured_outputs ALL
+#   bin/probe_structured_outputs open_router
+#   bin/probe_structured_outputs anthropic open_ai_responses
+#   bin/probe_structured_outputs open_router_grok_4_20
+#   bin/probe_structured_outputs --list
+
+set -eu
+
+bundle exec spec/dummy/bin/rails runner script/probe_structured_outputs.rb "$@"
