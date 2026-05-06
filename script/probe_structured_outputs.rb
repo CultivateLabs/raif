@@ -221,9 +221,17 @@ selected_keys.each do |model_key|
     next
   end
 
+  # Surface which mechanism the request actually used so a passing
+  # native-structured-outputs request is distinguishable from a passing
+  # synthetic-tool fallback. `response_format_parameter` is set by each
+  # provider's `build_request_parameters` (e.g. "json_schema" for native,
+  # "json_object" for the OpenRouter no-schema fallback, nil if the
+  # provider went down the json_response tool path).
+  rfp = model_completion&.response_format_parameter || "json_response_tool"
+
   raw = model_completion&.raw_response
   if raw.blank?
-    puts "FAIL #{model_key} valid_json=false reason=blank_response"
+    puts "FAIL #{model_key} response_format_parameter=#{rfp} valid_json=false reason=blank_response"
     next
   end
 
@@ -231,12 +239,12 @@ selected_keys.each do |model_key|
     begin
       JSON.parse(raw)
     rescue JSON::ParserError => e
-      puts "FAIL #{model_key} valid_json=false parser_error=#{e.message.first(120).inspect}"
+      puts "FAIL #{model_key} response_format_parameter=#{rfp} valid_json=false parser_error=#{e.message.first(120).inspect}"
       next
     end
 
   unless parsed.is_a?(Hash)
-    puts "FAIL #{model_key} valid_json=true matches_schema=false reason=root_not_object"
+    puts "FAIL #{model_key} response_format_parameter=#{rfp} valid_json=true matches_schema=false reason=root_not_object"
     next
   end
 
@@ -246,9 +254,9 @@ selected_keys.each do |model_key|
   values_ok = PROBE_REQUIRED_KEYS.all? { |k| parsed[k].is_a?(String) && !parsed[k].empty? }
 
   if missing.empty? && extra.empty? && values_ok
-    puts "PASS #{model_key} valid_json=true matches_schema=true tokens=#{model_completion.total_tokens}"
+    puts "PASS #{model_key} response_format_parameter=#{rfp} valid_json=true matches_schema=true tokens=#{model_completion.total_tokens}"
   else
-    parts = ["valid_json=true matches_schema=false"]
+    parts = ["response_format_parameter=#{rfp} valid_json=true matches_schema=false"]
     parts << "missing=#{missing.inspect}" if missing.any?
     parts << "extra=#{extra.inspect}" if extra.any?
     parts << "value_types_invalid=true" unless values_ok
