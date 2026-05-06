@@ -69,127 +69,64 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       end
     end
 
-    context "when the response format is JSON and model uses json_response tool" do
-      let(:test_task) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
-
-      context "when using open_router_llama_4_maverick" do
-        let(:llm){ Raif.llm(:open_router_llama_4_maverick) }
-
-        it "extracts JSON response from json_response tool call", vcr: { cassette_name: "open_router/format_json_with_tool_llama4_maverick" } do
-          model_completion = llm.chat(
-            messages: [{
-              role: "user",
-              content: "Please give me a JSON object with a joke and answer. Don't include any other text in your response. Use the json_response tool to provide your response." # rubocop:disable Layout/LineLength
-            }],
-            response_format: :json,
-            source: test_task
-          )
-
-          expect(model_completion.parsed_response).to eq({
-            "joke" => "Why don't scientists trust atoms?",
-            "answer" => "Because they make up everything."
-          })
-
-          expect(model_completion.raw_response).to eq("{\"joke\": \"Why don't scientists trust atoms?\", \"answer\": \"Because they make up everything.\"}") # rubocop:disable Layout/LineLength
-          expect(model_completion.response_tool_calls).to eq([{
-            "provider_tool_call_id" => "chatcmpl-abc123-9807d1c0536c4e46903bc13b4a820170",
-            "name" => "json_response",
-            "arguments" => {
-              "joke" => "Why don't scientists trust atoms?",
-              "answer" => "Because they make up everything."
-            }
-          }])
-          expect(model_completion.completion_tokens).to eq(33)
-          expect(model_completion.prompt_tokens).to eq(217)
-          expect(model_completion.total_tokens).to eq(250)
-          expect(model_completion.response_format).to eq("json")
-          expect(model_completion.response_id).to eq("gen-abc123-Xzzn8cgXV0Pew0ckjxYE")
-          expect(model_completion.response_array).to eq([{
-            "logprobs" => nil,
-            "finish_reason" => "tool_calls",
-            "native_finish_reason" => "tool_calls",
-            "index" => 0,
-            "message" => {
-              "role" => "assistant",
-              "content" => "",
-              "refusal" => nil,
-              "reasoning" => nil,
-              "tool_calls" => [{
-                "id" => "chatcmpl-abc123-9807d1c0536c4e46903bc13b4a820170",
-                "type" => "function",
-                "index" => 0,
-                "function" => {
-                  "name" => "json_response",
-                  "arguments" => "{\"joke\": \"Why don't scientists trust atoms?\", \"answer\": \"Because they make up everything.\"}"
-                }
-              }]
-            }
-          }])
-        end
+    context "when the response format is JSON and a json_response_schema is present" do
+      # Under the documented `response_format: json_schema` mechanism (provider
+      # enforces the schema), OpenRouter returns the JSON in `message.content`
+      # rather than as a `json_response` tool call. `extract_json_response`
+      # falls through to `extract_text_response` for that shape; these specs
+      # cover that path without a live API.
+      let(:llm){ Raif.llm(:open_router_llama_3_1_8b_instruct) }
+      let(:json_payload){ '{"joke":"Why don\'t scientists trust atoms?","answer":"Because they make up everything."}' }
+      let(:response_json) do
+        {
+          "id" => "gen-test-123",
+          "choices" => [
+            {
+              "logprobs" => nil,
+              "finish_reason" => "stop",
+              "native_finish_reason" => "stop",
+              "index" => 0,
+              "message" => {
+                "role" => "assistant",
+                "content" => json_payload,
+                "refusal" => nil,
+                "reasoning" => nil,
+              },
+            },
+          ],
+          "usage" => { "completion_tokens" => 27, "prompt_tokens" => 55, "total_tokens" => 82 },
+        }
       end
 
-      context "when using open_router_open_ai_gpt_oss_20b" do
-        let(:llm){ Raif.llm(:open_router_open_ai_gpt_oss_20b) }
+      it "extracts the JSON payload from message.content via the text fallback" do
+        # extract_json_response falls back to extract_text_response when
+        # there are no tool_calls — that's what the new path produces.
+        result = llm.send(:extract_json_response, response_json)
+        expect(result).to eq(json_payload)
+      end
 
-        it "extracts JSON response from json_response tool call", vcr: { cassette_name: "open_router/format_json_with_tool_gpt_oss_20b" } do
-          model_completion = llm.chat(
-            messages: [{
-              role: "user",
-              content: "Please give me a JSON object with a joke and answer. Don't include any other text in your response. Use the json_response tool to provide your response." # rubocop:disable Layout/LineLength
-            }],
-            response_format: :json,
-            source: test_task
-          )
+      it "populates raw_response, parsed_response, response_array, and usage on the model_completion" do
+        model_completion = Raif::ModelCompletion.create!(
+          messages: [{ "role" => "user", "content" => "Tell me a joke" }],
+          llm_model_key: "open_router_llama_3_1_8b_instruct",
+          model_api_name: "meta-llama/llama-3.1-8b-instruct",
+          response_format: "json",
+        )
 
-          expect(model_completion.parsed_response).to eq({
-            "answer" => "What do you call a fish with no eyes? Fsh.",
-            "joke" => "Why did the scarecrow win an award? Because he was outstanding in his field!"
-          })
+        llm.send(:update_model_completion, model_completion, response_json)
+        model_completion.reload
 
-          expect(model_completion.raw_response).to eq("{\"answer\":\"What do you call a fish with no eyes? Fsh.\",\"joke\":\"Why did the scarecrow win an award? Because he was outstanding in his field!\"}") # rubocop:disable Layout/LineLength
-          expect(model_completion.response_tool_calls).to eq([{
-            "provider_tool_call_id" => "fc_abc123-444c-4c46-8e42-838348740c0b",
-            "name" => "json_response",
-            "arguments" => {
-              "joke" => "Why did the scarecrow win an award? Because he was outstanding in his field!",
-              "answer" => "What do you call a fish with no eyes? Fsh."
-            }
-          }])
-          expect(model_completion.completion_tokens).to eq(71)
-          expect(model_completion.prompt_tokens).to eq(160)
-          expect(model_completion.total_tokens).to eq(231)
-          expect(model_completion.response_format).to eq("json")
-          expect(model_completion.response_id).to eq("gen-abc123-WQ3Wm9AMMlb2WZU5qCQk")
-          expect(model_completion.response_array).to eq([{
-            "logprobs" => nil,
-            "finish_reason" => "tool_calls",
-            "native_finish_reason" => "stop",
-            "index" => 0,
-            "message" => {
-              "role" => "assistant",
-              "content" => "",
-              "refusal" => nil,
-              "reasoning" => "We must use the json_response tool. So we need to call it.",
-              "reasoning_details" => [
-                {
-                  "format" => "unknown",
-                  "index" => 0,
-                  "text" => "We must use the json_response tool. So we need to call it.",
-                  "type" => "reasoning.text"
-                }
-              ],
-              "tool_calls" => [{
-                "id" => "fc_abc123-444c-4c46-8e42-838348740c0b",
-                "type" => "function",
-                "index" => 0,
-                "function" => {
-                  "name" => "json_response",
-                  "arguments" => "{\"answer\":\"What do you call a fish with no eyes? Fsh.\",\"joke\":\"Why did the scarecrow win an award? Because he was outstanding in his field!\"}" # rubocop:disable Layout/LineLength
-                }
-              }]
-            }
-          }])
-        end
+        expect(model_completion.raw_response).to eq(json_payload)
+        expect(model_completion.parsed_response).to eq({
+          "joke" => "Why don't scientists trust atoms?",
+          "answer" => "Because they make up everything.",
+        })
+        expect(model_completion.response_tool_calls).to be_nil
+        expect(model_completion.completion_tokens).to eq(27)
+        expect(model_completion.prompt_tokens).to eq(55)
+        expect(model_completion.total_tokens).to eq(82)
+        expect(model_completion.response_id).to eq("gen-test-123")
+        expect(model_completion.response_array).to eq(response_json["choices"])
       end
     end
 
@@ -513,6 +450,97 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         expect(tool[:function][:name]).to eq(Raif::TestModelTool.tool_name)
         expect(tool[:function][:description]).to eq("Mock Tool Description")
         expect(tool[:function][:parameters]).to eq(Raif::TestModelTool.tool_arguments_schema)
+      end
+    end
+
+    context "with a json_response_schema present" do
+      let(:test_task){ Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Tell me a joke" }],
+          llm_model_key: "open_router_claude_3_7_sonnet",
+          model_api_name: "anthropic/claude-3.7-sonnet",
+          response_format: "json",
+          source: test_task
+        )
+      end
+
+      it "sends response_format: json_schema with strict:true and the source's schema" do
+        params = llm.send(:build_request_parameters, model_completion)
+
+        expect(params[:response_format]).to eq({
+          type: "json_schema",
+          json_schema: {
+            name: "json_response_schema",
+            strict: true,
+            schema: model_completion.json_response_schema,
+          },
+        })
+      end
+
+      it "adds provider.require_parameters: true so OpenRouter only routes to providers honoring the parameter" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params[:provider]).to eq({ require_parameters: true })
+      end
+
+      it "does not add a json_response function tool to params[:tools]" do
+        params = llm.send(:build_request_parameters, model_completion)
+
+        if params[:tools].present?
+          tool_names = params[:tools].map{|t| t.dig(:function, :name) }
+          expect(tool_names).not_to include("json_response")
+        else
+          expect(params[:tools]).to be_blank
+        end
+      end
+
+      it "sets model_completion.response_format_parameter to 'json_schema'" do
+        llm.send(:build_request_parameters, model_completion)
+        expect(model_completion.response_format_parameter).to eq("json_schema")
+      end
+
+      it "honors a caller-set tool_choice alongside the schema" do
+        model_completion.tool_choice = "required"
+        model_completion.available_model_tools = ["Raif::TestModelTool"]
+
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params[:tool_choice]).to eq("required")
+        expect(params[:parallel_tool_calls]).to eq(false)
+      end
+
+      it "raises Raif::Errors::OpenAi::JsonSchemaError when the schema does not satisfy strict-mode constraints" do
+        invalid_schema = { type: "object", properties: { joke: { type: "string" } } } # missing additionalProperties: false and required
+        allow(model_completion).to receive(:json_response_schema).and_return(invalid_schema)
+
+        expect do
+          llm.send(:build_request_parameters, model_completion)
+        end.to raise_error(Raif::Errors::OpenAi::JsonSchemaError)
+      end
+    end
+
+    context "when response_format is :json but no json_response_schema is present (fallback)" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Tell me a joke" }],
+          llm_model_key: "open_router_claude_3_7_sonnet",
+          model_api_name: "anthropic/claude-3.7-sonnet",
+          response_format: "json"
+        )
+      end
+
+      it "sets response_format: json_object" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params[:response_format]).to eq({ type: "json_object" })
+      end
+
+      it "does not add a provider key" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params).not_to have_key(:provider)
+      end
+
+      it "sets model_completion.response_format_parameter to 'json_object'" do
+        llm.send(:build_request_parameters, model_completion)
+        expect(model_completion.response_format_parameter).to eq("json_object")
       end
     end
   end
