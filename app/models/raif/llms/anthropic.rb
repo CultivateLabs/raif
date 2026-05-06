@@ -91,6 +91,16 @@ private
       end
     end
 
+    if use_native_structured_outputs?(model_completion)
+      params[:output_config] = {
+        format: {
+          type: "json_schema",
+          schema: model_completion.json_response_schema
+        }
+      }
+      model_completion.response_format_parameter = "json_schema"
+    end
+
     params[:stream] = true if model_completion.stream_response?
 
     params
@@ -98,6 +108,30 @@ private
 
   def supports_temperature?
     provider_settings.key?(:supports_temperature) ? provider_settings[:supports_temperature] : true
+  end
+
+  def supports_structured_outputs?
+    provider_settings.fetch(:supports_structured_outputs, false)
+  end
+
+  # Anthropic documents `output_config.format` as incompatible with citations.
+  # Provider-managed WebSearch always enables citations, and `extract_citations`
+  # parses `web_search_result_location` annotations from text content blocks.
+  # When WebSearch is enabled, fall back to the synthetic `json_response` tool
+  # path so the request remains valid and citation parsing can keep working.
+  def uses_provider_managed_web_search?(model_completion)
+    Array(model_completion.available_model_tools).any? do |tool|
+      tool.to_s == Raif::ModelTools::ProviderManaged::WebSearch.to_s
+    end
+  end
+
+  def use_native_structured_outputs?(model_completion)
+    return false unless supports_structured_outputs?
+    return false unless model_completion.response_format_json?
+    return false if model_completion.json_response_schema.blank?
+    return false if uses_provider_managed_web_search?(model_completion)
+
+    true
   end
 
   def extract_text_response(resp)

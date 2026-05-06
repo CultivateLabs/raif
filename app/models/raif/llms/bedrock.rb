@@ -113,6 +113,27 @@ private
       end
     end
 
+    if use_native_structured_outputs?(model_completion)
+      # Bedrock's Converse API exposes structured outputs as
+      # outputConfig.textFormat (snake_cased to output_config / text_format
+      # in the Ruby SDK). The schema must be a JSON-encoded *string* and is
+      # nested inside `structure.json_schema`. See
+      # https://docs.aws.amazon.com/bedrock/latest/userguide/structured-output.html
+      params[:output_config] = {
+        text_format: {
+          type: "json_schema",
+          structure: {
+            json_schema: {
+              name: "json_response_schema",
+              description: "Generate a structured JSON response based on the provided schema.",
+              schema: JSON.generate(model_completion.json_response_schema)
+            }
+          }
+        }
+      }
+      model_completion.response_format_parameter = "json_schema"
+    end
+
     if model_completion.bedrock_prompt_caching_enabled
       cache_point = { cache_point: { type: "default" } }
       params[:system] << cache_point if params[:system].present?
@@ -120,6 +141,18 @@ private
     end
 
     params
+  end
+
+  def supports_structured_outputs?
+    provider_settings.fetch(:supports_structured_outputs, false)
+  end
+
+  def use_native_structured_outputs?(model_completion)
+    return false unless supports_structured_outputs?
+    return false unless model_completion.response_format_json?
+    return false if model_completion.json_response_schema.blank?
+
+    true
   end
 
   def replace_tmp_base64_data_with_bytes(messages)

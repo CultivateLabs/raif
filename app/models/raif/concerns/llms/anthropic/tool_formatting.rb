@@ -6,8 +6,21 @@ module Raif::Concerns::Llms::Anthropic::ToolFormatting
   def build_tools_parameter(model_completion)
     tools = []
 
-    # If we're looking for a JSON response, add a tool to the request that the model can use to provide a JSON response
-    if model_completion.response_format_json? && model_completion.json_response_schema.present?
+    # When the caller asks for a JSON response with a schema and the model can't
+    # (or shouldn't) use native structured outputs, expose the schema as a
+    # synthetic `json_response` tool. The model satisfies the request by calling
+    # the tool with schema-matching arguments; `extract_json_response` unwraps
+    # the tool-call input back into JSON.
+    #
+    # The native path (`use_native_structured_outputs?`) sends `output_config.format`
+    # instead — enforced provider-side via constrained decoding, making this
+    # synthetic tool redundant. That path is suppressed when the request
+    # combines JSON output with provider-managed WebSearch, since Anthropic
+    # documents structured outputs as incompatible with web-search citations
+    # and we want to preserve citations on those requests.
+    if model_completion.response_format_json? &&
+        model_completion.json_response_schema.present? &&
+        !use_native_structured_outputs?(model_completion)
       tools << {
         name: "json_response",
         description: "Generate a structured JSON response based on the provided schema.",

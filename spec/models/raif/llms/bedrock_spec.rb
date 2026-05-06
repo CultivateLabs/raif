@@ -855,6 +855,94 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
   end
 
+  describe "#build_request_parameters with native structured outputs" do
+    let(:test_task){ Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+
+    context "with a json_response_schema and a supporting model" do
+      let(:llm){ Raif.llm(:bedrock_claude_4_5_sonnet) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: [{ text: "Tell me a joke" }] }],
+          llm_model_key: "bedrock_claude_4_5_sonnet",
+          model_api_name: "anthropic.claude-sonnet-4-5-20250929-v1:0",
+          response_format: "json",
+          source: test_task
+        )
+      end
+
+      it "emits output_config.text_format with the source's schema as a JSON-encoded string nested under structure.json_schema" do
+        params = llm.send(:build_request_parameters, model_completion)
+
+        expect(params[:output_config]).to eq({
+          text_format: {
+            type: "json_schema",
+            structure: {
+              json_schema: {
+                name: "json_response_schema",
+                description: "Generate a structured JSON response based on the provided schema.",
+                schema: JSON.generate(model_completion.json_response_schema)
+              }
+            }
+          }
+        })
+      end
+
+      it "does NOT inject a json_response function tool" do
+        params = llm.send(:build_request_parameters, model_completion)
+        tool_specs = params.dig(:tool_config, :tools) || []
+        tool_names = tool_specs.map { |t| t.dig(:tool_spec, :name) }
+        expect(tool_names).not_to include("json_response")
+      end
+
+      it "sets model_completion.response_format_parameter to 'json_schema'" do
+        llm.send(:build_request_parameters, model_completion)
+        expect(model_completion.response_format_parameter).to eq("json_schema")
+      end
+    end
+
+    context "with a json_response_schema but a non-supporting model" do
+      let(:llm){ Raif.llm(:bedrock_claude_3_5_sonnet) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: [{ text: "Tell me a joke" }] }],
+          llm_model_key: "bedrock_claude_3_5_sonnet",
+          model_api_name: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+          response_format: "json",
+          source: test_task
+        )
+      end
+
+      it "does NOT include output_config" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params).not_to have_key(:output_config)
+      end
+
+      it "still injects the json_response function tool (existing fallback)" do
+        params = llm.send(:build_request_parameters, model_completion)
+        tool_specs = params.dig(:tool_config, :tools) || []
+        tool_names = tool_specs.map { |t| t.dig(:tool_spec, :name) }
+        expect(tool_names).to include("json_response")
+      end
+    end
+
+    context "without a json_response_schema on a supporting model" do
+      let(:llm){ Raif.llm(:bedrock_claude_4_5_sonnet) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: [{ text: "Hello" }] }],
+          llm_model_key: "bedrock_claude_4_5_sonnet",
+          model_api_name: "anthropic.claude-sonnet-4-5-20250929-v1:0",
+          response_format: "text"
+        )
+      end
+
+      it "does NOT include output_config (no schema to enforce)" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params).not_to have_key(:output_config)
+      end
+    end
+  end
+
   describe "#build_request_parameters with required tool_choice" do
     let(:model_completion) do
       Raif::ModelCompletion.new(
