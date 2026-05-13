@@ -1,5 +1,5 @@
 <div class="d-flex justify-content-between align-items-center my-4">
-  <h1><%= t(".title", id: @task.id) %></h1>
+  <h1><%= t(".title", type: @task.type, id: @task.id) %></h1>
   <%= link_to t(".back_to_tasks"), raif.admin_tasks_path, class: "btn btn-outline-secondary" %>
 </div>
 
