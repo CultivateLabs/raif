@@ -93,8 +93,8 @@ module Raif::Concerns::RunWith
   def self.serialize_run_with_value(value)
     if value.respond_to?(:to_global_id)
       value.to_global_id.to_s
-    elsif value.is_a?(Array) && value.any? && value.all? { |v| v.respond_to?(:to_global_id) }
-      value.map { |v| v.to_global_id.to_s }
+    elsif value.is_a?(Array) && value.any? && value.all? { |v| v.nil? || v.respond_to?(:to_global_id) }
+      value.map { |v| v&.to_global_id&.to_s }
     else
       value
     end
@@ -106,8 +106,8 @@ module Raif::Concerns::RunWith
   def self.deserialize_run_with_value(value)
     if gid_string?(value)
       locate_gid(value)
-    elsif value.is_a?(Array) && value.any? && value.all? { |v| gid_string?(v) }
-      value.map { |v| locate_gid(v) }
+    elsif value.is_a?(Array) && value.any? && value.all? { |v| v.nil? || gid_string?(v) }
+      value.map { |v| v.nil? ? nil : locate_gid(v) }
     else
       value
     end

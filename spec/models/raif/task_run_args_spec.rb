@@ -180,6 +180,18 @@ RSpec.describe "Raif::Task run_with", type: :model do
       expect(Raif::Concerns::RunWith.serialize_run_with_value(mixed)).to eq(mixed)
     end
 
+    it "round-trips arrays containing nil alongside AR objects" do
+      stub_raif_task(array_task_class) { "Test response" }
+
+      task = array_task_class.run(
+        creator: user,
+        conversations: [conversation_a, nil, conversation_b]
+      )
+      reloaded = array_task_class.find(task.id)
+
+      expect(reloaded.conversations).to eq([conversation_a, nil, conversation_b])
+    end
+
     it "is queryable via having_run_with using JSONB containment" do
       stub_raif_task(array_task_class) { "Test response" }
 
@@ -189,7 +201,7 @@ RSpec.describe "Raif::Task run_with", type: :model do
       )
       array_task_class.run(creator: user, conversations: [conversation_b])
 
-      expect(array_task_class.having_run_with(conversations: [conversation_a])).to eq([match])
+      expect(array_task_class.having_run_with(conversations: [conversation_a])).to contain_exactly(match)
     end
   end
 
