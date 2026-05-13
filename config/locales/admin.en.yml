@@ -267,4 +267,4 @@ en:
       tasks:
         show:
           back_to_tasks: Back to Tasks
-          title: 'Task #%{id}'
+          title: "%{type} #%{id}"
