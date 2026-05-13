@@ -88,7 +88,7 @@ RSpec.describe "Admin::Tasks", type: :feature do
     end
 
     it "displays the task details and has a back link to the tasks index" do
-      expect(page).to have_content(I18n.t("raif.admin.tasks.show.title", id: task.id))
+      expect(page).to have_content(I18n.t("raif.admin.tasks.show.title", type: task.type, id: task.id))
 
       # Check basic details
       expect(page).to have_content(task.id.to_s)
