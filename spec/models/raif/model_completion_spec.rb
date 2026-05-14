@@ -14,6 +14,8 @@
 #  failed_at                      :datetime
 #  failure_error                  :string
 #  failure_reason                 :text
+#  failure_response_body          :text
+#  failure_response_status        :integer
 #  llm_model_key                  :string           not null
 #  max_completion_tokens          :integer
 #  messages                       :jsonb            not null

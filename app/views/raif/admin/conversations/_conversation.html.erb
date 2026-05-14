@@ -1,6 +1,6 @@
 <tr id="<%= dom_id(conversation) %>" class="raif-conversation">
   <td><%= link_to "##{conversation.id}", raif.admin_conversation_path(conversation) %></td>
-  <td><small class="text-muted"><%= conversation.created_at.rfc822 %></small></td>
+  <td><small class="text-muted"><%= conversation.latest_entry_at&.rfc822 %></small></td>
   <td><%= conversation.creator.try(:raif_display_name) || "#{conversation.creator_type} ##{conversation.creator_id}" %></td>
   <td><%= conversation.type %></td>
   <td><%= conversation.conversation_entries_count %></td>

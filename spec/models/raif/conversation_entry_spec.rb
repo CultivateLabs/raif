@@ -40,6 +40,17 @@ RSpec.describe Raif::ConversationEntry, type: :model do
     end.to change { conversation.reload.conversation_entries_count }.by(1)
   end
 
+  it "updates the conversation's latest_entry_at when a new entry is added" do
+    conversation = FB.create(:raif_conversation, creator: creator)
+    expect(conversation.latest_entry_at).to be_nil
+
+    first_entry = conversation.entries.create!(creator: conversation.creator)
+    expect(conversation.reload.latest_entry_at).to be_within(1.second).of(first_entry.created_at)
+
+    later_entry = conversation.entries.create!(creator: conversation.creator, created_at: 1.hour.from_now)
+    expect(conversation.reload.latest_entry_at).to be_within(1.second).of(later_entry.created_at)
+  end
+
   describe "#add_user_tool_invocation_to_user_message" do
     let(:conversation) { FB.create(:raif_test_conversation, creator: creator) }
 

@@ -52,6 +52,7 @@ en:
         invocations: Invocations
         iterations: Iterations
         language: Language
+        latest_entry_at: Latest Entry At
         llms: LLMs
         messages: Messages
         model: Model
