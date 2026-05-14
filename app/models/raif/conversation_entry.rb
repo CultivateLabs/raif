@@ -70,6 +70,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   boolean_timestamp :failed_at
 
   before_validation :add_user_tool_invocation_to_user_message, on: :create
+  after_create_commit :update_conversation_latest_entry_at
 
   normalizes :model_response_message, with: ->(value) { value&.strip }
   normalizes :user_message, with: ->(value) { value&.strip }
@@ -78,6 +79,10 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
     return unless raif_user_tool_invocation.present?
 
     self.user_message = [user_message, raif_user_tool_invocation.as_user_message].join("\n\n")
+  end
+
+  def update_conversation_latest_entry_at
+    raif_conversation.update_column(:latest_entry_at, created_at)
   end
 
   def response_format

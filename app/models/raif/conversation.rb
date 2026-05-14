@@ -10,6 +10,7 @@
 #  conversation_entries_count :integer          default(0), not null
 #  creator_type               :string           not null
 #  generating_entry_response  :boolean          default(FALSE), not null
+#  latest_entry_at            :datetime
 #  llm_messages_max_length    :integer
 #  llm_model_key              :string           not null
 #  requested_language_key     :string
