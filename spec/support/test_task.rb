@@ -30,6 +30,15 @@ class Raif::TestJsonTask < Raif::Task
   end
 end
 
+class Raif::TestCachedTask < Raif::Task
+  enable_anthropic_prompt_caching
+  enable_bedrock_prompt_caching
+
+  def build_prompt
+    "Tell me a joke"
+  end
+end
+
 class Raif::TestHtmlTask < Raif::Task
   llm_response_format :html
   llm_response_allowed_tags %w[p b i u s a]

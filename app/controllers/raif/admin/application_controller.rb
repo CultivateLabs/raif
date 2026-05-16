@@ -3,7 +3,7 @@
 module Raif
   module Admin
     class ApplicationController < Raif::ApplicationController
-      include Pagy::Backend
+      include(defined?(Pagy::Method) ? Pagy::Method : Pagy::Backend)
 
       layout "raif/admin"
 

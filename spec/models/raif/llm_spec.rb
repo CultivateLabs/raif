@@ -93,6 +93,25 @@ RSpec.describe Raif::Llm, type: :model do
         expect(mc.failure_reason).to eq("Connection failed")
       end
 
+      it "persists upstream HTTP status and response body when a Faraday::Error carries a response" do
+        allow(Raif.config).to receive(:llm_request_retriable_exceptions).and_return([])
+        body = '{"error":{"message":"input tokens exceed maximum","type":"invalid_request_error"}}'
+        faraday_error = Faraday::BadRequestError.new(
+          "the server responded with status 400",
+          { status: 400, headers: {}, body: body }
+        )
+        allow(test_llm).to receive(:perform_model_completion!).and_raise(faraday_error)
+
+        expect do
+          test_llm.chat(messages: messages, system_prompt: system_prompt)
+        end.to raise_error(Faraday::BadRequestError)
+
+        mc = Raif::ModelCompletion.newest_first.first
+        expect(mc.failed?).to be true
+        expect(mc.failure_response_status).to eq(400)
+        expect(mc.failure_response_body).to eq(body)
+      end
+
       it "records failure when StandardError occurs" do
         allow(Raif.config).to receive(:llm_request_retriable_exceptions).and_return([])
         allow(test_llm).to receive(:perform_model_completion!).and_raise(StandardError.new("Unexpected error"))
@@ -414,6 +433,73 @@ RSpec.describe Raif::Llm, type: :model do
         )
 
         expect(llm.name).to eq("My custom model")
+      end
+    end
+  end
+
+  describe ".streaming_supported_for_key?" do
+    it "returns false for model keys matching any configured regex" do
+      allow(Raif.config).to receive(:streaming_unsupported_model_keys).and_return([/\Abedrock_gpt_oss_/])
+      expect(described_class.streaming_supported_for_key?(:bedrock_gpt_oss_120b)).to eq(false)
+      expect(described_class.streaming_supported_for_key?("bedrock_gpt_oss_20b")).to eq(false)
+    end
+
+    it "returns false for model keys matching a configured String or Symbol entry" do
+      allow(Raif.config).to receive(:streaming_unsupported_model_keys).and_return([:some_model, "another_model"])
+      expect(described_class.streaming_supported_for_key?(:some_model)).to eq(false)
+      expect(described_class.streaming_supported_for_key?("another_model")).to eq(false)
+    end
+
+    it "returns true for model keys that do not match any configured entry" do
+      allow(Raif.config).to receive(:streaming_unsupported_model_keys).and_return([/\Abedrock_gpt_oss_/])
+      expect(described_class.streaming_supported_for_key?(:open_ai_gpt_4o)).to eq(true)
+      expect(described_class.streaming_supported_for_key?("anthropic_claude_sonnet_4")).to eq(true)
+    end
+
+    it "returns true for every model key when the config list is empty" do
+      allow(Raif.config).to receive(:streaming_unsupported_model_keys).and_return([])
+      expect(described_class.streaming_supported_for_key?(:bedrock_gpt_oss_120b)).to eq(true)
+    end
+  end
+
+  describe "#chat streaming fallback" do
+    let(:test_llm){ Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api") }
+
+    before do
+      allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
+      stub_raif_llm(test_llm) { |_messages| "hi" }
+    end
+
+    context "when the model key is in streaming_unsupported_model_keys" do
+      before do
+        allow(Raif.config).to receive(:streaming_unsupported_model_keys).and_return([:raif_test_llm])
+      end
+
+      it "creates the ModelCompletion with stream_response: false even when a block is given" do
+        model_completion = test_llm.chat(messages: [{ role: "user", content: "Hello" }]) { |_mc, _delta, _event| nil }
+        expect(model_completion.stream_response).to eq(false)
+      end
+
+      it "does not invoke the provided block" do
+        calls = 0
+        test_llm.chat(messages: [{ role: "user", content: "Hello" }]) { |_mc, _delta, _event| calls += 1 }
+        expect(calls).to eq(0)
+      end
+    end
+
+    context "when the model key is not in streaming_unsupported_model_keys" do
+      before do
+        allow(Raif.config).to receive(:streaming_unsupported_model_keys).and_return([])
+      end
+
+      it "creates the ModelCompletion with stream_response: true when a block is given" do
+        model_completion = test_llm.chat(messages: [{ role: "user", content: "Hello" }]) { |_mc, _delta, _event| nil }
+        expect(model_completion.stream_response).to eq(true)
+      end
+
+      it "creates the ModelCompletion with stream_response: false when no block is given" do
+        model_completion = test_llm.chat(messages: [{ role: "user", content: "Hello" }])
+        expect(model_completion.stream_response).to eq(false)
       end
     end
   end

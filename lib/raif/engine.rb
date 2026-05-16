@@ -10,8 +10,29 @@ module Raif
     isolate_namespace Raif
 
     initializer "raif.prompt_template_formats", before: :add_view_paths do
-      Mime::Type.register "text/plain", :prompt unless Mime::Type.lookup_by_extension(:prompt)
-      Mime::Type.register "text/plain", :system_prompt unless Mime::Type.lookup_by_extension(:system_prompt)
+      # :prompt and :system_prompt are internal-only formats consumed by
+      # Raif::Concerns::HasPromptTemplates. They must be in Mime::SET so
+      # ActionView::LookupContext#formats= validation passes, but they should
+      # not be selectable via the HTTP Accept header. Passing skip_lookup
+      # keeps them out of Mime::Type::LOOKUP (the content-type → format
+      # registry used by Mime::Type.parse), so an Accept header like
+      # "application/x-raif-prompt" can't resolve to them.
+      Mime::Type.register("application/x-raif-prompt", :prompt, [], [], true) unless Mime::Type.lookup_by_extension(:prompt)
+      Mime::Type.register("application/x-raif-system-prompt", :system_prompt, [], [], true) unless Mime::Type.lookup_by_extension(:system_prompt)
+    end
+
+    # Prompt templates are plain-text LLM input, not HTML. Without this,
+    # `<%= some_method %>` in a .prompt.erb / .system_prompt.erb would
+    # HTML-escape the result (e.g. " => &quot;, ' => &#39;), corrupting
+    # the prompt sent to the model. Rails' ERB handler skips escaping only
+    # for mime types in `escape_ignore_list`, which defaults to ["text/plain"].
+    initializer "raif.prompt_template_escape_ignore", after: "raif.prompt_template_formats" do
+      ActiveSupport.on_load(:action_view) do
+        ActionView::Template::Handlers::ERB.escape_ignore_list += [
+          "application/x-raif-prompt",
+          "application/x-raif-system-prompt"
+        ]
+      end
     end
 
     # If the host app is using FactoryBot, add the factories to the host app so they can be used in host apptests

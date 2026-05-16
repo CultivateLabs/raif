@@ -18,6 +18,7 @@ The admin interface contains sections for:
 - [Agents](#agents)
 - [Model Tool Invocations](#model-tool-invocations)
 - [Prompt Studio](#prompt-studio)
+- [LLM Registry](#llm-registry)
 - [Stats](#stats)
 
 # Authorization
@@ -79,6 +80,23 @@ Prompt Studio is available at:
 - `/raif/admin/prompt_studio/tasks`
 - `/raif/admin/prompt_studio/conversations`
 - `/raif/admin/prompt_studio/agents`
+
+### Batch Runs
+
+From Prompt Studio you can create a **batch run** that re-executes a task against a set of existing records with the current prompt and a chosen LLM, so you can see how prompt or model changes perform across many inputs. Each batch run stores its items and outputs for later inspection.
+
+Optionally, a batch run can be scored by an **LLM judge**. Raif ships with four judge types:
+
+- `Raif::Evals::LlmJudges::Binary` – pass/fail judgments against a criterion
+- `Raif::Evals::LlmJudges::Scored` – numeric scoring against a rubric
+- `Raif::Evals::LlmJudges::Comparative` – compares outputs against a reference
+- `Raif::Evals::LlmJudges::Summarization` – scores summaries with a built-in rubric
+
+See [Evals](../key_raif_concepts/evals) for more on LLM judges.
+
+## LLM Registry
+
+The LLM registry page at `/raif/admin/llms` lists every model registered in the running process, along with its provider, API name, and input/output token costs. Use it to verify which models are registered and to compare provider pricing when picking a default. See [Adding LLM Models](customization#adding-llm-models) to register new models.
 
 ## Stats
 

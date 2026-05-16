@@ -37,6 +37,23 @@ it "stubs a document summarization task" do
   expect(task.raw_response).to eq("Stub out the response from the LLM")
 end
 
+it "stubs a streaming task" do
+  stub_raif_task(Raif::Tasks::DocumentSummarization) do |messages, model_completion|
+    "A streamed response from the LLM"
+  end
+
+  user = FactoryBot.create(:user) # assumes you have a User model & factory
+  document = FactoryBot.create(:document) # assumes you have a Document model & factory
+
+  deltas = []
+  Raif::Tasks::DocumentSummarization.run(document: document, creator: user) do |model_completion, delta, sse_event|
+    deltas << delta
+  end
+
+  # The stubbed response is automatically replayed to the block in 25-character chunks.
+  expect(deltas.join).to eq("A streamed response from the LLM")
+end
+
 it "stubs a conversation" do
   user = FactoryBot.create(:user) # assumes you have a User model & factory
   conversation = FactoryBot.create(:raif_test_conversation, creator: user)

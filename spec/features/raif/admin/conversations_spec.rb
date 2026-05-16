@@ -15,7 +15,7 @@ RSpec.describe "Admin::Conversations", type: :feature do
       # Check page title and table headers
       expect(page).to have_content(I18n.t("raif.admin.common.conversations"))
       expect(page).to have_content(I18n.t("raif.admin.common.id"))
-      expect(page).to have_content(I18n.t("raif.admin.common.created_at"))
+      expect(page).to have_content(I18n.t("raif.admin.common.latest_entry_at"))
       expect(page).to have_content(I18n.t("raif.admin.common.creator"))
       expect(page).to have_content(I18n.t("raif.admin.common.type"))
       expect(page).to have_content(I18n.t("raif.admin.common.entries_count"))

@@ -5,11 +5,11 @@ require "rails_helper"
 RSpec.describe Raif::ModelTool, type: :model do
   describe ".prepare_tool_arguments" do
     it "strips unknown keys from arguments" do
-      result = Raif::TestModelTool.prepare_tool_arguments(
+      result = Raif::TestModelTool.prepare_tool_arguments({
         "items" => [{ "title" => "foo", "description" => "bar" }],
         "length" => 2000,
-        "offset" => 0
-      )
+        "offset" => 0,
+      })
 
       expect(result).to eq("items" => [{ "title" => "foo", "description" => "bar" }])
     end
@@ -17,11 +17,11 @@ RSpec.describe Raif::ModelTool, type: :model do
     it "logs a warning when keys are stripped" do
       expect(Rails.logger).to receive(:warn).with(/Stripped unexpected tool arguments.*length, offset/)
 
-      Raif::TestModelTool.prepare_tool_arguments(
+      Raif::TestModelTool.prepare_tool_arguments({
         "items" => [{ "title" => "foo", "description" => "bar" }],
         "length" => 2000,
-        "offset" => 0
-      )
+        "offset" => 0,
+      })
     end
 
     it "passes through valid arguments unchanged" do
@@ -39,10 +39,10 @@ RSpec.describe Raif::ModelTool, type: :model do
     end
 
     it "normalizes symbol keys to string keys" do
-      result = Raif::TestModelTool.prepare_tool_arguments(
+      result = Raif::TestModelTool.prepare_tool_arguments({
         items: [{ "title" => "foo", "description" => "bar" }],
-        length: 2000
-      )
+        length: 2000,
+      })
 
       expect(result).to eq("items" => [{ "title" => "foo", "description" => "bar" }])
     end

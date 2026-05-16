@@ -4,8 +4,6 @@ module Raif
   module Admin
     module PromptStudio
       class BaseController < Raif::Admin::ApplicationController
-        include Pagy::Backend
-
       private
 
         def build_prompt_comparison(record)

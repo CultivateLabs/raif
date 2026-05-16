@@ -6,13 +6,19 @@ module Raif
     def stubbed_llm(llm_model_key, source_instance, &block)
       test_llm = Raif.llm(llm_model_key.to_sym)
 
-      allow(test_llm).to receive(:perform_model_completion!) do |model_completion|
+      allow(test_llm).to receive(:perform_model_completion!) do |model_completion, &streaming_block|
         result = block.call(model_completion.messages, model_completion, source_instance)
         model_completion.raw_response = result if result.is_a?(String)
         model_completion.completion_tokens = rand(100..2000)
         model_completion.prompt_tokens = rand(100..2000)
         model_completion.total_tokens = model_completion.completion_tokens + model_completion.prompt_tokens
         model_completion.save!
+
+        if streaming_block && result.is_a?(String)
+          result.chars.each_slice(25) do |chunk|
+            streaming_block.call(model_completion, chunk.join, nil)
+          end
+        end
 
         model_completion
       end

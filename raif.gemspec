@@ -23,12 +23,14 @@ Gem::Specification.new do |spec|
   spec.bindir = "exe"
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
 
-  spec.add_dependency "aws-sdk-bedrockruntime"
+  # >= 1.75.0 for output_config / text_format / strict tool fields on the Converse API
+  spec.add_dependency "aws-sdk-bedrockruntime", ">= 1.75.0"
   spec.add_dependency "event_stream_parser", ">= 1.0"
   spec.add_dependency "faraday", ">= 2.0"
+  spec.add_dependency "faraday-multipart", ">= 1.0"
   spec.add_dependency "json-schema", ">= 5.0"
   spec.add_dependency "loofah", ">= 2.21"
-  spec.add_dependency "pagy", "<10.0"
+  spec.add_dependency "pagy", "<44.0"
   spec.add_dependency "rails", ">= 7.1"
   spec.add_dependency "reverse_markdown", ">= 2.0"
   spec.add_dependency "turbo-rails", ">= 2.0"

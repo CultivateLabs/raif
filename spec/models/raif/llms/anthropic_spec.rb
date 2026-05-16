@@ -814,6 +814,142 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     end
   end
 
+  describe "#build_request_parameters with prompt caching" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        messages: [{ role: "user", content: "Hello" }],
+        llm_model_key: "anthropic_claude_4_sonnet",
+        model_api_name: "claude-sonnet-4-20250514",
+        temperature: 0.8,
+        response_format: "text",
+        system_prompt: "You are a helpful assistant"
+      )
+    end
+
+    let(:parameters) { llm.send(:build_request_parameters, model_completion) }
+
+    context "when prompt caching is enabled" do
+      before { model_completion.anthropic_prompt_caching_enabled = true }
+
+      it "includes cache_control in the request parameters" do
+        expect(parameters[:cache_control]).to eq({ type: "ephemeral" })
+      end
+    end
+
+    context "when prompt caching is not enabled" do
+      it "does not include cache_control in the request parameters" do
+        expect(parameters).not_to have_key(:cache_control)
+      end
+    end
+  end
+
+  describe "#build_request_parameters with native structured outputs" do
+    let(:test_task){ Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+
+    context "with a json_response_schema and a supporting model" do
+      let(:llm){ Raif.llm(:anthropic_claude_4_5_sonnet) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Tell me a joke" }],
+          llm_model_key: "anthropic_claude_4_5_sonnet",
+          model_api_name: "claude-sonnet-4-5",
+          response_format: "json",
+          source: test_task
+        )
+      end
+
+      it "emits output_config.format with the source's json_response_schema" do
+        params = llm.send(:build_request_parameters, model_completion)
+
+        expect(params[:output_config]).to eq({
+          format: {
+            type: "json_schema",
+            schema: model_completion.json_response_schema
+          }
+        })
+      end
+
+      it "does NOT inject a json_response function tool" do
+        params = llm.send(:build_request_parameters, model_completion)
+
+        if params[:tools].present?
+          tool_names = params[:tools].map { |t| t[:name] }
+          expect(tool_names).not_to include("json_response")
+        else
+          expect(params[:tools]).to be_blank
+        end
+      end
+
+      it "sets model_completion.response_format_parameter to 'json_schema'" do
+        llm.send(:build_request_parameters, model_completion)
+        expect(model_completion.response_format_parameter).to eq("json_schema")
+      end
+    end
+
+    context "with a json_response_schema but a non-supporting model" do
+      let(:llm){ Raif.llm(:anthropic_claude_3_5_haiku) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Tell me a joke" }],
+          llm_model_key: "anthropic_claude_3_5_haiku",
+          model_api_name: "claude-3-5-haiku-latest",
+          response_format: "json",
+          source: test_task
+        )
+      end
+
+      it "does NOT include output_config" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params).not_to have_key(:output_config)
+      end
+
+      it "still injects the json_response function tool (existing fallback path)" do
+        params = llm.send(:build_request_parameters, model_completion)
+        tool_names = params[:tools].map { |t| t[:name] }
+        expect(tool_names).to include("json_response")
+      end
+    end
+
+    context "with a json_response_schema, a supporting model, AND provider-managed WebSearch" do
+      let(:llm){ Raif.llm(:anthropic_claude_4_5_sonnet) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Tell me a joke" }],
+          llm_model_key: "anthropic_claude_4_5_sonnet",
+          model_api_name: "claude-sonnet-4-5",
+          response_format: "json",
+          source: test_task,
+          available_model_tools: ["Raif::ModelTools::ProviderManaged::WebSearch"]
+        )
+      end
+
+      it "falls back to the json_response tool path so citations are preserved" do
+        params = llm.send(:build_request_parameters, model_completion)
+
+        expect(params).not_to have_key(:output_config)
+        tool_names = params[:tools].map { |t| t[:name] }
+        expect(tool_names).to include("json_response")
+      end
+    end
+
+    context "without a json_response_schema on a supporting model" do
+      let(:llm){ Raif.llm(:anthropic_claude_4_5_sonnet) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "anthropic_claude_4_5_sonnet",
+          model_api_name: "claude-sonnet-4-5",
+          response_format: "text"
+        )
+      end
+
+      it "does NOT include output_config (no schema to enforce)" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params).not_to have_key(:output_config)
+      end
+    end
+  end
+
   describe "#build_request_parameters with required tool_choice" do
     let(:model_completion) do
       Raif::ModelCompletion.new(

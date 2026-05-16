@@ -59,18 +59,7 @@ module Raif::Concerns::RunWith
         value = run_with&.dig(name.to_s)
         return unless value
 
-        # Deserialize GID if it's a string starting with gid://
-        deserialized = if value.is_a?(String) && value.start_with?("gid://")
-          begin
-            GlobalID::Locator.locate(value)
-          rescue ActiveRecord::RecordNotFound
-            nil
-          end
-        else
-          value
-        end
-
-        instance_variable_set("@#{name}", deserialized)
+        instance_variable_set("@#{name}", Raif::Concerns::RunWith.deserialize_run_with_value(value))
       end
 
       # Define setter that stores in memory (for use during run)
@@ -88,12 +77,7 @@ module Raif::Concerns::RunWith
       _run_with_args.each do |arg_name|
         next unless args.key?(arg_name)
 
-        value = args[arg_name]
-        serialized_args[arg_name.to_s] = if value.respond_to?(:to_global_id)
-          value.to_global_id.to_s
-        else
-          value
-        end
+        serialized_args[arg_name.to_s] = Raif::Concerns::RunWith.serialize_run_with_value(args[arg_name])
       end
 
       serialized_args
@@ -101,6 +85,42 @@ module Raif::Concerns::RunWith
 
     # Backward compatibility alias
     alias_method :serialize_task_run_args, :serialize_run_with
+  end
+
+  # Serialize a single run_with value, converting GlobalID-able records (and
+  # arrays of them) into their GID string form so the JSONB column doesn't
+  # bloat with the full record payload.
+  def self.serialize_run_with_value(value)
+    if value.respond_to?(:to_global_id)
+      value.to_global_id.to_s
+    elsif value.is_a?(Array) && value.any? && value.all? { |v| v.nil? || v.respond_to?(:to_global_id) }
+      value.map { |v| v&.to_global_id&.to_s }
+    else
+      value
+    end
+  end
+
+  # Inverse of serialize_run_with_value: turn GID strings (or arrays of them)
+  # back into records. RecordNotFound becomes nil so callers see the same
+  # "live link, gone-record = nil" semantics for arrays as for singles.
+  def self.deserialize_run_with_value(value)
+    if gid_string?(value)
+      locate_gid(value)
+    elsif value.is_a?(Array) && value.any? && value.all? { |v| v.nil? || gid_string?(v) }
+      value.map { |v| v.nil? ? nil : locate_gid(v) }
+    else
+      value
+    end
+  end
+
+  def self.gid_string?(value)
+    value.is_a?(String) && value.start_with?("gid://")
+  end
+
+  def self.locate_gid(gid)
+    GlobalID::Locator.locate(gid)
+  rescue ActiveRecord::RecordNotFound
+    nil
   end
 
 private

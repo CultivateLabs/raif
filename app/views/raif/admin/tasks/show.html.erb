@@ -1,5 +1,5 @@
 <div class="d-flex justify-content-between align-items-center my-4">
-  <h1><%= t(".title", id: @task.id) %></h1>
+  <h1><%= t(".title", type: @task.type, id: @task.id) %></h1>
   <%= link_to t(".back_to_tasks"), raif.admin_tasks_path, class: "btn btn-outline-secondary" %>
 </div>
 
@@ -78,6 +78,14 @@
         <div class="col-md-9"><%= @task.requested_language_key %></div>
       </div>
     <% end %>
+    <% if @task.run_with.present? %>
+      <div class="row mb-3">
+        <div class="col-md-3"><strong><%= t("raif.admin.common.run_with") %>:</strong></div>
+        <div class="col-md-9">
+          <pre class="pre-wrap mb-0"><%= JSON.pretty_generate(@task.run_with) %></pre>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>
 
@@ -139,6 +147,14 @@
           -
         <% end %>
       </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.cache_read_input_tokens") %>:</strong></div>
+      <div class="col-md-9"><%= @task.raif_model_completion.cache_read_input_tokens ? number_with_delimiter(@task.raif_model_completion.cache_read_input_tokens) : "-" %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.cache_creation_input_tokens") %>:</strong></div>
+      <div class="col-md-9"><%= @task.raif_model_completion.cache_creation_input_tokens ? number_with_delimiter(@task.raif_model_completion.cache_creation_input_tokens) : "-" %></div>
     </div>
   </div>
 </div>

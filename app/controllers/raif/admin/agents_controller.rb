@@ -3,8 +3,6 @@
 module Raif
   module Admin
     class AgentsController < Raif::Admin::ApplicationController
-      include Pagy::Backend
-
       def index
         @agent_types = Raif::Agent.distinct.pluck(:type)
         @selected_type = params[:agent_type].present? ? params[:agent_type] : "all"

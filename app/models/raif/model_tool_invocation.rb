@@ -29,8 +29,7 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
   validates :tool_type, presence: true
   validate :ensure_valid_tool_argument_schema, if: -> { tool_type.present? && tool_arguments_schema.present? }
 
-  delegate :tool_arguments_schema,
-    :renderable?,
+  delegate :renderable?,
     :tool_name,
     :triggers_observation_to_model?,
     to: :tool
@@ -40,6 +39,14 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
 
   def tool
     @tool ||= tool_type.constantize
+  end
+
+  # Routes through `tool_arguments_schema_for_source` so the invocation
+  # validates against the schema the model saw when making the call. The
+  # helper forwards `source:` only to tools whose `tool_arguments_schema`
+  # accepts it, keeping existing overrides that predate the keyword working.
+  def tool_arguments_schema
+    tool.tool_arguments_schema_for_source(source)
   end
 
   # Returns tool call in the format expected by LLM message formatting

@@ -1,13 +1,14 @@
 PATH
   remote: ..
   specs:
-    raif (1.5.0.pre)
-      aws-sdk-bedrockruntime
+    raif (1.6.0.pre)
+      aws-sdk-bedrockruntime (>= 1.75.0)
       event_stream_parser (>= 1.0)
       faraday (>= 2.0)
+      faraday-multipart (>= 1.0)
       json-schema (>= 5.0)
       loofah (>= 2.21)
-      pagy (< 10.0)
+      pagy (< 44.0)
       rails (>= 7.1)
       reverse_markdown (>= 2.0)
       turbo-rails (>= 2.0)
@@ -93,10 +94,10 @@ GEM
     ast (2.4.3)
     aws-eventstream (1.4.0)
     aws-partitions (1.1208.0)
-    aws-sdk-bedrockruntime (1.72.0)
-      aws-sdk-core (~> 3, >= 3.241.4)
+    aws-sdk-bedrockruntime (1.75.0)
+      aws-sdk-core (~> 3, >= 3.244.0)
       aws-sigv4 (~> 1.5)
-    aws-sdk-core (3.241.4)
+    aws-sdk-core (3.246.0)
       aws-eventstream (~> 1, >= 1.3.0)
       aws-partitions (~> 1, >= 1.992.0)
       aws-sigv4 (~> 1.9)
@@ -162,6 +163,8 @@ GEM
       faraday-net_http (>= 2.0, < 3.5)
       json
       logger
+    faraday-multipart (1.2.0)
+      multipart-post (~> 2.0)
     faraday-net_http (3.4.2)
       net-http (~> 0.5)
     ferrum (0.17.1)
@@ -251,6 +254,7 @@ GEM
     mini_mime (1.1.5)
     minitest (6.0.1)
       prism (~> 1.5)
+    multipart-post (2.4.1)
     mysql2 (0.5.7)
       bigdecimal
     nenv (0.3.0)

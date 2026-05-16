@@ -220,6 +220,55 @@ body.raif-admin {
     white-space: pre-wrap;
   }
 
+  // Copy-to-clipboard wrapper around pre blocks
+  .raif-copyable-pre {
+    position: relative;
+
+    > pre {
+      margin-bottom: 0;
+    }
+
+    .raif-copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      line-height: 1;
+      background-color: white;
+      box-shadow: 0 1px 2px rgba(50, 50, 93, 0.12);
+      opacity: 0;
+      transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+
+      svg {
+        display: block;
+      }
+
+      &:focus,
+      &:focus-visible {
+        opacity: 1;
+      }
+
+      &.raif-copy-btn-success {
+        opacity: 1;
+        color: white;
+        background-color: $accent-color;
+        border-color: $accent-color;
+      }
+
+      &.raif-copy-btn-error {
+        opacity: 1;
+        color: white;
+        background-color: $danger-color;
+        border-color: $danger-color;
+      }
+    }
+
+    &:hover .raif-copy-btn,
+    &:focus-within .raif-copy-btn {
+      opacity: 1;
+    }
+  }
+
   // List groups
   .list-group-item {
     border-color: $border-color;

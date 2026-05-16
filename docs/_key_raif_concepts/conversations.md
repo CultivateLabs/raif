@@ -111,9 +111,11 @@ end
 Each time the user submits a message, a `Raif::ConversationEntry` record is created to store the user's message & the LLM's response. By default, Raif will:
 1. Queue a `Raif::ConversationEntryJob` to process the entry
 2. Make the API call to the LLM
-3. Call `Raif::Conversation#process_model_response_message` on the associated conversation to [pre-process the response](#pre-processing-conversation-entry-responses).
-4. Invoke any tools called by the LLM & create corresponding `Raif::ModelToolInvocation` records
-5. Broadcast the completed conversation entry via Turbo Streams
+3. Call `Raif::Conversation#process_model_response_message` on the associated conversation to [pre-process the response](#pre-processing-conversation-entry-responses)
+4. Validate any tool calls the LLM produced. If any are malformed (unknown tool name, missing/invalid arguments), Raif will re-prompt the model with corrective feedback up to `Raif.config.conversation_entry_max_retries` times (default: 2) before marking the entry as failed. See [Tool-Call Repair Loop](#tool-call-repair-loop) below
+5. Invoke any tools called by the LLM & create corresponding `Raif::ModelToolInvocation` records
+6. Call `Raif::Conversation#on_entry_finalized` to run any [post-finalization side effects](#post-finalization-side-effects)
+7. Broadcast the completed conversation entry via Turbo Streams
 
 # Using Model Tools
 
@@ -182,13 +184,38 @@ You can do this by overriding the `process_model_response_message` method in you
 
 ```ruby
 class Raif::Conversations::CustomerSupport < Raif::Conversation
-  def process_model_response_message(message)
-    message.gsub!(/\[DocumentID (\d+)\]/i, '<a href="/documents/\1">\1</a>')
+  def process_model_response_message(message:, entry:)
+    message.gsub(/\[DocumentID (\d+)\]/i, '<a href="/documents/\1">\1</a>')
   end
 end
 ```
 
-This method is called after the LLM's response is received and before it's displayed to the user.
+{: .warning }
+`process_model_response_message` is invoked on **every streaming chunk** and on **every retry attempt** made by the [tool-call repair loop](#tool-call-repair-loop). Treat it as a pure text transformation. Do **not** put persistent side effects (database writes, Turbo broadcasts, external API calls, enqueued jobs, etc.) in here — they will run repeatedly for a single user turn and will run for attempts that are ultimately discarded. Side effects belong in [`on_entry_finalized`](#post-finalization-side-effects).
+
+# Post-finalization Side Effects {#post-finalization-side-effects}
+
+For per-entry side effects — creating dependent records, enqueuing follow-up work, broadcasting UI updates tied to the final response, etc. — override `on_entry_finalized` in your conversation class. This hook is called exactly once per `Raif::ConversationEntry`, immediately after the entry has been successfully finalized (model response saved, tool calls validated and invoked, entry transitioned to `completed`). It is never invoked for attempts that were discarded by the retry loop.
+
+```ruby
+class Raif::Conversations::CustomerSupport < Raif::Conversation
+  def on_entry_finalized(entry:)
+    SupportTicketSyncJob.perform_later(entry.id)
+  end
+end
+```
+
+# Tool-Call Repair Loop {#tool-call-repair-loop}
+
+When the LLM emits a tool call, Raif validates it before invoking the tool: the tool must be in `available_model_tools`, arguments must be a hash, and the hash must match the tool's argument schema. If validation fails for any reason, Raif appends a synthetic user-role feedback message to the request (naming the offending tool and describing what was wrong) and re-prompts the model. Each retry produces a new `Raif::ModelCompletion` attached to the same `Raif::ConversationEntry`, which is visible in the [web admin](../learn_more/web_admin) for debugging.
+
+The number of retries is bounded by `Raif.config.conversation_entry_max_retries` (default: 2 — meaning up to 3 completions per entry). If all attempts fail validation, the entry is marked `failed!` and the job exits normally (no Sidekiq-level retry is triggered). Set the config to `0` to disable the repair loop entirely:
+
+```ruby
+Raif.configure do |config|
+  config.conversation_entry_max_retries = 2 # default
+end
+```
 
 # Real-time Streaming Responses
 
@@ -201,11 +228,11 @@ When using the `raif_conversation` view helper, it will automatically set up the
 ## Streaming Chunk Size Configuration
 
 By default, Raif will update the conversation entry's associated `Raif::ModelCompletion` and call `broadcast_replace_to(conversation)` after 25 characters have been accumulated from the streaming response. If you want this to happen more or less frequently,
-you can change the `streaming_chunk_size` configuration option in your initializer:
+you can change the `streaming_update_chunk_size_threshold` configuration option in your initializer:
 
 ```ruby
 Raif.configure do |config|
-  config.streaming_chunk_size = 100
+  config.streaming_update_chunk_size_threshold = 100 # default is 25
 end
 ```
 

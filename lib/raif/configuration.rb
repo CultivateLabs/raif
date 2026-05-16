@@ -4,6 +4,7 @@ module Raif
   class Configuration
     attr_accessor :agent_types,
       :anthropic_api_key,
+      :anthropic_message_batches_beta_header,
       :bedrock_models_enabled,
       :anthropic_models_enabled,
       :authorize_admin_controller_action,
@@ -12,6 +13,7 @@ module Raif
       :aws_bedrock_region,
       :bedrock_embedding_models_enabled,
       :conversation_entries_controller,
+      :conversation_entry_max_retries,
       :conversation_llm_messages_max_length_default,
       :conversation_system_prompt_intro,
       :conversation_types,
@@ -27,8 +29,11 @@ module Raif
       :llm_api_requests_enabled,
       :llm_request_max_retries,
       :llm_request_retriable_exceptions,
+      :model_completion_batch_max_age,
+      :model_completion_batch_poll_schedule,
       :model_superclass,
       :open_ai_api_key,
+      :open_ai_batch_completion_window,
       :open_ai_api_version,
       :open_ai_auth_header_style,
       :open_ai_base_url,
@@ -42,6 +47,7 @@ module Raif
       :request_open_timeout,
       :request_read_timeout,
       :request_write_timeout,
+      :streaming_unsupported_model_keys,
       :streaming_update_chunk_size_threshold,
       :task_creator_optional,
       :prompt_studio_runs_enabled,
@@ -59,6 +65,7 @@ module Raif
     def initialize
       @agent_types = Set.new(["Raif::Agents::NativeToolCallingAgent"])
       @anthropic_api_key = default_disable_llm_api_requests? ? "placeholder-anthropic-api-key" : ENV["ANTHROPIC_API_KEY"]
+      @anthropic_message_batches_beta_header = "message-batches-2024-09-24"
       @bedrock_models_enabled = false
       @anthropic_models_enabled = ENV["ANTHROPIC_API_KEY"].present?
       @authorize_admin_controller_action = ->{ false }
@@ -68,6 +75,7 @@ module Raif
       @bedrock_embedding_models_enabled = false
       @task_system_prompt_intro = "You are a helpful assistant."
       @conversation_entries_controller = "Raif::ConversationEntriesController"
+      @conversation_entry_max_retries = 2
       @conversation_llm_messages_max_length_default = 50
       @conversation_system_prompt_intro = "You are a helpful assistant who is collaborating with a teammate."
       @conversation_types = Set.new(["Raif::Conversation"])
@@ -91,9 +99,28 @@ module Raif
         Net::OpenTimeout,
         Raif::Errors::BlankResponseError,
       ]
+      # Schedule for the self-rescheduling Raif::PollModelCompletionBatchJob.
+      # The Nth poll waits poll_schedule[N] (clamped to the last entry once exhausted).
+      @model_completion_batch_poll_schedule = [
+        60.seconds,
+        2.minutes,
+        5.minutes,
+        10.minutes,
+        30.minutes
+      ]
+      # Hard ceiling for any non-terminal Raif::ModelCompletionBatch. Older
+      # batches are expired by the hourly safety sweep
+      # (Raif::ExpireStuckModelCompletionBatchesJob) and the polling job's
+      # max_age_exceeded? branch: a best-effort provider-side cancel is issued
+      # via batch.cancel! before the batch is force-failed locally, so the
+      # workflow can advance and we stop paying for completions we won't read.
+      # If the cancel fails (network, 5xx, etc.), the local force-fail still
+      # happens and the provider-side batch may continue and be billed.
+      @model_completion_batch_max_age = 26.hours
       @model_superclass = "ApplicationRecord"
       @open_ai_api_key = default_disable_llm_api_requests? ? "placeholder-open-ai-api-key" : ENV["OPENAI_API_KEY"]
       @open_ai_api_version = nil
+      @open_ai_batch_completion_window = "24h"
       @open_ai_auth_header_style = :bearer
       @open_ai_base_url = "https://api.openai.com/v1"
       @open_ai_embedding_base_url = "https://api.openai.com/v1"
@@ -108,6 +135,15 @@ module Raif
       @request_open_timeout = nil
       @request_read_timeout = nil
       @request_write_timeout = nil
+      # Raif model keys whose streaming path is known to be unreliable. When a
+      # caller passes a block to Raif::Llm#chat for one of these models, Raif
+      # transparently falls back to the non-streaming path. Each entry may be
+      # a String, Symbol, or Regexp matched against the model key.
+      #
+      # Default covers Bedrock gpt-oss, whose Converse streaming endpoint
+      # delivers corrupted/truncated tool_use deltas. Set to [] to disable
+      # the workaround.
+      @streaming_unsupported_model_keys = [/\Abedrock_gpt_oss_/]
       @streaming_update_chunk_size_threshold = 25
       @task_creator_optional = true
       @user_tool_types = []

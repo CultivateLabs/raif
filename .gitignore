@@ -3,6 +3,7 @@
 /pkg/
 /tmp/
 /spec/dummy/log/*.log
+/spec/dummy/log/*.log.*
 /spec/dummy/storage/
 /spec/dummy/tmp/
 /spec/examples.txt
@@ -12,4 +13,6 @@
 *.gem
 .erb_lint_cache/
 .claude/settings.local.json
+/.envrc.local
+/.envrc
 llm_outputs/

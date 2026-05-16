@@ -51,8 +51,28 @@ module Raif
       I18n.t("raif.model_names.#{key}", default: display_name || key.to_s.humanize)
     end
 
+    # Whether streaming is supported for the given Raif model key. A model key
+    # is considered unsupported if it matches any entry in
+    # Raif.config.streaming_unsupported_model_keys (each entry may be a
+    # String, Symbol, or Regexp). Used by #chat to transparently fall back to
+    # the non-streaming path for models with known-broken streaming endpoints.
+    def self.streaming_supported_for_key?(model_key)
+      entries = Array(Raif.config.streaming_unsupported_model_keys)
+      key_str = model_key.to_s
+      entries.none? do |entry|
+        case entry
+        when Regexp then entry.match?(key_str)
+        else entry.to_s == key_str
+        end
+      end
+    end
+
+    def streaming_supported?
+      self.class.streaming_supported_for_key?(key)
+    end
+
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
-      max_completion_tokens: nil, tool_choice: nil, &block)
+      max_completion_tokens: nil, tool_choice: nil, anthropic_prompt_caching_enabled: false, bedrock_prompt_caching_enabled: false, &block)
       unless response_format.is_a?(Symbol)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid response format: #{response_format}. Must be a symbol (you passed #{response_format.class}) and be one of: #{VALID_RESPONSE_FORMATS.join(", ")}" # rubocop:disable Layout/LineLength
@@ -93,18 +113,26 @@ module Raif
       temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
 
-      model_completion = Raif::ModelCompletion.create!(
-        messages: format_messages(messages),
-        system_prompt: system_prompt,
+      stream_response = block_given? && streaming_supported?
+      if block_given? && !stream_response
+        Raif.logger.info(
+          "Raif::Llm#chat: streaming requested but disabled for model key #{key.inspect} " \
+            "via Raif.config.streaming_unsupported_model_keys; falling back to non-streaming."
+        )
+      end
+
+      model_completion = build_pending_model_completion(
+        messages: messages,
         response_format: response_format,
+        available_model_tools: available_model_tools,
         source: source,
-        llm_model_key: key.to_s,
-        model_api_name: api_name,
+        system_prompt: system_prompt,
         temperature: temperature,
         max_completion_tokens: max_completion_tokens,
-        available_model_tools: available_model_tools,
-        tool_choice: tool_choice&.to_s,
-        stream_response: block_given?
+        tool_choice: tool_choice,
+        stream_response: stream_response,
+        anthropic_prompt_caching_enabled: anthropic_prompt_caching_enabled,
+        bedrock_prompt_caching_enabled: bedrock_prompt_caching_enabled
       )
 
       model_completion.started!
@@ -134,6 +162,40 @@ module Raif
       raise NotImplementedError, "#{self.class.name} must implement #perform_model_completion!"
     end
 
+    # Builds and persists a Raif::ModelCompletion without performing the request.
+    # Used by #chat (which then calls perform_model_completion!) and by callers
+    # that want to defer execution -- e.g. submitting through a provider Batch API
+    # via Raif::Task.build_for_batch / Raif::Task#prepare_for_batch!.
+    #
+    # @return [Raif::ModelCompletion] persisted, with started_at: nil
+    def build_pending_model_completion(messages:, response_format: :text, available_model_tools: [], source: nil,
+      system_prompt: nil, temperature: nil, max_completion_tokens: nil, tool_choice: nil,
+      stream_response: false, anthropic_prompt_caching_enabled: false, bedrock_prompt_caching_enabled: false,
+      raif_model_completion_batch: nil, batch_custom_id: nil)
+      temperature ||= default_temperature
+      max_completion_tokens ||= default_max_completion_tokens
+
+      model_completion = Raif::ModelCompletion.create!(
+        messages: format_messages(messages),
+        system_prompt: system_prompt,
+        response_format: response_format,
+        source: source,
+        llm_model_key: key.to_s,
+        model_api_name: api_name,
+        temperature: temperature,
+        max_completion_tokens: max_completion_tokens,
+        available_model_tools: available_model_tools,
+        tool_choice: tool_choice&.to_s,
+        stream_response: stream_response,
+        raif_model_completion_batch: raif_model_completion_batch,
+        batch_custom_id: batch_custom_id
+      )
+
+      model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled
+      model_completion.bedrock_prompt_caching_enabled = bedrock_prompt_caching_enabled
+      model_completion
+    end
+
     def self.valid_response_formats
       VALID_RESPONSE_FORMATS
     end
@@ -156,6 +218,27 @@ module Raif
     # cost for cache creation writes.  Return nil when there is no write surcharge.
     def self.cache_creation_input_token_cost_multiplier
       nil
+    end
+
+    # Whether this provider supports submitting model completions via a Batch API.
+    # Override in subclasses by including Raif::Concerns::Llms::SupportsBatchInference,
+    # which sets this to true.
+    def self.supports_batch_inference?
+      false
+    end
+
+    # Instance-level shortcut for the class-level predicate so callers can use the
+    # idiomatic Raif.llm(:some_key).supports_batch_inference? form instead of
+    # reaching through to the class.
+    def supports_batch_inference?
+      self.class.supports_batch_inference?
+    end
+
+    # Multiplier applied to per-token costs when a model completion was resolved
+    # through this provider's Batch API. Defaults to 0.5 (50% discount), which is
+    # what both Anthropic and OpenAI charge for batch requests today.
+    def self.batch_inference_cost_multiplier
+      0.5
     end
 
     def supports_provider_managed_tool?(tool_klass)

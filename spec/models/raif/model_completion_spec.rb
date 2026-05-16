@@ -4,49 +4,60 @@
 #
 # Table name: raif_model_completions
 #
-#  id                          :bigint           not null, primary key
-#  available_model_tools       :jsonb            not null
-#  cache_creation_input_tokens :integer
-#  cache_read_input_tokens     :integer
-#  citations                   :jsonb
-#  completed_at                :datetime
-#  completion_tokens           :integer
-#  failed_at                   :datetime
-#  failure_error               :string
-#  failure_reason              :text
-#  llm_model_key               :string           not null
-#  max_completion_tokens       :integer
-#  messages                    :jsonb            not null
-#  model_api_name              :string           not null
-#  output_token_cost           :decimal(10, 6)
-#  prompt_token_cost           :decimal(10, 6)
-#  prompt_tokens               :integer
-#  raw_response                :text
-#  response_array              :jsonb
-#  response_format             :integer          default("text"), not null
-#  response_format_parameter   :string
-#  response_tool_calls         :jsonb
-#  retry_count                 :integer          default(0), not null
-#  source_type                 :string
-#  started_at                  :datetime
-#  stream_response             :boolean          default(FALSE), not null
-#  system_prompt               :text
-#  temperature                 :decimal(5, 3)
-#  tool_choice                 :string
-#  total_cost                  :decimal(10, 6)
-#  total_tokens                :integer
-#  created_at                  :datetime         not null
-#  updated_at                  :datetime         not null
-#  response_id                 :string
-#  source_id                   :bigint
+#  id                             :bigint           not null, primary key
+#  available_model_tools          :jsonb            not null
+#  cache_creation_input_tokens    :integer
+#  cache_read_input_tokens        :integer
+#  citations                      :jsonb
+#  completed_at                   :datetime
+#  completion_tokens              :integer
+#  failed_at                      :datetime
+#  failure_error                  :string
+#  failure_reason                 :text
+#  failure_response_body          :text
+#  failure_response_status        :integer
+#  llm_model_key                  :string           not null
+#  max_completion_tokens          :integer
+#  messages                       :jsonb            not null
+#  model_api_name                 :string           not null
+#  output_token_cost              :decimal(10, 6)
+#  prompt_token_cost              :decimal(10, 6)
+#  prompt_tokens                  :integer
+#  raw_response                   :text
+#  response_array                 :jsonb
+#  response_format                :integer          default("text"), not null
+#  response_format_parameter      :string
+#  response_tool_calls            :jsonb
+#  retry_count                    :integer          default(0), not null
+#  source_type                    :string
+#  started_at                     :datetime
+#  stream_response                :boolean          default(FALSE), not null
+#  system_prompt                  :text
+#  temperature                    :decimal(5, 3)
+#  tool_choice                    :string
+#  total_cost                     :decimal(10, 6)
+#  total_tokens                   :integer
+#  created_at                     :datetime         not null
+#  updated_at                     :datetime         not null
+#  batch_custom_id                :string
+#  raif_model_completion_batch_id :bigint
+#  response_id                    :string
+#  source_id                      :bigint
 #
 # Indexes
 #
-#  index_raif_model_completions_on_completed_at  (completed_at)
-#  index_raif_model_completions_on_created_at    (created_at)
-#  index_raif_model_completions_on_failed_at     (failed_at)
-#  index_raif_model_completions_on_source        (source_type,source_id)
-#  index_raif_model_completions_on_started_at    (started_at)
+#  index_raif_model_completions_on_batch_custom_id                 (batch_custom_id)
+#  index_raif_model_completions_on_batch_id_and_custom_id          (raif_model_completion_batch_id,batch_custom_id) UNIQUE WHERE (raif_model_completion_batch_id IS NOT NULL)
+#  index_raif_model_completions_on_completed_at                    (completed_at)
+#  index_raif_model_completions_on_created_at                      (created_at)
+#  index_raif_model_completions_on_failed_at                       (failed_at)
+#  index_raif_model_completions_on_raif_model_completion_batch_id  (raif_model_completion_batch_id)
+#  index_raif_model_completions_on_source                          (source_type,source_id)
+#  index_raif_model_completions_on_started_at                      (started_at)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (raif_model_completion_batch_id => raif_model_completion_batches.id)
 #
 require "rails_helper"
 
@@ -297,6 +308,106 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         expect(model_completion.prompt_token_cost).to be_nil
         expect(model_completion.output_token_cost).to be_nil
         expect(model_completion.total_cost).to be_nil
+      end
+
+      describe "batch inference discount" do
+        let(:batch) do
+          FB.create(
+            :raif_model_completion_batch_anthropic,
+            llm_model_key: "anthropic_claude_3_5_haiku",
+            model_api_name: "claude-3-5-haiku-latest"
+          )
+        end
+
+        it "halves the per-token costs for a model completion attached to a batch" do
+          llm_config = Raif.llm_config(:anthropic_claude_3_5_haiku)
+          model_completion = described_class.new(
+            llm_model_key: "anthropic_claude_3_5_haiku",
+            model_api_name: "claude-3-5-haiku-latest",
+            prompt_tokens: 100,
+            completion_tokens: 50,
+            cache_read_input_tokens: 0,
+            cache_creation_input_tokens: 0,
+            raif_model_completion_batch: batch
+          )
+
+          model_completion.save(validate: false)
+
+          expect(model_completion.prompt_token_cost.to_f).to be_within(1e-9).of((llm_config[:input_token_cost] * 100) * 0.5)
+          expect(model_completion.output_token_cost.to_f).to be_within(1e-9).of((llm_config[:output_token_cost] * 50) * 0.5)
+          expect(model_completion.total_cost.to_f).to be_within(1e-9).of(
+            ((llm_config[:input_token_cost] * 100) + (llm_config[:output_token_cost] * 50)) * 0.5
+          )
+        end
+
+        it "honors a non-default batch_inference_cost_multiplier override" do
+          stub_const(
+            "Raif::Llms::AnthropicCustomDiscount",
+            Class.new(Raif::Llms::Anthropic) do
+              def self.batch_inference_cost_multiplier
+                0.4
+              end
+            end
+          )
+          llm_config = Raif.llm_config(:anthropic_claude_3_5_haiku).merge(llm_class: Raif::Llms::AnthropicCustomDiscount)
+          allow(Raif).to receive(:llm_config).and_return(llm_config)
+
+          model_completion = described_class.new(
+            llm_model_key: "anthropic_claude_3_5_haiku",
+            model_api_name: "claude-3-5-haiku-latest",
+            prompt_tokens: 100,
+            completion_tokens: 50,
+            cache_read_input_tokens: 0,
+            cache_creation_input_tokens: 0,
+            raif_model_completion_batch: batch
+          )
+
+          model_completion.save(validate: false)
+
+          expect(model_completion.prompt_token_cost.to_f).to be_within(1e-9).of((llm_config[:input_token_cost] * 100) * 0.4)
+          expect(model_completion.output_token_cost.to_f).to be_within(1e-9).of((llm_config[:output_token_cost] * 50) * 0.4)
+        end
+
+        it "is a no-op when the multiplier is exactly 1.0" do
+          llm_config = Raif.llm_config(:anthropic_claude_3_5_haiku)
+          allow(Raif::Llms::Anthropic).to receive(:batch_inference_cost_multiplier).and_return(1.0)
+
+          model_completion = described_class.new(
+            llm_model_key: "anthropic_claude_3_5_haiku",
+            model_api_name: "claude-3-5-haiku-latest",
+            prompt_tokens: 100,
+            completion_tokens: 50,
+            cache_read_input_tokens: 0,
+            cache_creation_input_tokens: 0,
+            raif_model_completion_batch: batch
+          )
+
+          model_completion.save(validate: false)
+
+          # No discount: costs match the synchronous path exactly.
+          expect(model_completion.prompt_token_cost.to_f).to be_within(1e-9).of(llm_config[:input_token_cost] * 100)
+          expect(model_completion.output_token_cost.to_f).to be_within(1e-9).of(llm_config[:output_token_cost] * 50)
+        end
+
+        it "leaves total_cost NULL when no tokens are recorded yet (parity with non-batch completions)" do
+          # Mirrors the state of a pending Raif::ModelCompletion built by
+          # Raif::Llm#build_pending_model_completion: persisted, attached to
+          # the batch, but no tokens or costs yet. total_cost should NOT be
+          # coerced from NULL to 0 by apply_batch_inference_discount, otherwise
+          # batch completions diverge from non-batch completions on aggregate
+          # queries that filter on total_cost IS NULL.
+          model_completion = described_class.new(
+            llm_model_key: "anthropic_claude_3_5_haiku",
+            model_api_name: "claude-3-5-haiku-latest",
+            raif_model_completion_batch: batch
+          )
+
+          model_completion.save(validate: false)
+
+          expect(model_completion.prompt_token_cost).to be_nil
+          expect(model_completion.output_token_cost).to be_nil
+          expect(model_completion.total_cost).to be_nil
+        end
       end
     end
   end
@@ -566,6 +677,75 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         expect(reloaded.failed?).to be true
         expect(reloaded.failure_error).to eq("StandardError")
         expect(reloaded.failure_reason).to eq("Test error")
+      end
+
+      context "when the exception is a Faraday::Error with a response" do
+        let(:body) { '{"error":{"message":"Invalid request: input tokens exceed max"}}' }
+        let(:exception) do
+          Faraday::BadRequestError.new(
+            "the server responded with status 400",
+            { status: 400, headers: {}, body: body }
+          )
+        end
+
+        it "stores the response status and body" do
+          model_completion.record_failure!(exception)
+
+          expect(model_completion.failure_error).to eq("Faraday::BadRequestError")
+          expect(model_completion.failure_response_status).to eq(400)
+          expect(model_completion.failure_response_body).to eq(body)
+        end
+
+        it "truncates a body longer than FAILURE_RESPONSE_BODY_MAX_CHARS" do
+          long_body = "x" * (described_class::FAILURE_RESPONSE_BODY_MAX_CHARS + 1_000)
+          exception = Faraday::BadRequestError.new(
+            "the server responded with status 400",
+            { status: 400, headers: {}, body: long_body }
+          )
+
+          model_completion.record_failure!(exception)
+
+          expect(model_completion.failure_response_body.length).to eq(described_class::FAILURE_RESPONSE_BODY_MAX_CHARS)
+        end
+      end
+
+      context "when the exception is a Faraday::Error with no response (e.g. ConnectionFailed)" do
+        it "leaves failure_response_status and failure_response_body nil" do
+          exception = Faraday::ConnectionFailed.new("Connection refused")
+
+          model_completion.record_failure!(exception)
+
+          expect(model_completion.failure_error).to eq("Faraday::ConnectionFailed")
+          expect(model_completion.failure_response_status).to be_nil
+          expect(model_completion.failure_response_body).to be_nil
+        end
+      end
+
+      context "when the exception is not a Faraday::Error" do
+        it "leaves failure_response_status and failure_response_body nil" do
+          model_completion.record_failure!(StandardError.new("kaboom"))
+
+          expect(model_completion.failure_response_status).to be_nil
+          expect(model_completion.failure_response_body).to be_nil
+        end
+      end
+
+      context "when called twice with different exception kinds" do
+        it "clears stale response metadata from a prior Faraday failure" do
+          first = Faraday::BadRequestError.new(
+            "the server responded with status 400",
+            { status: 400, headers: {}, body: '{"error":"first"}' }
+          )
+          model_completion.record_failure!(first)
+          expect(model_completion.failure_response_status).to eq(400)
+          expect(model_completion.failure_response_body).to eq('{"error":"first"}')
+
+          model_completion.record_failure!(StandardError.new("subsequent failure"))
+
+          expect(model_completion.failure_error).to eq("StandardError")
+          expect(model_completion.failure_response_status).to be_nil
+          expect(model_completion.failure_response_body).to be_nil
+        end
       end
     end
   end

@@ -73,13 +73,24 @@ jobs:
           bundler-cache: true
 
       - name: Create database
-        run: bin/rails app:db:create 
-  
-      - name: Run Migrations 
+        run: bin/rails app:db:create
+
+      - name: Run Migrations
         run: bin/rails app:db:migrate:reset
 
       - name: Run tests
+        id: initial_run
+        continue-on-error: true
         run: bundle exec rspec
+
+      - name: Retry failed specs
+        id: retry_run
+        if: steps.initial_run.outcome == 'failure'
+        run: bin/ci/retry_failed_specs
+
+      - name: Fail if specs failed
+        if: steps.initial_run.outcome == 'failure' && steps.retry_run.outcome == 'failure'
+        run: exit 1
 
   test-mysql:
     runs-on: ubuntu-latest
@@ -138,10 +149,21 @@ jobs:
           EOL
 
       - name: Create database
-        run: bin/rails app:db:create 
+        run: bin/rails app:db:create
 
-      - name: Run Migrations 
+      - name: Run Migrations
         run: bin/rails app:db:migrate:reset
 
       - name: Run tests
+        id: initial_run
+        continue-on-error: true
         run: bundle exec rspec
+
+      - name: Retry failed specs
+        id: retry_run
+        if: steps.initial_run.outcome == 'failure'
+        run: bin/ci/retry_failed_specs
+
+      - name: Fail if specs failed
+        if: steps.initial_run.outcome == 'failure' && steps.retry_run.outcome == 'failure'
+        run: exit 1

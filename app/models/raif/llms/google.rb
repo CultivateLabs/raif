@@ -4,6 +4,7 @@ class Raif::Llms::Google < Raif::Llm
   include Raif::Concerns::Llms::Google::MessageFormatting
   include Raif::Concerns::Llms::Google::ToolFormatting
   include Raif::Concerns::Llms::Google::ResponseToolCalls
+  include Raif::Concerns::Llms::Google::BatchInference
 
   def self.cache_read_input_token_cost_multiplier
     0.25

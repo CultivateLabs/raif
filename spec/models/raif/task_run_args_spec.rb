@@ -95,6 +95,116 @@ RSpec.describe "Raif::Task run_with", type: :model do
     end
   end
 
+  describe "arrays of ActiveRecord objects" do
+    before do
+      stub_const("Raif::TaskRunArgsArrayTask", Class.new(Raif::Task) do
+        run_with :conversations
+        run_with :tags
+
+        def build_prompt
+          "Test prompt"
+        end
+
+        def build_system_prompt
+          "Test system prompt"
+        end
+      end)
+    end
+
+    let(:array_task_class) { Raif::TaskRunArgsArrayTask }
+    let(:conversation_a) { FB.create(:raif_conversation, creator: user) }
+    let(:conversation_b) { FB.create(:raif_conversation, creator: user) }
+
+    it "serializes an array of ActiveRecord objects as an array of GIDs" do
+      stub_raif_task(array_task_class) { "Test response" }
+
+      task = array_task_class.run(
+        creator: user,
+        conversations: [conversation_a, conversation_b],
+        tags: ["alpha", "beta"]
+      )
+
+      expect(task.run_with["conversations"]).to eq([
+        conversation_a.to_global_id.to_s,
+        conversation_b.to_global_id.to_s
+      ])
+      expect(task.run_with["tags"]).to eq(["alpha", "beta"])
+    end
+
+    it "deserializes an array of GIDs back to ActiveRecord objects" do
+      stub_raif_task(array_task_class) { "Test response" }
+
+      task = array_task_class.run(
+        creator: user,
+        conversations: [conversation_a, conversation_b]
+      )
+      reloaded = array_task_class.find(task.id)
+
+      expect(reloaded.conversations).to eq([conversation_a, conversation_b])
+    end
+
+    it "preserves order and nils out missing records on deserialize" do
+      stub_raif_task(array_task_class) { "Test response" }
+
+      task = array_task_class.run(
+        creator: user,
+        conversations: [conversation_a, conversation_b]
+      )
+      conversation_a.destroy
+      reloaded = array_task_class.find(task.id)
+
+      expect(reloaded.conversations).to eq([nil, conversation_b])
+    end
+
+    it "leaves arrays of primitives untouched" do
+      stub_raif_task(array_task_class) { "Test response" }
+
+      task = array_task_class.run(creator: user, tags: ["alpha", "beta"])
+      reloaded = array_task_class.find(task.id)
+
+      expect(reloaded.tags).to eq(["alpha", "beta"])
+    end
+
+    it "leaves an empty array untouched" do
+      stub_raif_task(array_task_class) { "Test response" }
+
+      task = array_task_class.run(creator: user, conversations: [])
+      reloaded = array_task_class.find(task.id)
+
+      expect(task.run_with["conversations"]).to eq([])
+      expect(reloaded.conversations).to eq([])
+    end
+
+    it "leaves a mixed array (AR + primitive) untouched so unintended GID conversion can't happen" do
+      mixed = [conversation_a, "raw"]
+      expect(Raif::Concerns::RunWith.serialize_run_with_value(mixed)).to eq(mixed)
+    end
+
+    it "round-trips arrays containing nil alongside AR objects" do
+      stub_raif_task(array_task_class) { "Test response" }
+
+      task = array_task_class.run(
+        creator: user,
+        conversations: [conversation_a, nil, conversation_b]
+      )
+      reloaded = array_task_class.find(task.id)
+
+      expect(reloaded.conversations).to eq([conversation_a, nil, conversation_b])
+    end
+
+    it "is queryable via having_run_with using JSONB containment" do
+      stub_raif_task(array_task_class) { "Test response" }
+
+      match = array_task_class.run(
+        creator: user,
+        conversations: [conversation_a, conversation_b]
+      )
+      array_task_class.run(creator: user, conversations: [conversation_b])
+
+      expect(array_task_class.having_run_with(conversations: [conversation_a])).to contain_exactly(match)
+    end
+  end
+
   describe "accessing run_with after reload" do
     let(:task) do
       stub_raif_task(test_task_class) do |_messages|

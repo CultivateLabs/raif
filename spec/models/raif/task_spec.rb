@@ -269,6 +269,58 @@ RSpec.describe Raif::Task, type: :model do
         ])
       end
     end
+
+    context "with a streaming block" do
+      let(:user) { FB.create(:raif_test_user) }
+
+      before do
+        stub_raif_task(Raif::TestTask) do |_messages|
+          "Streaming response"
+        end
+      end
+
+      it "sets stream_response on the model completion when a block is given" do
+        task = Raif::TestTask.run(creator: user) do |_mc, _delta, _event|
+          # streaming callback
+        end
+
+        expect(task).to be_completed
+        expect(task.raif_model_completion.stream_response).to eq(true)
+      end
+
+      it "does not set stream_response when no block is given" do
+        task = Raif::TestTask.run(creator: user)
+
+        expect(task).to be_completed
+        expect(task.raif_model_completion.stream_response).to eq(false)
+      end
+
+      it "forwards the block from Task.run class method" do
+        block_provided = false
+
+        allow_any_instance_of(Raif::TestTask).to receive(:run).and_wrap_original do |original_method, **kwargs, &blk|
+          block_provided = blk.present?
+          original_method.call(**kwargs, &blk)
+        end
+
+        Raif::TestTask.run(creator: user) do |_mc, _delta, _event|
+          # streaming callback
+        end
+
+        expect(block_provided).to eq(true)
+      end
+
+      it "sets stream_response on re_run when a block is given" do
+        task = Raif::TestTask.run(creator: user)
+        expect(task.raif_model_completion.stream_response).to eq(false)
+
+        task.re_run do |_mc, _delta, _event|
+          # streaming callback
+        end
+
+        expect(task.raif_model_completion.stream_response).to eq(true)
+      end
+    end
   end
 
   describe "json_response_schema" do

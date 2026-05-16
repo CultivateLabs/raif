@@ -12,6 +12,8 @@ en:
         arguments: Arguments
         arguments_schema: Arguments Schema
         at: at
+        attempt: Attempt
+        attempts: Attempts
         available_tools: Available Tools
         cache_creation_input_tokens: Cache Creation Tokens
         cache_read_input_tokens: Cache Read Tokens
@@ -47,8 +49,10 @@ en:
         input: Input
         input_token_cost: Input Token Cost
         invalid_json: Invalid JSON
+        invocations: Invocations
         iterations: Iterations
         language: Language
+        latest_entry_at: Latest Entry At
         llms: LLMs
         messages: Messages
         model: Model
@@ -264,4 +268,4 @@ en:
       tasks:
         show:
           back_to_tasks: Back to Tasks
-          title: 'Task #%{id}'
+          title: "%{type} #%{id}"

@@ -19,8 +19,25 @@ module Raif::Concerns::Llms::Bedrock::ResponseToolCalls
       {
         "provider_tool_call_id" => content.tool_use.tool_use_id,
         "name" => content.tool_use.name,
-        "arguments" => content.tool_use.input
+        "arguments" => parse_tool_use_input(content.tool_use.input)
       }
     end
+  end
+
+private
+
+  # Defensively guard against tool_use.input arriving as a String rather than
+  # a Hash. The AWS SDK normally deserializes Bedrock's Document-typed tool
+  # input to a Hash (verified against Claude, Nova, and gpt-oss-120b on the
+  # non-streaming Converse API), but if a model/error path ever surfaces a
+  # raw JSON string here, mirror the streaming handler's behavior: parse
+  # when possible, otherwise leave the raw String so the downstream validator
+  # can reject it and trigger a repair loop.
+  def parse_tool_use_input(input)
+    return input unless input.is_a?(String)
+
+    JSON.parse(input)
+  rescue JSON::ParserError
+    input
   end
 end

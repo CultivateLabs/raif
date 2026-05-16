@@ -6,13 +6,17 @@
 
     <% if content.present? %>
       <div class="mb-1 rounded-2 p-3 <%= message_type == :user ? "bg-primary text-white" : "border" %>">
-        <% case local_assigns[:conversation_entry]&.response_format %>
-        <% when "text" %>
-          <%= simple_format content %>
-        <% when "html" %>
-          <%= sanitize content %>
+        <% if message_type == :user %>
+          <%= simple_format h(content), {}, sanitize: false %>
         <% else %>
-          <%= content %>
+          <% case local_assigns[:conversation_entry]&.response_format %>
+          <% when "text" %>
+            <%= simple_format content %>
+          <% when "html" %>
+            <%= sanitize content %>
+          <% else %>
+            <%= content %>
+          <% end %>
         <% end %>
 
         <% if message_type == :model_response && local_assigns[:conversation_entry]&.citations.present? %>

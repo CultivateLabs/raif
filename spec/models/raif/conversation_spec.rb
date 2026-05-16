@@ -10,6 +10,7 @@
 #  conversation_entries_count :integer          default(0), not null
 #  creator_type               :string           not null
 #  generating_entry_response  :boolean          default(FALSE), not null
+#  latest_entry_at            :datetime
 #  llm_messages_max_length    :integer
 #  llm_model_key              :string           not null
 #  requested_language_key     :string
@@ -272,6 +273,28 @@ RSpec.describe Raif::Conversation, type: :model do
 
       expect(conversation.system_prompt).to eq("You are a helpful assistant who is responding to message number 2 in the conversation.")
       expect(model_completion.system_prompt).to eq("You are a helpful assistant who is responding to message number 2 in the conversation.")
+    end
+
+    it "appends extra_messages to the LLM request but does not persist them as conversation history" do
+      conversation = FB.create(:raif_conversation, :with_entries, entries_count: 1, creator: creator)
+
+      captured_messages = nil
+      stub_raif_conversation(conversation) do |messages, _model_completion|
+        captured_messages = messages
+        "Corrected response"
+      end
+
+      entry = conversation.entries.first
+      extra_messages = [
+        { "role" => "user", "content" => "Synthetic feedback about invalid tool call" }
+      ]
+
+      model_completion = conversation.prompt_model_for_entry_response(entry: entry, extra_messages: extra_messages)
+
+      expect(captured_messages.last.to_json).to include("Synthetic feedback about invalid tool call")
+      expect(model_completion.messages.last.to_json).to include("Synthetic feedback about invalid tool call")
+
+      expect(conversation.llm_messages.map(&:to_json).join).not_to include("Synthetic feedback about invalid tool call")
     end
 
     it "handles errors" do
