@@ -70,6 +70,11 @@ module Raif::Concerns::Llms::XAi::BatchInference
         "xAI batch create returned no batch id (body=#{create_body.inspect})"
     end
 
+    # Persist provider_batch_id immediately after the create call so a mid-
+    # submission failure during chunked add-requests leaves the batch
+    # recoverable (cancelable / pollable) rather than orphaned on xAI's side.
+    batch.update!(provider_batch_id: provider_batch_id)
+
     last_add_body = nil
     completions.each_slice(XAI_BATCH_REQUESTS_CHUNK_SIZE) do |slice|
       payload = {
@@ -86,7 +91,6 @@ module Raif::Concerns::Llms::XAi::BatchInference
 
     Raif::ModelCompletionBatch.transaction do
       batch.update!(
-        provider_batch_id: provider_batch_id,
         status: "submitted",
         submitted_at: submitted_at,
         started_at: submitted_at,

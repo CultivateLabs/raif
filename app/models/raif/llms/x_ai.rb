@@ -59,17 +59,19 @@ private
   end
 
   def build_request_parameters(model_completion)
+    messages = model_completion.messages
+    messages_with_system = if model_completion.system_prompt.present?
+      [{ "role" => "system", "content" => model_completion.system_prompt }] + messages
+    else
+      messages
+    end
+
     params = {
       model: model_completion.model_api_name,
-      messages: model_completion.messages,
+      messages: messages_with_system,
       temperature: model_completion.temperature.to_f,
       max_tokens: model_completion.max_completion_tokens || default_max_completion_tokens,
     }
-
-    # Add system message to the messages array if present
-    if model_completion.system_prompt.present?
-      params[:messages].unshift({ "role" => "system", "content" => model_completion.system_prompt })
-    end
 
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
@@ -89,7 +91,9 @@ private
 
       params[:tools] = tools unless tools.blank?
 
-      if model_completion.tool_choice.present?
+      if model_completion.tool_choice == "required"
+        params[:tool_choice] = build_required_tool_choice
+      elsif model_completion.tool_choice.present?
         tool_klass = model_completion.tool_choice.constantize
         params[:tool_choice] = build_forced_tool_choice(tool_klass.tool_name)
       end
