@@ -22,7 +22,8 @@ SELECTORS = {
   "open_ai" => ->(key) { key.start_with?("open_ai_") && !key.start_with?("open_ai_responses_") },
   "open_ai_responses" => ->(key) { key.start_with?("open_ai_responses_") },
   "open_router" => ->(key) { key.start_with?("open_router_") },
-  "google" => ->(key) { key.start_with?("google_") }
+  "google" => ->(key) { key.start_with?("google_") },
+  "x_ai" => ->(key) { key.start_with?("x_ai_") }
 }.freeze
 
 options = {
@@ -117,6 +118,11 @@ end
 if ENV["GOOGLE_AI_API_KEY"].present? || ENV["GOOGLE_API_KEY"].present?
   Raif.config.google_models_enabled = true
   Raif.config.google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
+end
+
+if ENV["XAI_API_KEY"].present? || ENV["X_AI_API_KEY"].present?
+  Raif.config.x_ai_models_enabled = true
+  Raif.config.x_ai_api_key = ENV["XAI_API_KEY"].presence || ENV["X_AI_API_KEY"]
 end
 
 ENV["AWS_EC2_METADATA_DISABLED"] ||= "true"
