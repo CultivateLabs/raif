@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Raif::Llms::XAi, "batch inference" do
   let(:creator) { FB.build(:raif_test_user) }
   let(:base_url) { "https://api.x.ai/v1" }
-  let(:llm) { Raif.llm(:x_ai_grok_3_beta) }
+  let(:llm) { Raif.llm(:x_ai_grok_4_3) }
 
   before do
     allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
@@ -27,8 +27,8 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
     let(:batch) do
       FB.create(
         :raif_model_completion_batch_x_ai,
-        llm_model_key: "x_ai_grok_3_beta",
-        model_api_name: "grok-3-beta"
+        llm_model_key: "x_ai_grok_4_3",
+        model_api_name: "grok-4.3"
       )
     end
 
@@ -37,7 +37,7 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
         batch: batch,
         batch_custom_id: "task_a",
         creator: creator,
-        llm_model_key: "x_ai_grok_3_beta"
+        llm_model_key: "x_ai_grok_4_3"
       )
     end
 
@@ -46,7 +46,7 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
         batch: batch,
         batch_custom_id: "task_b",
         creator: creator,
-        llm_model_key: "x_ai_grok_3_beta"
+        llm_model_key: "x_ai_grok_4_3"
       )
     end
 
@@ -81,7 +81,7 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       expect(requests.map { |r| r["batch_request_id"] }).to contain_exactly("task_a", "task_b")
       requests.each do |entry|
         responses_payload = entry["batch_request"]["responses"]
-        expect(responses_payload["model"]).to eq("grok-3-beta")
+        expect(responses_payload["model"]).to eq("grok-4.3")
         expect(responses_payload).not_to have_key("stream")
         expect(responses_payload).not_to have_key("stream_options")
         expect(responses_payload["messages"]).to be_an(Array)
@@ -247,8 +247,8 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
     let(:batch) do
       FB.create(
         :raif_model_completion_batch_x_ai,
-        llm_model_key: "x_ai_grok_3_beta",
-        model_api_name: "grok-3-beta",
+        llm_model_key: "x_ai_grok_4_3",
+        model_api_name: "grok-4.3",
         provider_batch_id: "batch_results_target",
         status: "ended",
         started_at: 1.minute.ago
@@ -260,7 +260,7 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
         batch: batch,
         batch_custom_id: "ok_id",
         creator: creator,
-        llm_model_key: "x_ai_grok_3_beta"
+        llm_model_key: "x_ai_grok_4_3"
       )
     end
 
@@ -269,7 +269,7 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
         batch: batch,
         batch_custom_id: "bad_id",
         creator: creator,
-        llm_model_key: "x_ai_grok_3_beta"
+        llm_model_key: "x_ai_grok_4_3"
       )
     end
 
@@ -308,7 +308,7 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       expect(ok.prompt_tokens).to eq(11)
       expect(ok.completion_tokens).to eq(7)
 
-      llm_config = Raif.llm_config(:x_ai_grok_3_beta)
+      llm_config = Raif.llm_config(:x_ai_grok_4_3)
       no_discount_total = (llm_config[:input_token_cost] * 11) + (llm_config[:output_token_cost] * 7)
       expect(ok.total_cost.to_f).to be < no_discount_total.to_f
 

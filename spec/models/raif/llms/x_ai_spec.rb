@@ -6,10 +6,11 @@ RSpec.describe Raif::Llms::XAi, type: :model do
   it_behaves_like "an LLM that uses OpenAI's Completions API message formatting"
   it_behaves_like "an LLM that uses OpenAI's Completions API tool formatting"
 
-  let(:llm){ Raif.llm(:x_ai_grok_3_beta) }
+  let(:llm){ Raif.llm(:x_ai_grok_4_3) }
 
   before do
     allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
+    allow(Raif.config).to receive(:x_ai_api_key){ ENV["X_AI_API_KEY"] }
   end
 
   describe "#chat" do
@@ -21,8 +22,8 @@ RSpec.describe Raif::Llms::XAi, type: :model do
         expect(model_completion.completion_tokens).to be > 0
         expect(model_completion.prompt_tokens).to be > 0
         expect(model_completion.total_tokens).to be > 0
-        expect(model_completion.llm_model_key).to eq("x_ai_grok_3_beta")
-        expect(model_completion.model_api_name).to eq("grok-3-beta")
+        expect(model_completion.llm_model_key).to eq("x_ai_grok_4_3")
+        expect(model_completion.model_api_name).to eq("grok-4.3")
         expect(model_completion.response_format).to eq("text")
         expect(model_completion.temperature).to eq(0.7)
         expect(model_completion.system_prompt).to eq("You are a helpful assistant.")
@@ -84,8 +85,8 @@ RSpec.describe Raif::Llms::XAi, type: :model do
         expect(model_completion.prompt_tokens).to be > 0
         expect(model_completion.total_tokens).to be > 0
         expect(model_completion).to be_persisted
-        expect(model_completion.llm_model_key).to eq("x_ai_grok_3_beta")
-        expect(model_completion.model_api_name).to eq("grok-3-beta")
+        expect(model_completion.llm_model_key).to eq("x_ai_grok_4_3")
+        expect(model_completion.model_api_name).to eq("grok-4.3")
         expect(deltas).not_to be_empty
       end
     end
@@ -180,8 +181,8 @@ RSpec.describe Raif::Llms::XAi, type: :model do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
           system_prompt: "You are a helpful assistant.",
-          llm_model_key: "x_ai_grok_3_beta",
-          model_api_name: "grok-3-beta",
+          llm_model_key: "x_ai_grok_4_3",
+          model_api_name: "grok-4.3",
           temperature: 0.5
         )
       end
@@ -189,7 +190,7 @@ RSpec.describe Raif::Llms::XAi, type: :model do
       it "builds the correct parameters with system prompt" do
         params = llm.send(:build_request_parameters, model_completion)
 
-        expect(params[:model]).to eq("grok-3-beta")
+        expect(params[:model]).to eq("grok-4.3")
         expect(params[:temperature]).to eq(0.5)
         expect(params[:messages].first["role"]).to eq("system")
         expect(params[:messages].first["content"]).to eq("You are a helpful assistant.")
@@ -203,8 +204,8 @@ RSpec.describe Raif::Llms::XAi, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "I need information" }],
-          llm_model_key: "x_ai_grok_3_beta",
-          model_api_name: "grok-3-beta",
+          llm_model_key: "x_ai_grok_4_3",
+          model_api_name: "grok-4.3",
           available_model_tools: ["Raif::TestModelTool"]
         )
       end

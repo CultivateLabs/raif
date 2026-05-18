@@ -26,8 +26,8 @@ FactoryBot.define do
   end
 
   factory :raif_model_completion_batch_x_ai, class: "Raif::ModelCompletionBatches::XAi" do
-    llm_model_key { "x_ai_grok_3_beta" }
-    model_api_name { "grok-3-beta" }
+    llm_model_key { "x_ai_grok_4_3" }
+    model_api_name { "grok-4.3" }
     status { "pending" }
   end
 end

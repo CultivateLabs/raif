@@ -714,6 +714,12 @@ module Raif
           output_token_cost: 15.0 / 1_000_000,
         },
         {
+          key: :x_ai_grok_4_3,
+          api_name: "grok-4.3",
+          input_token_cost: 3.0 / 1_000_000,
+          output_token_cost: 15.0 / 1_000_000,
+        },
+        {
           key: :x_ai_grok_4_20,
           api_name: "grok-4.20-0309-non-reasoning",
           input_token_cost: 2.0 / 1_000_000,
