@@ -37,9 +37,9 @@ rails db:migrate
 
 # Configuring LLM Providers & API Keys
 
-You **must configure at least one API key** for an LLM provider ([OpenAI](#openai), [Anthropic](#anthropic), [AWS Bedrock](#aws-bedrock), [OpenRouter](#openrouter), [Google AI](#google-ai)). 
+You **must configure at least one API key** for an LLM provider ([OpenAI](#openai), [Anthropic](#anthropic), [AWS Bedrock](#aws-bedrock), [OpenRouter](#openrouter), [Google AI](#google-ai), [xAI](#xai)). 
 
-By default, the initializer will load them from environment variables (e.g. `ENV["OPENAI_API_KEY"]`, `ENV["ANTHROPIC_API_KEY"]`, `ENV["OPEN_ROUTER_API_KEY"]`, `ENV["GOOGLE_AI_API_KEY"]`). Alternatively, you can set them directly in `config/initializers/raif.rb`.
+By default, the initializer will load them from environment variables (e.g. `ENV["OPENAI_API_KEY"]`, `ENV["ANTHROPIC_API_KEY"]`, `ENV["OPEN_ROUTER_API_KEY"]`, `ENV["GOOGLE_AI_API_KEY"]`, `ENV["XAI_API_KEY"]`). Alternatively, you can set them directly in `config/initializers/raif.rb`.
 
 ## OpenAI
 
@@ -238,6 +238,23 @@ Currently supported Google AI models:
 - `google_gemini_2_5_flash`
 
 Google embedding models use the same API key, but remain opt-in. See [Embedding Models](../learn_more/embedding_models) to enable `config.google_embedding_models_enabled`.
+
+## xAI
+
+The xAI adapter provides access to [Grok models](https://docs.x.ai/docs/models){:target="_blank"} via xAI's chat completions API, with support for streaming, developer-managed tools, and [batch inference](../learn_more/task_batching).
+
+```ruby
+Raif.configure do |config|
+  config.x_ai_models_enabled = true
+  config.x_ai_api_key = ENV["XAI_API_KEY"].presence || ENV["X_AI_API_KEY"]
+  config.default_llm_model_key = "x_ai_grok_4_3"
+end
+```
+
+Currently supported xAI models:
+- `x_ai_grok_4_3`
+- `x_ai_grok_4_20_reasoning`
+- `x_ai_grok_4_20_non_reasoning`
 
 ---
 

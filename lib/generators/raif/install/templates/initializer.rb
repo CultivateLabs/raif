@@ -65,6 +65,12 @@ Raif.configure do |config|
   # Whether Google embedding models are enabled. Defaults to false
   # config.google_embedding_models_enabled = false
 
+  # Your xAI API key. Defaults to ENV["XAI_API_KEY"].presence || ENV["X_AI_API_KEY"]
+  # config.x_ai_api_key = ENV["XAI_API_KEY"].presence || ENV["X_AI_API_KEY"]
+
+  # Whether xAI models are enabled.
+  # config.x_ai_models_enabled = ENV["XAI_API_KEY"].present? || ENV["X_AI_API_KEY"].present?
+
   # The default LLM model to use. Defaults to "open_ai_gpt_4o"
   # Available keys:
   #   open_ai_gpt_5_4
@@ -169,6 +175,9 @@ Raif.configure do |config|
   #   google_gemini_3_0_flash
   #   google_gemini_2_5_pro
   #   google_gemini_2_5_flash
+  #   x_ai_grok_4_3
+  #   x_ai_grok_4_20_reasoning
+  #   x_ai_grok_4_20_non_reasoning
   #
   # config.default_llm_model_key = "open_ai_gpt_4o"
 

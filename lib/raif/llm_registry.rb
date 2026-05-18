@@ -696,40 +696,22 @@ module Raif
       ],
       Raif::Llms::XAi => [
         {
-          key: :x_ai_grok_3_beta,
-          api_name: "grok-3-beta",
-          input_token_cost: 3.0 / 1_000_000,
-          output_token_cost: 15.0 / 1_000_000,
-        },
-        {
-          key: :x_ai_grok_3_mini_beta,
-          api_name: "grok-3-mini-beta",
-          input_token_cost: 0.30 / 1_000_000,
-          output_token_cost: 0.50 / 1_000_000,
-        },
-        {
-          key: :x_ai_grok_4,
-          api_name: "grok-4-0709",
-          input_token_cost: 3.0 / 1_000_000,
-          output_token_cost: 15.0 / 1_000_000,
-        },
-        {
           key: :x_ai_grok_4_3,
           api_name: "grok-4.3",
-          input_token_cost: 3.0 / 1_000_000,
-          output_token_cost: 15.0 / 1_000_000,
+          input_token_cost: 1.25 / 1_000_000,
+          output_token_cost: 2.50 / 1_000_000,
         },
         {
-          key: :x_ai_grok_4_20,
+          key: :x_ai_grok_4_20_reasoning,
+          api_name: "grok-4.20-0309-reasoning",
+          input_token_cost: 1.25 / 1_000_000,
+          output_token_cost: 2.50 / 1_000_000,
+        },
+        {
+          key: :x_ai_grok_4_20_non_reasoning,
           api_name: "grok-4.20-0309-non-reasoning",
-          input_token_cost: 2.0 / 1_000_000,
-          output_token_cost: 6.0 / 1_000_000,
-        },
-        {
-          key: :x_ai_grok_4_1_fast,
-          api_name: "grok-4-1-fast-non-reasoning",
-          input_token_cost: 0.20 / 1_000_000,
-          output_token_cost: 0.50 / 1_000_000,
+          input_token_cost: 1.25 / 1_000_000,
+          output_token_cost: 2.50 / 1_000_000,
         },
       ],
       Raif::Llms::Google => [
