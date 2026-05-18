@@ -5,6 +5,7 @@ class Raif::Llms::XAi < Raif::Llm
   include Raif::Concerns::Llms::OpenAiCompletions::ToolFormatting
   include Raif::Concerns::Llms::OpenAiCompletions::ResponseToolCalls
   include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
+  include Raif::Concerns::Llms::XAi::BatchInference
 
   def perform_model_completion!(model_completion, &block)
     model_completion.temperature ||= default_temperature

@@ -24,4 +24,10 @@ FactoryBot.define do
     model_api_name { "gemini-2.5-flash" }
     status { "pending" }
   end
+
+  factory :raif_model_completion_batch_x_ai, class: "Raif::ModelCompletionBatches::XAi" do
+    llm_model_key { "x_ai_grok_3_beta" }
+    model_api_name { "grok-3-beta" }
+    status { "pending" }
+  end
 end
