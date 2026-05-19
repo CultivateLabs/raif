@@ -3,7 +3,7 @@
   <div class="message-header d-flex justify-content-between align-items-center mb-2 px-2">
     <strong class="<%= conversation_message_header_class(message) %>">
       <% if message_type == "tool_call" %>
-        <% invocation = invocations_by_call_id[message["provider_tool_call_id"]] %>
+        <% invocation = invocations_by_call_id[message["provider_tool_call_id"].presence] %>
         <%= t("raif.admin.common.tool_call") %>:
         <% if invocation %>
           <%= link_to message["name"], raif.admin_model_tool_invocation_path(invocation) %>

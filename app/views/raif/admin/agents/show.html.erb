@@ -130,7 +130,7 @@
 </div>
 
 <% if @agent.conversation_history.present? %>
-  <% invocations_by_call_id = @agent.raif_model_tool_invocations.index_by(&:provider_tool_call_id) %>
+  <% invocations_by_call_id = @agent.raif_model_tool_invocations.where.not(provider_tool_call_id: nil).index_by(&:provider_tool_call_id) %>
   <div class="card mb-4 conversation-card">
     <div class="card-header">
       <h5 class="mb-0"><%= t("raif.admin.common.conversation_history") %></h5>
