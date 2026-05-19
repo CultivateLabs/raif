@@ -1,19 +1,30 @@
 # frozen_string_literal: true
 
+require "faraday/multipart"
+require "stringio"
+
 # xAI Batch API support for Raif::Llms::XAi.
 # Implements the Raif::Concerns::Llms::SupportsBatchInference contract on top
-# of /v1/batches and the per-request REST add path.
+# of /v1/files (multipart JSONL upload) and /v1/batches.
 #
-# xAI's Batch API uses a two-call submission flow with no file upload required:
+# xAI's Batch API supports two submission flows; we use the JSONL file-upload
+# flow because it lets us send each per-request body in /v1/chat/completions
+# shape (with `messages`), matching the sync path verbatim. The alternate REST
+# append flow (POST /v1/batches/{id}/requests) only accepts the `responses`
+# wrapper, which targets xAI's Responses API and would force a body-shape
+# conversion (messages -> input, response_format -> text.format, ...).
 #
-#   POST /v1/batches                 -> creates an empty batch, returns batch_id
-#   POST /v1/batches/{id}/requests   -> appends an array of batch_requests;
-#                                       processing begins as soon as items are added
-#   GET  /v1/batches/{id}            -> status (counts: pending/success/error/cancelled)
-#   GET  /v1/batches/{id}/results    -> paginated per-entry results
-#   POST /v1/batches/{id}:cancel     -> cancels pending entries
+# Submission flow:
 #
-# Result envelope per entry:
+#   POST /v1/files                        -> multipart upload of the JSONL,
+#                                            returns { id: "file-..." }
+#   POST /v1/batches { input_file_id }    -> creates the batch, returns
+#                                            { batch_id, state: {...} }
+#   GET  /v1/batches/{id}                 -> status (counts: pending/success/error/cancelled)
+#   GET  /v1/batches/{id}/results         -> paginated per-entry results
+#   POST /v1/batches/{id}:cancel          -> cancels pending entries
+#
+# Result envelope per entry (same for both submission flows):
 #
 #   {
 #     "batch_request_id": "...",
@@ -37,12 +48,6 @@ module Raif::Concerns::Llms::XAi::BatchInference
 
   include Raif::Concerns::Llms::SupportsBatchInference
 
-  # Max batch_requests items sent in a single POST /v1/batches/{id}/requests
-  # call. Chunked client-side so a single large batch turns into a sequence of
-  # smaller add-requests calls. 500 is conservative -- xAI documents 50k
-  # requests per batch in aggregate but doesn't publish a per-call limit.
-  XAI_BATCH_REQUESTS_CHUNK_SIZE = 500
-
   def batch_class
     Raif::ModelCompletionBatches::XAi
   end
@@ -53,52 +58,34 @@ module Raif::Concerns::Llms::XAi::BatchInference
     completions = batch.raif_model_completions.to_a
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
 
-    completions.each do |mc|
-      if mc.batch_custom_id.blank?
-        raise Raif::Errors::InvalidBatchError, "Raif::ModelCompletion ##{mc.id} has blank batch_custom_id"
-      end
-    end
+    jsonl = build_batch_jsonl(completions)
+    input_file_id = upload_batch_input_file!(jsonl)
 
-    create_response = batch_connection.post("batches") do |req|
-      req.body = { name: "raif_batch_#{batch.id}" }
+    response = batch_connection.post("batches") do |req|
+      req.body = { name: "raif_batch_#{batch.id}", input_file_id: input_file_id }
     end
-    create_body = create_response.body
-    provider_batch_id = create_body["batch_id"] || create_body["id"]
+    body = response.body.is_a?(Hash) ? response.body : {}
+    provider_batch_id = body["batch_id"] || body["id"]
 
     if provider_batch_id.blank?
       raise Raif::Errors::InvalidBatchError,
-        "xAI batch create returned no batch id (body=#{create_body.inspect})"
-    end
-
-    # Persist provider_batch_id immediately after the create call so a mid-
-    # submission failure during chunked add-requests leaves the batch
-    # recoverable (cancelable / pollable) rather than orphaned on xAI's side.
-    batch.update!(provider_batch_id: provider_batch_id)
-
-    last_add_body = nil
-    completions.each_slice(XAI_BATCH_REQUESTS_CHUNK_SIZE) do |slice|
-      payload = {
-        batch_requests: slice.map { |mc| { batch_request_id: mc.batch_custom_id, batch_request: build_batch_request(mc) } }
-      }
-
-      response = batch_connection.post("batches/#{provider_batch_id}/requests") do |req|
-        req.body = payload
-      end
-      last_add_body = response.body
+        "xAI batch create returned no batch id (body=#{response.body.inspect})"
     end
 
     submitted_at = Time.current
 
     Raif::ModelCompletionBatch.transaction do
       batch.update!(
+        provider_batch_id: provider_batch_id,
         status: "submitted",
         submitted_at: submitted_at,
         started_at: submitted_at,
         provider_response: (batch.provider_response || {}).merge(
-          "expires_at" => create_body["expires_at"] || last_add_body&.dig("expires_at"),
-          "cost_breakdown" => last_add_body&.dig("cost_breakdown") || create_body["cost_breakdown"]
+          "input_file_id" => input_file_id,
+          "expires_at" => body["expires_at"],
+          "cost_breakdown" => body["cost_breakdown"]
         ).compact,
-        request_counts: derive_request_counts(last_add_body || create_body) || batch.request_counts
+        request_counts: derive_request_counts(body) || batch.request_counts
       )
 
       batch.raif_model_completions.where(started_at: nil).update_all(started_at: submitted_at)
@@ -257,19 +244,65 @@ private
     end
   end
 
-  # Builds the batch_request payload for one model completion. xAI's REST
-  # add-requests endpoint expects each entry under a response-type key
-  # (responses / image_generation / video_generation / ...). For chat we wrap
-  # the chat-completions body inside `responses` per the xAI docs example;
-  # `messages` is documented as accepted alongside `model` for this wrapper.
-  # Streaming and stream_options are stripped -- batch entries are never
-  # streamed.
-  def build_batch_request(mc)
-    body = build_request_parameters(mc)
-    body.delete(:stream)
-    body.delete(:stream_options)
+  # Faraday connection for /v1/files JSONL uploads. Uses faraday-multipart so we
+  # can pass a Faraday::Multipart::FilePart and let the middleware handle
+  # boundary generation and content-disposition framing. xAI's /v1/files takes
+  # only the file part -- no `purpose` field, unlike OpenAI.
+  def batch_files_upload_connection
+    @batch_files_upload_connection ||= Faraday.new(url: Raif.config.x_ai_base_url, request: Raif.default_request_options) do |f|
+      f.headers["Authorization"] = "Bearer #{Raif.config.x_ai_api_key}"
+      f.request :multipart
+      f.request :url_encoded
+      f.response :json
+      f.response :raise_error
+    end
+  end
 
-    { responses: body }
+  # xAI batch input is a JSONL file. Each line:
+  #   { custom_id, method: "POST", url: "/v1/chat/completions", body: <build_request_parameters> }
+  # The body matches what the synchronous endpoint would receive verbatim, so
+  # tools, response_format, and other chat-completions fields all work without
+  # any batch-specific conversion. xAI maps the JSONL `custom_id` to
+  # `batch_request_id` in /results, which is what fetch_batch_results! reads.
+  def build_batch_jsonl(completions)
+    completions.map do |mc|
+      if mc.batch_custom_id.blank?
+        raise Raif::Errors::InvalidBatchError, "Raif::ModelCompletion ##{mc.id} has blank batch_custom_id"
+      end
+
+      body = build_request_parameters(mc)
+      body.delete(:stream)
+      body.delete(:stream_options)
+
+      {
+        custom_id: mc.batch_custom_id,
+        method: "POST",
+        url: "/v1/chat/completions",
+        body: body
+      }.to_json
+    end.join("\n")
+  end
+
+  # Uploads a JSONL string to /v1/files and returns the resulting file id.
+  def upload_batch_input_file!(jsonl_string)
+    file_part = Faraday::Multipart::FilePart.new(
+      StringIO.new(jsonl_string),
+      "application/jsonl",
+      "batch.jsonl"
+    )
+
+    response = batch_files_upload_connection.post("files") do |req|
+      req.body = { file: file_part }
+    end
+
+    body = response.body.is_a?(Hash) ? response.body : {}
+    file_id = body["id"] || body["file_id"]
+    if file_id.blank?
+      raise Raif::Errors::InvalidBatchError,
+        "xAI /v1/files upload returned no file id (body=#{response.body.inspect})"
+    end
+
+    file_id
   end
 
   # Returns nil when the response body has no usable state counts, so callers
