@@ -136,12 +136,12 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.raw_response).to include("Ruby on Rails 7.1")
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::ProviderManaged::WebSearch"])
         # candidatesTokenCount (1038) + thoughtsTokenCount (208) -- Gemini reports
-        # thinking tokens separately but bills them at the output rate. The
-        # additional toolUsePromptTokenCount (157) is grounding-tool input
-        # and is not rolled into completion_tokens.
+        # thinking tokens separately but bills them at the output rate.
         expect(model_completion.completion_tokens).to eq(1246)
-        expect(model_completion.prompt_tokens).to eq(11)
-        # total_tokens includes thoughtsTokenCount (208) and toolUsePromptTokenCount (157)
+        # promptTokenCount (11) + toolUsePromptTokenCount (157) -- grounding-tool
+        # prompt tokens are billed at the input rate but reported separately.
+        expect(model_completion.prompt_tokens).to eq(168)
+        # total_tokens = prompt + candidates + thoughts + toolUsePrompt
         expect(model_completion.total_tokens).to eq(1414)
 
         # Test that citations are extracted from grounding metadata
