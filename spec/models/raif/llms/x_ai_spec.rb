@@ -223,6 +223,125 @@ RSpec.describe Raif::Llms::XAi, type: :model do
         expect(tool[:function][:parameters]).to eq(Raif::TestModelTool.tool_arguments_schema)
       end
     end
+
+    context "with a json_response_schema present" do
+      let(:test_task){ Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Tell me a joke" }],
+          llm_model_key: "x_ai_grok_4_3",
+          model_api_name: "grok-4.3",
+          response_format: "json",
+          source: test_task
+        )
+      end
+
+      it "sends response_format: json_schema with strict:true and the source's schema" do
+        params = llm.send(:build_request_parameters, model_completion)
+
+        expect(params[:response_format]).to eq({
+          type: "json_schema",
+          json_schema: {
+            name: "json_response_schema",
+            strict: true,
+            schema: model_completion.json_response_schema,
+          },
+        })
+      end
+
+      it "does not add a synthetic json_response function-tool to params[:tools]" do
+        params = llm.send(:build_request_parameters, model_completion)
+
+        if params[:tools].present?
+          tool_names = params[:tools].map{|t| t.dig(:function, :name) }
+          expect(tool_names).not_to include("json_response")
+        else
+          expect(params[:tools]).to be_blank
+        end
+      end
+
+      it "sets model_completion.response_format_parameter to 'json_schema'" do
+        llm.send(:build_request_parameters, model_completion)
+        expect(model_completion.response_format_parameter).to eq("json_schema")
+      end
+
+      it "raises Raif::Errors::OpenAi::JsonSchemaError when the schema does not satisfy strict-mode constraints" do
+        invalid_schema = { type: "object", properties: { joke: { type: "string" } } }
+        allow(model_completion).to receive(:json_response_schema).and_return(invalid_schema)
+
+        expect do
+          llm.send(:build_request_parameters, model_completion)
+        end.to raise_error(Raif::Errors::OpenAi::JsonSchemaError)
+      end
+    end
+
+    context "when response_format is :json but no json_response_schema is present (fallback)" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Tell me a joke" }],
+          llm_model_key: "x_ai_grok_4_3",
+          model_api_name: "grok-4.3",
+          response_format: "json"
+        )
+      end
+
+      it "falls back to response_format: { type: 'json_object' }" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params[:response_format]).to eq({ type: "json_object" })
+        expect(model_completion.response_format_parameter).to eq("json_object")
+      end
+    end
+  end
+
+  describe "#update_model_completion" do
+    let(:json_payload){ '{"joke":"Why don\'t scientists trust atoms?","answer":"Because they make up everything."}' }
+    let(:response_json) do
+      {
+        "id" => "chatcmpl-xai-test-1",
+        "choices" => [
+          {
+            "index" => 0,
+            "finish_reason" => "stop",
+            "message" => {
+              "role" => "assistant",
+              "content" => json_payload,
+              "refusal" => nil,
+            },
+          },
+        ],
+        "usage" => {
+          "completion_tokens" => 27,
+          "prompt_tokens" => 55,
+          "total_tokens" => 82,
+          "prompt_tokens_details" => { "cached_tokens" => 12 },
+        },
+      }
+    end
+
+    it "populates raw_response from message.content and reads usage off the response" do
+      model_completion = Raif::ModelCompletion.create!(
+        messages: [{ "role" => "user", "content" => "Tell me a joke" }],
+        llm_model_key: "x_ai_grok_4_3",
+        model_api_name: "grok-4.3",
+        response_format: "json",
+      )
+
+      llm.send(:update_model_completion, model_completion, response_json)
+      model_completion.reload
+
+      expect(model_completion.raw_response).to eq(json_payload)
+      expect(model_completion.parsed_response).to eq({
+        "joke" => "Why don't scientists trust atoms?",
+        "answer" => "Because they make up everything.",
+      })
+      expect(model_completion.response_tool_calls).to be_nil
+      expect(model_completion.completion_tokens).to eq(27)
+      expect(model_completion.prompt_tokens).to eq(55)
+      expect(model_completion.total_tokens).to eq(82)
+      expect(model_completion.cache_read_input_tokens).to eq(12)
+      expect(model_completion.response_id).to eq("chatcmpl-xai-test-1")
+      expect(model_completion.response_array).to eq(response_json["choices"])
+    end
   end
 
   describe "#extract_response_tool_calls" do

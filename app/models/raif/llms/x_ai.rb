@@ -40,16 +40,10 @@ private
   def update_model_completion(model_completion, response_json)
     return if response_json.nil?
 
-    raw_response = if model_completion.response_format_json?
-      extract_json_response(response_json)
-    else
-      extract_text_response(response_json)
-    end
-
     model_completion.update!(
       response_id: response_json["id"],
       response_tool_calls: extract_response_tool_calls(response_json),
-      raw_response: raw_response,
+      raw_response: response_json.dig("choices", 0, "message", "content"),
       response_array: response_json["choices"],
       completion_tokens: response_json.dig("usage", "completion_tokens"),
       prompt_tokens: response_json.dig("usage", "prompt_tokens"),
@@ -75,20 +69,6 @@ private
 
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
-
-      if model_completion.json_response_schema.present?
-        validate_json_schema!(model_completion.json_response_schema)
-
-        tools << {
-          type: "function",
-          function: {
-            name: "json_response",
-            description: "Generate a structured JSON response based on the provided schema.",
-            parameters: model_completion.json_response_schema
-          }
-        }
-      end
-
       params[:tools] = tools unless tools.blank?
 
       if model_completion.tool_choice == "required"
@@ -104,30 +84,26 @@ private
       params[:stream_options] = { include_usage: true }
     end
 
-    if model_completion.response_format_json? && params[:tools].blank?
+    if model_completion.json_response_schema.present?
+      # xAI documents native structured outputs for the Grok 4 family on
+      # /v1/chat/completions. Use response_format: json_schema so the schema
+      # is enforced provider-side rather than via a synthetic function-tool.
+      # https://docs.x.ai/developers/model-capabilities/text/structured-outputs
+      validate_json_schema!(model_completion.json_response_schema)
+      params[:response_format] = {
+        type: "json_schema",
+        json_schema: {
+          name: "json_response_schema",
+          strict: true,
+          schema: model_completion.json_response_schema
+        }
+      }
+      model_completion.response_format_parameter = "json_schema"
+    elsif model_completion.response_format_json?
       params[:response_format] = { type: "json_object" }
       model_completion.response_format_parameter = "json_object"
     end
 
     params
-  end
-
-  def extract_text_response(resp)
-    resp&.dig("choices", 0, "message", "content")
-  end
-
-  def extract_json_response(resp)
-    tool_calls = resp&.dig("choices", 0, "message", "tool_calls")
-    return extract_text_response(resp) if tool_calls.blank?
-
-    tool_response = tool_calls.find do |tool_call|
-      tool_call["function"]["name"] == "json_response"
-    end
-
-    if tool_response&.dig("function", "arguments")
-      tool_response["function"]["arguments"]
-    else
-      extract_text_response(resp)
-    end
   end
 end
