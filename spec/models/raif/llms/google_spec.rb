@@ -61,7 +61,9 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.parsed_response).to eq({
           "joke" => "Why don't scientists trust atoms? Because they make up everything!"
         })
-        expect(model_completion.completion_tokens).to eq(28)
+        # candidatesTokenCount (28) + thoughtsTokenCount (44) -- Gemini reports
+        # thinking tokens separately but bills them at the output rate.
+        expect(model_completion.completion_tokens).to eq(72)
         expect(model_completion.prompt_tokens).to eq(66)
         expect(model_completion.total_tokens).to eq(138)
         expect(model_completion).to be_persisted
@@ -92,7 +94,9 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.response_tool_calls.first["name"]).to eq("fetch_url")
         expect(model_completion.response_tool_calls.first["arguments"]).to eq({ "url" => "https://www.wsj.com" })
         expect(model_completion.response_tool_calls.first["provider_tool_call_id"]).to be_present
-        expect(model_completion.completion_tokens).to eq(22)
+        # candidatesTokenCount (22) + thoughtsTokenCount (54) -- Gemini reports
+        # thinking tokens separately but bills them at the output rate.
+        expect(model_completion.completion_tokens).to eq(76)
         expect(model_completion.prompt_tokens).to eq(65)
         # total_tokens includes thoughtsTokenCount (54) in addition to prompt + completion
         expect(model_completion.total_tokens).to eq(141)
@@ -131,7 +135,11 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.raw_response).to include("Ruby on Rails 7.2")
         expect(model_completion.raw_response).to include("Ruby on Rails 7.1")
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::ProviderManaged::WebSearch"])
-        expect(model_completion.completion_tokens).to eq(1038)
+        # candidatesTokenCount (1038) + thoughtsTokenCount (208) -- Gemini reports
+        # thinking tokens separately but bills them at the output rate. The
+        # additional toolUsePromptTokenCount (157) is grounding-tool input
+        # and is not rolled into completion_tokens.
+        expect(model_completion.completion_tokens).to eq(1246)
         expect(model_completion.prompt_tokens).to eq(11)
         # total_tokens includes thoughtsTokenCount (208) and toolUsePromptTokenCount (157)
         expect(model_completion.total_tokens).to eq(1414)
@@ -170,7 +178,9 @@ RSpec.describe Raif::Llms::Google, type: :model do
         ])
 
         expect(model_completion.raw_response).to eq("The world awakes with whispered sigh,\nA gentle breath upon the air.\nWhere morning mists begin to lie,\nAnd banish shadows everywhere.\n\nThe sunbeams stretch their golden fingers,\nTo paint the dew on leaf and bloom,\nWhile distant song a robin lingers,\nDispelling all the fading gloom.\n\nA quiet peace begins to settle,\nUpon the heart, a gentle balm.\nNo urgency, no need to meddle,\nJust nature's soft and timeless calm.\n\nSo take a moment, soft and deep,\nTo breathe it in, this world so fair.\nWhile secret promises it keeps,\nAnd wonders wait beyond compare.") # rubocop:disable Layout/LineLength
-        expect(model_completion.completion_tokens).to eq(139)
+        # candidatesTokenCount (139) + thoughtsTokenCount (1338) -- Gemini reports
+        # thinking tokens separately but bills them at the output rate.
+        expect(model_completion.completion_tokens).to eq(1477)
         expect(model_completion.prompt_tokens).to eq(6)
         # total_tokens includes thoughtsTokenCount (1338) in addition to prompt + completion
         expect(model_completion.total_tokens).to eq(1483)
@@ -205,7 +215,9 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.parsed_response).to eq({
           "joke" => "Why don't scientists trust atoms? Because they make up everything!"
         })
-        expect(model_completion.completion_tokens).to eq(28)
+        # candidatesTokenCount (28) + thoughtsTokenCount (50) -- Gemini reports
+        # thinking tokens separately but bills them at the output rate.
+        expect(model_completion.completion_tokens).to eq(78)
         expect(model_completion.prompt_tokens).to eq(54)
         # total_tokens includes thoughtsTokenCount (50) in addition to prompt + completion
         expect(model_completion.total_tokens).to eq(132)
@@ -232,7 +244,9 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.response_tool_calls.first["name"]).to eq("fetch_url")
         expect(model_completion.response_tool_calls.first["arguments"]).to eq({ "url" => "https://www.wsj.com" })
         expect(model_completion.response_tool_calls.first["provider_tool_call_id"]).to be_present
-        expect(model_completion.completion_tokens).to eq(22)
+        # candidatesTokenCount (22) + thoughtsTokenCount (54) -- Gemini reports
+        # thinking tokens separately but bills them at the output rate.
+        expect(model_completion.completion_tokens).to eq(76)
         expect(model_completion.prompt_tokens).to eq(65)
         # total_tokens includes thoughtsTokenCount (54) in addition to prompt + completion
         expect(model_completion.total_tokens).to eq(141)

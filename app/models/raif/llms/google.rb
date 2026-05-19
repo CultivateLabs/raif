@@ -66,12 +66,25 @@ private
     model_completion.response_array = response_json&.dig("candidates", 0, "content", "parts")
     model_completion.response_tool_calls = extract_response_tool_calls(response_json)
     model_completion.citations = extract_citations(response_json)
-    model_completion.completion_tokens = response_json&.dig("usageMetadata", "candidatesTokenCount")
+    model_completion.completion_tokens = derive_completion_tokens(response_json)
     model_completion.prompt_tokens = response_json&.dig("usageMetadata", "promptTokenCount")
     model_completion.total_tokens = response_json&.dig("usageMetadata", "totalTokenCount") ||
       (model_completion.completion_tokens.to_i + model_completion.prompt_tokens.to_i)
     model_completion.cache_read_input_tokens = response_json&.dig("usageMetadata", "cachedContentTokenCount")
     model_completion.save!
+  end
+
+  # Gemini reports usageMetadata.candidatesTokenCount as visible-output-only and
+  # exposes thinking tokens separately under usageMetadata.thoughtsTokenCount
+  # (totalTokenCount = prompt + candidates + thoughts). Roll them together so
+  # Raif::ModelCompletion#calculate_costs charges thinking tokens at the
+  # output rate, matching what Google bills.
+  def derive_completion_tokens(response_json)
+    visible = response_json&.dig("usageMetadata", "candidatesTokenCount")
+    return if visible.nil?
+
+    thoughts = response_json.dig("usageMetadata", "thoughtsTokenCount").to_i
+    visible + thoughts
   end
 
   def build_request_parameters(model_completion)
