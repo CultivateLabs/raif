@@ -50,41 +50,57 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       )
     end
 
-    it "creates a batch then POSTs all requests in a single add-requests call" do
-      create_stub = stub_request(:post, "#{base_url}/batches")
-        .with(body: hash_including("name" => "raif_batch_#{batch.id}"))
+    it "uploads a JSONL input file then creates a batch referencing the file id" do
+      files_stub = stub_request(:post, "#{base_url}/files")
         .to_return(
           status: 200,
           headers: { "Content-Type" => "application/json" },
-          body: { batch_id: "batch_xai_1", expires_at: 1.day.from_now.iso8601 }.to_json
+          body: { id: "file_xai_1" }.to_json
         )
 
-      add_stub = stub_request(:post, "#{base_url}/batches/batch_xai_1/requests")
+      create_stub = stub_request(:post, "#{base_url}/batches")
+        .with(body: hash_including("name" => "raif_batch_#{batch.id}", "input_file_id" => "file_xai_1"))
         .to_return(
           status: 200,
           headers: { "Content-Type" => "application/json" },
-          body: { batch_id: "batch_xai_1", state: { num_requests: 2, num_pending: 2 } }.to_json
+          body: {
+            batch_id: "batch_xai_1",
+            expires_at: 1.day.from_now.iso8601,
+            state: { num_requests: 2, num_pending: 2 }
+          }.to_json
         )
 
       llm.submit_batch!(batch)
 
+      expect(files_stub).to have_been_requested
       expect(create_stub).to have_been_requested
-      expect(add_stub).to have_been_requested
 
-      add_signature = WebMock::RequestRegistry.instance.requested_signatures.hash.keys.find do |sig|
-        sig.uri.to_s.end_with?("/batches/batch_xai_1/requests") && sig.method == :post
+      files_signature = WebMock::RequestRegistry.instance.requested_signatures.hash.keys.find do |sig|
+        sig.uri.to_s.end_with?("/files") && sig.method == :post
       end
-      expect(add_signature).to be_present
+      expect(files_signature).to be_present
+      expect(files_signature.headers["Content-Type"]).to include("multipart/form-data")
 
-      parsed_body = JSON.parse(add_signature.body)
-      requests = parsed_body["batch_requests"]
-      expect(requests.map { |r| r["batch_request_id"] }).to contain_exactly("task_a", "task_b")
-      requests.each do |entry|
-        responses_payload = entry["batch_request"]["responses"]
-        expect(responses_payload["model"]).to eq("grok-4.3")
-        expect(responses_payload).not_to have_key("stream")
-        expect(responses_payload).not_to have_key("stream_options")
-        expect(responses_payload["messages"]).to be_an(Array)
+      # Decode the multipart body's `file` part and assert each JSONL line targets
+      # /v1/chat/completions with the unchanged sync-path body shape (messages,
+      # not the Responses-API `input`). The original bug was wrapping the body
+      # under `responses` with `messages`, which xAI rejects with 422.
+      file_segment = files_signature.body.to_s.split("\r\n\r\n", 2).last
+      jsonl_payload = file_segment.split("\r\n--", 2).first
+      lines = jsonl_payload.lines.map(&:strip).reject(&:empty?)
+      expect(lines.size).to eq(2)
+
+      entries = lines.map { |l| JSON.parse(l) }
+      expect(entries.map { |e| e["custom_id"] }).to contain_exactly("task_a", "task_b")
+      entries.each do |entry|
+        expect(entry["method"]).to eq("POST")
+        expect(entry["url"]).to eq("/v1/chat/completions")
+        body_json = entry["body"]
+        expect(body_json["model"]).to eq("grok-4.3")
+        expect(body_json["messages"]).to be_an(Array)
+        expect(body_json).not_to have_key("stream")
+        expect(body_json).not_to have_key("stream_options")
+        expect(body_json).not_to have_key("input")
       end
 
       batch.reload
@@ -93,46 +109,56 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       expect(batch.submitted_at).to be_present
       expect(batch.started_at).to be_present
       expect(batch.expires_at).to be_present
+      expect(batch.provider_response["input_file_id"]).to eq("file_xai_1")
+      expect(batch.request_counts).to include("total" => 2, "pending" => 2)
     end
 
-    it "raises (without creating or POSTing) if the batch was already submitted" do
+    it "raises without uploading or creating if the batch was already submitted" do
       batch.update!(status: "submitted", provider_batch_id: "batch_already_submitted", submitted_at: 1.minute.ago)
+      files_stub = stub_request(:post, "#{base_url}/files")
       create_stub = stub_request(:post, "#{base_url}/batches")
-      add_stub = stub_request(:post, %r{#{Regexp.escape(base_url)}/batches/.+/requests})
 
       expect { llm.submit_batch!(batch) }.to raise_error(Raif::Errors::InvalidBatchError, /not submittable/)
+      expect(files_stub).not_to have_been_requested
       expect(create_stub).not_to have_been_requested
-      expect(add_stub).not_to have_been_requested
     end
 
     it "raises if any child completion has a blank batch_custom_id" do
       task1.raif_model_completion.update_column(:batch_custom_id, nil)
 
+      files_stub = stub_request(:post, "#{base_url}/files")
       create_stub = stub_request(:post, "#{base_url}/batches")
-      add_stub = stub_request(:post, %r{#{Regexp.escape(base_url)}/batches/.+/requests})
 
       expect { llm.submit_batch!(batch) }.to raise_error(Raif::Errors::InvalidBatchError, /blank batch_custom_id/)
+      expect(files_stub).not_to have_been_requested
       expect(create_stub).not_to have_been_requested
-      expect(add_stub).not_to have_been_requested
     end
 
-    it "chunks the add-requests calls when child count exceeds XAI_BATCH_REQUESTS_CHUNK_SIZE" do
-      stub_const("Raif::Concerns::Llms::XAi::BatchInference::XAI_BATCH_REQUESTS_CHUNK_SIZE", 1)
+    it "raises if /v1/files returns no file id" do
+      stub_request(:post, "#{base_url}/files").to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {}.to_json
+      )
+      create_stub = stub_request(:post, "#{base_url}/batches")
 
+      expect { llm.submit_batch!(batch) }.to raise_error(Raif::Errors::InvalidBatchError, /no file id/)
+      expect(create_stub).not_to have_been_requested
+    end
+
+    it "raises if /v1/batches returns no batch id" do
+      stub_request(:post, "#{base_url}/files").to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: { id: "file_xai_no_batch" }.to_json
+      )
       stub_request(:post, "#{base_url}/batches").to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },
-        body: { batch_id: "batch_xai_chunk" }.to_json
+        body: {}.to_json
       )
 
-      add_stub = stub_request(:post, "#{base_url}/batches/batch_xai_chunk/requests").to_return(
-        status: 200,
-        headers: { "Content-Type" => "application/json" },
-        body: { batch_id: "batch_xai_chunk", state: { num_requests: 2, num_pending: 2 } }.to_json
-      )
-
-      llm.submit_batch!(batch)
-      expect(add_stub).to have_been_requested.twice
+      expect { llm.submit_batch!(batch) }.to raise_error(Raif::Errors::InvalidBatchError, /no batch id/)
     end
   end
 
