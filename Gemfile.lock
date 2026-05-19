@@ -97,11 +97,11 @@ GEM
       activesupport (>= 6.0.0)
     ast (2.4.3)
     aws-eventstream (1.4.0)
-    aws-partitions (1.1245.0)
-    aws-sdk-bedrockruntime (1.75.0)
-      aws-sdk-core (~> 3, >= 3.244.0)
+    aws-partitions (1.1250.0)
+    aws-sdk-bedrockruntime (1.76.0)
+      aws-sdk-core (~> 3, >= 3.247.0)
       aws-sigv4 (~> 1.5)
-    aws-sdk-core (3.246.0)
+    aws-sdk-core (3.247.0)
       aws-eventstream (~> 1, >= 1.3.0)
       aws-partitions (~> 1, >= 1.992.0)
       aws-sigv4 (~> 1.9)
@@ -161,7 +161,7 @@ GEM
     factory_bot_rails (6.5.1)
       factory_bot (~> 6.5)
       railties (>= 6.1.0)
-    faraday (2.14.1)
+    faraday (2.14.2)
       faraday-net_http (>= 2.0, < 3.5)
       json
       logger
@@ -293,8 +293,8 @@ GEM
     notiffany (0.1.3)
       nenv (~> 0.1)
       shellany (~> 0.0)
-    openssl (4.0.1)
-    pagy (43.5.3)
+    openssl (4.0.2)
+    pagy (43.5.4)
       json
       uri
       yaml
@@ -480,7 +480,7 @@ DEPENDENCIES
   i18n-tasks
   importmap-rails
   mysql2
-  openssl (= 4.0.1)
+  openssl (= 4.0.2)
   pg
   propshaft
   puma
