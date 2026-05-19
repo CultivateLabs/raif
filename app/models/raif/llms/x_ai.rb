@@ -44,11 +44,24 @@ private
       response_tool_calls: extract_response_tool_calls(response_json),
       raw_response: response_json.dig("choices", 0, "message", "content"),
       response_array: response_json["choices"],
-      completion_tokens: response_json.dig("usage", "completion_tokens"),
+      completion_tokens: derive_completion_tokens(response_json),
       prompt_tokens: response_json.dig("usage", "prompt_tokens"),
       total_tokens: response_json.dig("usage", "total_tokens"),
       cache_read_input_tokens: response_json.dig("usage", "prompt_tokens_details", "cached_tokens")
     )
+  end
+
+  # xAI reports usage.completion_tokens as visible-output-only and exposes
+  # reasoning tokens separately in usage.completion_tokens_details.reasoning_tokens
+  # (total_tokens = prompt + completion + reasoning). Roll them together so
+  # Raif::ModelCompletion#calculate_costs charges reasoning tokens at the
+  # output rate, matching what xAI actually bills.
+  def derive_completion_tokens(response_json)
+    visible = response_json.dig("usage", "completion_tokens")
+    return if visible.nil?
+
+    reasoning = response_json.dig("usage", "completion_tokens_details", "reasoning_tokens").to_i
+    visible + reasoning
   end
 
   def build_request_parameters(model_completion)

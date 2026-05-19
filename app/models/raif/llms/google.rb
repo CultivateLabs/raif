@@ -66,12 +66,39 @@ private
     model_completion.response_array = response_json&.dig("candidates", 0, "content", "parts")
     model_completion.response_tool_calls = extract_response_tool_calls(response_json)
     model_completion.citations = extract_citations(response_json)
-    model_completion.completion_tokens = response_json&.dig("usageMetadata", "candidatesTokenCount")
-    model_completion.prompt_tokens = response_json&.dig("usageMetadata", "promptTokenCount")
+    model_completion.completion_tokens = derive_completion_tokens(response_json)
+    model_completion.prompt_tokens = derive_prompt_tokens(response_json)
     model_completion.total_tokens = response_json&.dig("usageMetadata", "totalTokenCount") ||
       (model_completion.completion_tokens.to_i + model_completion.prompt_tokens.to_i)
     model_completion.cache_read_input_tokens = response_json&.dig("usageMetadata", "cachedContentTokenCount")
     model_completion.save!
+  end
+
+  # Gemini reports usageMetadata.candidatesTokenCount as visible-output-only and
+  # exposes thinking tokens separately under usageMetadata.thoughtsTokenCount
+  # (totalTokenCount = prompt + candidates + thoughts). Roll them together so
+  # Raif::ModelCompletion#calculate_costs charges thinking tokens at the
+  # output rate, matching what Google bills.
+  def derive_completion_tokens(response_json)
+    visible = response_json&.dig("usageMetadata", "candidatesTokenCount")
+    return if visible.nil?
+
+    thoughts = response_json.dig("usageMetadata", "thoughtsTokenCount").to_i
+    visible + thoughts
+  end
+
+  # Gemini bills tool-grounding prompts (e.g. Google Search via the provider-
+  # managed WebSearch tool) at the input rate but reports them in their own
+  # field -- usageMetadata.toolUsePromptTokenCount -- rather than rolling them
+  # into promptTokenCount. Fold them into prompt_tokens so input-side cost
+  # reflects what Gemini actually bills. cachedContentTokenCount remains a
+  # subset of promptTokenCount and is unaffected.
+  def derive_prompt_tokens(response_json)
+    prompt = response_json&.dig("usageMetadata", "promptTokenCount")
+    return if prompt.nil?
+
+    tool_use = response_json.dig("usageMetadata", "toolUsePromptTokenCount").to_i
+    prompt + tool_use
   end
 
   def build_request_parameters(model_completion)
