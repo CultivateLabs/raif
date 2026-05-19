@@ -43,6 +43,27 @@ RSpec.describe Raif::Llms::XAi, type: :model do
       end
     end
 
+    context "when the response format is json and the source has a json_response_schema" do
+      let(:test_task){ Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+
+      it "sends response_format: json_schema, parses the structured response, and adds no synthetic tool calls",
+        vcr: { cassette_name: "x_ai/json_response_with_schema" } do
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "Tell me a joke" }],
+          response_format: :json,
+          source: test_task
+        )
+
+        expect(model_completion.response_format).to eq("json")
+        expect(model_completion.response_format_parameter).to eq("json_schema")
+        expect(model_completion.parsed_response).to eq({
+          "joke" => "Why don't scientists trust atoms?",
+          "answer" => "Because they make up everything."
+        })
+        expect(model_completion.response_tool_calls).to be_nil
+      end
+    end
+
     context "when using developer-managed tools" do
       it "extracts tool calls correctly", vcr: { cassette_name: "x_ai/developer_managed_fetch_url" } do
         model_completion = llm.chat(

@@ -98,7 +98,7 @@ module Raif::Concerns::Llms::XAi::BatchInference
           "expires_at" => create_body["expires_at"] || last_add_body&.dig("expires_at"),
           "cost_breakdown" => last_add_body&.dig("cost_breakdown") || create_body["cost_breakdown"]
         ).compact,
-        request_counts: derive_request_counts(last_add_body || create_body)
+        request_counts: derive_request_counts(last_add_body || create_body) || batch.request_counts
       )
 
       batch.raif_model_completions.where(started_at: nil).update_all(started_at: submitted_at)
@@ -122,7 +122,7 @@ module Raif::Concerns::Llms::XAi::BatchInference
 
       updates = {
         status: new_status,
-        request_counts: derive_request_counts(body),
+        request_counts: derive_request_counts(body) || batch.request_counts,
         provider_response: provider_response_updates
       }
       if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
@@ -249,7 +249,7 @@ module Raif::Concerns::Llms::XAi::BatchInference
 private
 
   def batch_connection
-    @batch_connection ||= Faraday.new(url: "https://api.x.ai/v1", request: Raif.default_request_options) do |f|
+    @batch_connection ||= Faraday.new(url: Raif.config.x_ai_base_url, request: Raif.default_request_options) do |f|
       f.headers["Authorization"] = "Bearer #{Raif.config.x_ai_api_key}"
       f.request :json
       f.response :json
@@ -265,7 +265,6 @@ private
   # Streaming and stream_options are stripped -- batch entries are never
   # streamed.
   def build_batch_request(mc)
-    mc.temperature ||= default_temperature
     body = build_request_parameters(mc)
     body.delete(:stream)
     body.delete(:stream_options)
@@ -273,15 +272,23 @@ private
     { responses: body }
   end
 
+  # Returns nil when the response body has no usable state counts, so callers
+  # can fall back to the previously-persisted batch.request_counts instead of
+  # clobbering them with {} when xAI returns a sparse body (early-state
+  # batches, transitional cancel acks, etc.).
   def derive_request_counts(body)
-    state = body.is_a?(Hash) ? (body["state"] || {}) : {}
-    {
+    state = body.is_a?(Hash) ? body["state"] : nil
+    return unless state.is_a?(Hash)
+
+    counts = {
       "total" => state["num_requests"],
       "pending" => state["num_pending"],
       "success" => state["num_success"],
       "error" => state["num_error"],
       "cancelled" => state["num_cancelled"]
     }.compact
+
+    counts.presence
   end
 
   # xAI has no batch-level status enum. We derive a Raif status from the

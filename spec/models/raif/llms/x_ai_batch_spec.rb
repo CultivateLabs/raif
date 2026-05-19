@@ -193,6 +193,20 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       )
       expect(llm.fetch_batch_status!(batch)).to eq("expired")
     end
+
+    it "preserves previously-persisted request_counts when a poll body omits state" do
+      batch.update!(request_counts: { "total" => 2, "pending" => 1, "success" => 1 })
+
+      stub_request(:get, "#{base_url}/batches/batch_status_target").to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: { batch_id: "batch_status_target" }.to_json
+      )
+
+      llm.fetch_batch_status!(batch)
+
+      expect(batch.reload.request_counts).to eq({ "total" => 2, "pending" => 1, "success" => 1 })
+    end
   end
 
   describe "#cancel_batch!" do

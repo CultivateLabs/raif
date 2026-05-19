@@ -54,6 +54,7 @@ module Raif
       :task_system_prompt_intro,
       :user_tool_types,
       :x_ai_api_key,
+      :x_ai_base_url,
       :x_ai_models_enabled
 
     alias_method :anthropic_bedrock_models_enabled, :bedrock_models_enabled
@@ -149,6 +150,7 @@ module Raif
       @user_tool_types = []
       x_ai_api_key = ENV["XAI_API_KEY"].presence || ENV["X_AI_API_KEY"]
       @x_ai_api_key = default_disable_llm_api_requests? ? "placeholder-x-ai-api-key" : x_ai_api_key
+      @x_ai_base_url = "https://api.x.ai/v1"
       @x_ai_models_enabled = @x_ai_api_key.present?
     end
 

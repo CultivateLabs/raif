@@ -8,7 +8,6 @@ class Raif::Llms::XAi < Raif::Llm
   include Raif::Concerns::Llms::XAi::BatchInference
 
   def perform_model_completion!(model_completion, &block)
-    model_completion.temperature ||= default_temperature
     parameters = build_request_parameters(model_completion)
     response = connection.post("chat/completions") do |req|
       req.body = parameters
@@ -25,7 +24,7 @@ class Raif::Llms::XAi < Raif::Llm
 private
 
   def connection
-    @connection ||= Faraday.new(url: "https://api.x.ai/v1", request: Raif.default_request_options) do |f|
+    @connection ||= Faraday.new(url: Raif.config.x_ai_base_url, request: Raif.default_request_options) do |f|
       f.headers["Authorization"] = "Bearer #{Raif.config.x_ai_api_key}"
       f.request :json
       f.response :json
@@ -63,9 +62,11 @@ private
     params = {
       model: model_completion.model_api_name,
       messages: messages_with_system,
-      temperature: model_completion.temperature.to_f,
-      max_tokens: model_completion.max_completion_tokens || default_max_completion_tokens,
+      temperature: model_completion.temperature.to_f
     }
+
+    max_tokens = model_completion.max_completion_tokens || default_max_completion_tokens
+    params[:max_tokens] = max_tokens if max_tokens.present?
 
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)

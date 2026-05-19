@@ -5,7 +5,7 @@ http_interactions:
     uri: https://api.x.ai/v1/chat/completions
     body:
       encoding: UTF-8
-      string: '{"model":"grok-4.3","messages":[{"role":"user","content":[{"type":"text","text":"Hello"}]}],"temperature":0.7,"max_tokens":null,"stream":true,"stream_options":{"include_usage":true}}'
+      string: '{"model":"grok-4.3","messages":[{"role":"user","content":[{"type":"text","text":"Hello"}]}],"temperature":0.7,"stream":true,"stream_options":{"include_usage":true}}'
     headers:
       Authorization:
       - "<PLACEHOLDER_AUTHORIZATION>"
