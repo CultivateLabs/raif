@@ -363,6 +363,42 @@ RSpec.describe Raif::Llms::XAi, type: :model do
       expect(model_completion.response_id).to eq("chatcmpl-xai-test-1")
       expect(model_completion.response_array).to eq(response_json["choices"])
     end
+
+    context "when the response includes reasoning_tokens" do
+      let(:reasoning_response_json) do
+        response_json.deep_merge(
+          "usage" => {
+            "completion_tokens" => 9,
+            "prompt_tokens" => 140,
+            "total_tokens" => 259,
+            "completion_tokens_details" => { "reasoning_tokens" => 110 },
+          }
+        )
+      end
+
+      it "adds reasoning_tokens to completion_tokens so cost reflects what xAI bills" do
+        model_completion = Raif::ModelCompletion.create!(
+          messages: [{ "role" => "user", "content" => "Hello" }],
+          llm_model_key: "x_ai_grok_4_3",
+          model_api_name: "grok-4.3",
+          response_format: "text",
+        )
+
+        llm.send(:update_model_completion, model_completion, reasoning_response_json)
+        model_completion.reload
+
+        # xAI's completion_tokens (9) excludes reasoning_tokens (110); we roll
+        # them together so Raif::ModelCompletion#calculate_costs charges the
+        # combined output at the output token rate.
+        expect(model_completion.completion_tokens).to eq(119)
+        expect(model_completion.prompt_tokens).to eq(140)
+        expect(model_completion.total_tokens).to eq(259)
+
+        config = Raif.llm_config(:x_ai_grok_4_3)
+        expected_output_cost = (config[:output_token_cost] * 119).round(6)
+        expect(model_completion.output_token_cost.to_f).to be_within(1e-6).of(expected_output_cost)
+      end
+    end
   end
 
   describe "#extract_response_tool_calls" do
