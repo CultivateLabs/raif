@@ -160,6 +160,32 @@ module Raif
       iteration_count == max_iterations
     end
 
+    # Per-tool invocation counts for the admin agent show page, keyed by tool
+    # class name (e.g. "Raif::ModelTools::ProviderManaged::WebSearch") so the
+    # `_list` partial can look up `counts[tool_class.name]`.
+    #
+    # Combines two sources:
+    # - Developer-managed tools persist as Raif::ModelToolInvocation rows via
+    #   Raif::ModelTool.invoke_tool.
+    # - Provider-managed tools (e.g. Anthropic / OpenAI web_search) never reach
+    #   that path - they live as `server_tool_use` / `web_search_call` blocks
+    #   in each completion's `response_array` and are surfaced via
+    #   ModelCompletion#provider_managed_tool_calls.
+    def model_tool_invocation_counts
+      counts = raif_model_tool_invocations.group(:tool_type).count
+
+      raif_model_completions.find_each do |completion|
+        Array(completion.provider_managed_tool_calls).each do |call|
+          tool_klass = completion.available_model_tools_map[call["tool_name"]]
+          next unless tool_klass
+
+          counts[tool_klass.name] = (counts[tool_klass.name] || 0) + 1
+        end
+      end
+
+      counts
+    end
+
   private
 
     def populate_default_model_tools
