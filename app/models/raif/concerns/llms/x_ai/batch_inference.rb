@@ -64,12 +64,12 @@ module Raif::Concerns::Llms::XAi::BatchInference
     response = batch_connection.post("batches") do |req|
       req.body = { name: "raif_batch_#{batch.id}", input_file_id: input_file_id }
     end
-    body = response.body
+    body = response.body.is_a?(Hash) ? response.body : {}
     provider_batch_id = body["batch_id"] || body["id"]
 
     if provider_batch_id.blank?
       raise Raif::Errors::InvalidBatchError,
-        "xAI batch create returned no batch id (body=#{body.inspect})"
+        "xAI batch create returned no batch id (body=#{response.body.inspect})"
     end
 
     submitted_at = Time.current
@@ -295,11 +295,11 @@ private
       req.body = { file: file_part }
     end
 
-    body = response.body
+    body = response.body.is_a?(Hash) ? response.body : {}
     file_id = body["id"] || body["file_id"]
     if file_id.blank?
       raise Raif::Errors::InvalidBatchError,
-        "xAI /v1/files upload returned no file id (body=#{body.inspect})"
+        "xAI /v1/files upload returned no file id (body=#{response.body.inspect})"
     end
 
     file_id

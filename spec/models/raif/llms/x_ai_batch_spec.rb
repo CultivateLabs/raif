@@ -85,9 +85,14 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       # /v1/chat/completions with the unchanged sync-path body shape (messages,
       # not the Responses-API `input`). The original bug was wrapping the body
       # under `responses` with `messages`, which xAI rejects with 422.
-      file_segment = files_signature.body.to_s.split("\r\n\r\n", 2).last
-      jsonl_payload = file_segment.split("\r\n--", 2).first
-      lines = jsonl_payload.lines.map(&:strip).reject(&:empty?)
+      multipart_body = files_signature.body.to_s
+      expect(multipart_body).to include('name="file"')
+      expect(multipart_body).to include('filename="batch.jsonl"')
+
+      jsonl_payload = multipart_body[/Content-Disposition: form-data; name="file".*?\r\n\r\n(.+?)\r\n--/m, 1]
+      expect(jsonl_payload).to be_present
+
+      lines = jsonl_payload.strip.lines.map(&:strip).reject(&:empty?)
       expect(lines.size).to eq(2)
 
       entries = lines.map { |l| JSON.parse(l) }
