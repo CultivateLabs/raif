@@ -694,6 +694,26 @@ module Raif
           output_token_cost: 0.40 / 1_000_000,
         },
       ],
+      Raif::Llms::XAi => [
+        {
+          key: :x_ai_grok_4_3,
+          api_name: "grok-4.3",
+          input_token_cost: 1.25 / 1_000_000,
+          output_token_cost: 2.50 / 1_000_000,
+        },
+        {
+          key: :x_ai_grok_4_20_reasoning,
+          api_name: "grok-4.20-0309-reasoning",
+          input_token_cost: 1.25 / 1_000_000,
+          output_token_cost: 2.50 / 1_000_000,
+        },
+        {
+          key: :x_ai_grok_4_20_non_reasoning,
+          api_name: "grok-4.20-0309-non-reasoning",
+          input_token_cost: 1.25 / 1_000_000,
+          output_token_cost: 2.50 / 1_000_000,
+        },
+      ],
       Raif::Llms::Google => [
         {
           key: :google_gemini_3_1_pro,

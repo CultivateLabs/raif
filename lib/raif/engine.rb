@@ -99,6 +99,14 @@ module Raif
     end
 
     config.after_initialize do
+      next unless Raif.config.x_ai_models_enabled
+
+      Raif.default_llms[Raif::Llms::XAi].each do |llm_config|
+        Raif.register_llm(Raif::Llms::XAi, **llm_config)
+      end
+    end
+
+    config.after_initialize do
       next unless Raif.config.google_models_enabled
 
       Raif.default_llms[Raif::Llms::Google].each do |llm_config|
