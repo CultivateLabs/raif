@@ -13,7 +13,7 @@ module Raif
   # For each non-terminal batch whose next_poll_at is in the past by at least
   # POLL_GRACE, this sweep enqueues a fresh Raif::PollModelCompletionBatchJob.
   # That job is idempotent at the top (terminal? check + handler-dispatched
-  # gating), and fetch_batch_status! is a read against the provider, so a
+  # gating), and batch.fetch_status! is a read against the provider, so a
   # concurrent normally-firing poll plus this sweep at most causes a duplicate
   # provider status request.
   #

@@ -91,7 +91,7 @@ If a batch outlives `Raif.config.model_completion_batch_max_age` (default 26 hou
 
 The self-rescheduling poll chain can be lost if a scheduled job is evicted (queue backend restart, deploy that drains the queue, ActiveJob retries exhausted). Raif provides two safety sweeps that host apps should schedule together:
 
-1. `Raif::ResumeStalledModelCompletionBatchPollsJob` (run every ~5 minutes) finds non-terminal batches whose `next_poll_at` is in the past and re-enqueues `Raif::PollModelCompletionBatchJob` for each. The next poll calls `fetch_status!`, so if the provider has already finished the batch, results are reclaimed instead of being thrown away.
+1. `Raif::ResumeStalledModelCompletionBatchPollsJob` (run every ~5 minutes) finds non-terminal batches whose `next_poll_at` is more than 5 minutes in the past (a `POLL_GRACE` window that keeps the sweep from racing a normally-firing poll) and re-enqueues `Raif::PollModelCompletionBatchJob` for each. The next poll calls `fetch_status!`, so if the provider has already finished the batch, results are reclaimed instead of being thrown away.
 2. `Raif::ExpireStuckModelCompletionBatchesJob` (run hourly) is the final fallback: any non-terminal batch older than `model_completion_batch_max_age` is force-failed through the same expiry path described above.
 
 **Schedule both in your host app's cron.** The resume sweep recovers happy-path batches whose chain dropped; the expire sweep cleans up batches the provider can't or won't finalize.
