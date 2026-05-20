@@ -1,0 +1,12 @@
+<tr id="<%= dom_id(model_completion_batch) %>" class="raif-model-completion-batch">
+  <td><%= link_to "##{model_completion_batch.id}", raif.admin_model_completion_batch_path(model_completion_batch) %></td>
+  <td><small class="text-muted"><%= model_completion_batch.created_at.rfc822 %></small></td>
+  <td><small><%= model_completion_batch.type %></small></td>
+  <td><%= model_completion_batch.llm_model_key %></td>
+  <td><small><%= model_completion_batch.provider_batch_id.presence || "-" %></small></td>
+  <td><%= render "raif/admin/model_completion_batches/status_badge", model_completion_batch: model_completion_batch %></td>
+  <td><%= completion_counts_by_batch_id.fetch(model_completion_batch.id, 0) %></td>
+  <td><small class="text-muted"><%= model_completion_batch.submitted_at&.rfc822 || "-" %></small></td>
+  <td><small class="text-muted"><%= model_completion_batch.ended_at&.rfc822 || "-" %></small></td>
+  <td><%= model_completion_batch.total_cost ? number_to_currency(model_completion_batch.total_cost, precision: 6) : "-" %></td>
+</tr>

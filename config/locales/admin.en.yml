@@ -15,12 +15,16 @@ en:
         attempt: Attempt
         attempts: Attempts
         available_tools: Available Tools
+        batch: Batch
+        batch_custom_id: Batch Custom ID
         cache_creation_input_tokens: Cache Creation Tokens
         cache_read_input_tokens: Cache Read Tokens
         citations: Citations
         completed: Completed
         completed_at: Completed At
+        completion_handler: Completion Handler
         completion_tokens: Completion Tokens
+        completions: Completions
         config: Config
         conversation_entries: Conversation Entries
         conversation_history: Conversation History
@@ -32,6 +36,7 @@ en:
         description: Description
         details: Details
         duration: Duration
+        ended_at: Ended At
         entries_count: Entries Count
         entry: Entry
         est_cost: est. cost
@@ -42,6 +47,7 @@ en:
         failure_reason: Failure Reason
         filter: Filter
         final_answer: Final Answer
+        handler_dispatched_at: Handler Dispatched At
         id: ID
         in_progress: In Progress
         inferred_from_citations: Inferred from response citations.
@@ -55,14 +61,19 @@ en:
         latest_entry_at: Latest Entry At
         llms: LLMs
         messages: Messages
+        metadata: Metadata
         model: Model
+        model_api_name: Model API Name
         model_completion: Model Completion
+        model_completion_batches: Model Completion Batches
         model_completions: Model Completions
         model_response: Model Response
         model_tool_invocations: Model Tool Invocations
+        next_poll_at: Next Poll At
         no_agents: No agents found.
         no_citations: No citations found in this response.
         no_conversations: No conversations found.
+        no_model_completion_batches: No model completion batches found.
         no_model_completions: No model completions found.
         no_model_tool_invocations: No model tool invocations found.
         no_tasks: No tasks found.
@@ -77,11 +88,15 @@ en:
         period_week: Past week
         prettified: Prettified
         prompt: Prompt
+        prompt_token_cost: Prompt Token Cost
         prompt_tokens: Prompt Tokens
+        provider_batch_id: Provider Batch ID
         provider_managed_tool_calls: Provider-Managed Tool Calls
+        provider_response: Provider Response
         provider_tool_call_id: Provider Tool Call ID
         raw: Raw
         rendered: Rendered
+        request_counts: Request Counts
         requested_language: Requested Language
         response: Response
         response_array: Response Array
@@ -96,6 +111,7 @@ en:
         started_at: Started At
         stats: Stats
         status: Status
+        submitted_at: Submitted At
         system_prompt: System Prompt
         task: Task
         tasks: Tasks
@@ -144,6 +160,10 @@ en:
           provider: Provider
           search_placeholder: Search by name, provider, or API name...
           title: Registered LLMs
+      model_completion_batches:
+        show:
+          back_to_model_completion_batches: Back to Model Completion Batches
+          title: 'Model Completion Batch #%{id}'
       model_completions:
         show:
           back_to_model_completions: Back to Model Completions

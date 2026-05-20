@@ -1,0 +1,12 @@
+<% case model_completion_batch.status %>
+<% when "ended" %>
+  <span class="badge bg-success"><%= model_completion_batch.status.titleize %></span>
+<% when "failed", "expired" %>
+  <span class="badge bg-danger"><%= model_completion_batch.status.titleize %></span>
+<% when "canceled" %>
+  <span class="badge bg-secondary"><%= model_completion_batch.status.titleize %></span>
+<% when "in_progress", "submitted" %>
+  <span class="badge bg-warning text-dark"><%= model_completion_batch.status.titleize %></span>
+<% else %>
+  <span class="badge bg-light text-dark"><%= model_completion_batch.status.titleize %></span>
+<% end %>

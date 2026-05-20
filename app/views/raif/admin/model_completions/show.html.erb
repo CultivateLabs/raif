@@ -44,6 +44,12 @@
           <div class="col-5"><strong><%= t("raif.admin.common.retry_count") %>:</strong></div>
           <div class="col-7"><%= @model_completion.retry_count %></div>
         </div>
+        <% if @model_completion.raif_model_completion_batch_id.present? %>
+          <div class="row mb-2">
+            <div class="col-5"><strong><%= t("raif.admin.common.batch") %>:</strong></div>
+            <div class="col-7"><%= link_to "##{@model_completion.raif_model_completion_batch_id}", raif.admin_model_completion_batch_path(@model_completion.raif_model_completion_batch_id) %></div>
+          </div>
+        <% end %>
       </div>
       <div class="col-md-6">
         <div class="row mb-2">
