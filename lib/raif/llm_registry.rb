@@ -727,7 +727,7 @@ module Raif
         },
         {
           key: :google_gemini_3_1_flash_lite,
-          api_name: "gemini-3.1-flash-lite-preview",
+          api_name: "gemini-3.1-flash-lite",
           input_token_cost: 0.25 / 1_000_000,
           output_token_cost: 1.5 / 1_000_000,
           supported_provider_managed_tools: [
