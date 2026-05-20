@@ -87,10 +87,22 @@ You don't usually interact with the polling job directly. Once `submit!` is call
    - **`canceled` / `expired` / `failed`**: every still-pending child is force-failed with the batch status as the reason. No per-entry fetch happens.
 4. `batch.dispatch_completion_handler!` runs your handler.
 
-If a batch outlives `Raif.config.model_completion_batch_max_age` (default 26 hours) without resolving, it's expired: raif issues a best-effort provider-side cancel via `batch.cancel!` and then force-fails the batch locally so any waiting workflow can advance. If the cancel call fails (network, 5xx, etc.), the local force-fail still happens — the provider-side batch may continue running and be billed, but raif logs and moves on. The hourly safety sweep `Raif::ExpireStuckModelCompletionBatchesJob` runs the same expiry path for batches whose polling chain was dropped entirely (e.g., a queue restart that loses scheduled jobs). **Schedule it to run hourly in your host app's cron** – without it, a stranded batch never advances.
+If a batch outlives `Raif.config.model_completion_batch_max_age` (default 26 hours) without resolving, it's expired: raif issues a best-effort provider-side cancel via `batch.cancel!` and then force-fails the batch locally so any waiting workflow can advance. If the cancel call fails (network, 5xx, etc.), the local force-fail still happens — the provider-side batch may continue running and be billed, but raif logs and moves on.
+
+The self-rescheduling poll chain can be lost if a scheduled job is evicted (queue backend restart, deploy that drains the queue, ActiveJob retries exhausted). Raif provides two safety sweeps that host apps should schedule together:
+
+1. `Raif::ResumeStalledModelCompletionBatchPollsJob` (run every ~5 minutes) finds non-terminal batches whose `next_poll_at` is more than 5 minutes in the past (a `POLL_GRACE` window that keeps the sweep from racing a normally-firing poll) and re-enqueues `Raif::PollModelCompletionBatchJob` for each. The next poll calls `fetch_status!`, so if the provider has already finished the batch, results are reclaimed instead of being thrown away.
+2. `Raif::ExpireStuckModelCompletionBatchesJob` (run hourly) is the final fallback: any non-terminal batch older than `model_completion_batch_max_age` is force-failed through the same expiry path described above.
+
+**Schedule both in your host app's cron.** The resume sweep recovers happy-path batches whose chain dropped; the expire sweep cleans up batches the provider can't or won't finalize.
 
 ```yaml
 # config/schedule.yml (sidekiq-cron example)
+resume_stalled_model_completion_batch_polls:
+  cron: "*/5 * * * *"
+  class: "Raif::ResumeStalledModelCompletionBatchPollsJob"
+  queue: "default"
+
 expire_stuck_model_completion_batches:
   cron: "every hour"
   class: "Raif::ExpireStuckModelCompletionBatchesJob"
