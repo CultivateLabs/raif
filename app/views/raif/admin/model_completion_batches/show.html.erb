@@ -1,0 +1,206 @@
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1><%= t(".title", id: @model_completion_batch.id) %></h1>
+  <%= link_to t(".back_to_model_completion_batches"), raif.admin_model_completion_batches_path, class: "btn btn-outline-secondary" %>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t("raif.admin.common.details") %></h5>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.id") %>:</strong></div>
+          <div class="col-7"><%= @model_completion_batch.id %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.type") %>:</strong></div>
+          <div class="col-7"><%= @model_completion_batch.type %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.model") %>:</strong></div>
+          <div class="col-7"><%= @model_completion_batch.llm_model_key %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.model_api_name") %>:</strong></div>
+          <div class="col-7"><%= @model_completion_batch.model_api_name %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.provider_batch_id") %>:</strong></div>
+          <div class="col-7"><code><%= @model_completion_batch.provider_batch_id.presence || "-" %></code></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.creator") %>:</strong></div>
+          <div class="col-7">
+            <% if @model_completion_batch.creator.present? %>
+              <%= @model_completion_batch.creator.try(:raif_display_name) || "#{@model_completion_batch.creator_type} ##{@model_completion_batch.creator_id}" %>
+            <% else %>
+              -
+            <% end %>
+          </div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.status") %>:</strong></div>
+          <div class="col-7"><%= render "raif/admin/model_completion_batches/status_badge", model_completion_batch: @model_completion_batch %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.completion_handler") %>:</strong></div>
+          <div class="col-7"><code><%= @model_completion_batch.completion_handler_class_name.presence || "-" %></code></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.handler_dispatched_at") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion_batch.handler_dispatched_at&.rfc822 || "-" %></small></div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion_batch.created_at.rfc822 %></small></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.submitted_at") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion_batch.submitted_at&.rfc822 || "-" %></small></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.started_at") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion_batch.started_at&.rfc822 || "-" %></small></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.ended_at") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion_batch.ended_at&.rfc822 || "-" %></small></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.failed_at") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion_batch.failed_at&.rfc822 || "-" %></small></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.next_poll_at") %>:</strong></div>
+          <div class="col-7"><small><%= @model_completion_batch.next_poll_at&.rfc822 || "-" %></small></div>
+        </div>
+        <hr class="my-2">
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.prompt_token_cost") %>:</strong></div>
+          <div class="col-7"><%= @model_completion_batch.prompt_token_cost ? number_to_currency(@model_completion_batch.prompt_token_cost, precision: 6) : "-" %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.output_token_cost") %>:</strong></div>
+          <div class="col-7"><%= @model_completion_batch.output_token_cost ? number_to_currency(@model_completion_batch.output_token_cost, precision: 6) : "-" %></div>
+        </div>
+        <div class="row mb-2">
+          <div class="col-5"><strong><%= t("raif.admin.common.total_cost") %>:</strong></div>
+          <div class="col-7"><%= @model_completion_batch.total_cost ? number_to_currency(@model_completion_batch.total_cost, precision: 6) : "-" %></div>
+        </div>
+      </div>
+    </div>
+
+    <% if @model_completion_batch.failure_reason.present? || @model_completion_batch.failure_error.present? %>
+      <hr>
+      <% if @model_completion_batch.failure_error.present? %>
+        <div class="row mb-2">
+          <div class="col-md-2"><strong><%= t("raif.admin.common.failure_error") %>:</strong></div>
+          <div class="col-md-10"><code><%= @model_completion_batch.failure_error %></code></div>
+        </div>
+      <% end %>
+      <% if @model_completion_batch.failure_reason.present? %>
+        <div class="row mb-2">
+          <div class="col-md-2"><strong><%= t("raif.admin.common.failure_reason") %>:</strong></div>
+          <div class="col-md-10"><%= @model_completion_batch.failure_reason %></div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<% if @model_completion_batch.request_counts.present? && @model_completion_batch.request_counts.any? %>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><%= t("raif.admin.common.request_counts") %></h5>
+    </div>
+    <div class="card-body">
+      <pre class="pre-wrap mb-0"><%= JSON.pretty_generate(@model_completion_batch.request_counts) %></pre>
+    </div>
+  </div>
+<% end %>
+
+<% if @model_completion_batch.metadata.present? && @model_completion_batch.metadata.any? %>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><%= t("raif.admin.common.metadata") %></h5>
+    </div>
+    <div class="card-body">
+      <pre class="pre-wrap mb-0"><%= JSON.pretty_generate(@model_completion_batch.metadata) %></pre>
+    </div>
+  </div>
+<% end %>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t("raif.admin.common.model_completions") %> (<%= @model_completions.size %>)</h5>
+  </div>
+  <div class="card-body">
+    <% if @model_completions.any? %>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead class="table-light">
+            <tr>
+              <th><%= t("raif.admin.common.id") %></th>
+              <th><%= t("raif.admin.common.batch_custom_id") %></th>
+              <th><%= t("raif.admin.common.source") %></th>
+              <th><%= t("raif.admin.common.status") %></th>
+              <th><%= t("raif.admin.common.prompt_tokens") %></th>
+              <th><%= t("raif.admin.common.completion_tokens") %></th>
+              <th><%= t("raif.admin.common.total_tokens") %></th>
+              <th><%= t("raif.admin.common.total_cost") %></th>
+              <th><%= t("raif.admin.common.response") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @model_completions.each do |model_completion| %>
+              <tr>
+                <td><%= link_to "##{model_completion.id}", raif.admin_model_completion_path(model_completion) %></td>
+                <td><small><%= model_completion.batch_custom_id.presence || "-" %></small></td>
+                <td>
+                  <% if model_completion.source.present? %>
+                    <%= model_completion.source_type %> #<%= model_completion.source_id %>
+                  <% else %>
+                    -
+                  <% end %>
+                </td>
+                <td>
+                  <% if model_completion.failed? %>
+                    <span class="badge bg-danger"><%= t("raif.admin.common.failed") %></span>
+                  <% elsif model_completion.completed? %>
+                    <span class="badge bg-success"><%= t("raif.admin.common.completed") %></span>
+                  <% elsif model_completion.started? %>
+                    <span class="badge bg-warning text-dark"><%= t("raif.admin.common.in_progress") %></span>
+                  <% else %>
+                    <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
+                  <% end %>
+                </td>
+                <td><%= model_completion.prompt_tokens ? number_with_delimiter(model_completion.prompt_tokens) : "-" %></td>
+                <td><%= model_completion.completion_tokens ? number_with_delimiter(model_completion.completion_tokens) : "-" %></td>
+                <td><%= model_completion.total_tokens ? number_with_delimiter(model_completion.total_tokens) : "-" %></td>
+                <td><%= model_completion.total_cost ? number_to_currency(model_completion.total_cost, precision: 6) : "-" %></td>
+                <td><small class="text-muted"><%= truncate(model_completion.raw_response.to_s, length: 80) %></small></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="text-muted mb-0"><%= t("raif.admin.common.no_model_completions") %></p>
+    <% end %>
+  </div>
+</div>
+
+<% if @model_completion_batch.provider_response.present? && @model_completion_batch.provider_response.any? %>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><%= t("raif.admin.common.provider_response") %></h5>
+    </div>
+    <div class="card-body">
+      <pre class="pre-wrap mb-0"><%= JSON.pretty_generate(@model_completion_batch.provider_response) %></pre>
+    </div>
+  </div>
+<% end %>
