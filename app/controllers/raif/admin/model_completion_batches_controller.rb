@@ -21,11 +21,16 @@ module Raif
         batches = batches.where(type: @selected_type) if @selected_type.present?
 
         @pagy, @model_completion_batches = pagy(batches)
+
+        @completion_counts_by_batch_id = Raif::ModelCompletion
+          .where(raif_model_completion_batch_id: @model_completion_batches.map(&:id))
+          .group(:raif_model_completion_batch_id)
+          .count
       end
 
       def show
         @model_completion_batch = Raif::ModelCompletionBatch.find(params[:id])
-        @model_completions = @model_completion_batch.raif_model_completions.order(:id)
+        @model_completions = @model_completion_batch.raif_model_completions.order(:id).to_a
       end
     end
   end

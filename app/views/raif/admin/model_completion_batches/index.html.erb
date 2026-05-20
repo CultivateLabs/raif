@@ -62,7 +62,7 @@
             </tr>
           </thead>
           <tbody>
-            <%= render partial: "raif/admin/model_completion_batches/model_completion_batch", collection: @model_completion_batches %>
+            <%= render partial: "raif/admin/model_completion_batches/model_completion_batch", collection: @model_completion_batches, locals: { completion_counts_by_batch_id: @completion_counts_by_batch_id } %>
           </tbody>
         </table>
       </div>
