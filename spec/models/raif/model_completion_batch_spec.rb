@@ -20,6 +20,7 @@
 #  prompt_token_cost             :decimal(10, 6)
 #  provider_response             :jsonb
 #  request_counts                :jsonb
+#  results_fetched_at            :datetime
 #  started_at                    :datetime
 #  status                        :string           default("pending"), not null
 #  submitted_at                  :datetime
@@ -287,6 +288,32 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
       expect { batch.dispatch_completion_handler! }.not_to raise_error
     end
 
+    it "is a no-op when results_fetched_at is blank" do
+      # Defense in depth: even if a caller bypasses finalize! and invokes
+      # dispatch directly, we refuse to run the handler against a batch whose
+      # child completions haven't been hydrated yet. This is the guard that
+      # prevents the silent-stranding bug where a fetch_results! failure
+      # would otherwise be followed by a handler dispatch against
+      # parsed_response-blank tasks.
+      stub_const("UndispatchedHandlerStub", Class.new do
+        @calls = 0
+        class << self
+          attr_accessor :calls
+        end
+
+        def self.handle_batch_completion(_batch)
+          self.calls += 1
+        end
+      end)
+
+      batch.update!(completion_handler_class_name: "UndispatchedHandlerStub", results_fetched_at: nil)
+
+      batch.dispatch_completion_handler!
+
+      expect(UndispatchedHandlerStub.calls).to eq(0)
+      expect(batch.reload.handler_dispatched_at).to be_nil
+    end
+
     it "calls handle_batch_completion on the resolved class and stamps handler_dispatched_at" do
       stub_const("BatchCompletionHandlerStub", Class.new do
         def self.handle_batch_completion(batch)
@@ -298,7 +325,7 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         end
       end)
 
-      batch.update!(completion_handler_class_name: "BatchCompletionHandlerStub")
+      batch.update!(completion_handler_class_name: "BatchCompletionHandlerStub", results_fetched_at: Time.current)
       expect(batch.handler_dispatched_at).to be_nil
 
       batch.dispatch_completion_handler!
@@ -319,7 +346,7 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         end
       end)
 
-      batch.update!(completion_handler_class_name: "CountedHandlerStub")
+      batch.update!(completion_handler_class_name: "CountedHandlerStub", results_fetched_at: Time.current)
 
       batch.dispatch_completion_handler!
       first_dispatched_at = batch.reload.handler_dispatched_at
@@ -336,19 +363,90 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         end
       end)
 
-      batch.update!(completion_handler_class_name: "RaisingHandlerStub")
+      batch.update!(completion_handler_class_name: "RaisingHandlerStub", results_fetched_at: Time.current)
 
       expect { batch.dispatch_completion_handler! }.to raise_error("synthetic-failure")
       expect(batch.reload.handler_dispatched_at).to be_nil
     end
 
     it "logs and skips when the class name does not resolve" do
-      batch.update!(completion_handler_class_name: "NoSuchHandlerClassXYZ")
+      batch.update!(completion_handler_class_name: "NoSuchHandlerClassXYZ", results_fetched_at: Time.current)
       expect(Raif.logger).to receive(:error).with(a_string_matching(/could not be resolved/))
       expect { batch.dispatch_completion_handler! }.not_to raise_error
       # Misconfigured handler -- no work was done, so leave the flag NULL in
       # case the host fixes the class name and re-dispatches.
       expect(batch.reload.handler_dispatched_at).to be_nil
+    end
+  end
+
+  describe "#finalize!" do
+    let(:batch) { FB.create(:raif_model_completion_batch_anthropic, status: "ended", ended_at: Time.current) }
+    let(:llm_double) { instance_double(Raif::Llms::Anthropic) }
+
+    before do
+      allow(batch).to receive(:llm).and_return(llm_double)
+    end
+
+    it "calls fetch_results! on a successful batch and stamps results_fetched_at" do
+      allow(llm_double).to receive(:fetch_batch_results!)
+
+      batch.finalize!
+
+      expect(llm_double).to have_received(:fetch_batch_results!).with(batch).once
+      expect(batch.reload.results_fetched_at).to be_within(2.seconds).of(Time.current)
+    end
+
+    it "is idempotent: a second call after results_fetched_at is set does not re-fetch" do
+      allow(llm_double).to receive(:fetch_batch_results!)
+
+      batch.finalize!
+      batch.finalize!
+
+      expect(llm_double).to have_received(:fetch_batch_results!).with(batch).once
+    end
+
+    it "leaves results_fetched_at NULL when fetch_results! raises so a future call can retry" do
+      # This is the central retry-on-transient-failure regression: a
+      # fetch_batch_results! that raises (e.g. provider returns a transient
+      # 4xx on /results) must not silently mark the batch as resolved,
+      # because that would let the handler dispatch against un-hydrated
+      # child completions.
+      allow(llm_double).to receive(:fetch_batch_results!).and_raise(Faraday::BadRequestError, "transient 400")
+
+      expect { batch.finalize! }.to raise_error(Faraday::BadRequestError)
+      expect(batch.reload.results_fetched_at).to be_nil
+    end
+
+    it "retries fetch_results! on a subsequent call after the previous one raised" do
+      call_count = 0
+      allow(llm_double).to receive(:fetch_batch_results!) do
+        call_count += 1
+        raise Faraday::BadRequestError, "transient 400" if call_count == 1
+      end
+
+      expect { batch.finalize! }.to raise_error(Faraday::BadRequestError)
+      expect(batch.reload.results_fetched_at).to be_nil
+
+      batch.finalize!
+
+      expect(call_count).to eq(2)
+      expect(batch.reload.results_fetched_at).to be_within(2.seconds).of(Time.current)
+    end
+
+    it "delegates to force_fail! for non-successful terminal statuses and ends with results_fetched_at set" do
+      batch.update!(status: "canceled")
+      mc = FB.create(
+        :raif_model_completion,
+        raif_model_completion_batch: batch,
+        batch_custom_id: "x1",
+        model_api_name: "claude-3-5-haiku-latest",
+        llm_model_key: "anthropic_claude_3_5_haiku"
+      )
+
+      batch.finalize!
+
+      expect(mc.reload.failed?).to be(true)
+      expect(batch.reload.results_fetched_at).to be_within(2.seconds).of(Time.current)
     end
   end
 
