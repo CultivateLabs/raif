@@ -231,7 +231,7 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
         )
 
         call_count = 0
-        allow(llm_double).to receive(:fetch_batch_results!) do |b|
+        allow(llm_double).to receive(:fetch_batch_results!) do |_b|
           call_count += 1
           raise Faraday::BadRequestError, "transient 400" if call_count == 1
         end
