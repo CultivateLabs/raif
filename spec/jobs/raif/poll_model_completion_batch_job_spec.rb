@@ -247,8 +247,8 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
         expect(batch.reload.handler_dispatched_at).to be_nil
         expect(RetryFinalizeHandlerStub.calls).to eq(0)
 
-        # Second poll (ActiveJob retry / safety sweep / etc.): xAI now responds
-        # cleanly, finalize! completes, handler dispatches.
+        # Second poll (ActiveJob retry / safety sweep / etc.): the provider
+        # now responds cleanly, finalize! completes, handler dispatches.
         described_class.perform_now(batch.id)
 
         expect(call_count).to eq(2)
