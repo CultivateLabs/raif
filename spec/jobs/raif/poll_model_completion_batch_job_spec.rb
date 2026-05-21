@@ -204,6 +204,60 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
       end.to have_enqueued_job(described_class).with(batch.id, attempt: 2)
     end
 
+    describe "terminal-batch finalize retry" do
+      it "re-runs finalize! on a subsequent run when results_fetched_at is still NULL" do
+        # Regression: under the prior code path, a fetch_batch_results! that
+        # raised after fetch_batch_status! had committed the terminal status
+        # would permanently strand the batch -- the next poll's
+        # terminal-at-top branch dispatched the completion handler against
+        # un-hydrated child completions. With finalize! now called in that
+        # branch (and gated on results_fetched_at), the rescheduled run
+        # retries fetch_batch_results! and the chain self-heals.
+        stub_const("RetryFinalizeHandlerStub", Class.new do
+          @calls = 0
+          class << self
+            attr_accessor :calls
+          end
+
+          def self.handle_batch_completion(_batch)
+            self.calls += 1
+          end
+        end)
+
+        batch.update!(
+          status: "ended",
+          ended_at: 1.minute.ago,
+          completion_handler_class_name: "RetryFinalizeHandlerStub"
+        )
+
+        call_count = 0
+        allow(llm_double).to receive(:fetch_batch_results!) do |_b|
+          call_count += 1
+          raise Faraday::BadRequestError, "transient 400" if call_count == 1
+        end
+
+        # First poll on the already-terminal batch: fetch_results! raises.
+        # The job's rescue path re-raises (BadRequest isn't transient by default).
+        expect do
+          described_class.perform_now(batch.id)
+        end.to raise_error(Faraday::BadRequestError)
+
+        # results_fetched_at remained NULL, handler never dispatched.
+        expect(batch.reload.results_fetched_at).to be_nil
+        expect(batch.reload.handler_dispatched_at).to be_nil
+        expect(RetryFinalizeHandlerStub.calls).to eq(0)
+
+        # Second poll (ActiveJob retry / safety sweep / etc.): the provider
+        # now responds cleanly, finalize! completes, handler dispatches.
+        described_class.perform_now(batch.id)
+
+        expect(call_count).to eq(2)
+        expect(batch.reload.results_fetched_at).to be_present
+        expect(batch.reload.handler_dispatched_at).to be_present
+        expect(RetryFinalizeHandlerStub.calls).to eq(1)
+      end
+    end
+
     describe "terminal-batch handler retry" do
       it "re-dispatches the handler on a subsequent run when handler_dispatched_at is still NULL" do
         stub_const("RetryHandlerStub", Class.new do
@@ -255,15 +309,17 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
         batch.update!(
           status: "ended",
           completion_handler_class_name: "AlreadyDispatchedHandlerStub",
+          results_fetched_at: 1.minute.ago,
           handler_dispatched_at: 1.minute.ago
         )
 
         described_class.perform_now(batch.id)
 
-        # Handler is gated on handler_dispatched_at; the second perform call
-        # must not re-run it.
+        # Both gates set -- finalize! and dispatch_completion_handler! both
+        # no-op, so the provider isn't touched and the handler isn't re-run.
         expect(AlreadyDispatchedHandlerStub.calls).to eq(0)
         expect(llm_double).not_to have_received(:fetch_batch_status!)
+        expect(llm_double).not_to have_received(:fetch_batch_results!)
       end
     end
   end

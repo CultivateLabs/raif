@@ -20,6 +20,7 @@
 #  prompt_token_cost             :decimal(10, 6)
 #  provider_response             :jsonb
 #  request_counts                :jsonb
+#  results_fetched_at            :datetime
 #  started_at                    :datetime
 #  status                        :string           default("pending"), not null
 #  submitted_at                  :datetime
@@ -206,9 +207,20 @@ module Raif
     # without that retry path the polling job's `return if batch.terminal?`
     # guard would silently swallow handler-raised errors and the consumer's
     # on_batch_completion block would never run.
+    #
+    # At-most-once across concurrent callers: the guard + handler invocation +
+    # timestamp write are wrapped in #with_lock so a normal poll job racing
+    # with the safety sweep (or a resume-stalled poll) cannot both pass the
+    # blank-handler_dispatched_at check and run the handler twice. Cheap
+    # callers still short-circuit before taking the lock.
     def dispatch_completion_handler!
       return if handler_dispatched_at.present?
       return if completion_handler_class_name.blank?
+      # Local-side resolution must be complete before the handler runs --
+      # otherwise the handler would dispatch against child completions that
+      # haven't been hydrated with their provider results yet, which is how
+      # batches got silently stranded under the prior code path.
+      return if results_fetched_at.blank?
 
       handler = completion_handler_class_name.safe_constantize
       if handler.blank?
@@ -219,8 +231,14 @@ module Raif
         return
       end
 
-      handler.handle_batch_completion(self)
-      update_column(:handler_dispatched_at, Time.current)
+      with_lock do
+        # Re-check under lock: another worker may have dispatched between our
+        # early-return check above and lock acquisition.
+        return if handler_dispatched_at.present?
+
+        handler.handle_batch_completion(self)
+        update_column(:handler_dispatched_at, Time.current)
+      end
     end
 
     # True once submitted_at is older than Raif.config.model_completion_batch_max_age.
@@ -237,11 +255,36 @@ module Raif
     # other terminal statuses (canceled / expired / failed), force-fails every
     # still-pending child completion since there are no per-entry results to
     # collect.
+    #
+    # Idempotent via results_fetched_at: once a successful run finishes, future
+    # callers (the poll job's terminal-at-top path, the safety sweep, an
+    # ActiveJob retry of either) skip the provider round-trip. If
+    # fetch_results! raises mid-stream, results_fetched_at stays NULL so a
+    # subsequent finalize! call retries the fetch -- this is how the
+    # poll chain self-heals from transient provider errors on the results
+    # endpoint without permanently stranding the child completions.
+    #
+    # At-most-once across concurrent callers: the guard + fetch + stamp are
+    # wrapped in #with_lock so a normal poll job racing with the safety
+    # sweep (or a resume-stalled poll) cannot both pass the blank-
+    # results_fetched_at check and double-call fetch_results!. Cheap callers
+    # still short-circuit before taking the lock.
     def finalize!
-      if successful?
-        fetch_results!
-      else
-        force_fail!(reason: "Batch ended with status: #{status}")
+      return if results_fetched_at.present?
+
+      with_lock do
+        # Re-check under lock: another worker may have hydrated results
+        # between our early-return check above and lock acquisition.
+        return if results_fetched_at.present?
+
+        if successful?
+          fetch_results!
+          update_column(:results_fetched_at, Time.current)
+        else
+          # force_fail! sets results_fetched_at inside its transaction so the
+          # success/failure paths converge on the same on-disk signal.
+          force_fail!(reason: "Batch ended with status: #{status}")
+        end
       end
     end
 
@@ -307,6 +350,8 @@ module Raif
           mc.update_columns(started_at: started_at) if mc.started_at.nil? && started_at.present?
           mc.failed!
         end
+
+        update_column(:results_fetched_at, Time.current) if results_fetched_at.blank?
       end
     end
 
