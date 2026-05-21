@@ -20,6 +20,7 @@
 #  prompt_token_cost             :decimal(10, 6)
 #  provider_response             :jsonb
 #  request_counts                :jsonb
+#  results_fetched_at            :datetime
 #  started_at                    :datetime
 #  status                        :string           default("pending"), not null
 #  submitted_at                  :datetime

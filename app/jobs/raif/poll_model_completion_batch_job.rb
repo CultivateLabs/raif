@@ -47,20 +47,24 @@ module Raif
       )
 
       # If the batch is already terminal at the top of perform, this run
-      # exists either to retry a handler that raised on a previous attempt
-      # (host's job adapter retried us, or the safety sweep beat us to the
-      # terminal transition) or because the polling chain raced with another
-      # finalize path. dispatch_completion_handler! is gated on
-      # handler_dispatched_at, so it's a no-op when the handler already ran
-      # successfully -- otherwise the early return here would silently
-      # swallow handler errors and the consumer's on_batch_completion block
-      # would never run.
+      # exists either to retry a finalize/handler that raised on a previous
+      # attempt (host's job adapter retried us, or the safety sweep beat us
+      # to the terminal transition) or because the polling chain raced with
+      # another finalize path. We call both finalize! and
+      # dispatch_completion_handler! here -- both are idempotent (gated on
+      # results_fetched_at and handler_dispatched_at respectively) so they
+      # no-op on a healthy batch. Calling finalize! is what lets the chain
+      # self-heal when a previous run's fetch_results! raised after
+      # fetch_status! had already committed the terminal status: without it
+      # the handler would dispatch against un-hydrated child completions.
       if batch.terminal?
         Raif.logger.info(
           "Raif::PollModelCompletionBatchJob ##{batch.id}: batch already terminal " \
-            "(status=#{batch.status}, handler_dispatched_at=#{batch.handler_dispatched_at&.iso8601 || "nil"}); " \
-            "dispatching completion handler and returning."
+            "(status=#{batch.status}, results_fetched_at=#{batch.results_fetched_at&.iso8601 || "nil"}, " \
+            "handler_dispatched_at=#{batch.handler_dispatched_at&.iso8601 || "nil"}); " \
+            "finalizing and dispatching completion handler."
         )
+        batch.finalize!
         batch.dispatch_completion_handler!
         return
       end
