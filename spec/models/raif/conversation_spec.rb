@@ -7,6 +7,7 @@
 #  id                         :bigint           not null, primary key
 #  available_model_tools      :jsonb            not null
 #  available_user_tools       :jsonb            not null
+#  config                     :jsonb            not null
 #  conversation_entries_count :integer          default(0), not null
 #  creator_type               :string           not null
 #  generating_entry_response  :boolean          default(FALSE), not null
@@ -16,18 +17,21 @@
 #  requested_language_key     :string
 #  response_format            :integer          default("text"), not null
 #  source_type                :string
+#  subject_type               :string
 #  system_prompt              :text
 #  type                       :string           not null
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  creator_id                 :bigint           not null
 #  source_id                  :bigint
+#  subject_id                 :bigint
 #
 # Indexes
 #
 #  index_raif_conversations_on_created_at  (created_at)
 #  index_raif_conversations_on_creator     (creator_type,creator_id)
 #  index_raif_conversations_on_source      (source_type,source_id)
+#  index_raif_conversations_on_subject     (subject_type,subject_id)
 #
 require "rails_helper"
 
@@ -49,6 +53,36 @@ RSpec.describe Raif::Conversation, type: :model do
 
       expect(conversation.source).to be_nil
       expect(conversation).to be_valid
+    end
+
+    it "belongs to a polymorphic subject" do
+      subject_record = Raif::TestUser.create!(email: "subject@example.com")
+      conversation = FB.create(:raif_conversation, creator: creator, subject: subject_record)
+
+      expect(conversation.subject).to eq(subject_record)
+      expect(conversation.subject_type).to eq("Raif::TestUser")
+      expect(conversation.subject_id).to eq(subject_record.id)
+    end
+
+    it "allows subject to be nil" do
+      conversation = FB.create(:raif_conversation, creator: creator, subject: nil)
+
+      expect(conversation.subject).to be_nil
+      expect(conversation).to be_valid
+    end
+  end
+
+  describe "config" do
+    it "defaults to an empty hash" do
+      conversation = FB.build(:raif_conversation, creator: creator)
+      expect(conversation.config).to eq({})
+    end
+
+    it "persists arbitrary keys and values" do
+      conversation = FB.create(:raif_conversation, creator: creator, config: { "foo" => "bar", "n" => 3 })
+      conversation.reload
+
+      expect(conversation.config).to eq({ "foo" => "bar", "n" => 3 })
     end
   end
 

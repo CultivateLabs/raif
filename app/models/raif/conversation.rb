@@ -7,6 +7,7 @@
 #  id                         :bigint           not null, primary key
 #  available_model_tools      :jsonb            not null
 #  available_user_tools       :jsonb            not null
+#  config                     :jsonb            not null
 #  conversation_entries_count :integer          default(0), not null
 #  creator_type               :string           not null
 #  generating_entry_response  :boolean          default(FALSE), not null
@@ -16,18 +17,21 @@
 #  requested_language_key     :string
 #  response_format            :integer          default("text"), not null
 #  source_type                :string
+#  subject_type               :string
 #  system_prompt              :text
 #  type                       :string           not null
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  creator_id                 :bigint           not null
 #  source_id                  :bigint
+#  subject_id                 :bigint
 #
 # Indexes
 #
 #  index_raif_conversations_on_created_at  (created_at)
 #  index_raif_conversations_on_creator     (creator_type,creator_id)
 #  index_raif_conversations_on_source      (source_type,source_id)
+#  index_raif_conversations_on_subject     (subject_type,subject_id)
 #
 class Raif::Conversation < Raif::ApplicationRecord
   prepend Raif::Concerns::HasPromptTemplates
@@ -40,6 +44,7 @@ class Raif::Conversation < Raif::ApplicationRecord
 
   belongs_to :creator, polymorphic: true
   belongs_to :source, polymorphic: true, optional: true
+  belongs_to :subject, polymorphic: true, optional: true
 
   class << self
     def before_prompt_model_for_entry_response(&block)
@@ -68,6 +73,7 @@ class Raif::Conversation < Raif::ApplicationRecord
   after_initialize -> { self.available_model_tools ||= [] }
   after_initialize -> { self.available_user_tools ||= [] }
   after_initialize -> { self.llm_messages_max_length ||= Raif.config.conversation_llm_messages_max_length_default }
+  after_initialize -> { self.config ||= {} }
 
   before_validation ->{ self.type ||= "Raif::Conversation" }, on: :create
 
