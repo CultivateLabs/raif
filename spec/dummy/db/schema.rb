@@ -96,7 +96,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_195606) do
   create_table "raif_conversations", force: :cascade do |t|
     t.jsonb "available_model_tools", null: false
     t.jsonb "available_user_tools", null: false
-    t.jsonb "config", default: {}, null: false
+    t.jsonb "config", null: false
     t.integer "conversation_entries_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.bigint "creator_id", null: false
