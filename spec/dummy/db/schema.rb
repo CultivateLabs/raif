@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_21_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_21_195606) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -96,6 +96,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_000000) do
   create_table "raif_conversations", force: :cascade do |t|
     t.jsonb "available_model_tools", null: false
     t.jsonb "available_user_tools", null: false
+    t.jsonb "config", null: false
     t.integer "conversation_entries_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.bigint "creator_id", null: false
@@ -108,12 +109,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_000000) do
     t.integer "response_format", default: 0, null: false
     t.bigint "source_id"
     t.string "source_type"
+    t.bigint "subject_id"
+    t.string "subject_type"
     t.text "system_prompt"
     t.string "type", null: false
     t.datetime "updated_at", null: false
     t.index ["created_at"], name: "index_raif_conversations_on_created_at"
     t.index ["creator_type", "creator_id"], name: "index_raif_conversations_on_creator"
     t.index ["source_type", "source_id"], name: "index_raif_conversations_on_source"
+    t.index ["subject_type", "subject_id"], name: "index_raif_conversations_on_subject"
   end
 
   create_table "raif_model_completion_batches", force: :cascade do |t|
