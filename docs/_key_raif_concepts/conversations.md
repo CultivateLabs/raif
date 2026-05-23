@@ -174,12 +174,12 @@ end
 
 `format_result_for_llm` is called lazily each time the conversation is sent to the LLM, so the return value can reflect the current state of any persisted side effects (e.g. whether a queued Suggestion has since been accepted by the user).
 
-If you also want the model to be prompted again **immediately** after the tool runs — so it can keep reasoning in the same turn rather than waiting for the next user message — override `triggers_immediate_follow_up_turn?(invocation)` to return `true`. This is what most search/read tools want; it's not what suggestion-queueing tools want.
+If you also want the model to be prompted again **immediately** after the tool runs — so it can keep reasoning in the same turn rather than waiting for the next user message — override `triggers_immediate_llm_follow_up?(invocation)` to return `true`. This is what most search/read tools want; it's not what suggestion-queueing tools want.
 
 ```ruby
 class Raif::ModelTools::GoogleSearch < Raif::ModelTool
   class << self
-    def triggers_immediate_follow_up_turn?(_invocation)
+    def triggers_immediate_llm_follow_up?(_invocation)
       true
     end
   end

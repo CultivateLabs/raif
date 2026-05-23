@@ -148,10 +148,10 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   # True when at least one of this entry's tool invocations wants the model to
   # be prompted again immediately in a follow-up turn — used to drive the
   # synthetic next entry created by {#create_immediate_follow_up_entry!}.
-  def triggers_immediate_follow_up_turn?
+  def triggers_immediate_llm_follow_up?
     return false unless completed?
 
-    raif_model_tool_invocations.any?(&:triggers_immediate_follow_up_turn?)
+    raif_model_tool_invocations.any?(&:triggers_immediate_llm_follow_up?)
   end
 
   def create_immediate_follow_up_entry!
@@ -210,7 +210,7 @@ private
     # attempts. See {Raif::Conversation#on_entry_finalized}.
     raif_conversation.on_entry_finalized(entry: self)
 
-    create_immediate_follow_up_entry! if triggers_immediate_follow_up_turn?
+    create_immediate_follow_up_entry! if triggers_immediate_llm_follow_up?
   rescue StandardError => e
     # Do not re-raise: the caller is ConversationEntryJob via Sidekiq and we
     # don't want the job to retry on top of our in-process retry budget. Mark

@@ -174,7 +174,7 @@ class Raif::ModelTool
     #
     # @param invocation [Raif::ModelToolInvocation]
     # @return [Boolean]
-    def triggers_immediate_follow_up_turn?(invocation)
+    def triggers_immediate_llm_follow_up?(invocation)
       false
     end
 

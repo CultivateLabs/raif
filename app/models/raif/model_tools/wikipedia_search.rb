@@ -23,7 +23,7 @@ class Raif::ModelTools::WikipediaSearch < Raif::ModelTool
       JSON.pretty_generate(invocation.result)
     end
 
-    def triggers_immediate_follow_up_turn?(_invocation)
+    def triggers_immediate_llm_follow_up?(_invocation)
       true
     end
 

@@ -60,7 +60,7 @@
       # prompting the model again immediately so it can react to the result in the same turn.
       # Use for tools whose result the model needs to keep reasoning over (search → read → act).
       # Skip for tools whose result is interesting only on a later, user-driven turn.
-      def triggers_immediate_follow_up_turn?(invocation)
+      def triggers_immediate_llm_follow_up?(invocation)
         false
       end
 

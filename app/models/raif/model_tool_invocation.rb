@@ -40,8 +40,8 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
     tool.format_result_for_llm(self)
   end
 
-  def triggers_immediate_follow_up_turn?
-    tool.triggers_immediate_follow_up_turn?(self)
+  def triggers_immediate_llm_follow_up?
+    tool.triggers_immediate_llm_follow_up?(self)
   end
 
   boolean_timestamp :completed_at

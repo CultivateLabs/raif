@@ -49,7 +49,7 @@ class Raif::ModelTools::GoogleSearch < Raif::ModelTool
     # When true, Raif creates a synthetic follow-up entry after this invocation finalizes,
     # prompting the model again immediately so it can react to the result in the same turn.
     # Use for tools whose result the model needs to keep reasoning over (search → read → act).
-    def triggers_immediate_follow_up_turn?(invocation)
+    def triggers_immediate_llm_follow_up?(invocation)
       false
     end
 
@@ -168,7 +168,7 @@ When your tool is being invoked in a [conversation](conversations) or [agent](ag
 
 By default Raif sends the raw `tool_invocation.result` jsonb. Override `format_result_for_llm(invocation)` on your tool class to send a different shape — a formatted string, a richer payload, or a live snapshot computed at message-build time (the method is called lazily each turn). The raw `result` remains persisted for rendering and inspection in the admin UI.
 
-If you also want the model to be prompted again **immediately** after the tool runs — so it can keep reasoning in the same turn — override `triggers_immediate_follow_up_turn?(invocation)` to return `true`. Search/read tools usually want this; suggestion-queueing tools usually don't.
+If you also want the model to be prompted again **immediately** after the tool runs — so it can keep reasoning in the same turn — override `triggers_immediate_llm_follow_up?(invocation)` to return `true`. Search/read tools usually want this; suggestion-queueing tools usually don't.
 
 ## Using Model Tools
 

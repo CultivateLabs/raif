@@ -32,7 +32,7 @@ RSpec.describe Raif::Generators::ModelToolGenerator, type: :generator do
       expect(content).to include("tool_arguments_schema do")
       expect(content).to include("example_model_invocation do")
       expect(content).to include("def format_result_for_llm(invocation)")
-      expect(content).to include("def triggers_immediate_follow_up_turn?(invocation)")
+      expect(content).to include("def triggers_immediate_llm_follow_up?(invocation)")
       expect(content).to include("def process_invocation(tool_invocation)")
       expect(content).to include("Wikipedia Search Tool:")
       expect(content).to include("Fetch URL Tool:")
