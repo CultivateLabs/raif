@@ -23,9 +23,13 @@ class Raif::ModelTools::AgentFinalAnswer < Raif::ModelTool
       invocation.result
     end
 
-    def triggers_immediate_follow_up_turn?(_invocation)
-      true
-    end
+    # No override on triggers_immediate_follow_up_turn? - it stays at the
+    # default (false). AgentFinalAnswer is consumed exclusively by Raif
+    # agents, whose own loop terminates as soon as this tool is called.
+    # The hook only governs conversation-level follow-ups; in the unlikely
+    # event AgentFinalAnswer ever ran inside a conversation, prompting the
+    # model again right after it explicitly said "this is my final answer"
+    # would be exactly the wrong thing to do.
 
     def process_invocation(tool_invocation)
       tool_invocation.update!(result: tool_invocation.tool_arguments["final_answer"])
