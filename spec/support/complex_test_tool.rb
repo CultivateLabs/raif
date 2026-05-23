@@ -57,9 +57,9 @@ class Raif::ModelTools::ComplexTestTool < Raif::ModelTool
     tool_invocation.result
   end
 
-  def self.observation_for_invocation(tool_invocation)
-    return "No results" unless tool_invocation.result.present?
+  def self.format_result_for_llm(invocation)
+    return "No results" unless invocation.result.present?
 
-    "Successfully processed request for: #{tool_invocation.tool_arguments["title"]}"
+    "Successfully processed request for: #{invocation.tool_arguments["title"]}"
   end
 end

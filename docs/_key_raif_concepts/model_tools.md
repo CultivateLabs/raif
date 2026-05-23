@@ -40,15 +40,16 @@ class Raif::ModelTools::GoogleSearch < Raif::ModelTool
   end
 
   class << self
-    def observation_for_invocation(tool_invocation)
-      return "No results found" unless tool_invocation.result.present?
+    def format_result_for_llm(invocation)
+      return "No results found" unless invocation.result.present?
 
-      JSON.pretty_generate(tool_invocation.result)
+      JSON.pretty_generate(invocation.result)
     end
 
-    # When your tool is invoked in a Raif::Conversation, should the result be automatically provided back to the model?
-    # When true, observation_for_invocation will be used to produce the observation provided to the model
-    def triggers_observation_to_model?
+    # When true, Raif creates a synthetic follow-up entry after this invocation finalizes,
+    # prompting the model again immediately so it can react to the result in the same turn.
+    # Use for tools whose result the model needs to keep reasoning over (search → read → act).
+    def triggers_immediate_follow_up_turn?(invocation)
       false
     end
 
@@ -161,13 +162,13 @@ When the LLM invokes your tool, Raif will call your tool's `process_invocation` 
 
 You should implement `process_invocation` to perform whatever actions are appropriate for your tool and store the results in the `tool_invocation.result` JSON column.
 
-## Model Tool Observations
+## Model Tool Results
 
-When your tool is being invoked in a [conversation](conversations) or [agent](agents), the results of the tool invocation are provided back to the LLM as an observation.
+When your tool is being invoked in a [conversation](conversations) or [agent](agents), the result of the tool invocation is sent back to the LLM via the standard tool-call-result message on every subsequent turn.
 
-When `triggers_observation_to_model?` returns `true`, Raif will call `observation_for_invocation` to build the model-facing observation. This observation can differ from the raw `tool_invocation.result`, which remains persisted for rendering and inspection.
+By default Raif sends the raw `tool_invocation.result` jsonb. Override `format_result_for_llm(invocation)` on your tool class to send a different shape — a formatted string, a richer payload, or a live snapshot computed at message-build time (the method is called lazily each turn). The raw `result` remains persisted for rendering and inspection in the admin UI.
 
-To control the manner in which the result is provided to the LLM, implement the `observation_for_invocation` method.
+If you also want the model to be prompted again **immediately** after the tool runs — so it can keep reasoning in the same turn — override `triggers_immediate_follow_up_turn?(invocation)` to return `true`. Search/read tools usually want this; suggestion-queueing tools usually don't.
 
 ## Using Model Tools
 

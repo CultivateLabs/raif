@@ -171,9 +171,9 @@ en:
       model_tool_invocations:
         show:
           back_to_model_tool_invocations: Back to Model Tool Invocations
-          observation_disclaimer: This observation is regenerated from current data and code. It may differ from what was originally sent to the model.
-          observation_sent_to_model: Observation Sent to Model
-          observation_unavailable: 'Could not generate observation: %{error}'
+          formatted_result_disclaimer: This formatted result is regenerated from current data and code. It may differ from what was originally sent to the model.
+          formatted_result_unavailable: 'Could not generate formatted result: %{error}'
+          result_sent_to_model: Result Sent to Model
           title: 'Model Tool Invocation #%{id}'
       prompt_studio:
         agents:

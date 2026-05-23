@@ -17,10 +17,14 @@ class Raif::ModelTools::WikipediaSearch < Raif::ModelTool
   end
 
   class << self
-    def observation_for_invocation(tool_invocation)
-      return "No results found" unless tool_invocation.result.present?
+    def format_result_for_llm(invocation)
+      return "No results found" unless invocation.result.present?
 
-      JSON.pretty_generate(tool_invocation.result)
+      JSON.pretty_generate(invocation.result)
+    end
+
+    def triggers_immediate_follow_up_turn?(_invocation)
+      true
     end
 
     def process_invocation(tool_invocation)

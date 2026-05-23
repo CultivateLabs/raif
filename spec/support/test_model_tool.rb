@@ -24,9 +24,9 @@ class Raif::TestModelTool < Raif::ModelTool
     "Mock Tool Description"
   end
 
-  def self.observation_for_invocation(tool_invocation)
-    return if tool_invocation.result.blank?
+  def self.format_result_for_llm(invocation)
+    return if invocation.result.blank?
 
-    "Mock Observation for #{tool_invocation.id}. Result was: #{tool_invocation.result["status"]}"
+    "Mock Formatted Result for #{invocation.id}. Result was: #{invocation.result["status"]}"
   end
 end

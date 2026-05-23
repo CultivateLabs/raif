@@ -20,13 +20,13 @@ class Raif::ModelTools::CurrentTemperatureTestTool < Raif::ModelTool
       tool_invocation.result
     end
 
-    def triggers_observation_to_model?
+    def triggers_immediate_follow_up_turn?(_invocation)
       true
     end
 
-    def observation_for_invocation(tool_invocation)
-      zip_code = tool_invocation.tool_arguments["zip_code"]
-      temperature = tool_invocation.result["temperature"]
+    def format_result_for_llm(invocation)
+      zip_code = invocation.tool_arguments["zip_code"]
+      temperature = invocation.result["temperature"]
 
       "The current temperature for zip code #{zip_code} is #{temperature} degrees Fahrenheit."
     end

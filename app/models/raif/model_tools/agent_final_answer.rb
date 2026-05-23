@@ -17,10 +17,14 @@ class Raif::ModelTools::AgentFinalAnswer < Raif::ModelTool
   end
 
   class << self
-    def observation_for_invocation(tool_invocation)
-      return "No answer provided" unless tool_invocation.result.present?
+    def format_result_for_llm(invocation)
+      return "No answer provided" unless invocation.result.present?
 
-      tool_invocation.result
+      invocation.result
+    end
+
+    def triggers_immediate_follow_up_turn?(_invocation)
+      true
     end
 
     def process_invocation(tool_invocation)
