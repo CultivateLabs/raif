@@ -77,7 +77,8 @@
     <% else %>
       <div class="card-body">
         <p class="text-muted small"><%= t(".formatted_result_disclaimer") %></p>
-        <pre class="pre-wrap"><%= @model_tool_invocation.admin_formatted_result %></pre>
+        <% formatted_result = @model_tool_invocation.admin_formatted_result %>
+        <pre class="pre-wrap"><%= formatted_result.is_a?(String) ? formatted_result : JSON.pretty_generate(formatted_result) %></pre>
       </div>
     <% end %>
   </div>

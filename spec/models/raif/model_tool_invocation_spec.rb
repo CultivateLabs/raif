@@ -158,6 +158,16 @@ RSpec.describe Raif::ModelToolInvocation, type: :model do
       end
     end
 
+    context "when the formatter returns blank" do
+      it "falls back to the raw result so admin matches what was sent to the model" do
+        allow(Raif::TestModelTool).to receive(:format_result_for_llm).and_return(nil)
+
+        expect(invocation.admin_formatted_result).to eq(invocation.result)
+        expect(invocation.admin_formatted_result_error).to be_nil
+        expect(invocation).to be_admin_formatted_result_available
+      end
+    end
+
     it "returns nothing for an invocation that is not completed" do
       pending_invocation = described_class.create!(
         source: source,

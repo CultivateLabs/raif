@@ -94,9 +94,8 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
   end
 
   # True when admin should show the formatted result block — either we have
-  # something to display or we have an error to surface. Always shows for
-  # completed invocations: the formatted result is what was actually sent to
-  # the model, even when the tool didn't override the default.
+  # something to display (the formatted payload or its raw-result fallback) or
+  # we have a formatter error to surface.
   def admin_formatted_result_available?
     admin_formatted_result.present? || admin_formatted_result_error.present?
   end
@@ -112,11 +111,13 @@ private
   # Best-effort reconstruction of the formatted result shown in admin. Uses the
   # current formatter code against persisted invocation data, so formatter
   # failures are captured for display instead of breaking the page render.
+  # Mirrors `Raif::Conversation#tool_result_for_llm`'s fallback to the raw
+  # `result` so admin shows what was actually sent to the model.
   def admin_formatted_result_attempt
     @admin_formatted_result_attempt ||= if completed?
       begin
         formatted = tool.format_result_for_llm(self)
-        { formatted: formatted.presence, error: nil }
+        { formatted: formatted.presence || result, error: nil }
       rescue StandardError => e
         { formatted: nil, error: e.message }
       end
