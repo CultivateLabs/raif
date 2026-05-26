@@ -20,11 +20,12 @@ module Raif
   #    force-failed and the handler is dispatched.
   #
   # On a transient error from the provider (the exception classes listed in
-  # Raif.config.llm_request_retriable_exceptions), the job logs + notifies
-  # but reschedules itself instead of re-raising, so the chain self-heals
-  # across the kinds of failures that ActiveJob retry policies typically
-  # cover. Non-transient errors are re-raised so the host's job adapter
-  # surfaces them.
+  # Raif.config.llm_request_retriable_exceptions), the job logs and
+  # reschedules itself instead of re-raising or notifying the host's error
+  # tracker, so the chain self-heals across the kinds of failures that
+  # ActiveJob retry policies typically cover without producing per-attempt
+  # noise. Non-transient errors are notified (Airbrake, if loaded) and
+  # re-raised so the host's job adapter surfaces them.
   #
   # The self-reschedule uses `perform_later(wait: ...)`, so the configured
   # ActiveJob queue adapter must support scheduled jobs. If the host app's
@@ -98,9 +99,14 @@ module Raif
 
       reschedule!(batch, attempt: attempt)
     rescue StandardError => e
-      log_and_notify_error(batch_id, e)
+      log_error(batch_id, e)
 
       if transient_error?(e)
+        # Transient errors self-heal via reschedule (or are no-ops if another
+        # process already finalized the batch), so we don't notify the host's
+        # error tracker for them -- otherwise every flaky provider response
+        # produces noise that doesn't correspond to actionable work.
+        #
         # Reload (the batch may have been transitioned by another process while
         # we were in flight). Three cases after reload:
         # 1. Batch missing -> nothing to reschedule against, end of chain.
@@ -126,6 +132,7 @@ module Raif
         return
       end
 
+      notify_error(batch_id, e)
       raise
     end
 
@@ -154,16 +161,18 @@ module Raif
       retriable.any? { |klass| error.is_a?(klass) }
     end
 
-    def log_and_notify_error(batch_id, error)
+    def log_error(batch_id, error)
       Raif.logger.error("Raif::PollModelCompletionBatchJob ##{batch_id} failed: #{error.class}: #{error.message}")
       Raif.logger.error(error.backtrace.first(20).join("\n")) if error.backtrace.present?
+    end
 
-      if defined?(Airbrake)
-        notice = Airbrake.build_notice(error)
-        notice[:context][:component] = "raif_poll_model_completion_batch_job"
-        notice[:params] = { batch_id: batch_id }
-        Airbrake.notify(notice)
-      end
+    def notify_error(batch_id, error)
+      return unless defined?(Airbrake)
+
+      notice = Airbrake.build_notice(error)
+      notice[:context][:component] = "raif_poll_model_completion_batch_job"
+      notice[:params] = { batch_id: batch_id }
+      Airbrake.notify(notice)
     end
 
   end

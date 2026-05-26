@@ -1,5 +1,6 @@
 ## v1.6.0-pre
 
+- `Raif::PollModelCompletionBatchJob` no longer notifies the host's error tracker (Airbrake) for transient provider errors. The job already reschedules itself on the exception classes listed in `Raif.config.llm_request_retriable_exceptions` (e.g. `Faraday::ServerError` for upstream 5xx, `Faraday::TimeoutError`, `Faraday::ConnectionFailed`), so per-attempt notifications were noise that didn't correspond to actionable work. Transient errors are still logged at `error` level; non-transient errors are notified and re-raised as before.
 - Added optional `subject` (polymorphic) and `config` (jsonb, default `{}`) columns to `Raif::Conversation` for host apps that want to attach a domain object and/or arbitrary configuration to a conversation.
 - Added an xAI adapter (`Raif::Llms::XAi`) with support for streaming, developer-managed tools, and native [structured outputs](https://docs.x.ai/developers/model-capabilities/text/structured-outputs) via `response_format: { type: "json_schema" }` on `/v1/chat/completions`. Registered Grok models: `x_ai_grok_4_3`, `x_ai_grok_4_20_reasoning`, and `x_ai_grok_4_20_non_reasoning`. Configure via `Raif.config.x_ai_api_key` / `Raif.config.x_ai_models_enabled` (or `ENV["XAI_API_KEY"]`).
 - Added xAI [Batch API](https://docs.x.ai/docs/guides/batch) support.
