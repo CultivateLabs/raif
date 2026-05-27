@@ -5,4 +5,5 @@ module Raif::Utils
   require "raif/utils/html_to_markdown_converter"
   require "raif/utils/html_fragment_processor"
   require "raif/utils/colors"
+  require "raif/utils/transient_retry"
 end

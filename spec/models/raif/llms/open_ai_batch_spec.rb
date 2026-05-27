@@ -136,6 +136,31 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
       expect(file_stub).not_to have_been_requested
       expect(batch_stub).not_to have_been_requested
     end
+
+    it "retries the /v1/files upload on a transient 520 and succeeds when it recovers" do
+      allow(Raif::Utils::TransientRetry).to receive(:sleep_for)
+
+      file_upload_stub = stub_request(:post, "#{base_url}/files").to_return(
+        { status: 520, body: "Cloudflare upstream unknown error" },
+        {
+          status: 200,
+          headers: { "Content-Type" => "application/json" },
+          body: { id: "file-input-abc", object: "file", purpose: "batch" }.to_json
+        }
+      )
+      stub_request(:post, "#{base_url}/batches").to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: { id: "batch_recovered", status: "in_progress", request_counts: { total: 2 } }.to_json
+      )
+
+      llm.submit_batch!(batch)
+
+      expect(file_upload_stub).to have_been_requested.twice
+      batch.reload
+      expect(batch.provider_batch_id).to eq("batch_recovered")
+      expect(batch.input_file_id).to eq("file-input-abc")
+    end
   end
 
   describe "#fetch_batch_status!" do

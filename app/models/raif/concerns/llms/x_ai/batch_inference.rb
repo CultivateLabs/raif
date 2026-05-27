@@ -59,10 +59,14 @@ module Raif::Concerns::Llms::XAi::BatchInference
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
 
     jsonl = build_batch_jsonl(completions)
-    input_file_id = upload_batch_input_file!(jsonl)
+    input_file_id = with_batch_transient_retry(:submit_upload_input, batch_id: batch.id) do
+      upload_batch_input_file!(jsonl)
+    end
 
-    response = batch_connection.post("batches") do |req|
-      req.body = { name: "raif_batch_#{batch.id}", input_file_id: input_file_id }
+    response = with_batch_transient_retry(:submit_create, batch_id: batch.id) do
+      batch_connection.post("batches") do |req|
+        req.body = { name: "raif_batch_#{batch.id}", input_file_id: input_file_id }
+      end
     end
     body = response.body.is_a?(Hash) ? response.body : {}
     provider_batch_id = body["batch_id"] || body["id"]
@@ -95,7 +99,9 @@ module Raif::Concerns::Llms::XAi::BatchInference
   end
 
   def fetch_batch_status!(batch)
-    response = batch_connection.get("batches/#{batch.provider_batch_id}")
+    response = with_batch_transient_retry(:fetch_status, batch_id: batch.id) do
+      batch_connection.get("batches/#{batch.provider_batch_id}")
+    end
     body = response.body
     new_status = derive_batch_status(body, batch)
 
@@ -131,7 +137,9 @@ module Raif::Concerns::Llms::XAi::BatchInference
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no provider_batch_id" if batch.provider_batch_id.blank?
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} is already terminal (status=#{batch.status})" if batch.terminal?
 
-    response = batch_connection.post("batches/#{batch.provider_batch_id}:cancel")
+    response = with_batch_transient_retry(:cancel, batch_id: batch.id) do
+      batch_connection.post("batches/#{batch.provider_batch_id}:cancel")
+    end
     body = response.body
     new_status = derive_batch_status(body, batch, post_cancel: true)
 
@@ -166,7 +174,9 @@ module Raif::Concerns::Llms::XAi::BatchInference
       params = {}
       params[:pagination_token] = pagination_token if pagination_token.present?
 
-      response = batch_connection.get("batches/#{batch.provider_batch_id}/results", params)
+      response = with_batch_transient_retry(:fetch_results_page, batch_id: batch.id) do
+        batch_connection.get("batches/#{batch.provider_batch_id}/results", params)
+      end
       body = response.body || {}
 
       Array(body["results"]).each do |raw|

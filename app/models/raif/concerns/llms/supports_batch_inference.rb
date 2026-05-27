@@ -109,4 +109,22 @@ module Raif::Concerns::Llms::SupportsBatchInference
   def cancel_batch!(batch)
     raise NotImplementedError, "#{self.class.name} must implement #cancel_batch!"
   end
+
+protected
+
+  # Wraps a single batch-API HTTP call in Raif's standard transient-error
+  # retry (Raif.config.llm_request_max_retries on
+  # Raif.config.llm_request_retriable_exceptions). Adapters call this around
+  # individual Faraday calls inside submit_batch! / fetch_batch_status! /
+  # fetch_batch_results! / cancel_batch! so a single upstream 5xx / network
+  # blip self-heals before bubbling up to the host app.
+  #
+  # @param operation [Symbol, String] short operation label appended to the
+  #   provider name in log lines (e.g. :submit, :fetch_status, :upload_input).
+  # @param batch_id [Integer, nil] surfaced in the log line for traceability.
+  def with_batch_transient_retry(operation, batch_id: nil, &block)
+    label = +"#{self.class.name} #{operation}"
+    label << " (batch ##{batch_id})" if batch_id
+    Raif::Utils::TransientRetry.call(label: label, &block)
+  end
 end

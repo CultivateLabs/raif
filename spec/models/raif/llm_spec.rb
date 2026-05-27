@@ -300,7 +300,7 @@ RSpec.describe Raif::Llm, type: :model do
           key: :test_retry_llm,
           api_name: "test_retry_api"
         )
-        allow(llm).to receive(:sleep) # Skip sleep delay in tests
+        allow(Raif::Utils::TransientRetry).to receive(:sleep_for) # Skip sleep delay in tests
 
         result = llm.chat(messages: messages)
 
@@ -317,7 +317,7 @@ RSpec.describe Raif::Llm, type: :model do
           key: :test_retry_llm,
           api_name: "test_retry_api"
         )
-        allow(llm).to receive(:sleep) # Skip sleep delay in tests
+        allow(Raif::Utils::TransientRetry).to receive(:sleep_for) # Skip sleep delay in tests
 
         expect(Raif::ModelCompletion.count).to eq(0)
         expect do
@@ -338,7 +338,7 @@ RSpec.describe Raif::Llm, type: :model do
           key: :test_retry_llm,
           api_name: "test_retry_api"
         )
-        allow(llm).to receive(:sleep) # Skip sleep delay in tests
+        allow(Raif::Utils::TransientRetry).to receive(:sleep_for) # Skip sleep delay in tests
 
         expect do
           llm.chat(messages: messages)

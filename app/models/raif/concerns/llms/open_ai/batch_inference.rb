@@ -43,14 +43,18 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
 
     jsonl = build_batch_jsonl(completions)
-    input_file_id = upload_batch_input_file!(jsonl)
+    input_file_id = with_batch_transient_retry(:submit_upload_input, batch_id: batch.id) do
+      upload_batch_input_file!(jsonl)
+    end
 
-    response = batch_connection.post("batches") do |req|
-      req.body = {
-        input_file_id: input_file_id,
-        endpoint: batch_endpoint_path,
-        completion_window: Raif.config.open_ai_batch_completion_window
-      }
+    response = with_batch_transient_retry(:submit_create, batch_id: batch.id) do
+      batch_connection.post("batches") do |req|
+        req.body = {
+          input_file_id: input_file_id,
+          endpoint: batch_endpoint_path,
+          completion_window: Raif.config.open_ai_batch_completion_window
+        }
+      end
     end
 
     body = response.body
@@ -79,7 +83,9 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
   end
 
   def fetch_batch_status!(batch)
-    response = batch_connection.get("batches/#{batch.provider_batch_id}")
+    response = with_batch_transient_retry(:fetch_status, batch_id: batch.id) do
+      batch_connection.get("batches/#{batch.provider_batch_id}")
+    end
     body = response.body
     new_status = map_batch_status(body["status"])
 
@@ -118,7 +124,9 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no provider_batch_id" if batch.provider_batch_id.blank?
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} is already terminal (status=#{batch.status})" if batch.terminal?
 
-    response = batch_connection.post("batches/#{batch.provider_batch_id}/cancel")
+    response = with_batch_transient_retry(:cancel, batch_id: batch.id) do
+      batch_connection.post("batches/#{batch.provider_batch_id}/cancel")
+    end
     body = response.body
     new_status = map_batch_status(body["status"])
 
@@ -332,7 +340,9 @@ private
   end
 
   def apply_batch_jsonl(batch, file_id, completions_by_id)
-    response = batch_files_download_connection.get("files/#{file_id}/content")
+    response = with_batch_transient_retry(:fetch_results_file, batch_id: batch.id) do
+      batch_files_download_connection.get("files/#{file_id}/content")
+    end
     body = response.body.to_s
 
     body.each_line do |line|
