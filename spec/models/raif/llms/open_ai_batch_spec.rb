@@ -138,8 +138,6 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
     end
 
     it "retries the /v1/files upload on a transient 520 and succeeds when it recovers" do
-      allow(Raif::Utils::TransientRetry).to receive(:sleep_for)
-
       file_upload_stub = stub_request(:post, "#{base_url}/files").to_return(
         { status: 520, body: "Cloudflare upstream unknown error" },
         {

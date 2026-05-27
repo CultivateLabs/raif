@@ -351,7 +351,6 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
       allow(Raif.config).to receive(:llm_request_max_retries).and_return(2)
       allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return(nil)
-      allow(Raif::Utils::TransientRetry).to receive(:sleep_for)
     end
 
     it "retries a blank response and succeeds on a subsequent attempt" do
