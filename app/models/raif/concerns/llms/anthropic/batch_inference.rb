@@ -37,8 +37,10 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
       { custom_id: mc.batch_custom_id, params: build_request_parameters(mc) }
     end
 
-    response = batch_connection.post("messages/batches") do |req|
-      req.body = { requests: requests }
+    response = with_batch_transient_retry(:submit, batch_id: batch.id) do
+      batch_connection.post("messages/batches") do |req|
+        req.body = { requests: requests }
+      end
     end
 
     body = response.body
@@ -67,7 +69,9 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
   end
 
   def fetch_batch_status!(batch)
-    response = batch_connection.get("messages/batches/#{batch.provider_batch_id}")
+    response = with_batch_transient_retry(:fetch_status, batch_id: batch.id) do
+      batch_connection.get("messages/batches/#{batch.provider_batch_id}")
+    end
     body = response.body
     new_status = map_processing_status(body["processing_status"])
 
@@ -104,7 +108,9 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no provider_batch_id" if batch.provider_batch_id.blank?
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} is already terminal (status=#{batch.status})" if batch.terminal?
 
-    response = batch_connection.post("messages/batches/#{batch.provider_batch_id}/cancel")
+    response = with_batch_transient_retry(:cancel, batch_id: batch.id) do
+      batch_connection.post("messages/batches/#{batch.provider_batch_id}/cancel")
+    end
     body = response.body
     new_status = map_processing_status(body["processing_status"])
 
@@ -134,7 +140,9 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
 
     completions_by_id = batch.raif_model_completions.index_by(&:batch_custom_id)
 
-    response = batch_results_connection.get(batch.results_url)
+    response = with_batch_transient_retry(:fetch_results, batch_id: batch.id) do
+      batch_results_connection.get(batch.results_url)
+    end
     body = response.body.to_s
 
     body.each_line do |line|

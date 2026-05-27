@@ -74,8 +74,10 @@ module Raif::Concerns::Llms::Google::BatchInference
           "split the batch or open multiple batches."
     end
 
-    response = batch_connection.post("models/#{batch.model_api_name}:batchGenerateContent") do |req|
-      req.body = body
+    response = with_batch_transient_retry(:submit, batch_id: batch.id) do
+      batch_connection.post("models/#{batch.model_api_name}:batchGenerateContent") do |req|
+        req.body = body
+      end
     end
 
     response_body = response.body
@@ -107,7 +109,9 @@ module Raif::Concerns::Llms::Google::BatchInference
   end
 
   def fetch_batch_status!(batch)
-    response = batch_connection.get(batch.operation_name)
+    response = with_batch_transient_retry(:fetch_status, batch_id: batch.id) do
+      batch_connection.get(batch.operation_name)
+    end
     body = response.body
     new_status = map_job_state(extract_state(body))
 
@@ -151,7 +155,9 @@ module Raif::Concerns::Llms::Google::BatchInference
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no provider_batch_id" if batch.provider_batch_id.blank?
     raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} is already terminal (status=#{batch.status})" if batch.terminal?
 
-    batch_connection.post("#{batch.operation_name}:cancel")
+    with_batch_transient_retry(:cancel, batch_id: batch.id) do
+      batch_connection.post("#{batch.operation_name}:cancel")
+    end
 
     batch.with_lock do
       return batch.status if batch.terminal?
@@ -170,7 +176,9 @@ module Raif::Concerns::Llms::Google::BatchInference
       # Fall back to a direct fetch in case the polling job's status update
       # didn't capture the response sub-tree (e.g. the success transition
       # happened in a prior process and provider_response was cleared).
-      response = batch_connection.get(batch.operation_name)
+      response = with_batch_transient_retry(:fetch_results, batch_id: batch.id) do
+        batch_connection.get(batch.operation_name)
+      end
       payload = response.body["response"] || response.body
     end
 
