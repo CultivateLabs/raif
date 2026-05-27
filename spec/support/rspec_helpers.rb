@@ -73,3 +73,13 @@ module Raif
 
   end
 end
+
+RSpec.configure do |config|
+  # Skip the exponential-backoff sleep so retry-driven tests (and tests that
+  # hit retries unintentionally, e.g. a stub that returns blank) don't burn
+  # wall time. Retry semantics -- count, logging, eventual raise -- are
+  # preserved; only the sleep is bypassed.
+  config.before(:each) do
+    allow(Raif::Utils::TransientRetry).to receive(:sleep_for)
+  end
+end

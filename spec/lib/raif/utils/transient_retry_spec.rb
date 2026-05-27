@@ -3,10 +3,6 @@
 require "rails_helper"
 
 RSpec.describe Raif::Utils::TransientRetry do
-  before do
-    allow(described_class).to receive(:sleep_for) # never actually sleep in tests
-  end
-
   describe ".call" do
     it "returns the block's value on the first attempt when nothing raises" do
       attempts = 0
