@@ -11,7 +11,8 @@ Raif.configure do |config|
   # config.open_ai_embedding_models_enabled = ENV["OPENAI_API_KEY"].present?
 
   # The base URL for OpenAI API requests.
-  # Set this if you want to use the OpenAI adapter with a different provider (e.g. for using Azure instead of OpenAI)
+  # Set this if you want to use the OpenAI adapter with a different provider or gateway
+  # (e.g. Azure OpenAI or a governed OpenAI-compatible endpoint such as Tuning Engines)
   # config.open_ai_base_url = "https://api.openai.com/v1"
 
   # The base URL for OpenAI embedding API requests.

@@ -112,6 +112,26 @@ Currently supported OpenAI Completions API models:
 - `open_ai_o1_mini`
 
 
+### OpenAI-Compatible Gateways
+
+Raif's OpenAI adapters can also point at an OpenAI-compatible gateway by setting `open_ai_base_url` and, for embeddings, `open_ai_embedding_base_url`. This is useful when a Rails app wants to keep Raif's task, conversation, agent, and admin workflows while routing model calls through a governed endpoint.
+
+For example, Rails teams using [Tuning Engines](https://www.tuningengines.com/) can route Raif calls through Tuning Engines for centralized model routing, policy controls, audit logs, traces, approvals, and cost visibility:
+
+```ruby
+Raif.configure do |config|
+  config.open_ai_api_key = ENV["TUNING_ENGINES_API_KEY"]
+  config.open_ai_models_enabled = true
+  config.open_ai_base_url = "https://api.tuningengines.com/v1"
+
+  # Optional: route embeddings through the same governed endpoint.
+  config.open_ai_embedding_models_enabled = true
+  config.open_ai_embedding_base_url = "https://api.tuningengines.com/v1"
+end
+```
+
+Register the model names exposed by your Tuning Engines tenant as regular Raif LLMs. See [Adding LLM Models](../learn_more/customization#adding-llm-models) for the registry pattern.
+
 ## Anthropic
 
 The Anthropic adapter provides access to [provider-managed tools](../key_raif_concepts/model_tools#provider-managed-tools) for web search and code execution.
