@@ -25,6 +25,7 @@
 #  prompt_tokens                  :integer
 #  raw_response                   :text
 #  response_array                 :jsonb
+#  response_finish_reason         :string
 #  response_format                :integer          default("text"), not null
 #  response_format_parameter      :string
 #  response_tool_calls            :jsonb

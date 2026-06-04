@@ -25,6 +25,7 @@
 #  prompt_tokens                  :integer
 #  raw_response                   :text
 #  response_array                 :jsonb
+#  response_finish_reason         :string
 #  response_format                :integer          default("text"), not null
 #  response_format_parameter      :string
 #  response_tool_calls            :jsonb
@@ -85,6 +86,15 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   def pending?
     started_at.nil? && completed_at.nil? && failed_at.nil?
+  end
+
+  # Raw provider-reported finish/stop reasons that indicate the response was cut off
+  # because it hit the maximum output token limit. The response (including any tool
+  # calls in it) is incomplete and should not be trusted.
+  TRUNCATED_FINISH_REASONS = %w[max_output_tokens length max_tokens MAX_TOKENS incomplete].freeze
+
+  def truncated?
+    TRUNCATED_FINISH_REASONS.include?(response_finish_reason)
   end
 
   # Scope to find completions that have response tool calls

@@ -38,6 +38,8 @@ module Raif
     class NativeToolCallingAgent < Raif::Agent
       include Raif::Concerns::ToolCallValidation
 
+      RAW_ARGUMENTS_EXCERPT_LENGTH = 500
+
       validate :ensure_llm_supports_native_tool_use
       validates :available_model_tools, length: {
         minimum: 2,
@@ -118,6 +120,23 @@ module Raif
         required_tool = current_iteration_required_tool
         assistant_response_message = model_completion.parsed_response if model_completion.parsed_response.present?
 
+        # The response was cut off at the provider's max output token limit, so anything in
+        # it (most importantly tool calls, whose arguments may be truncated mid-JSON) cannot
+        # be trusted or persisted. Tell the model what happened and let it retry.
+        if model_completion.truncated?
+          if assistant_response_message.present?
+            assistant_message = Raif::Messages::AssistantMessage.new(content: assistant_response_message)
+            add_conversation_history_entry(assistant_message.to_h)
+          end
+
+          error_content = "Error: Your previous response exceeded the maximum output length and was cut off before completing. " \
+            "Keep your responses and tool call arguments concise. Avoid very long queries or long, repetitive lists in arguments. " \
+            "Prefer multiple smaller tool calls."
+          handle_iteration_error(error_content, required_tool:)
+
+          return
+        end
+
         # The model made no tool call in this completion. Tell it to make a tool call.
         if model_completion.response_tool_calls.blank?
           if assistant_response_message.present?
@@ -150,55 +169,73 @@ module Raif
         end
 
         tool_call = model_completion.response_tool_calls.first
-        tool_name = tool_call["name"]
         validation = validate_tool_call(tool_call, available_model_tools_map, source: self)
-        tool_klass = validation.tool_klass
+        rejection_error = tool_call_rejection_error(validation, required_tool)
 
-        # Prefer prepared arguments (Hash, extra keys stripped) when available
-        # so history accurately reflects what was/would be invoked.
-        history_arguments = validation.prepared_arguments || tool_call["arguments"]
+        # A rejected tool call is never added to conversation history. If it were, it would be
+        # replayed to the provider on every subsequent request, which providers reject (e.g.
+        # OpenAI 400s on a function_call input item with no paired function_call_output),
+        # permanently failing the run. Instead, keep any assistant text and give the model
+        # corrective feedback via a user message so it can retry.
+        if rejection_error.present?
+          if assistant_response_message.present?
+            assistant_message = Raif::Messages::AssistantMessage.new(content: assistant_response_message)
+            add_conversation_history_entry(assistant_message.to_h)
+          end
 
-        # Add the tool call to history (with prepared arguments if tool is known)
+          handle_iteration_error(rejection_error, required_tool:)
+          return
+        end
+
+        # Validation passed, so prepared_arguments is a schema-valid Hash (extra keys stripped).
         tool_call_message = Raif::Messages::ToolCall.new(
           provider_tool_call_id: tool_call["provider_tool_call_id"],
           name: tool_call["name"],
-          arguments: history_arguments,
+          arguments: validation.prepared_arguments,
           assistant_message: assistant_response_message,
           provider_metadata: tool_call["provider_metadata"]
         )
         add_conversation_history_entry(tool_call_message.to_h)
 
-        if required_tool.present? && tool_name != required_tool.tool_name
-          error_content = "Error: This iteration required the tool '#{required_tool.tool_name}', but the model called '#{tool_name}' instead."
-          handle_iteration_error(error_content, required_tool:)
-          return
-        end
-
-        case validation.status
-        when :unknown_tool
-          error_content = "Error: Tool '#{tool_name}' is not a valid tool. " \
-            "Available tools: #{available_model_tools_map.keys.join(", ")}"
-          handle_iteration_error(error_content, required_tool:)
-          return
-        when :non_hash_arguments, :schema_mismatch, :preparation_error
-          error_content = "Error: Invalid tool arguments for the tool '#{tool_name}'. " \
-            "Tool arguments schema: #{tool_klass.tool_arguments_schema.to_json}"
-          handle_iteration_error(error_content, required_tool:)
-          return
-        end
-
         # Process the tool invocation and add observation/result to history
-        tool_invocation = tool_klass.invoke_tool(
+        tool_invocation = validation.tool_klass.invoke_tool(
           provider_tool_call_id: tool_call["provider_tool_call_id"],
           tool_arguments: validation.prepared_arguments,
           source: self
         )
 
-        if tool_name == "agent_final_answer"
+        if validation.tool_name == "agent_final_answer"
           self.final_answer = tool_invocation.result
         else
           add_conversation_history_entry(tool_invocation.as_tool_call_result_message)
         end
+      end
+
+      # Returns the corrective feedback for a tool call that must not be invoked or
+      # persisted, or nil if the tool call is acceptable.
+      def tool_call_rejection_error(validation, required_tool)
+        if required_tool.present? && validation.tool_name != required_tool.tool_name
+          return "Error: This iteration required the tool '#{required_tool.tool_name}', but the model called '#{validation.tool_name}' instead."
+        end
+
+        case validation.status
+        when :unknown_tool
+          "Error: Tool '#{validation.tool_name}' is not a valid tool. " \
+            "Available tools: #{available_model_tools_map.keys.join(", ")}"
+        when :non_hash_arguments, :schema_mismatch, :preparation_error
+          "Error: Invalid tool arguments for the tool '#{validation.tool_name}'. " \
+            "Tool arguments schema: #{validation.tool_klass.tool_arguments_schema.to_json}. " \
+            "Arguments received: #{raw_arguments_excerpt(validation.raw_arguments)}"
+        end
+      end
+
+      # Echo back what the model sent so it can correct itself (the rejected call is not in
+      # history), but cap the excerpt — runaway/truncated argument strings can be enormous.
+      def raw_arguments_excerpt(raw_arguments)
+        raw = raw_arguments.is_a?(String) ? raw_arguments : JSON.generate(raw_arguments)
+        return raw if raw.length <= RAW_ARGUMENTS_EXCERPT_LENGTH
+
+        "#{raw[0, RAW_ARGUMENTS_EXCERPT_LENGTH]} ... (truncated, #{raw.length} characters total)"
       end
 
       def validate_successful_completion

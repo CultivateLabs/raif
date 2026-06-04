@@ -91,13 +91,13 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       agent.max_iterations = 2
       agent.run!
 
+      # The rejected tool call must not be persisted to history - replaying it to the
+      # provider on the next iteration would be rejected (no paired tool result).
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
         {
-          "name" => "unavailable_tool",
-          "arguments" => { "query" => "capital of France" },
-          "type" => "tool_call",
-          "assistant_message" => "I'll try to use a non-existent tool."
+          "role" => "assistant",
+          "content" => "I'll try to use a non-existent tool."
         },
         {
           "role" => "user",
@@ -188,15 +188,131 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(agent.conversation_history).to eq([
         { "role" => "user", "content" => "What is the capital of France?" },
         {
-          "name" => "wikipedia_search",
-          "arguments" => {},
-          "type" => "tool_call",
-          "assistant_message" => "I'll try to use Wikipedia search with wrong arguments."
+          "role" => "assistant",
+          "content" => "I'll try to use Wikipedia search with wrong arguments."
         },
         {
           "role" => "user",
           "content" =>
-          "Error: Invalid tool arguments for the tool 'wikipedia_search'. Tool arguments schema: {\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"The query to search Wikipedia for\"}},\"required\":[\"query\"]}" # rubocop:disable Layout/LineLength
+          "Error: Invalid tool arguments for the tool 'wikipedia_search'. Tool arguments schema: {\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"The query to search Wikipedia for\"}},\"required\":[\"query\"]}. Arguments received: {\"search_term\":\"jingle bells\"}" # rubocop:disable Layout/LineLength
+        },
+        {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
+        {
+          "provider_tool_call_id" => "call_456",
+          "name" => "agent_final_answer",
+          "arguments" => { "final_answer" => "Paris is the capital of France." },
+          "type" => "tool_call",
+          "assistant_message" => "Using the final answer tool now."
+        }
+      ])
+    end
+
+    it "discards a tool call whose arguments are an unparseable string and recovers" do
+      # Mirrors a model hitting its max output tokens mid-tool-call: the arguments arrive
+      # as a truncated, unparseable JSON string (e.g. a runaway "OR site:..." query).
+      truncated_arguments = "{\"query\":\"capital of France #{"OR site:example.com " * 40}".strip
+
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_123",
+              "name" => "wikipedia_search",
+              "arguments" => truncated_arguments
+            }
+          ]
+
+          "I'll search with a runaway query."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+
+          "Using the final answer tool now."
+        end
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      expect(agent).to be_completed
+      expect(agent).not_to be_failed
+
+      expected_excerpt = "#{truncated_arguments[0, 500]} ... (truncated, #{truncated_arguments.length} characters total)"
+      expect(agent.conversation_history).to eq([
+        { "role" => "user", "content" => "What is the capital of France?" },
+        {
+          "role" => "assistant",
+          "content" => "I'll search with a runaway query."
+        },
+        {
+          "role" => "user",
+          "content" =>
+          "Error: Invalid tool arguments for the tool 'wikipedia_search'. Tool arguments schema: {\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"The query to search Wikipedia for\"}},\"required\":[\"query\"]}. Arguments received: #{expected_excerpt}" # rubocop:disable Layout/LineLength
+        },
+        {
+          "role" => "user",
+          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+        },
+        {
+          "provider_tool_call_id" => "call_456",
+          "name" => "agent_final_answer",
+          "arguments" => { "final_answer" => "Paris is the capital of France." },
+          "type" => "tool_call",
+          "assistant_message" => "Using the final answer tool now."
+        }
+      ])
+    end
+
+    it "discards tool calls from a truncated model completion and recovers" do
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_finish_reason = "max_output_tokens"
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_123",
+              "name" => "wikipedia_search",
+              "arguments" => "{\"query\":\"capital of France OR site:"
+            }
+          ]
+
+          "I'll search with a runaway query."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+
+          "Using the final answer tool now."
+        end
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      expect(agent).to be_completed
+      expect(agent).not_to be_failed
+      expect(agent.conversation_history).to eq([
+        { "role" => "user", "content" => "What is the capital of France?" },
+        {
+          "role" => "assistant",
+          "content" => "I'll search with a runaway query."
+        },
+        {
+          "role" => "user",
+          "content" => "Error: Your previous response exceeded the maximum output length and was cut off before completing. " \
+            "Keep your responses and tool call arguments concise. Avoid very long queries or long, repetitive lists in arguments. " \
+            "Prefer multiple smaller tool calls."
         },
         {
           "role" => "user",
@@ -438,10 +554,8 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
         },
         {
-          "name" => "wikipedia_search",
-          "arguments" => { "query" => "capital of France" },
-          "type" => "tool_call",
-          "assistant_message" => "I'll search instead of using the final answer tool."
+          "role" => "assistant",
+          "content" => "I'll search instead of using the final answer tool."
         },
         {
           "role" => "user",
@@ -470,6 +584,30 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(agent).to be_failed
       expect(agent).not_to be_completed
       expect(agent.failure_reason).to eq("Agent completed without calling agent_final_answer")
+    end
+
+    it "passes the configured agent_max_completion_tokens to the LLM" do
+      expect(Raif.config.agent_max_completion_tokens).to be_nil
+      allow(Raif.config).to receive(:agent_max_completion_tokens).and_return(1234)
+
+      max_completion_tokens_values = []
+      stub_raif_agent(agent) do |_messages, model_completion|
+        max_completion_tokens_values << model_completion.max_completion_tokens
+        model_completion.response_tool_calls = [
+          {
+            "provider_tool_call_id" => "call_123",
+            "name" => "agent_final_answer",
+            "arguments" => { "final_answer" => "Paris is the capital of France." }
+          }
+        ]
+
+        "Using the final answer tool now."
+      end
+
+      agent.run!
+
+      expect(agent).to be_completed
+      expect(max_completion_tokens_values).to eq([1234])
     end
 
     it "defaults tool_choice to :required when no specific tool is required" do

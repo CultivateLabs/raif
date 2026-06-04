@@ -19,6 +19,38 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
   end
 
+  describe "#update_model_completion" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        llm_model_key: "anthropic_claude_3_5_haiku",
+        model_api_name: "claude-3-5-haiku-latest"
+      )
+    end
+
+    def response_json_with_stop_reason(stop_reason)
+      {
+        "id" => "msg_123",
+        "content" => [{ "type" => "text", "text" => "Hello" }],
+        "stop_reason" => stop_reason,
+        "usage" => { "input_tokens" => 10, "output_tokens" => 5 }
+      }
+    end
+
+    it "stores the stop reason and flags a max_tokens response as truncated" do
+      llm.send(:update_model_completion, model_completion, response_json_with_stop_reason("max_tokens"))
+
+      expect(model_completion.response_finish_reason).to eq("max_tokens")
+      expect(model_completion).to be_truncated
+    end
+
+    it "does not flag a normally completed response as truncated" do
+      llm.send(:update_model_completion, model_completion, response_json_with_stop_reason("end_turn"))
+
+      expect(model_completion.response_finish_reason).to eq("end_turn")
+      expect(model_completion).not_to be_truncated
+    end
+  end
+
   describe "#chat" do
     context "when the response format is text" do
       it "makes a request to the Anthropic API and processes the text response", vcr: { cassette_name: "anthropic/format_text" } do

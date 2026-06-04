@@ -24,6 +24,7 @@ private
 
     model_completion.update!(
       response_id: response_json["id"],
+      response_finish_reason: extract_response_finish_reason(response_json),
       response_tool_calls: extract_response_tool_calls(response_json),
       raw_response: extract_raw_response(response_json),
       response_array: response_json["output"],
@@ -33,6 +34,16 @@ private
       total_tokens: response_json.dig("usage", "total_tokens"),
       cache_read_input_tokens: response_json.dig("usage", "input_tokens_details", "cached_tokens")
     )
+  end
+
+  # An incomplete response (e.g. it hit max_output_tokens mid-generation) reports a
+  # top-level status of "incomplete" with the specific reason under incomplete_details.
+  def extract_response_finish_reason(resp)
+    if resp["status"] == "incomplete"
+      resp.dig("incomplete_details", "reason") || "incomplete"
+    else
+      resp["status"]
+    end
   end
 
   def extract_raw_response(resp)

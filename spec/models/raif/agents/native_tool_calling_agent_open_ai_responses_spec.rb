@@ -208,6 +208,73 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         expect(mti3.tool_arguments).to eq({ "final_answer" => final_answer })
         expect(mti3.result).to eq(final_answer)
       end
+
+      context "when a response is cut off at the max output token limit" do
+        before do
+          allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
+        end
+
+        it "discards the truncated tool call and recovers instead of replaying it" do
+          truncated_response = {
+            "id" => "resp_1",
+            "status" => "incomplete",
+            "incomplete_details" => { "reason" => "max_output_tokens" },
+            "output" => [
+              {
+                "id" => "fc_1",
+                "type" => "function_call",
+                "status" => "incomplete",
+                "call_id" => "call_1",
+                "name" => "wikipedia_search",
+                "arguments" => "{\"query\":\"James Webb Space Telescope OR site:"
+              }
+            ],
+            "usage" => { "input_tokens" => 100, "output_tokens" => 32_768, "total_tokens" => 32_868 }
+          }
+
+          final_answer_response = {
+            "id" => "resp_2",
+            "status" => "completed",
+            "output" => [
+              {
+                "id" => "fc_2",
+                "type" => "function_call",
+                "status" => "completed",
+                "call_id" => "call_2",
+                "name" => "agent_final_answer",
+                "arguments" => "{\"final_answer\":\"The JWST is the largest space telescope.\"}"
+              }
+            ],
+            "usage" => { "input_tokens" => 120, "output_tokens" => 20, "total_tokens" => 140 }
+          }
+
+          request_bodies = []
+          responses = [truncated_response, final_answer_response]
+          stub_request(:post, "https://api.openai.com/v1/responses").to_return do |request|
+            request_bodies << JSON.parse(request.body)
+            {
+              status: 200,
+              body: responses.shift.to_json,
+              headers: { "Content-Type" => "application/json" }
+            }
+          end
+
+          agent.max_iterations = 2
+          agent.run!
+
+          expect(agent).to be_completed
+          expect(agent).not_to be_failed
+          expect(agent.final_answer).to eq("The JWST is the largest space telescope.")
+
+          # The truncated function_call must not be replayed to the provider - OpenAI rejects
+          # a function_call input item that has no paired function_call_output.
+          second_request_input = request_bodies.last["input"]
+          expect(second_request_input.none? { |item| item["type"] == "function_call" }).to be(true)
+
+          input_texts = second_request_input.flat_map { |item| Array(item["content"]).map { |c| c["text"] } }
+          expect(input_texts.join("\n")).to include("Error: Your previous response exceeded the maximum output length")
+        end
+      end
     end
   end
 end

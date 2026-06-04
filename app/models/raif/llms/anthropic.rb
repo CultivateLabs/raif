@@ -56,6 +56,7 @@ private
     end
 
     model_completion.response_id = response_json&.dig("id")
+    model_completion.response_finish_reason = response_json&.dig("stop_reason")
     model_completion.response_array = response_json&.dig("content")
     model_completion.response_tool_calls = extract_response_tool_calls(response_json)
     model_completion.citations = extract_citations(response_json)

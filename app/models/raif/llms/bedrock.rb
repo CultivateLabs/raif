@@ -78,6 +78,7 @@ private
       extract_text_response(resp)
     end
 
+    model_completion.response_finish_reason = resp.stop_reason
     model_completion.response_array = resp.output.message.content
     model_completion.response_tool_calls = extract_response_tool_calls(resp)
     model_completion.completion_tokens = resp.usage.output_tokens
