@@ -134,7 +134,7 @@ RSpec.describe Raif::Conversation, type: :model do
           "type" => "tool_call_result",
           "provider_tool_call_id" => "call_123",
           "name" => mti.tool_name,
-          "result" => { "status" => "success" }
+          "result" => "Mock Formatted Result for #{mti.id}. Result was: success"
         },
         # Entry 3: user message + tool call (with assistant_message) + tool result
         { "role" => "user", "content" => entry3.user_message },
@@ -149,14 +149,14 @@ RSpec.describe Raif::Conversation, type: :model do
           "type" => "tool_call_result",
           "provider_tool_call_id" => "call_456",
           "name" => mti2.tool_name,
-          "result" => { "status" => "pending" }
+          "result" => "Mock Formatted Result for #{mti2.id}. Result was: pending"
         }
       ]
 
       expect(conversation.llm_messages).to eq(messages)
     end
 
-    it "uses tool observations for tool result messages when the tool triggers observations" do
+    it "uses format_result_for_llm to build the tool-call-result message when the tool overrides it" do
       conversation = FB.create(:raif_conversation, creator: creator)
       entry = FB.create(:raif_conversation_entry, :completed, raif_conversation: conversation, creator: creator)
       entry.update_columns(model_response_message: nil)

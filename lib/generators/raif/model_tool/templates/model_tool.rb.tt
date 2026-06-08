@@ -45,20 +45,22 @@
     end
 
     class << self
-      # When your tool is invoked by the LLM in a Raif::Agent loop,
-      # the results of the tool invocation are provided back to the LLM as an observation.
-      # This method should return whatever you want provided to the LLM.
-      # For example, if you were implementing a GoogleSearch tool, this might return a JSON
-      # object containing search results for the query.
-      def observation_for_invocation(tool_invocation)
-        return "No results found" unless tool_invocation.result.present?
+      # The content of the tool-call-result message that gets sent back to the model on subsequent turns.
+      # Called lazily on every turn, so overrides can render live state rather than a static snapshot.
+      # Default is the invocation's raw `result` jsonb; override only when you need a different shape.
+      # For example, if you were implementing a GoogleSearch tool, this might return a JSON object
+      # containing search results for the query.
+      def format_result_for_llm(invocation)
+        return "No results found" unless invocation.result.present?
 
-        JSON.pretty_generate(tool_invocation.result)
+        JSON.pretty_generate(invocation.result)
       end
 
-      # When your tool is invoked in a Raif::Conversation, should the result be automatically provided back to the model?
-      # When true, observation_for_invocation will be used to produce the observation provided to the model
-      def triggers_observation_to_model?
+      # When true, Raif creates a synthetic follow-up entry after this invocation finalizes,
+      # prompting the model again immediately so it can react to the result in the same turn.
+      # Use for tools whose result the model needs to keep reasoning over (search → read → act).
+      # Skip for tools whose result is interesting only on a later, user-driven turn.
+      def triggers_immediate_llm_follow_up?(invocation)
         false
       end
 

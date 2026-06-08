@@ -31,8 +31,18 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
 
   delegate :renderable?,
     :tool_name,
-    :triggers_observation_to_model?,
     to: :tool
+
+  # Instance-aware shims so callers (Raif::Conversation, Raif::ConversationEntry,
+  # etc.) ask the invocation itself, which forwards `self` to the tool class.
+  # Lets tools decide per-invocation rather than at the class level.
+  def format_result_for_llm
+    tool.format_result_for_llm(self)
+  end
+
+  def triggers_immediate_llm_follow_up?
+    tool.triggers_immediate_llm_follow_up?(self)
+  end
 
   boolean_timestamp :completed_at
   boolean_timestamp :failed_at
@@ -75,16 +85,19 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
     "raif/model_tool_invocations/#{tool.invocation_partial_name}"
   end
 
-  def admin_observation
-    admin_observation_result[:observation]
+  def admin_formatted_result
+    admin_formatted_result_attempt[:formatted]
   end
 
-  def admin_observation_error
-    admin_observation_result[:error]
+  def admin_formatted_result_error
+    admin_formatted_result_attempt[:error]
   end
 
-  def admin_observation_available?
-    admin_observation.present? || admin_observation_error.present?
+  # True when admin should show the formatted result block — either we have
+  # something to display (the formatted payload or its raw-result fallback) or
+  # we have a formatter error to surface.
+  def admin_formatted_result_available?
+    admin_formatted_result.present? || admin_formatted_result_error.present?
   end
 
   def ensure_valid_tool_argument_schema
@@ -95,19 +108,21 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
 
 private
 
-  # Best-effort reconstruction of the observation shown in admin. This uses the
-  # current formatter code against persisted invocation data, so failures are
-  # captured for display instead of breaking the page render.
-  def admin_observation_result
-    @admin_observation_result ||= if completed? && triggers_observation_to_model?
+  # Best-effort reconstruction of the formatted result shown in admin. Uses the
+  # current formatter code against persisted invocation data, so formatter
+  # failures are captured for display instead of breaking the page render.
+  # Mirrors `Raif::Conversation#tool_result_for_llm`'s fallback to the raw
+  # `result` so admin shows what was actually sent to the model.
+  def admin_formatted_result_attempt
+    @admin_formatted_result_attempt ||= if completed?
       begin
-        observation = tool.observation_for_invocation(self)
-        { observation: observation.presence, error: nil }
+        formatted = tool.format_result_for_llm(self)
+        { formatted: formatted.presence || result, error: nil }
       rescue StandardError => e
-        { observation: nil, error: e.message }
+        { formatted: nil, error: e.message }
       end
     else
-      { observation: nil, error: nil }
+      { formatted: nil, error: nil }
     end
   end
 

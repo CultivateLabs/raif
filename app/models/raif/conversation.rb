@@ -226,14 +226,11 @@ class Raif::Conversation < Raif::ApplicationRecord
 private
 
   def tool_result_for_llm(tool_invocation)
-    # Some tools persist a compact structured result for display/admin purposes but
-    # need to send richer text/XML back to the model for the continuation turn.
-    return tool_invocation.result unless tool_invocation.triggers_observation_to_model?
-
-    tool = tool_invocation.tool
-    return tool_invocation.result unless tool.respond_to?(:observation_for_invocation)
-
-    tool.observation_for_invocation(tool_invocation).presence || tool_invocation.result
+    # The model-facing tool-result payload. Tools that need to send a different
+    # shape than `invocation.result` (or that want to render live state at
+    # message-build time) override `format_result_for_llm` on the tool class.
+    # Falls back to the raw persisted result when the formatter returns blank.
+    tool_invocation.format_result_for_llm.presence || tool_invocation.result
   end
 
 end
