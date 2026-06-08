@@ -280,43 +280,29 @@ module Raif
       Raif.config.llm_request_retriable_exceptions
     end
 
-    def retry_with_backoff(model_completion)
-      retries = 0
-      max_retries = Raif.config.llm_request_max_retries
-      base_delay = 3
-      max_delay = 30
-
-      begin
-        yield
-      rescue *retriable_exceptions => e
-        retries += 1
-        if retries <= max_retries
-          delay = [base_delay * (2**(retries - 1)), max_delay].min
-          log_retry(e, model_completion, retries, max_retries, delay)
+    def retry_with_backoff(model_completion, &block)
+      Raif::Utils::TransientRetry.call(
+        label: "Raif::Llm##{api_name} perform_model_completion",
+        on_retry: ->(error, attempt, max_retries, delay) {
+          log_blank_response_retry(error, model_completion, attempt, max_retries, delay)
           model_completion.increment!(:retry_count)
-          sleep delay
-          retry
-        else
-          Raif.logger.error("LLM API request failed after #{max_retries} retries. Last error: #{e.message}")
-          raise
-        end
-      end
+        },
+        &block
+      )
     end
 
-    def log_retry(error, model_completion, attempt, max_retries, delay)
-      if error.is_a?(Raif::Errors::BlankResponseError)
-        has_reasoning = model_completion.response_array&.any? do |block|
-          block.is_a?(Hash) ? block.key?("reasoning_content") : block.respond_to?(:reasoning_content)
-        end
-        Raif.logger.warn(
-          "Blank response retry #{attempt}/#{max_retries} for #{api_name} " \
-            "(ModelCompletion##{model_completion.id}, source: #{model_completion.source_type}##{model_completion.source_id}, " \
-            "completion_tokens: #{model_completion.completion_tokens}, reasoning_content_present: #{has_reasoning}). " \
-            "Waiting #{delay} seconds..."
-        )
-      else
-        Raif.logger.warn("Retrying LLM API request after error: #{error.message}. Attempt #{attempt}/#{max_retries}. Waiting #{delay} seconds...")
+    def log_blank_response_retry(error, model_completion, attempt, max_retries, delay)
+      return unless error.is_a?(Raif::Errors::BlankResponseError)
+
+      has_reasoning = model_completion.response_array&.any? do |block|
+        block.is_a?(Hash) ? block.key?("reasoning_content") : block.respond_to?(:reasoning_content)
       end
+      Raif.logger.warn(
+        "Blank response retry #{attempt}/#{max_retries} for #{api_name} " \
+          "(ModelCompletion##{model_completion.id}, source: #{model_completion.source_type}##{model_completion.source_id}, " \
+          "completion_tokens: #{model_completion.completion_tokens}, reasoning_content_present: #{has_reasoning}). " \
+          "Waiting #{delay} seconds..."
+      )
     end
 
     def streaming_response_type
