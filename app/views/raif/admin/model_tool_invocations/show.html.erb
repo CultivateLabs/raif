@@ -65,19 +65,20 @@
 </div>
 <% end %>
 
-<% if @model_tool_invocation.admin_observation_available? %>
+<% if @model_tool_invocation.admin_formatted_result_available? %>
   <div class="card mb-4">
     <div class="card-header">
-      <h5 class="mb-0"><%= t(".observation_sent_to_model") %></h5>
+      <h5 class="mb-0"><%= t(".result_sent_to_model") %></h5>
     </div>
-    <% if @model_tool_invocation.admin_observation_error.present? %>
+    <% if @model_tool_invocation.admin_formatted_result_error.present? %>
       <div class="card-body text-muted">
-        <%= t(".observation_unavailable", error: @model_tool_invocation.admin_observation_error) %>
+        <%= t(".formatted_result_unavailable", error: @model_tool_invocation.admin_formatted_result_error) %>
       </div>
     <% else %>
       <div class="card-body">
-        <p class="text-muted small"><%= t(".observation_disclaimer") %></p>
-        <pre class="pre-wrap"><%= @model_tool_invocation.admin_observation %></pre>
+        <p class="text-muted small"><%= t(".formatted_result_disclaimer") %></p>
+        <% formatted_result = @model_tool_invocation.admin_formatted_result %>
+        <pre class="pre-wrap"><%= formatted_result.is_a?(String) ? formatted_result : JSON.pretty_generate(formatted_result) %></pre>
       </div>
     <% end %>
   </div>

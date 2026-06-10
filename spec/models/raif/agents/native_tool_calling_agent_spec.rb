@@ -891,8 +891,8 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           tool_invocation.result
         end
 
-        def self.observation_for_invocation(tool_invocation)
-          tool_invocation.result&.fetch("final_answer", "")
+        def self.format_result_for_llm(invocation)
+          invocation.result&.fetch("final_answer", "")
         end
       end
 

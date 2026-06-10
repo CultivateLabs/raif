@@ -17,14 +17,18 @@ class Raif::ModelTools::FetchUrl < Raif::ModelTool
   end
 
   class << self
-    def observation_for_invocation(tool_invocation)
-      return "No results found" unless tool_invocation.result.present?
+    def format_result_for_llm(invocation)
+      return "No results found" unless invocation.result.present?
 
-      <<~OBSERVATION
-        Result Status: #{tool_invocation.result["status"]}
+      <<~RESULT
+        Result Status: #{invocation.result["status"]}
         Result Content:
-        #{tool_invocation.result["content"]}
-      OBSERVATION
+        #{invocation.result["content"]}
+      RESULT
+    end
+
+    def triggers_immediate_llm_follow_up?(_invocation)
+      true
     end
 
     def process_invocation(tool_invocation)

@@ -149,7 +149,32 @@ class Raif::ModelTool
       true
     end
 
-    def triggers_observation_to_model?
+    # The content of the tool-call-result message that gets sent back to the
+    # model on subsequent turns. Called lazily at message-build time on every
+    # turn — overrides can return live state (e.g. a follow-on record's status)
+    # rather than a static snapshot. The default is the invocation's raw
+    # `result` jsonb, which is what most tools want.
+    #
+    # @param invocation [Raif::ModelToolInvocation]
+    # @return [Object] anything serializable into the tool-call-result message
+    #   (string, hash, etc.). Returning nil or "" falls back to the raw result.
+    def format_result_for_llm(invocation)
+      invocation.result
+    end
+
+    # When true, Raif creates a synthetic follow-up entry after this invocation
+    # finalizes, prompting the model again immediately so it can react to the
+    # tool result in the same conversational turn. Use for tools whose result
+    # the model needs to keep reasoning over (search → read → act). Skip for
+    # tools whose result is interesting only on a later turn (e.g. queueing a
+    # suggestion the user will review later).
+    #
+    # Instance-aware so a tool can decide based on what actually happened
+    # (e.g. "fire only on partial failure"). Default: false.
+    #
+    # @param invocation [Raif::ModelToolInvocation]
+    # @return [Boolean]
+    def triggers_immediate_llm_follow_up?(invocation)
       false
     end
 

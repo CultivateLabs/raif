@@ -158,19 +158,29 @@ class Raif::ModelTools::SuggestNewScenarios < Raif::ModelTool
 end
 ```
 
-## Providing Tool Observations/Results to the LLM
+## Providing Tool Results to the LLM
 
-Once the tool invocation is completed (via the tool's [`process_invocation` method](../key_raif_concepts/model_tools#processing-model-tool-invocations)), you can provide the result back to the LLM as an observation. For example, if you're implementing a `GoogleSearch` tool, you'll want to return the search results.
-
-If your tool returns `true` from `triggers_observation_to_model?`, Raif will use `observation_for_invocation` when building the next conversation turn for the LLM. The raw `tool_invocation.result` is still persisted for admin pages and custom UI rendering.
-
-You implement the `observation_for_invocation` method in your model tool class to control what is provided back to the LLM:
+Once the tool invocation is completed (via the tool's [`process_invocation` method](../key_raif_concepts/model_tools#processing-model-tool-invocations)), the result is sent back to the LLM in the tool-call-result message of every subsequent turn. By default the raw `tool_invocation.result` jsonb is what the model sees. To send a different shape (for example, a formatted string instead of a hash, or a live snapshot computed at message-build time), override `format_result_for_llm` on your model tool class:
 
 ```ruby
 class Raif::ModelTools::GoogleSearch < Raif::ModelTool
   class << self
-    def observation_for_invocation(tool_invocation)
-      JSON.pretty_generate(tool_invocation.result)
+    def format_result_for_llm(invocation)
+      JSON.pretty_generate(invocation.result)
+    end
+  end
+end
+```
+
+`format_result_for_llm` is called lazily each time the conversation is sent to the LLM, so the return value can reflect the current state of any persisted side effects (e.g. whether a queued Suggestion has since been accepted by the user).
+
+If you also want the model to be prompted again **immediately** after the tool runs — so it can keep reasoning in the same turn rather than waiting for the next user message — override `triggers_immediate_llm_follow_up?(invocation)` to return `true`. This is what most search/read tools want; it's not what suggestion-queueing tools want.
+
+```ruby
+class Raif::ModelTools::GoogleSearch < Raif::ModelTool
+  class << self
+    def triggers_immediate_llm_follow_up?(_invocation)
+      true
     end
   end
 end
