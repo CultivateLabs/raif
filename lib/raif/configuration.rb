@@ -2,8 +2,7 @@
 
 module Raif
   class Configuration
-    attr_accessor :agent_max_completion_tokens,
-      :agent_types,
+    attr_accessor :agent_types,
       :anthropic_api_key,
       :anthropic_message_batches_beta_header,
       :bedrock_models_enabled,
@@ -65,11 +64,6 @@ module Raif
     alias_method :aws_bedrock_titan_embedding_models_enabled=, :bedrock_embedding_models_enabled=
 
     def initialize
-      # Max output tokens per agent iteration. nil = Raif's per-model default
-      # (each LLM's default_max_completion_tokens) applies. Setting a cap bounds the
-      # cost/latency of runaway generations; a response that hits it is treated as
-      # truncated and the agent discards it and retries.
-      @agent_max_completion_tokens = nil
       @agent_types = Set.new(["Raif::Agents::NativeToolCallingAgent"])
       @anthropic_api_key = default_disable_llm_api_requests? ? "placeholder-anthropic-api-key" : ENV["ANTHROPIC_API_KEY"]
       @anthropic_message_batches_beta_header = "message-batches-2024-09-24"

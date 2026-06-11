@@ -591,30 +591,6 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(agent.failure_reason).to eq("Agent completed without calling agent_final_answer")
     end
 
-    it "passes the configured agent_max_completion_tokens to the LLM" do
-      expect(Raif.config.agent_max_completion_tokens).to be_nil
-      allow(Raif.config).to receive(:agent_max_completion_tokens).and_return(1234)
-
-      max_completion_tokens_values = []
-      stub_raif_agent(agent) do |_messages, model_completion|
-        max_completion_tokens_values << model_completion.max_completion_tokens
-        model_completion.response_tool_calls = [
-          {
-            "provider_tool_call_id" => "call_123",
-            "name" => "agent_final_answer",
-            "arguments" => { "final_answer" => "Paris is the capital of France." }
-          }
-        ]
-
-        "Using the final answer tool now."
-      end
-
-      agent.run!
-
-      expect(agent).to be_completed
-      expect(max_completion_tokens_values).to eq([1234])
-    end
-
     it "defaults tool_choice to :required when no specific tool is required" do
       tool_choices = []
 

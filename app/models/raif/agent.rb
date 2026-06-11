@@ -127,7 +127,6 @@ module Raif
           system_prompt: system_prompt,
           available_model_tools: native_model_tools,
           tool_choice: tool_choice_for_iteration,
-          max_completion_tokens: Raif.config.agent_max_completion_tokens,
           anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
           bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled
         )
