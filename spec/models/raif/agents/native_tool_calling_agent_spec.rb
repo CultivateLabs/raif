@@ -182,32 +182,37 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         end
       end
 
+      expect(Raif::ModelTools::WikipediaSearch).to receive(:tool_arguments_schema_for_source).with(agent).at_least(:once).and_call_original
+
       agent.max_iterations = 2
       agent.run!
 
-      expect(agent.conversation_history).to eq([
-        { "role" => "user", "content" => "What is the capital of France?" },
-        {
-          "role" => "assistant",
-          "content" => "I'll try to use Wikipedia search with wrong arguments."
-        },
-        {
-          "role" => "user",
-          "content" =>
-          "Error: Invalid tool arguments for the tool 'wikipedia_search'. Tool arguments schema: {\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"The query to search Wikipedia for\"}},\"required\":[\"query\"]}. Arguments received: {\"search_term\":\"jingle bells\"}" # rubocop:disable Layout/LineLength
-        },
-        {
-          "role" => "user",
-          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
-        },
-        {
-          "provider_tool_call_id" => "call_456",
-          "name" => "agent_final_answer",
-          "arguments" => { "final_answer" => "Paris is the capital of France." },
-          "type" => "tool_call",
-          "assistant_message" => "Using the final answer tool now."
-        }
-      ])
+      expect(agent.conversation_history.length).to eq(5)
+      expect(agent.conversation_history[0]).to eq({ "role" => "user", "content" => "What is the capital of France?" })
+      expect(agent.conversation_history[1]).to eq({
+        "role" => "assistant",
+        "content" => "I'll try to use Wikipedia search with wrong arguments."
+      })
+
+      error_message = agent.conversation_history[2]
+      expect(error_message["role"]).to eq("user")
+      expect(error_message["content"]).to start_with("Error: Invalid tool arguments for the tool 'wikipedia_search'.")
+      expect(error_message["content"]).to include("Tool arguments schema: {\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"The query to search Wikipedia for\"}},\"required\":[\"query\"]}") # rubocop:disable Layout/LineLength
+      expect(error_message["content"]).to include("Arguments received: {\"search_term\":\"jingle bells\"}")
+      expect(error_message["content"]).to include("Validation errors:")
+      expect(error_message["content"]).to include("did not contain a required property of 'query'")
+
+      expect(agent.conversation_history[3]).to eq({
+        "role" => "user",
+        "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
+      })
+      expect(agent.conversation_history[4]).to eq({
+        "provider_tool_call_id" => "call_456",
+        "name" => "agent_final_answer",
+        "arguments" => { "final_answer" => "Paris is the capital of France." },
+        "type" => "tool_call",
+        "assistant_message" => "Using the final answer tool now."
+      })
     end
 
     it "discards a tool call whose arguments are an unparseable string and recovers" do

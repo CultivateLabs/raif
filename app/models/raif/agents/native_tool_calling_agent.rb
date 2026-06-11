@@ -223,19 +223,27 @@ module Raif
           "Error: Tool '#{validation.tool_name}' is not a valid tool. " \
             "Available tools: #{available_model_tools_map.keys.join(", ")}"
         when :non_hash_arguments, :schema_mismatch, :preparation_error
-          "Error: Invalid tool arguments for the tool '#{validation.tool_name}'. " \
-            "Tool arguments schema: #{validation.tool_klass.tool_arguments_schema.to_json}. " \
+          # Echo the same schema the validation actually ran against (tools can define
+          # source-aware schemas), plus the validator's errors when it produced any.
+          error = "Error: Invalid tool arguments for the tool '#{validation.tool_name}'. " \
+            "Tool arguments schema: #{validation.tool_klass.tool_arguments_schema_for_source(self).to_json}. " \
             "Arguments received: #{raw_arguments_excerpt(validation.raw_arguments)}"
+          error += ". Validation errors: #{feedback_excerpt(Array(validation.errors).join("; "))}" if validation.errors.present?
+          error
         end
       end
 
       # Echo back what the model sent so it can correct itself (the rejected call is not in
       # history), but cap the excerpt — runaway/truncated argument strings can be enormous.
       def raw_arguments_excerpt(raw_arguments)
-        raw = raw_arguments.is_a?(String) ? raw_arguments : JSON.generate(raw_arguments)
-        return raw if raw.length <= RAW_ARGUMENTS_EXCERPT_LENGTH
+        feedback_excerpt(raw_arguments.is_a?(String) ? raw_arguments : JSON.generate(raw_arguments))
+      end
 
-        "#{raw[0, RAW_ARGUMENTS_EXCERPT_LENGTH]} ... (truncated, #{raw.length} characters total)"
+      # Cap text echoed back to the model in corrective feedback.
+      def feedback_excerpt(text)
+        return text if text.length <= RAW_ARGUMENTS_EXCERPT_LENGTH
+
+        "#{text[0, RAW_ARGUMENTS_EXCERPT_LENGTH]} ... (truncated, #{text.length} characters total)"
       end
 
       def validate_successful_completion
