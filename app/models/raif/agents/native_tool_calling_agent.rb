@@ -120,9 +120,10 @@ module Raif
         required_tool = current_iteration_required_tool
         assistant_response_message = model_completion.parsed_response if model_completion.parsed_response.present?
 
-        # The response was cut off at the provider's max output token limit, so anything in
-        # it (most importantly tool calls, whose arguments may be truncated mid-JSON) cannot
-        # be trusted or persisted. Tell the model what happened and let it retry.
+        # The response was cut off at the provider's max output token limit. Any tool calls
+        # in it cannot be trusted (their arguments may be truncated mid-JSON), so they are
+        # never invoked or persisted. Any assistant text is kept for context - the follow-up
+        # error message tells the model it was cut off and lets it retry.
         if model_completion.truncated?
           if assistant_response_message.present?
             assistant_message = Raif::Messages::AssistantMessage.new(content: assistant_response_message)

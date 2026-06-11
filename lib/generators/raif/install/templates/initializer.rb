@@ -244,10 +244,11 @@ Raif.configure do |config|
   # If you want to use custom agent types that inherits from Raif::Agent, you can add them here.
   # config.agent_types += ["MyAgent"]
 
-  # Maximum output tokens per agent iteration. Defaults to nil (no limit; the provider's
-  # model default applies). Setting a cap bounds the cost/latency of runaway generations -
-  # a response that hits the cap is treated as truncated, discarded, and the agent is told
-  # to retry with more concise output.
+  # Maximum output tokens per agent iteration. Defaults to nil, in which case Raif's
+  # per-model default (each LLM's default_max_completion_tokens) applies. Setting a cap
+  # bounds the cost/latency of runaway generations - a response that hits the cap is
+  # treated as truncated, discarded, and the agent is told to retry with more concise
+  # output.
   # config.agent_max_completion_tokens = nil
 
   # The superclass for Raif models. Defaults to "ApplicationRecord"
