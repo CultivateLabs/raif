@@ -125,46 +125,31 @@ module Raif
         # never invoked or persisted. Any assistant text is kept for context - the follow-up
         # error message tells the model it was cut off and lets it retry.
         if model_completion.truncated?
-          if assistant_response_message.present?
-            assistant_message = Raif::Messages::AssistantMessage.new(content: assistant_response_message)
-            add_conversation_history_entry(assistant_message.to_h)
-          end
-
           error_content = "Error: Your previous response exceeded the maximum output length and was cut off before completing. " \
             "Keep your responses and tool call arguments concise. Avoid very long queries or long, repetitive lists in arguments. " \
             "Prefer multiple smaller tool calls."
-          handle_iteration_error(error_content, required_tool:)
+          reject_iteration!(error_content, assistant_response_message, required_tool:)
 
           return
         end
 
         # The model made no tool call in this completion. Tell it to make a tool call.
         if model_completion.response_tool_calls.blank?
-          if assistant_response_message.present?
-            assistant_message = Raif::Messages::AssistantMessage.new(content: assistant_response_message)
-            add_conversation_history_entry(assistant_message.to_h)
-          end
-
           error_content = if required_tool.present?
             "Error: This iteration required the tool '#{required_tool.tool_name}', but the model response contained no tool call. Available tools: #{available_model_tools_map.keys.join(", ")}" # rubocop:disable Layout/LineLength
           else
             "Error: Previous message contained no tool call. Make a tool call at each step. Available tools: #{available_model_tools_map.keys.join(", ")}" # rubocop:disable Layout/LineLength
           end
-          handle_iteration_error(error_content, required_tool:)
+          reject_iteration!(error_content, assistant_response_message, required_tool:)
 
           return
         end
 
         # The model returned multiple tool calls. We only allow one per step.
         if model_completion.response_tool_calls.length > 1
-          if assistant_response_message.present?
-            assistant_message = Raif::Messages::AssistantMessage.new(content: assistant_response_message)
-            add_conversation_history_entry(assistant_message.to_h)
-          end
-
           error_content = "Error: Multiple tool calls received. Only one tool call is allowed per step. " \
             "Please call exactly one tool at a time."
-          handle_iteration_error(error_content, required_tool:)
+          reject_iteration!(error_content, assistant_response_message, required_tool:)
 
           return
         end
@@ -179,12 +164,8 @@ module Raif
         # permanently failing the run. Instead, keep any assistant text and give the model
         # corrective feedback via a user message so it can retry.
         if rejection_error.present?
-          if assistant_response_message.present?
-            assistant_message = Raif::Messages::AssistantMessage.new(content: assistant_response_message)
-            add_conversation_history_entry(assistant_message.to_h)
-          end
+          reject_iteration!(rejection_error, assistant_response_message, required_tool:)
 
-          handle_iteration_error(rejection_error, required_tool:)
           return
         end
 
@@ -272,6 +253,19 @@ module Raif
         end
 
         @current_iteration_required_tool
+      end
+
+      # A completion whose tool calls can't be used (truncated, missing, multiple, or
+      # rejected). Keeps any assistant text for context, never persists the tool calls,
+      # and feeds corrective feedback back to the model via handle_iteration_error
+      # (which fails the run when no retry is available).
+      def reject_iteration!(error_content, assistant_response_message, required_tool:)
+        if assistant_response_message.present?
+          assistant_message = Raif::Messages::AssistantMessage.new(content: assistant_response_message)
+          add_conversation_history_entry(assistant_message.to_h)
+        end
+
+        handle_iteration_error(error_content, required_tool:)
       end
 
       def handle_iteration_error(error_content, required_tool: nil)
