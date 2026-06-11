@@ -5,6 +5,8 @@ class Raif::StreamingResponses::OpenAiResponses
   def initialize
     @output_items = []
     @finish_reason = nil
+    @status = nil
+    @incomplete_details = nil
   end
 
   def process_streaming_event(event_type, event)
@@ -29,6 +31,14 @@ class Raif::StreamingResponses::OpenAiResponses
       @output_items[output_index]["content"][content_index]["text"] = event["text"]
     when "response.completed"
       @usage = event["response"]["usage"]
+      @status = event.dig("response", "status")
+      @finish_reason = "stop"
+    when "response.incomplete"
+      # The response hit a stop condition (e.g. max_output_tokens) mid-generation.
+      # Capture the status/reason so update_model_completion can flag it as truncated.
+      @usage = event.dig("response", "usage")
+      @status = event.dig("response", "status")
+      @incomplete_details = event.dig("response", "incomplete_details")
       @finish_reason = "stop"
     when "error"
       raise Raif::Errors::StreamingError.new(
@@ -46,6 +56,8 @@ class Raif::StreamingResponses::OpenAiResponses
   def current_response_json
     {
       "id" => @id,
+      "status" => @status,
+      "incomplete_details" => @incomplete_details,
       "output" => @output_items,
       "usage" => @usage
     }
