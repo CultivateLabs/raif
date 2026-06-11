@@ -89,9 +89,16 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   end
 
   # Raw provider-reported finish/stop reasons that indicate the response was cut off
-  # because it hit the maximum output token limit. The response (including any tool
-  # calls in it) is incomplete and should not be trusted.
-  TRUNCATED_FINISH_REASONS = %w[max_output_tokens length max_tokens MAX_TOKENS incomplete].freeze
+  # before completing - either at the maximum output token limit, or (on Anthropic
+  # models) because the request exhausted the model's context window
+  # (model_context_window_exceeded). The response (including any tool calls in it) is
+  # incomplete and should not be trusted.
+  #
+  # Deliberately excluded: content-filter stops (e.g. OpenAI's "content_filter" /
+  # incomplete_details.reason "content_filter"). Those responses are also cut short,
+  # but the truncation-recovery guidance ("be more concise and retry") would be wrong
+  # for them; their partial tool calls are still rejected by argument validation.
+  TRUNCATED_FINISH_REASONS = %w[max_output_tokens length max_tokens MAX_TOKENS incomplete model_context_window_exceeded].freeze
 
   def truncated?
     TRUNCATED_FINISH_REASONS.include?(response_finish_reason)
