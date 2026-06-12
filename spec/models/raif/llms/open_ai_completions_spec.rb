@@ -642,5 +642,10 @@ RSpec.describe Raif::Llms::OpenAiCompletions, type: :model do
     it "disables parallel tool calls" do
       expect(parameters[:parallel_tool_calls]).to eq(false)
     end
+
+    it "enables parallel tool calls when the completion allows them" do
+      model_completion.allow_parallel_tool_calls = true
+      expect(parameters[:parallel_tool_calls]).to eq(true)
+    end
   end
 end

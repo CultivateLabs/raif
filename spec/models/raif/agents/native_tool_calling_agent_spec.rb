@@ -676,7 +676,12 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(Raif.logger).to have_received(:warn).with(/falling back to runtime tool-call validation/).once
     end
 
-    it "handles multiple tool calls by returning an error" do
+    it "invokes multiple tool calls from a single iteration, interleaving each call with its result" do
+      stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
+        .to_return(status: 200, body: { query: { search: [] } }.to_json)
+      stub_request(:get, "https://example.com")
+        .to_return(status: 200, body: "<html><body>Example</body></html>")
+
       stub_raif_agent(agent) do |messages, model_completion|
         if messages.length == 1
           model_completion.response_tool_calls = [
@@ -707,54 +712,183 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       agent.max_iterations = 2
       agent.run!
 
-      expect(agent.conversation_history).to eq([
-        { "role" => "user", "content" => "What is the capital of France?" },
-        {
-          "role" => "assistant",
-          "content" => "Let me search and fetch at the same time."
-        },
-        {
-          "role" => "user",
-          "content" => "Error: Multiple tool calls received. Only one tool call is allowed per step. Please call exactly one tool at a time."
-        },
-        {
-          "role" => "user",
-          "content" => "Warning: This is your final iteration. You must provide your final answer using the agent_final_answer tool."
-        },
-        {
-          "provider_tool_call_id" => "call_456",
-          "name" => "agent_final_answer",
-          "arguments" => { "final_answer" => "Paris is the capital of France." },
-          "type" => "tool_call",
-          "assistant_message" => "Using the final answer tool now."
-        }
+      expect(agent).to be_completed
+
+      # Both tools were invoked in the single first iteration.
+      expect(agent.raif_model_tool_invocations.where(tool_type: "Raif::ModelTools::WikipediaSearch").count).to eq(1)
+      expect(agent.raif_model_tool_invocations.where(tool_type: "Raif::ModelTools::FetchUrl").count).to eq(1)
+
+      # The first iteration's history is interleaved: call A, result A, call B, result B.
+      # Only the first tool call carries the assistant's prose.
+      first_iteration = agent.conversation_history[1, 4]
+      expect(first_iteration.map { |e| [e["type"], e["name"]] }).to eq([
+        ["tool_call", "wikipedia_search"],
+        ["tool_call_result", "wikipedia_search"],
+        ["tool_call", "fetch_url"],
+        ["tool_call_result", "fetch_url"]
       ])
+      expect(first_iteration[0]["assistant_message"]).to eq("Let me search and fetch at the same time.")
+      expect(first_iteration[2]).not_to have_key("assistant_message")
     end
 
-    it "fails when multiple tool calls are returned on the final required-tool attempt" do
+    it "processes the final answer and drops sibling calls when they are batched together" do
       stub_raif_agent(agent) do |_messages, model_completion|
         model_completion.response_tool_calls = [
           {
             "provider_tool_call_id" => "call_1",
-            "name" => "agent_final_answer",
-            "arguments" => { "final_answer" => "Paris" }
+            "name" => "wikipedia_search",
+            "arguments" => { "query" => "capital of France" }
           },
           {
             "provider_tool_call_id" => "call_2",
-            "name" => "wikipedia_search",
-            "arguments" => { "query" => "France" }
+            "name" => "agent_final_answer",
+            "arguments" => { "final_answer" => "Paris is the capital of France." }
           }
         ]
-        "Here's the answer and a search."
+        "Searching and answering at once."
       end
 
-      agent.max_iterations = 1
+      agent.max_iterations = 3
       agent.run!
 
-      expect(agent).to be_failed
-      expect(agent.failure_reason).to eq(
-        "Error: Multiple tool calls received. Only one tool call is allowed per step. Please call exactly one tool at a time."
+      expect(agent).to be_completed
+      expect(agent.final_answer).to eq("Paris is the capital of France.")
+
+      # The sibling search must never be invoked - it would register documents/results
+      # the model never actually observed.
+      expect(agent.raif_model_tool_invocations.where(tool_type: "Raif::ModelTools::WikipediaSearch").count).to eq(0)
+      expect(agent.conversation_history.any? { |e| e["name"] == "wikipedia_search" }).to be(false)
+
+      final_answer_entry = agent.conversation_history.find { |e| e["name"] == "agent_final_answer" }
+      expect(final_answer_entry["assistant_message"]).to eq("Searching and answering at once.")
+    end
+
+    it "atomically rejects the whole batch when any tool call is invalid, invoking none" do
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_1",
+              "name" => "wikipedia_search",
+              "arguments" => { "query" => "capital of France" }
+            },
+            {
+              "provider_tool_call_id" => "call_2",
+              "name" => "unavailable_tool",
+              "arguments" => { "query" => "capital of France" }
+            }
+          ]
+          "Let me try both."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_456",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+          "Using the final answer tool now."
+        end
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      expect(agent).to be_completed
+
+      # The valid sibling is NOT invoked when the batch is rejected.
+      expect(agent.raif_model_tool_invocations.where(tool_type: "Raif::ModelTools::WikipediaSearch").count).to eq(0)
+
+      # No tool call from the rejected batch is persisted; the model gets corrective feedback.
+      expect(agent.conversation_history.any? { |e| e["type"] == "tool_call" && e["name"] == "wikipedia_search" }).to be(false)
+      error_entry = agent.conversation_history.find { |e| e["role"] == "user" && e["content"].to_s.include?("unavailable_tool") }
+      expect(error_entry).to be_present
+    end
+
+    it "rejects multiple tool calls when parallel tool calls are disabled for the agent class" do
+      allow(described_class).to receive(:parallel_tool_calls).and_return(false)
+
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_tool_calls = [
+            { "provider_tool_call_id" => "call_1", "name" => "wikipedia_search", "arguments" => { "query" => "France" } },
+            { "provider_tool_call_id" => "call_2", "name" => "fetch_url", "arguments" => { "url" => "https://example.com" } }
+          ]
+          "Let me search and fetch at the same time."
+        else
+          model_completion.response_tool_calls = [
+            { "provider_tool_call_id" => "call_456", "name" => "agent_final_answer", "arguments" => { "final_answer" => "Paris." } }
+          ]
+          "Using the final answer tool now."
+        end
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      expect(agent.conversation_history).to include(
+        {
+          "role" => "user",
+          "content" => "Error: Multiple tool calls received. Only one tool call is allowed per step. Please call exactly one tool at a time."
+        }
       )
+      expect(agent.raif_model_tool_invocations.where(tool_type: "Raif::ModelTools::WikipediaSearch").count).to eq(0)
+    end
+
+    it "rejects multiple tool calls when the LLM does not support parallel tool calls" do
+      allow_any_instance_of(Raif::Llms::OpenAiResponses).to receive(:supports_parallel_tool_calls?).and_return(false)
+
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_tool_calls = [
+            { "provider_tool_call_id" => "call_1", "name" => "wikipedia_search", "arguments" => { "query" => "France" } },
+            { "provider_tool_call_id" => "call_2", "name" => "fetch_url", "arguments" => { "url" => "https://example.com" } }
+          ]
+          "Let me search and fetch at the same time."
+        else
+          model_completion.response_tool_calls = [
+            { "provider_tool_call_id" => "call_456", "name" => "agent_final_answer", "arguments" => { "final_answer" => "Paris." } }
+          ]
+          "Using the final answer tool now."
+        end
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      expect(agent.conversation_history).to include(
+        {
+          "role" => "user",
+          "content" => "Error: Multiple tool calls received. Only one tool call is allowed per step. Please call exactly one tool at a time."
+        }
+      )
+      expect(agent.raif_model_tool_invocations.where(tool_type: "Raif::ModelTools::WikipediaSearch").count).to eq(0)
+    end
+
+    it "rejects the batch when it exceeds max_tool_calls_per_iteration" do
+      allow(described_class).to receive(:max_tool_calls_per_iteration).and_return(1)
+
+      stub_raif_agent(agent) do |messages, model_completion|
+        if messages.length == 1
+          model_completion.response_tool_calls = [
+            { "provider_tool_call_id" => "call_1", "name" => "wikipedia_search", "arguments" => { "query" => "France" } },
+            { "provider_tool_call_id" => "call_2", "name" => "fetch_url", "arguments" => { "url" => "https://example.com" } }
+          ]
+          "Let me search and fetch at the same time."
+        else
+          model_completion.response_tool_calls = [
+            { "provider_tool_call_id" => "call_456", "name" => "agent_final_answer", "arguments" => { "final_answer" => "Paris." } }
+          ]
+          "Using the final answer tool now."
+        end
+      end
+
+      agent.max_iterations = 2
+      agent.run!
+
+      error_entry = agent.conversation_history.find { |e| e["role"] == "user" && e["content"].to_s.include?("at most 1 tool call") }
+      expect(error_entry).to be_present
+      expect(agent.raif_model_tool_invocations.where(tool_type: "Raif::ModelTools::WikipediaSearch").count).to eq(0)
     end
   end
 
@@ -792,14 +926,15 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
 
         At each step, you must:
         1. Think about what to do next.
-        2. Choose and invoke exactly one tool/function call based on that thought.
-        3. Observe the results of the tool/function call.
+        2. Choose and invoke one or more tool/function calls based on that thought. You may make several independent tool calls in a single step; when a call depends on another's result, make them in separate steps.
+        3. Observe the results of the tool/function call(s).
         4. Use the results to update your thought process.
         5. Repeat steps 1-4 until the task is complete.
         6. Provide a final answer to the user's request.
 
         For your final answer:
         - You **MUST** use the agent_final_answer tool/function to provide your final answer.
+        - Call the agent_final_answer tool by itself - do not combine it with other tool calls in the same step.
         - Your answer should be comprehensive and directly address the user's request.
 
         Guidelines
@@ -813,6 +948,15 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       PROMPT
 
       expect(agent.build_system_prompt).to eq(prompt)
+    end
+
+    it "builds a single-tool-call system prompt when parallel tool calls are disabled" do
+      allow(described_class).to receive(:parallel_tool_calls).and_return(false)
+
+      expect(agent.build_system_prompt).to include(
+        "Choose and invoke exactly one tool/function call based on that thought."
+      )
+      expect(agent.build_system_prompt).not_to include("you may make several independent tool calls")
     end
   end
 

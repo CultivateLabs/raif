@@ -56,19 +56,32 @@ module Raif
       }
 
       def build_system_prompt
+        step_two = if self.class.parallel_tool_calls
+          "Choose and invoke one or more tool/function calls based on that thought. You may make several " \
+            "independent tool calls in a single step; when a call depends on another's result, make them in separate steps."
+        else
+          "Choose and invoke exactly one tool/function call based on that thought."
+        end
+
+        final_answer_note = if self.class.parallel_tool_calls
+          "\n- Call the agent_final_answer tool by itself - do not combine it with other tool calls in the same step."
+        else
+          ""
+        end
+
         <<~PROMPT.strip
           You are an AI agent that follows the ReAct (Reasoning + Acting) framework to complete tasks step by step using tool/function calls.
 
           At each step, you must:
           1. Think about what to do next.
-          2. Choose and invoke exactly one tool/function call based on that thought.
-          3. Observe the results of the tool/function call.
+          2. #{step_two}
+          3. Observe the results of the tool/function call(s).
           4. Use the results to update your thought process.
           5. Repeat steps 1-4 until the task is complete.
           6. Provide a final answer to the user's request.
 
           For your final answer:
-          - You **MUST** use the agent_final_answer tool/function to provide your final answer.
+          - You **MUST** use the agent_final_answer tool/function to provide your final answer.#{final_answer_note}
           - Your answer should be comprehensive and directly address the user's request.
 
           Guidelines
@@ -145,8 +158,11 @@ module Raif
           return
         end
 
-        # The model returned multiple tool calls. We only allow one per step.
-        if model_completion.response_tool_calls.length > 1
+        tool_calls = model_completion.response_tool_calls
+
+        # Parallel tool calls disabled (agent class opted out, or the model doesn't
+        # support them): only one call per step.
+        if tool_calls.length > 1 && !parallel_tool_calls_allowed?
           error_content = "Error: Multiple tool calls received. Only one tool call is allowed per step. " \
             "Please call exactly one tool at a time."
           reject_iteration!(error_content, assistant_response_message, required_tool:)
@@ -154,43 +170,77 @@ module Raif
           return
         end
 
-        tool_call = model_completion.response_tool_calls.first
-        validation = validate_tool_call(tool_call, available_model_tools_map, source: self)
-        rejection_error = tool_call_rejection_error(validation, required_tool)
-
-        # A rejected tool call is never added to conversation history. If it were, it would be
-        # replayed to the provider on every subsequent request, which providers reject (e.g.
-        # OpenAI 400s on a function_call input item with no paired function_call_output),
-        # permanently failing the run. Instead, keep any assistant text and give the model
-        # corrective feedback via a user message so it can retry.
-        if rejection_error.present?
-          reject_iteration!(rejection_error, assistant_response_message, required_tool:)
+        # Guard against pathological fan-out (and runaway context/cost) in a single step.
+        max_calls = self.class.max_tool_calls_per_iteration
+        if max_calls.present? && tool_calls.length > max_calls
+          error_content = "Error: Too many tool calls in a single step (received #{tool_calls.length}). " \
+            "Make at most #{max_calls} tool call#{"s" unless max_calls == 1} per step."
+          reject_iteration!(error_content, assistant_response_message, required_tool:)
 
           return
         end
 
-        # Validation passed, so prepared_arguments is a schema-valid Hash (extra keys stripped).
-        tool_call_message = Raif::Messages::ToolCall.new(
-          provider_tool_call_id: tool_call["provider_tool_call_id"],
-          name: tool_call["name"],
-          arguments: validation.prepared_arguments,
-          assistant_message: assistant_response_message,
-          provider_metadata: tool_call["provider_metadata"]
-        )
-        add_conversation_history_entry(tool_call_message.to_h)
+        validations = tool_calls.map { |tool_call| validate_tool_call(tool_call, available_model_tools_map, source: self) }
 
-        # Process the tool invocation and add observation/result to history
-        tool_invocation = validation.tool_klass.invoke_tool(
-          provider_tool_call_id: tool_call["provider_tool_call_id"],
-          tool_arguments: validation.prepared_arguments,
-          source: self
-        )
-
-        if validation.tool_name == "agent_final_answer"
-          self.final_answer = tool_invocation.result
+        # When the model calls agent_final_answer alongside other tools, honor the final
+        # answer and drop the siblings without invoking them. Invoking a sibling here would
+        # record results/documents the model never actually observed before answering.
+        final_answer_index = validations.index { |validation| validation.tool_name == "agent_final_answer" }
+        if final_answer_index && tool_call_rejection_error(validations[final_answer_index], required_tool).nil?
+          tool_calls = [tool_calls[final_answer_index]]
+          validations = [validations[final_answer_index]]
         else
-          add_conversation_history_entry(tool_invocation.as_tool_call_result_message)
+          # Atomic validation: if any call is invalid, none are invoked or persisted. A
+          # rejected call replayed to the provider on the next request would be rejected
+          # (no paired tool result), so we keep any assistant text and send corrective
+          # feedback covering every invalid call instead.
+          rejection_error = batch_rejection_error(validations, required_tool)
+          if rejection_error.present?
+            reject_iteration!(rejection_error, assistant_response_message, required_tool:)
+
+            return
+          end
         end
+
+        # Invoke each valid call in order, interleaving its result with the call so the
+        # provider sees correctly paired tool_call/tool_call_result messages on replay.
+        # Only the first call carries the assistant's prose for this turn.
+        tool_calls.each_with_index do |tool_call, index|
+          validation = validations[index]
+
+          tool_call_message = Raif::Messages::ToolCall.new(
+            provider_tool_call_id: tool_call["provider_tool_call_id"],
+            name: tool_call["name"],
+            arguments: validation.prepared_arguments,
+            assistant_message: (index.zero? ? assistant_response_message : nil),
+            provider_metadata: tool_call["provider_metadata"]
+          )
+          add_conversation_history_entry(tool_call_message.to_h)
+
+          tool_invocation = validation.tool_klass.invoke_tool(
+            provider_tool_call_id: tool_call["provider_tool_call_id"],
+            tool_arguments: validation.prepared_arguments,
+            source: self
+          )
+
+          if validation.tool_name == "agent_final_answer"
+            self.final_answer = tool_invocation.result
+            break
+          else
+            add_conversation_history_entry(tool_invocation.as_tool_call_result_message)
+          end
+        end
+      end
+
+      # Permit parallel tool calls unless they're disallowed, or this iteration forces a
+      # specific tool (e.g. the final-answer iteration), where exactly one call is required.
+      def allow_parallel_tool_calls?
+        parallel_tool_calls_allowed? && current_iteration_required_tool.nil?
+      end
+
+      # Whether this agent class and its LLM both permit multiple tool calls per iteration.
+      def parallel_tool_calls_allowed?
+        self.class.parallel_tool_calls && llm.supports_parallel_tool_calls?
       end
 
       # Returns the corrective feedback for a tool call that must not be invoked or
@@ -213,6 +263,19 @@ module Raif
           error += ". Validation errors: #{feedback_excerpt(Array(validation.errors).join("; "))}" if validation.errors.present?
           error
         end
+      end
+
+      # Aggregated corrective feedback for a batch of tool calls, or nil if all are
+      # acceptable. A single invalid call returns its error verbatim (matching the
+      # single-call path); multiple invalid calls are summarized, then listed.
+      def batch_rejection_error(validations, required_tool)
+        errors = validations.filter_map { |validation| tool_call_rejection_error(validation, required_tool) }
+        return if errors.empty?
+        return errors.first if errors.length == 1
+
+        header = "Error: #{errors.length} of the #{validations.length} tool calls in your previous response were invalid. " \
+          "None were executed. Correct them and try again - you may call multiple tools in one step."
+        [header, *errors].join("\n\n")
       end
 
       # Echo back what the model sent so it can correct itself (the rejected call is not in

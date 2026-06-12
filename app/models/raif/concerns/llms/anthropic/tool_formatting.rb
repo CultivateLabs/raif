@@ -71,7 +71,7 @@ module Raif::Concerns::Llms::Anthropic::ToolFormatting
     { "type" => "tool", "name" => tool_name, "disable_parallel_tool_use" => true }
   end
 
-  def build_required_tool_choice
-    { "type" => "any", "disable_parallel_tool_use" => true }
+  def build_required_tool_choice(disable_parallel: true)
+    { "type" => "any", "disable_parallel_tool_use" => disable_parallel }
   end
 end

@@ -46,6 +46,16 @@ module Raif
     include Raif::Concerns::LlmPromptCaching
     include Raif::Concerns::RunWith
 
+    # Whether the agent may make multiple tool calls in a single iteration. When
+    # false, a completion containing more than one tool call is rejected and the
+    # model is asked to call one tool at a time (the historical behavior).
+    class_attribute :parallel_tool_calls, instance_writer: false, default: true
+
+    # Optional cap on the number of tool calls accepted in a single iteration.
+    # nil means uncapped. A batch exceeding the cap is rejected with corrective
+    # feedback rather than partially invoked.
+    class_attribute :max_tool_calls_per_iteration, instance_writer: false, default: nil
+
     belongs_to :creator, polymorphic: true
     belongs_to :source, polymorphic: true, optional: true
 
@@ -127,6 +137,7 @@ module Raif
           system_prompt: system_prompt,
           available_model_tools: native_model_tools,
           tool_choice: tool_choice_for_iteration,
+          allow_parallel_tool_calls: allow_parallel_tool_calls?,
           anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
           bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled
         )
@@ -222,6 +233,14 @@ module Raif
     # @return [Class, nil] A model tool class (e.g., Raif::ModelTools::AgentFinalAnswer), or nil for default behavior
     def tool_choice_for_iteration
       nil
+    end
+
+    # Hook for subclasses: whether the current iteration's request should permit
+    # the provider to return multiple tool calls. Base agents do not; subclasses
+    # that process multiple calls per iteration override this.
+    # @return [Boolean]
+    def allow_parallel_tool_calls?
+      false
     end
 
     # Hook for subclasses to require a specific tool on the current iteration.

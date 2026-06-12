@@ -681,6 +681,53 @@ RSpec.describe Raif::Llms::Google, type: :model do
   end
 
   describe "#format_messages" do
+    it "formats an interleaved multi-tool-call turn, preserving each call's thoughtSignature" do
+      # Same tool called twice in one turn, each carrying its own thoughtSignature. Google
+      # matches functionResponse by name/order, so interleaving must be preserved and the
+      # per-call thoughtSignature must round-trip (required for Gemini 2.5+ thinking models).
+      messages = [
+        {
+          "type" => "tool_call",
+          "provider_tool_call_id" => "uuid-1",
+          "name" => "wikipedia_search",
+          "arguments" => { "query" => "France" },
+          "assistant_message" => "Searching twice.",
+          "provider_metadata" => { "thought_signature" => "sig-1" }
+        },
+        { "type" => "tool_call_result", "provider_tool_call_id" => "uuid-1", "name" => "wikipedia_search", "result" => { "ok" => 1 } },
+        {
+          "type" => "tool_call",
+          "provider_tool_call_id" => "uuid-2",
+          "name" => "wikipedia_search",
+          "arguments" => { "query" => "Germany" },
+          "provider_metadata" => { "thought_signature" => "sig-2" }
+        },
+        { "type" => "tool_call_result", "provider_tool_call_id" => "uuid-2", "name" => "wikipedia_search", "result" => { "ok" => 2 } }
+      ]
+
+      expect(llm.format_messages(messages)).to eq([
+        {
+          "role" => "model",
+          "parts" => [
+            { "text" => "Searching twice." },
+            { "functionCall" => { "name" => "wikipedia_search", "args" => { "query" => "France" } }, "thoughtSignature" => "sig-1" }
+          ]
+        },
+        {
+          "role" => "user",
+          "parts" => [{ "functionResponse" => { "name" => "wikipedia_search", "response" => { "ok" => 1 } } }]
+        },
+        {
+          "role" => "model",
+          "parts" => [{ "functionCall" => { "name" => "wikipedia_search", "args" => { "query" => "Germany" } }, "thoughtSignature" => "sig-2" }]
+        },
+        {
+          "role" => "user",
+          "parts" => [{ "functionResponse" => { "name" => "wikipedia_search", "response" => { "ok" => 2 } } }]
+        }
+      ])
+    end
+
     it "formats the messages correctly with a string as the content" do
       messages = [{ "role" => "user", "content" => "Hello" }]
       formatted_messages = llm.format_messages(messages)
