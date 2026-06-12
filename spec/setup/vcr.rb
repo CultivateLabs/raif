@@ -9,6 +9,16 @@ VCR.configure do |config|
   config.ignore_localhost = true
   # config.debug_logger = $stdout
 
+  # Never record AWS SSO / OIDC credential-resolution traffic. When recording Bedrock
+  # cassettes via an SSO profile, the SDK resolves credentials over HTTP, and those
+  # responses contain real access/refresh tokens and temporary credentials that must
+  # not be written to a cassette. Ignored requests still hit the network (so credential
+  # resolution works) but are never recorded.
+  config.ignore_request do |request|
+    host = URI(request.uri).host.to_s
+    host.start_with?("oidc.") || host.include?(".sso.")
+  end
+
   config.default_cassette_options = {
     match_requests_on: [
       :method,
@@ -76,21 +86,35 @@ VCR.configure do |config|
     end
   end
 
+  # Normalize provider-generated ids (tool call ids, response ids, etc.) to stable
+  # placeholders. We scrub BOTH request and response bodies so that an id the model
+  # returns in one turn's response and the agent echoes back in the next turn's request
+  # collapse to the same placeholder - otherwise the recorded request (real id) would
+  # never match the replayed request (placeholder id from the scrubbed response).
   config.before_record do |interaction|
-    if interaction.response.body
+    [interaction.request.body, interaction.response.body].each do |body|
+      next unless body
+
       # For anything with an underscore (e.g. resp_abc123), replace the value with a placeholder
       ["resp", "msg", "fc", "call", "ws", "toolu", "fp", "tooluse"].each do |prefix|
-        interaction.response.body.gsub!(/#{prefix}_[\w\d]+/) do |match|
+        body.gsub!(/#{prefix}_[\w\d]+/) do |match|
           match.end_with?("_id") ? match : "#{prefix}_abc123"
         end
       end
 
       # For anything with a dash (e.g. chatcmpl-abc123), replace the value with a placeholder
       ["chatcmpl", "gen"].each do |prefix|
-        interaction.response.body.gsub!(/#{prefix}-[\w\d]+/) do
+        body.gsub!(/#{prefix}-[\w\d]+/) do
           "#{prefix}-abc123"
         end
       end
+    end
+
+    # Scrubbing changes the response body length. Keep Content-Length in sync, otherwise
+    # strict clients (e.g. the AWS SDK for Bedrock) reject the replayed response as truncated.
+    if interaction.response.body
+      content_length_key = interaction.response.headers.keys.find { |k| k.casecmp?("Content-Length") }
+      interaction.response.headers[content_length_key] = [interaction.response.body.bytesize.to_s] if content_length_key
     end
   end
 

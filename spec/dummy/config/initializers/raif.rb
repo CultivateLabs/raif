@@ -5,20 +5,20 @@ Raif.configure do |config|
   # config.conversation_entries_controller = "ConversationEntriesController"
   # config.conversation_llm_messages_max_length_default = 50
 
-  config.anthropic_api_key = "placeholder"
+  config.anthropic_api_key = ENV["ANTHROPIC_API_KEY"].presence || "placeholder"
   config.anthropic_models_enabled = true
 
-  config.open_ai_api_key = "placeholder"
+  config.open_ai_api_key = ENV["OPENAI_API_KEY"].presence || "placeholder"
   config.open_ai_models_enabled = true
   config.open_ai_embedding_models_enabled = true
 
-  config.open_router_api_key = "placeholder"
+  config.open_router_api_key = ENV["OPEN_ROUTER_API_KEY"].presence || "placeholder"
   config.open_router_models_enabled = true
 
   config.bedrock_embedding_models_enabled = true
   config.bedrock_models_enabled = true
 
-  config.google_api_key = "placeholder"
+  config.google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || "placeholder"
   config.google_models_enabled = true
   config.google_embedding_models_enabled = true
 
