@@ -232,8 +232,9 @@ module Raif
         end
       end
 
-      # Permit parallel tool calls unless they're disallowed, or this iteration forces a
-      # specific tool (e.g. the final-answer iteration), where exactly one call is required.
+      # Permit parallel tool calls unless they're disallowed, or this iteration requires a
+      # specific tool (any iteration where required_tool_for_iteration returns a tool)
+      # such as the forced final-answer iteration where exactly one call is expected.
       def allow_parallel_tool_calls?
         parallel_tool_calls_allowed? && current_iteration_required_tool.nil?
       end

@@ -236,8 +236,10 @@ module Raif
     end
 
     # Hook for subclasses: whether the current iteration's request should permit
-    # the provider to return multiple tool calls. Base agents do not; subclasses
-    # that process multiple calls per iteration override this.
+    # the provider to return multiple tool calls. Returns false here in the base
+    # class. Raif::Agents::NativeToolCallingAgent overrides this and permits
+    # parallel calls by default, controlled by its parallel_tool_calls class
+    # attribute (default true) and Raif::Llm#supports_parallel_tool_calls?.
     # @return [Boolean]
     def allow_parallel_tool_calls?
       false
