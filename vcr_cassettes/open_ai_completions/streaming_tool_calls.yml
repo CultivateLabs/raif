@@ -8,7 +8,7 @@ http_interactions:
       string: '{"model":"gpt-4o","messages":[{"role":"user","content":[{"type":"text","text":"What''s
         on the homepage of https://www.wsj.com today?"}]}],"temperature":0.7,"tools":[{"type":"function","function":{"name":"fetch_url","description":"Fetch
         a URL and return the page content as markdown","parameters":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
-        URL to fetch content from"}},"required":["url"]}}}],"stream":true,"stream_options":{"include_usage":true}}'
+        URL to fetch content from"}},"required":["url"]}}}],"parallel_tool_calls":false,"stream":true,"stream_options":{"include_usage":true}}'
     headers:
       Authorization:
       - "<PLACEHOLDER_AUTHORIZATION>"

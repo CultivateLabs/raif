@@ -66,6 +66,8 @@ private
         tool_klass = model_completion.tool_choice.constantize
         parameters[:tool_choice] = build_forced_tool_choice(tool_klass.tool_name)
         parameters[:parallel_tool_calls] = false unless tools.blank?
+      else
+        parameters[:parallel_tool_calls] = (model_completion.allow_parallel_tool_calls == true) unless tools.blank?
       end
     end
 

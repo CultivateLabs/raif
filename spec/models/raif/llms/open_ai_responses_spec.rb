@@ -1094,4 +1094,29 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
       expect(parameters[:parallel_tool_calls]).to eq(true)
     end
   end
+
+  describe "#build_request_parameters with tools and no tool_choice" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        messages: [{ role: "user", content: "Hello" }],
+        llm_model_key: "open_ai_responses_gpt_4o",
+        model_api_name: "gpt-4o",
+        temperature: 0.8,
+        response_format: "text",
+        system_prompt: "You are a helpful assistant",
+        available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::AgentFinalAnswer]
+      )
+    end
+
+    let(:parameters) { llm.send(:build_request_parameters, model_completion) }
+
+    it "disables parallel tool calls by default" do
+      expect(parameters[:parallel_tool_calls]).to eq(false)
+    end
+
+    it "enables parallel tool calls when the completion allows them" do
+      model_completion.allow_parallel_tool_calls = true
+      expect(parameters[:parallel_tool_calls]).to eq(true)
+    end
+  end
 end

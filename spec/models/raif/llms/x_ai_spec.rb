@@ -282,6 +282,53 @@ RSpec.describe Raif::Llms::XAi, type: :model do
       end
     end
 
+    context "with tools and tool_choice" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "I need information" }],
+          llm_model_key: "x_ai_grok_4_3",
+          model_api_name: "grok-4.3",
+          available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::AgentFinalAnswer]
+        )
+      end
+
+      let(:params) { llm.send(:build_request_parameters, model_completion) }
+
+      context "when tool_choice is 'required'" do
+        before { model_completion.tool_choice = "required" }
+
+        it "sets tool_choice to 'required' and disables parallel tool calls" do
+          expect(params[:tool_choice]).to eq("required")
+          expect(params[:parallel_tool_calls]).to eq(false)
+        end
+
+        it "enables parallel tool calls when the completion allows them" do
+          model_completion.allow_parallel_tool_calls = true
+          expect(params[:parallel_tool_calls]).to eq(true)
+        end
+      end
+
+      context "when a specific tool is forced" do
+        before { model_completion.tool_choice = "Raif::ModelTools::AgentFinalAnswer" }
+
+        it "forces the tool and disables parallel tool calls" do
+          expect(params[:tool_choice]).to eq({ "type" => "function", "function" => { "name" => "agent_final_answer" } })
+          expect(params[:parallel_tool_calls]).to eq(false)
+        end
+      end
+
+      context "when tool_choice is not set" do
+        it "disables parallel tool calls by default" do
+          expect(params[:parallel_tool_calls]).to eq(false)
+        end
+
+        it "enables parallel tool calls when the completion allows them" do
+          model_completion.allow_parallel_tool_calls = true
+          expect(params[:parallel_tool_calls]).to eq(true)
+        end
+      end
+    end
+
     context "with a json_response_schema present" do
       let(:test_task){ Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
       let(:model_completion) do
