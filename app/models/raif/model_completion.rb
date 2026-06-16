@@ -69,6 +69,13 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   attr_accessor :anthropic_prompt_caching_enabled, :bedrock_prompt_caching_enabled
 
+  # Request-scoped (not persisted): when true, the provider request permits the
+  # model to return multiple tool calls. Adapters that can disable parallel tool
+  # use map this onto their provider parameter. Any value other than true
+  # (including nil, the default for an instance built outside Raif::Llm#chat)
+  # is treated as false (single call).
+  attr_accessor :allow_parallel_tool_calls
+
   boolean_timestamp :started_at
   boolean_timestamp :completed_at
   boolean_timestamp :failed_at

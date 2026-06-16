@@ -79,12 +79,15 @@ private
 
       if model_completion.tool_choice == "required"
         params[:tool_choice] = build_required_tool_choice
-        params[:parallel_tool_calls] = false unless tools.blank?
+        params[:parallel_tool_calls] = (model_completion.allow_parallel_tool_calls == true) unless tools.blank?
       elsif model_completion.tool_choice.present?
         tool_klass = model_completion.tool_choice.constantize
         params[:tool_choice] = build_forced_tool_choice(tool_klass.tool_name)
         params[:parallel_tool_calls] = false unless tools.blank?
       end
+      # With no tool_choice (conversations, tasks, normal agent iterations) the parameter
+      # is intentionally omitted so the request inherits the provider default (parallel
+      # allowed), which the conversation and agent paths both handle.
     end
 
     if model_completion.stream_response?

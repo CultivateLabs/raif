@@ -670,6 +670,43 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
   end
 
   describe "#format_messages" do
+    it "formats an interleaved multi-tool-call turn into paired tool_use/tool_result messages" do
+      messages = [
+        {
+          "type" => "tool_call",
+          "provider_tool_call_id" => "toolu_1",
+          "name" => "wikipedia_search",
+          "arguments" => { "query" => "France" },
+          "assistant_message" => "Let me search and fetch."
+        },
+        { "type" => "tool_call_result", "provider_tool_call_id" => "toolu_1", "name" => "wikipedia_search", "result" => { "ok" => true } },
+        { "type" => "tool_call", "provider_tool_call_id" => "toolu_2", "name" => "fetch_url", "arguments" => { "url" => "https://example.com" } },
+        { "type" => "tool_call_result", "provider_tool_call_id" => "toolu_2", "name" => "fetch_url", "result" => { "ok" => true } }
+      ]
+
+      expect(llm.format_messages(messages)).to eq([
+        {
+          "role" => "assistant",
+          "content" => [
+            { "type" => "text", "text" => "Let me search and fetch." },
+            { "type" => "tool_use", "id" => "toolu_1", "name" => "wikipedia_search", "input" => { "query" => "France" } }
+          ]
+        },
+        {
+          "role" => "user",
+          "content" => [{ "type" => "tool_result", "tool_use_id" => "toolu_1", "content" => "{\"ok\":true}" }]
+        },
+        {
+          "role" => "assistant",
+          "content" => [{ "type" => "tool_use", "id" => "toolu_2", "name" => "fetch_url", "input" => { "url" => "https://example.com" } }]
+        },
+        {
+          "role" => "user",
+          "content" => [{ "type" => "tool_result", "tool_use_id" => "toolu_2", "content" => "{\"ok\":true}" }]
+        }
+      ])
+    end
+
     it "formats the messages correctly with a string as the content" do
       messages = [{ "role" => "user", "content" => "Hello" }]
       formatted_messages = llm.format_messages(messages)
@@ -1000,6 +1037,11 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
 
     it "sets tool_choice to the required format" do
       expect(parameters[:tool_choice]).to eq({ "type" => "any", "disable_parallel_tool_use" => true })
+    end
+
+    it "allows parallel tool use in the required tool_choice when the completion allows it" do
+      model_completion.allow_parallel_tool_calls = true
+      expect(parameters[:tool_choice]).to eq({ "type" => "any", "disable_parallel_tool_use" => false })
     end
 
     it "does not include parallel_tool_calls" do

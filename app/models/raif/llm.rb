@@ -72,7 +72,8 @@ module Raif
     end
 
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
-      max_completion_tokens: nil, tool_choice: nil, anthropic_prompt_caching_enabled: false, bedrock_prompt_caching_enabled: false, &block)
+      max_completion_tokens: nil, tool_choice: nil, allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
+      bedrock_prompt_caching_enabled: false, &block)
       unless response_format.is_a?(Symbol)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid response format: #{response_format}. Must be a symbol (you passed #{response_format.class}) and be one of: #{VALID_RESPONSE_FORMATS.join(", ")}" # rubocop:disable Layout/LineLength
@@ -131,6 +132,7 @@ module Raif
         max_completion_tokens: max_completion_tokens,
         tool_choice: tool_choice,
         stream_response: stream_response,
+        allow_parallel_tool_calls: allow_parallel_tool_calls,
         anthropic_prompt_caching_enabled: anthropic_prompt_caching_enabled,
         bedrock_prompt_caching_enabled: bedrock_prompt_caching_enabled
       )
@@ -170,8 +172,8 @@ module Raif
     # @return [Raif::ModelCompletion] persisted, with started_at: nil
     def build_pending_model_completion(messages:, response_format: :text, available_model_tools: [], source: nil,
       system_prompt: nil, temperature: nil, max_completion_tokens: nil, tool_choice: nil,
-      stream_response: false, anthropic_prompt_caching_enabled: false, bedrock_prompt_caching_enabled: false,
-      raif_model_completion_batch: nil, batch_custom_id: nil)
+      stream_response: false, allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
+      bedrock_prompt_caching_enabled: false, raif_model_completion_batch: nil, batch_custom_id: nil)
       temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
 
@@ -191,6 +193,7 @@ module Raif
         batch_custom_id: batch_custom_id
       )
 
+      model_completion.allow_parallel_tool_calls = allow_parallel_tool_calls
       model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled
       model_completion.bedrock_prompt_caching_enabled = bedrock_prompt_caching_enabled
       model_completion
@@ -265,6 +268,15 @@ module Raif
     # enforce required tool use for some tool types.
     def supports_faithful_required_tool_choice?(available_model_tools)
       available_model_tools.present?
+    end
+
+    # Whether this model can handle being asked to make multiple tool calls in a
+    # single response. Override (per provider or per model key) to return false for
+    # models that reject the parallel-tool-call request parameter or that produce
+    # worse results when allowed to batch. Agents consult this before enabling
+    # parallel tool calls; when false they fall back to one tool call per step.
+    def supports_parallel_tool_calls?
+      true
     end
 
     def validate_provider_managed_tool_support!(tool)

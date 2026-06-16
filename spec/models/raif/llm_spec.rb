@@ -3,6 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llm, type: :model do
+  describe "#supports_parallel_tool_calls?" do
+    it "is true by default" do
+      llm = Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api")
+      expect(llm.supports_parallel_tool_calls?).to be(true)
+    end
+  end
+
   describe "#chat" do
     let(:messages) { [{ role: "user", content: "Hello" }] }
     let(:system_prompt) { "You are a helpful assistant." }
