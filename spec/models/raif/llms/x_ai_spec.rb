@@ -318,13 +318,13 @@ RSpec.describe Raif::Llms::XAi, type: :model do
       end
 
       context "when tool_choice is not set" do
-        it "disables parallel tool calls by default" do
-          expect(params[:parallel_tool_calls]).to eq(false)
+        it "omits parallel_tool_calls so the request inherits the provider default" do
+          expect(params).not_to have_key(:parallel_tool_calls)
         end
 
-        it "enables parallel tool calls when the completion allows them" do
+        it "still omits parallel_tool_calls even when the completion allows them" do
           model_completion.allow_parallel_tool_calls = true
-          expect(params[:parallel_tool_calls]).to eq(true)
+          expect(params).not_to have_key(:parallel_tool_calls)
         end
       end
     end

@@ -6,7 +6,7 @@ http_interactions:
     body:
       encoding: UTF-8
       string: '{"model":"gpt-4o","input":[{"role":"user","content":[{"type":"input_text","text":"What
-        are the latest developments in Ruby on Rails?"}]}],"temperature":0.7,"tools":[{"type":"web_search_preview"}],"parallel_tool_calls":false}'
+        are the latest developments in Ruby on Rails?"}]}],"temperature":0.7,"tools":[{"type":"web_search_preview"}]}'
     headers:
       Authorization:
       - "<PLACEHOLDER_AUTHORIZATION>"

@@ -1110,13 +1110,13 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
 
     let(:parameters) { llm.send(:build_request_parameters, model_completion) }
 
-    it "disables parallel tool calls by default" do
-      expect(parameters[:parallel_tool_calls]).to eq(false)
+    it "omits parallel_tool_calls so the request inherits the provider default" do
+      expect(parameters).not_to have_key(:parallel_tool_calls)
     end
 
-    it "enables parallel tool calls when the completion allows them" do
+    it "still omits parallel_tool_calls even when the completion allows them" do
       model_completion.allow_parallel_tool_calls = true
-      expect(parameters[:parallel_tool_calls]).to eq(true)
+      expect(parameters).not_to have_key(:parallel_tool_calls)
     end
   end
 end

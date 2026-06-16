@@ -9,7 +9,7 @@ http_interactions:
         you please write me a song in the style of the Beatles?"}]}],"temperature":0.7,"stream":true,"instructions":"You
         are an expert songwriter. You are given a topic and you need to write a song
         about it.\n\nYour response should be formatted using basic HTML tags such
-        as <p>, <ul>, <ol>, <li>, <strong>, and <a>. Do not include any other tags.","tools":[{"type":"web_search_preview"}],"parallel_tool_calls":false}'
+        as <p>, <ul>, <ol>, <li>, <strong>, and <a>. Do not include any other tags.","tools":[{"type":"web_search_preview"}]}'
     headers:
       Authorization:
       - "<PLACEHOLDER_AUTHORIZATION>"
