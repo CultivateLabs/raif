@@ -19,6 +19,42 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     allow(llm).to receive(:bedrock_client).and_return(client)
   end
 
+  describe "#update_model_completion" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        llm_model_key: "bedrock_claude_3_5_sonnet",
+        model_api_name: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+      )
+    end
+
+    def converse_response_with_stop_reason(stop_reason)
+      Aws::BedrockRuntime::Types::ConverseResponse.new(
+        output: Aws::BedrockRuntime::Types::ConverseOutput::Message.new(
+          message: Aws::BedrockRuntime::Types::Message.new(
+            role: "assistant",
+            content: [Aws::BedrockRuntime::Types::ContentBlock::Text.new(text: "Hello")]
+          )
+        ),
+        usage: Aws::BedrockRuntime::Types::TokenUsage.new(input_tokens: 10, output_tokens: 5, total_tokens: 15),
+        stop_reason: stop_reason
+      )
+    end
+
+    it "stores the stop reason and flags a max_tokens response as truncated" do
+      llm.send(:update_model_completion, model_completion, converse_response_with_stop_reason("max_tokens"))
+
+      expect(model_completion.response_finish_reason).to eq("max_tokens")
+      expect(model_completion).to be_truncated
+    end
+
+    it "does not flag a normally completed response as truncated" do
+      llm.send(:update_model_completion, model_completion, converse_response_with_stop_reason("end_turn"))
+
+      expect(model_completion.response_finish_reason).to eq("end_turn")
+      expect(model_completion).not_to be_truncated
+    end
+  end
+
   describe "#chat" do
     context "when the response format is text" do
       it "makes a request to the Bedrock API and processes the text response", vcr: { cassette_name: "bedrock/text_response" } do

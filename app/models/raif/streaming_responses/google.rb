@@ -15,8 +15,13 @@ class Raif::StreamingResponses::Google
     if candidates.present?
       candidate = candidates[0]
 
-      # Check for finish reason
-      @finish_reason = candidate["finishReason"] if candidate["finishReason"].present?
+      # Check for finish reason. Mirror it into the accumulated response JSON so
+      # update_model_completion (which digs candidates/0/finishReason) sees it -
+      # otherwise streamed completions would always persist a nil finish reason.
+      if candidate["finishReason"].present?
+        @finish_reason = candidate["finishReason"]
+        @response_json["candidates"][0]["finishReason"] = @finish_reason
+      end
 
       # Process content parts
       parts = candidate.dig("content", "parts")

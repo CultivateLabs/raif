@@ -42,7 +42,10 @@ class Raif::StreamingResponses::Anthropic
       @finish_reason = event.dig("delta", "stop_reason")
       @response_json["usage"]["output_tokens"] = event.dig("usage", "output_tokens")
     when "message_stop"
-      @finish_reason = "stop"
+      # message_stop carries no stop_reason of its own and always follows the message_delta
+      # that does - only default to the flush-sentinel when nothing was captured, so the
+      # real reason (e.g. "max_tokens") survives into current_response_json.
+      @finish_reason ||= "stop"
     when "error"
       error_details = event["error"]
       raise Raif::Errors::StreamingError.new(

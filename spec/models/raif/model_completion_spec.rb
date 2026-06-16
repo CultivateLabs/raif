@@ -25,6 +25,7 @@
 #  prompt_tokens                  :integer
 #  raw_response                   :text
 #  response_array                 :jsonb
+#  response_finish_reason         :string
 #  response_format                :integer          default("text"), not null
 #  response_format_parameter      :string
 #  response_tool_calls            :jsonb
@@ -409,6 +410,30 @@ RSpec.describe Raif::ModelCompletion, type: :model do
           expect(model_completion.total_cost).to be_nil
         end
       end
+    end
+  end
+
+  describe "#truncated?" do
+    Raif::ModelCompletion::TRUNCATED_FINISH_REASONS.each do |reason|
+      it "returns true for finish reason #{reason.inspect}" do
+        model_completion = described_class.new(response_finish_reason: reason)
+        expect(model_completion).to be_truncated
+      end
+    end
+
+    it "returns false for a normally completed response" do
+      model_completion = described_class.new(response_finish_reason: "end_turn")
+      expect(model_completion).not_to be_truncated
+    end
+
+    it "returns false for a content-filter stop, which is deliberately not treated as truncated" do
+      model_completion = described_class.new(response_finish_reason: "content_filter")
+      expect(model_completion).not_to be_truncated
+    end
+
+    it "returns false when no finish reason was recorded" do
+      model_completion = described_class.new(response_finish_reason: nil)
+      expect(model_completion).not_to be_truncated
     end
   end
 

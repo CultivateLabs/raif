@@ -13,6 +13,43 @@ RSpec.describe Raif::Llms::XAi, type: :model do
     allow(Raif.config).to receive(:x_ai_api_key){ ENV["X_AI_API_KEY"] }
   end
 
+  describe "#update_model_completion" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        llm_model_key: "x_ai_grok_4_3",
+        model_api_name: "grok-4.3"
+      )
+    end
+
+    def response_json_with_finish_reason(finish_reason)
+      {
+        "id" => "gen-123",
+        "choices" => [
+          {
+            "index" => 0,
+            "message" => { "role" => "assistant", "content" => "Hello" },
+            "finish_reason" => finish_reason
+          }
+        ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 5, "total_tokens" => 15 }
+      }
+    end
+
+    it "stores the finish reason and flags a length-limited response as truncated" do
+      llm.send(:update_model_completion, model_completion, response_json_with_finish_reason("length"))
+
+      expect(model_completion.response_finish_reason).to eq("length")
+      expect(model_completion).to be_truncated
+    end
+
+    it "does not flag a normally completed response as truncated" do
+      llm.send(:update_model_completion, model_completion, response_json_with_finish_reason("stop"))
+
+      expect(model_completion.response_finish_reason).to eq("stop")
+      expect(model_completion).not_to be_truncated
+    end
+  end
+
   describe "#chat" do
     context "when the response format is text" do
       it "makes a request to the xAI API and processes the text response", vcr: { cassette_name: "x_ai/text_response" } do

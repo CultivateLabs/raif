@@ -11,6 +11,41 @@ RSpec.describe Raif::Llms::Google, type: :model do
     allow(Raif.config).to receive(:google_api_key) { ENV["GOOGLE_AI_API_KEY"] }
   end
 
+  describe "#update_model_completion" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        llm_model_key: "google_gemini_2_5_flash",
+        model_api_name: "gemini-2.5-flash"
+      )
+    end
+
+    def response_json_with_finish_reason(finish_reason)
+      {
+        "candidates" => [
+          {
+            "content" => { "parts" => [{ "text" => "Hello" }] },
+            "finishReason" => finish_reason
+          }
+        ],
+        "usageMetadata" => { "promptTokenCount" => 10, "candidatesTokenCount" => 5, "totalTokenCount" => 15 }
+      }
+    end
+
+    it "stores the finish reason and flags a MAX_TOKENS response as truncated" do
+      llm.send(:update_model_completion, model_completion, response_json_with_finish_reason("MAX_TOKENS"))
+
+      expect(model_completion.response_finish_reason).to eq("MAX_TOKENS")
+      expect(model_completion).to be_truncated
+    end
+
+    it "does not flag a normally completed response as truncated" do
+      llm.send(:update_model_completion, model_completion, response_json_with_finish_reason("STOP"))
+
+      expect(model_completion.response_finish_reason).to eq("STOP")
+      expect(model_completion).not_to be_truncated
+    end
+  end
+
   describe "#chat" do
     context "when the response format is text" do
       it "makes a request to the Google API and processes the response", vcr: { cassette_name: "google/format_text" } do

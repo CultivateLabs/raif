@@ -63,6 +63,7 @@ private
       extract_text_response(response_json)
     end
 
+    model_completion.response_finish_reason = response_json&.dig("candidates", 0, "finishReason")
     model_completion.response_array = response_json&.dig("candidates", 0, "content", "parts")
     model_completion.response_tool_calls = extract_response_tool_calls(response_json)
     model_completion.citations = extract_citations(response_json)

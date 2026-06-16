@@ -9,6 +9,61 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
     allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
   end
 
+  describe "#update_model_completion" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        llm_model_key: "open_ai_responses_gpt_4o",
+        model_api_name: "gpt-4o"
+      )
+    end
+
+    it "stores the incomplete reason and flags a response that hit the max output token limit as truncated" do
+      response_json = {
+        "id" => "resp_123",
+        "status" => "incomplete",
+        "incomplete_details" => { "reason" => "max_output_tokens" },
+        "output" => [
+          {
+            "id" => "fc_123",
+            "type" => "function_call",
+            "status" => "incomplete",
+            "call_id" => "call_123",
+            "name" => "wikipedia_search",
+            "arguments" => "{\"query\":\"capital of Fra"
+          }
+        ],
+        "usage" => { "input_tokens" => 100, "output_tokens" => 32_768, "total_tokens" => 32_868 }
+      }
+
+      llm.send(:update_model_completion, model_completion, response_json)
+
+      expect(model_completion.response_finish_reason).to eq("max_output_tokens")
+      expect(model_completion).to be_truncated
+    end
+
+    it "stores the status for a completed response and does not flag it as truncated" do
+      response_json = {
+        "id" => "resp_123",
+        "status" => "completed",
+        "output" => [
+          {
+            "id" => "msg_123",
+            "type" => "message",
+            "status" => "completed",
+            "role" => "assistant",
+            "content" => [{ "type" => "output_text", "annotations" => [], "text" => "Hello" }]
+          }
+        ],
+        "usage" => { "input_tokens" => 10, "output_tokens" => 5, "total_tokens" => 15 }
+      }
+
+      llm.send(:update_model_completion, model_completion, response_json)
+
+      expect(model_completion.response_finish_reason).to eq("completed")
+      expect(model_completion).not_to be_truncated
+    end
+  end
+
   describe "#chat" do
     context "when the response format is text" do
       it "makes a request to the OpenAI Responses API and processes the response", vcr: { cassette_name: "open_ai_responses/format_text" } do
