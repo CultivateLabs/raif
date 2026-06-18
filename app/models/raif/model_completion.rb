@@ -111,6 +111,20 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     TRUNCATED_FINISH_REASONS.include?(response_finish_reason)
   end
 
+  # Admin-friendly summary of the tool calls this completion requested,
+  # e.g. "5: google_search_tool (4), web_search". Combines developer-managed calls
+  # (response_tool_calls) with provider-managed calls (provider_managed_tool_calls,
+  # e.g. OpenAI/Anthropic web search). nil when no tool calls were requested.
+  def tool_call_summary
+    names = Array(response_tool_calls).map { |call| call["name"] }
+    names += provider_managed_tool_calls.map { |call| call["tool_name"] }
+    names = names.compact
+    return if names.empty?
+
+    tally = names.tally.map { |name, count| count > 1 ? "#{name} (#{count})" : name }
+    "#{names.length}: #{tally.join(", ")}"
+  end
+
   # Scope to find completions that have response tool calls
   scope :with_response_tool_calls, -> { where_json_not_blank(:response_tool_calls) }
 

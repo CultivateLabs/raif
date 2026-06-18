@@ -165,6 +165,7 @@
               <th><%= t("raif.admin.common.created_at") %></th>
               <th><%= t("raif.admin.common.model") %></th>
               <th><%= t("raif.admin.common.total_tokens") %></th>
+              <th><%= t("raif.admin.common.tool_calls") %></th>
               <th><%= t("raif.admin.common.response") %></th>
             </tr>
           </thead>
@@ -175,6 +176,7 @@
                 <td><small class="text-muted"><%= model_completion.created_at.rfc822 %></small></td>
                 <td><%= model_completion.llm_model_key %></td>
                 <td><%= model_completion.total_tokens ? number_with_delimiter(model_completion.total_tokens) : "-" %></td>
+                <td><small class="text-muted"><%= model_completion.tool_call_summary || "-" %></small></td>
                 <td><small class="text-muted"><%= truncate(model_completion.raw_response, length: 100) %></small></td>
               </tr>
             <% end %>
