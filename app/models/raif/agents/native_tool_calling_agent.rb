@@ -57,8 +57,14 @@ module Raif
 
       def build_system_prompt
         step_two = if self.class.parallel_tool_calls
-          "Choose and invoke one or more tool/function calls based on that thought. You may make several " \
-            "independent tool calls in a single step; when a call depends on another's result, make them in separate steps."
+          limit = self.class.max_tool_calls_per_iteration
+          batch_phrase = if limit.present?
+            "up to #{limit} independent tool call#{"s" unless limit == 1}"
+          else
+            "several independent tool calls"
+          end
+          "Choose and invoke one or more tool/function calls based on that thought. You may make #{batch_phrase} " \
+            "in a single step; when a call depends on another's result, make them in separate steps."
         else
           "Choose and invoke exactly one tool/function call based on that thought."
         end
@@ -173,8 +179,13 @@ module Raif
         # Guard against pathological fan-out (and runaway context/cost) in a single step.
         max_calls = self.class.max_tool_calls_per_iteration
         if max_calls.present? && tool_calls.length > max_calls
-          error_content = "Error: Too many tool calls in a single step (received #{tool_calls.length}). " \
-            "Make at most #{max_calls} tool call#{"s" unless max_calls == 1} per step."
+          guidance = if max_calls == 1
+            "Make a single tool call per step; choose the most important one and defer the rest to later steps."
+          else
+            "You may make up to #{max_calls} independent tool calls per step; " \
+              "make the most important #{max_calls} now and defer the rest to a later step."
+          end
+          error_content = "Error: Too many tool calls in a single step (received #{tool_calls.length}). #{guidance}"
           reject_iteration!(error_content, assistant_response_message, required_tool:)
 
           return
