@@ -911,4 +911,40 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       ])
     end
   end
+
+  describe "#tool_call_summary" do
+    it "summarizes developer-managed tool calls with repeat counts" do
+      model_completion = described_class.new(
+        llm_model_key: "open_ai_gpt_4o",
+        model_api_name: "gpt-4o",
+        response_tool_calls: [
+          { "name" => "google_search_tool" },
+          { "name" => "google_search_tool" },
+          { "name" => "google_news_search_tool" }
+        ]
+      )
+
+      expect(model_completion.tool_call_summary).to eq("3: google_search_tool (2), google_news_search_tool")
+    end
+
+    it "includes provider-managed tool calls alongside developer-managed ones" do
+      model_completion = described_class.new(
+        llm_model_key: "anthropic_claude_3_5_haiku",
+        model_api_name: "claude-3-5-haiku-20241022",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_tool_calls: [{ "name" => "google_search_tool" }],
+        response_array: [
+          { "type" => "server_tool_use", "id" => "srvtoolu_1", "name" => "web_search", "input" => { "query" => "rails" } }
+        ]
+      )
+
+      expect(model_completion.tool_call_summary).to eq("2: google_search_tool, web_search")
+    end
+
+    it "returns nil when the completion made no tool calls" do
+      model_completion = described_class.new(llm_model_key: "open_ai_gpt_4o", model_api_name: "gpt-4o")
+
+      expect(model_completion.tool_call_summary).to be_nil
+    end
+  end
 end

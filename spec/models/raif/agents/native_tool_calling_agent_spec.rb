@@ -886,7 +886,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       agent.max_iterations = 2
       agent.run!
 
-      error_entry = agent.conversation_history.find { |e| e["role"] == "user" && e["content"].to_s.include?("at most 1 tool call") }
+      error_entry = agent.conversation_history.find { |e| e["role"] == "user" && e["content"].to_s.include?("Make a single tool call per step") }
       expect(error_entry).to be_present
       expect(agent.raif_model_tool_invocations.where(tool_type: "Raif::ModelTools::WikipediaSearch").count).to eq(0)
     end
@@ -957,6 +957,22 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         "Choose and invoke exactly one tool/function call based on that thought."
       )
       expect(agent.build_system_prompt).not_to include("you may make several independent tool calls")
+    end
+
+    it "states the per-step cap when max_tool_calls_per_iteration is set" do
+      allow(described_class).to receive(:max_tool_calls_per_iteration).and_return(6)
+
+      expect(agent.build_system_prompt).to include(
+        "You may make up to 6 independent tool calls in a single step"
+      )
+      expect(agent.build_system_prompt).not_to include("You may make several independent tool calls")
+    end
+
+    it "uses singular wording when the cap is 1" do
+      allow(described_class).to receive(:max_tool_calls_per_iteration).and_return(1)
+
+      expect(agent.build_system_prompt).to include("You may make up to 1 independent tool call in a single step")
+      expect(agent.build_system_prompt).not_to include("1 independent tool calls")
     end
   end
 

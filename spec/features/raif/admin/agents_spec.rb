@@ -217,5 +217,26 @@ RSpec.describe "Admin::Agents", type: :feature do
       click_link I18n.t("raif.admin.agents.show.back_to_agents")
       expect(page).to have_current_path(raif.admin_agents_path)
     end
+
+    it "surfaces the requested tool calls for each completion, including a rejected batch" do
+      Raif::ModelCompletion.create!(
+        source: agent,
+        llm_model_key: "open_ai_gpt_4o",
+        model_api_name: "gpt-4o",
+        response_format: "text",
+        raw_response: "batched several searches at once",
+        response_tool_calls: [
+          { "name" => "google_search_tool", "arguments" => {} },
+          { "name" => "google_search_tool", "arguments" => {} },
+          { "name" => "google_news_search_tool", "arguments" => {} }
+        ],
+        total_tokens: 42
+      )
+
+      visit raif.admin_agent_path(agent)
+
+      expect(page).to have_content(I18n.t("raif.admin.common.tool_calls"))
+      expect(page).to have_content("3: google_search_tool (2), google_news_search_tool")
+    end
   end
 end
