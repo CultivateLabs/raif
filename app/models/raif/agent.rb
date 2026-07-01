@@ -254,10 +254,27 @@ module Raif
     end
 
     def add_conversation_history_entry(entry)
-      entry_stringified = entry.stringify_keys
+      # Tool results carry arbitrary external content (fetched pages, search
+      # results) that can contain NUL bytes, which Postgres cannot store in a
+      # jsonb column. Strip them before persisting so a single poisoned tool
+      # result doesn't abort the whole agent run.
+      entry_stringified = strip_null_bytes(entry.stringify_keys)
       conversation_history << entry_stringified
       save!
       on_conversation_history_entry.call(entry_stringified) if on_conversation_history_entry.present?
+    end
+
+    def strip_null_bytes(value)
+      case value
+      when String
+        value.delete("\u0000")
+      when Hash
+        value.transform_values { |v| strip_null_bytes(v) }
+      when Array
+        value.map { |v| strip_null_bytes(v) }
+      else
+        value
+      end
     end
 
     def fail_run!(reason)
