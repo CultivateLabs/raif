@@ -99,4 +99,40 @@ RSpec.describe Raif::Agent, type: :model do
       expect(agent.model_tool_invocation_counts).to eq({})
     end
   end
+
+  describe "#add_conversation_history_entry" do
+    let(:agent) do
+      FB.create(
+        :raif_native_tool_calling_agent,
+        creator: creator,
+        system_prompt: "System prompt",
+        available_model_tools: [
+          "Raif::ModelTools::WikipediaSearch",
+          "Raif::ModelTools::ProviderManaged::WebSearch",
+        ]
+      )
+    end
+
+    # A NUL byte (e.g. from a corrupted scraped page) in a tool result would
+    # otherwise abort the save! with PG::UntranslatableCharacter, since
+    # Postgres cannot store NUL bytes in a jsonb column.
+    it "strips NUL bytes from string, nested hash, and array content before persisting to the jsonb column" do
+      nul = 0.chr
+      entry = {
+        "type" => "tool_call_result",
+        "name" => "fetch_url",
+        "result" => {
+          "content" => "announced later in 2026 in a communiqu#{nul}#{nul}",
+          "links" => ["https://example.com/a#{nul}b", "https://example.com/c"]
+        }
+      }
+
+      expect { agent.send(:add_conversation_history_entry, entry) }.not_to raise_error
+
+      persisted = agent.reload.conversation_history.last
+      expect(persisted["result"]["content"]).to eq("announced later in 2026 in a communiqu")
+      expect(persisted["result"]["links"]).to eq(["https://example.com/ab", "https://example.com/c"])
+      expect(agent.conversation_history.to_json).not_to include(nul)
+    end
+  end
 end
