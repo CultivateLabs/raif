@@ -42,6 +42,13 @@ module Raif
   def self.default_llms
     open_ai_models = [
       {
+        key: :open_ai_gpt_5_5,
+        api_name: "gpt-5.5",
+        input_token_cost: 5.0 / 1_000_000,
+        output_token_cost: 30.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
         key: :open_ai_gpt_5_4,
         api_name: "gpt-5.4",
         input_token_cost: 2.5 / 1_000_000,
@@ -233,10 +240,54 @@ module Raif
       model_provider_settings: { supports_temperature: false, supports_structured_outputs: false },
     }
 
+    open_ai_responses_models << {
+      key: :open_ai_responses_gpt_5_5_pro,
+      api_name: "gpt-5.5-pro",
+      input_token_cost: 30.0 / 1_000_000,
+      output_token_cost: 180.0 / 1_000_000,
+      model_provider_settings: { supports_temperature: false },
+    }
+
     {
       Raif::Llms::OpenAiCompletions => open_ai_models,
       Raif::Llms::OpenAiResponses => open_ai_responses_models,
       Raif::Llms::Anthropic => [
+        {
+          key: :anthropic_claude_5_fable,
+          api_name: "claude-fable-5",
+          input_token_cost: 10.0 / 1_000_000,
+          output_token_cost: 50.0 / 1_000_000,
+          max_completion_tokens: 128_000,
+          model_provider_settings: { supports_temperature: false, supports_structured_outputs: true },
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
+          key: :anthropic_claude_4_8_opus,
+          api_name: "claude-opus-4-8",
+          input_token_cost: 5.0 / 1_000_000,
+          output_token_cost: 25.0 / 1_000_000,
+          max_completion_tokens: 128_000,
+          model_provider_settings: { supports_temperature: false, supports_structured_outputs: true },
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
+        {
+          key: :anthropic_claude_5_sonnet,
+          api_name: "claude-sonnet-5",
+          input_token_cost: 3.0 / 1_000_000,
+          output_token_cost: 15.0 / 1_000_000,
+          max_completion_tokens: 128_000,
+          model_provider_settings: { supports_temperature: false, supports_structured_outputs: true },
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
         {
           key: :anthropic_claude_4_7_opus,
           api_name: "claude-opus-4-7",
@@ -385,6 +436,30 @@ module Raif
       ],
       Raif::Llms::Bedrock => [
         {
+          key: :bedrock_claude_5_fable,
+          api_name: "anthropic.claude-fable-5",
+          input_token_cost: 0.010 / 1000,
+          output_token_cost: 0.050 / 1000,
+          max_completion_tokens: 128_000,
+          model_provider_settings: { supports_structured_outputs: true }
+        },
+        {
+          key: :bedrock_claude_4_8_opus,
+          api_name: "anthropic.claude-opus-4-8",
+          input_token_cost: 0.005 / 1000,
+          output_token_cost: 0.025 / 1000,
+          max_completion_tokens: 128_000,
+          model_provider_settings: { supports_structured_outputs: true }
+        },
+        {
+          key: :bedrock_claude_5_sonnet,
+          api_name: "anthropic.claude-sonnet-5",
+          input_token_cost: 0.003 / 1000,
+          output_token_cost: 0.015 / 1000,
+          max_completion_tokens: 128_000,
+          model_provider_settings: { supports_structured_outputs: true }
+        },
+        {
           key: :bedrock_claude_4_7_opus,
           api_name: "anthropic.claude-opus-4-7",
           input_token_cost: 0.005 / 1000,
@@ -532,6 +607,24 @@ module Raif
       ],
       Raif::Llms::OpenRouter => [
         {
+          key: :open_router_claude_5_fable,
+          api_name: "anthropic/claude-fable-5",
+          input_token_cost: 10.0 / 1_000_000,
+          output_token_cost: 50.0 / 1_000_000,
+        },
+        {
+          key: :open_router_claude_4_8_opus,
+          api_name: "anthropic/claude-opus-4.8",
+          input_token_cost: 5.0 / 1_000_000,
+          output_token_cost: 25.0 / 1_000_000,
+        },
+        {
+          key: :open_router_claude_5_sonnet,
+          api_name: "anthropic/claude-sonnet-5",
+          input_token_cost: 3.0 / 1_000_000,
+          output_token_cost: 15.0 / 1_000_000,
+        },
+        {
           key: :open_router_claude_3_7_sonnet,
           api_name: "anthropic/claude-3.7-sonnet",
           input_token_cost: 3.0 / 1_000_000,
@@ -566,6 +659,12 @@ module Raif
           api_name: "google/gemini-2.5-flash",
           input_token_cost: 0.3 / 1_000_000,
           output_token_cost: 2.5 / 1_000_000,
+        },
+        {
+          key: :open_router_gemini_3_5_flash,
+          api_name: "google/gemini-3.5-flash",
+          input_token_cost: 1.5 / 1_000_000,
+          output_token_cost: 9.0 / 1_000_000,
         },
         {
           key: :open_router_gemini_2_5_pro,
@@ -715,6 +814,16 @@ module Raif
         },
       ],
       Raif::Llms::Google => [
+        {
+          key: :google_gemini_3_5_flash,
+          api_name: "gemini-3.5-flash",
+          input_token_cost: 1.5 / 1_000_000,
+          output_token_cost: 9.0 / 1_000_000,
+          supported_provider_managed_tools: [
+            Raif::ModelTools::ProviderManaged::WebSearch,
+            Raif::ModelTools::ProviderManaged::CodeExecution
+          ]
+        },
         {
           key: :google_gemini_3_1_pro,
           api_name: "gemini-3.1-pro-preview",

@@ -64,8 +64,11 @@ en:
       anthropic_claude_4_6_opus: Anthropic Claude 4.6 Opus
       anthropic_claude_4_6_sonnet: Anthropic Claude 4.6 Sonnet
       anthropic_claude_4_7_opus: Anthropic Claude 4.7 Opus
+      anthropic_claude_4_8_opus: Anthropic Claude 4.8 Opus
       anthropic_claude_4_opus: Anthropic Claude 4 Opus
       anthropic_claude_4_sonnet: Anthropic Claude 4 Sonnet
+      anthropic_claude_5_fable: Anthropic Claude Fable 5
+      anthropic_claude_5_sonnet: Anthropic Claude 5 Sonnet
       bedrock_amazon_nova_lite: Amazon Nova Lite (via AWS Bedrock)
       bedrock_amazon_nova_micro: Amazon Nova Micro (via AWS Bedrock)
       bedrock_amazon_nova_pro: Amazon Nova Pro (via AWS Bedrock)
@@ -80,8 +83,11 @@ en:
       bedrock_claude_4_6_opus: Anthropic Claude 4.6 Opus (via AWS Bedrock)
       bedrock_claude_4_6_sonnet: Anthropic Claude 4.6 Sonnet (via AWS Bedrock)
       bedrock_claude_4_7_opus: Anthropic Claude 4.7 Opus (via AWS Bedrock)
+      bedrock_claude_4_8_opus: Anthropic Claude 4.8 Opus (via AWS Bedrock)
       bedrock_claude_4_opus: Anthropic Claude 4 Opus (via AWS Bedrock)
       bedrock_claude_4_sonnet: Anthropic Claude 4 Sonnet (via AWS Bedrock)
+      bedrock_claude_5_fable: Anthropic Claude Fable 5 (via AWS Bedrock)
+      bedrock_claude_5_sonnet: Anthropic Claude 5 Sonnet (via AWS Bedrock)
       bedrock_deepseek_r1: DeepSeek R1 (via AWS Bedrock)
       bedrock_deepseek_v3_2: DeepSeek v3.2 (via AWS Bedrock)
       bedrock_gpt_oss_120b: OpenAI GPT-OSS 120B (via AWS Bedrock)
@@ -92,6 +98,7 @@ en:
       google_gemini_3_0_pro: Google Gemini 3 Pro
       google_gemini_3_1_flash_lite: Google Gemini 3.1 Flash-Lite
       google_gemini_3_1_pro: Google Gemini 3.1 Pro
+      google_gemini_3_5_flash: Google Gemini 3.5 Flash
       open_ai_gpt_3_5_turbo: OpenAI GPT-3.5 Turbo
       open_ai_gpt_4_1: OpenAI GPT-4.1
       open_ai_gpt_4_1_mini: OpenAI GPT-4.1 Mini
@@ -105,6 +112,7 @@ en:
       open_ai_gpt_5_4: OpenAI GPT-5.4
       open_ai_gpt_5_4_mini: OpenAI GPT-5.4 Mini
       open_ai_gpt_5_4_nano: OpenAI GPT-5.4 Nano
+      open_ai_gpt_5_5: OpenAI GPT-5.5
       open_ai_gpt_5_mini: OpenAI GPT-5 Mini
       open_ai_gpt_5_nano: OpenAI GPT-5 Nano
       open_ai_o1: OpenAI o1
@@ -127,6 +135,8 @@ en:
       open_ai_responses_gpt_5_4_mini: OpenAI GPT-5.4 Mini (Responses API)
       open_ai_responses_gpt_5_4_nano: OpenAI GPT-5.4 Nano (Responses API)
       open_ai_responses_gpt_5_4_pro: OpenAI GPT-5.4 Pro (Responses API)
+      open_ai_responses_gpt_5_5: OpenAI GPT-5.5 (Responses API)
+      open_ai_responses_gpt_5_5_pro: OpenAI GPT-5.5 Pro (Responses API)
       open_ai_responses_gpt_5_mini: OpenAI GPT-5 Mini (Responses API)
       open_ai_responses_gpt_5_nano: OpenAI GPT-5 Nano (Responses API)
       open_ai_responses_gpt_5_pro: OpenAI GPT-5 Pro (Responses API)
@@ -138,6 +148,9 @@ en:
       open_ai_responses_o3_pro: OpenAI o3 Pro (Responses API)
       open_ai_responses_o4_mini: OpenAI o4 Mini (Responses API)
       open_router_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via OpenRouter)
+      open_router_claude_4_8_opus: Anthropic Claude 4.8 Opus (via OpenRouter)
+      open_router_claude_5_fable: Anthropic Claude Fable 5 (via OpenRouter)
+      open_router_claude_5_sonnet: Anthropic Claude 5 Sonnet (via OpenRouter)
       open_router_deepseek_chat_v3: DeepSeek Chat v3 (via OpenRouter)
       open_router_deepseek_v3_1: DeepSeek v3.1 (via OpenRouter)
       open_router_deepseek_v3_2: DeepSeek v3.2 (via OpenRouter)
@@ -146,6 +159,7 @@ en:
       open_router_gemini_2_5_pro: Gemini 2.5 Pro (via OpenRouter)
       open_router_gemini_3_1_flash_lite_preview: Gemini 3.1 Flash-Lite Preview (via OpenRouter)
       open_router_gemini_3_1_pro_preview: Gemini 3.1 Pro Preview (via OpenRouter)
+      open_router_gemini_3_5_flash: Gemini 3.5 Flash (via OpenRouter)
       open_router_gemini_3_pro_preview: Gemini 3 Pro Preview (via OpenRouter)
       open_router_google_gemma_4_31b_it: Google Gemma 4 31B IT (via OpenRouter)
       open_router_grok_4: Grok 4 (via OpenRouter)
