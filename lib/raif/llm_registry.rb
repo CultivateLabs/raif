@@ -440,24 +440,21 @@ module Raif
           api_name: "anthropic.claude-fable-5",
           input_token_cost: 0.010 / 1000,
           output_token_cost: 0.050 / 1000,
-          max_completion_tokens: 128_000,
-          model_provider_settings: { supports_structured_outputs: true }
+          max_completion_tokens: 128_000
         },
         {
           key: :bedrock_claude_4_8_opus,
           api_name: "anthropic.claude-opus-4-8",
           input_token_cost: 0.005 / 1000,
           output_token_cost: 0.025 / 1000,
-          max_completion_tokens: 128_000,
-          model_provider_settings: { supports_structured_outputs: true }
+          max_completion_tokens: 128_000
         },
         {
           key: :bedrock_claude_5_sonnet,
           api_name: "anthropic.claude-sonnet-5",
           input_token_cost: 0.003 / 1000,
           output_token_cost: 0.015 / 1000,
-          max_completion_tokens: 128_000,
-          model_provider_settings: { supports_structured_outputs: true }
+          max_completion_tokens: 128_000
         },
         {
           key: :bedrock_claude_4_7_opus,
