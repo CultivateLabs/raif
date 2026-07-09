@@ -371,68 +371,6 @@ module Raif
             Raif::ModelTools::ProviderManaged::CodeExecution
           ]
         },
-        {
-          key: :anthropic_claude_4_opus,
-          api_name: "claude-opus-4-20250514",
-          input_token_cost: 15.0 / 1_000_000,
-          output_token_cost: 75.0 / 1_000_000,
-          max_completion_tokens: 32_000,
-          supported_provider_managed_tools: [
-            Raif::ModelTools::ProviderManaged::WebSearch,
-            Raif::ModelTools::ProviderManaged::CodeExecution
-          ]
-        },
-        {
-          key: :anthropic_claude_4_sonnet,
-          api_name: "claude-sonnet-4-20250514",
-          input_token_cost: 3.0 / 1_000_000,
-          output_token_cost: 15.0 / 1_000_000,
-          max_completion_tokens: 64_000,
-          supported_provider_managed_tools: [
-            Raif::ModelTools::ProviderManaged::WebSearch,
-            Raif::ModelTools::ProviderManaged::CodeExecution
-          ]
-        },
-        {
-          key: :anthropic_claude_3_7_sonnet,
-          api_name: "claude-3-7-sonnet-latest",
-          input_token_cost: 3.0 / 1_000_000,
-          output_token_cost: 15.0 / 1_000_000,
-          max_completion_tokens: 8192,
-          supported_provider_managed_tools: [
-            Raif::ModelTools::ProviderManaged::WebSearch,
-            Raif::ModelTools::ProviderManaged::CodeExecution
-          ]
-        },
-        {
-          key: :anthropic_claude_3_5_sonnet,
-          api_name: "claude-3-5-sonnet-latest",
-          input_token_cost: 3.0 / 1_000_000,
-          output_token_cost: 15.0 / 1_000_000,
-          max_completion_tokens: 8192,
-          supported_provider_managed_tools: [
-            Raif::ModelTools::ProviderManaged::WebSearch,
-            Raif::ModelTools::ProviderManaged::CodeExecution
-          ]
-        },
-        {
-          key: :anthropic_claude_3_5_haiku,
-          api_name: "claude-3-5-haiku-latest",
-          input_token_cost: 0.8 / 1_000_000,
-          output_token_cost: 4.0 / 1_000_000,
-          max_completion_tokens: 8192,
-          supported_provider_managed_tools: [
-            Raif::ModelTools::ProviderManaged::WebSearch,
-            Raif::ModelTools::ProviderManaged::CodeExecution
-          ]
-        },
-        {
-          key: :anthropic_claude_3_opus,
-          api_name: "claude-3-opus-latest",
-          input_token_cost: 15.0 / 1_000_000,
-          output_token_cost: 75.0 / 1_000_000,
-          max_completion_tokens: 4096
-        },
       ],
       Raif::Llms::Bedrock => [
         {
@@ -518,41 +456,6 @@ module Raif
           max_completion_tokens: 64_000
         },
         {
-          key: :bedrock_claude_4_opus,
-          api_name: "anthropic.claude-opus-4-20250514-v1:0",
-          input_token_cost: 0.015 / 1000,
-          output_token_cost: 0.075 / 1000,
-          max_completion_tokens: 32_000
-        },
-        {
-          key: :bedrock_claude_3_7_sonnet,
-          api_name: "anthropic.claude-3-7-sonnet-20250219-v1:0",
-          input_token_cost: 0.003 / 1000,
-          output_token_cost: 0.015 / 1000,
-          max_completion_tokens: 8192
-        },
-        {
-          key: :bedrock_claude_3_5_sonnet,
-          api_name: "anthropic.claude-3-5-sonnet-20241022-v2:0",
-          input_token_cost: 0.003 / 1000,
-          output_token_cost: 0.015 / 1000,
-          max_completion_tokens: 8192
-        },
-        {
-          key: :bedrock_claude_3_5_haiku,
-          api_name: "anthropic.claude-3-5-haiku-20241022-v1:0",
-          input_token_cost: 0.0008 / 1000,
-          output_token_cost: 0.004 / 1000,
-          max_completion_tokens: 8192
-        },
-        {
-          key: :bedrock_claude_3_opus,
-          api_name: "anthropic.claude-3-opus-20240229-v1:0",
-          input_token_cost: 0.015 / 1000,
-          output_token_cost: 0.075 / 1000,
-          max_completion_tokens: 4096
-        },
-        {
           key: :bedrock_amazon_nova_micro,
           api_name: "amazon.nova-micro-v1:0",
           input_token_cost: 0.0000115 / 1000,
@@ -618,12 +521,6 @@ module Raif
         {
           key: :open_router_claude_5_sonnet,
           api_name: "anthropic/claude-sonnet-5",
-          input_token_cost: 3.0 / 1_000_000,
-          output_token_cost: 15.0 / 1_000_000,
-        },
-        {
-          key: :open_router_claude_3_7_sonnet,
-          api_name: "anthropic/claude-3.7-sonnet",
           input_token_cost: 3.0 / 1_000_000,
           output_token_cost: 15.0 / 1_000_000,
         },

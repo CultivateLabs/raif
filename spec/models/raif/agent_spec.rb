@@ -58,8 +58,8 @@ RSpec.describe Raif::Agent, type: :model do
       FB.create(
         :raif_model_completion,
         source: agent,
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-20241022",
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5",
         available_model_tools: ["Raif::ModelTools::ProviderManaged::WebSearch"],
         response_array: [
           { "type" => "server_tool_use", "id" => "srvtoolu_1", "name" => "web_search", "input" => { "query" => "q1" } },
@@ -70,8 +70,8 @@ RSpec.describe Raif::Agent, type: :model do
       FB.create(
         :raif_model_completion,
         source: agent,
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-20241022",
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5",
         available_model_tools: ["Raif::ModelTools::ProviderManaged::WebSearch"],
         response_array: [
           { "type" => "server_tool_use", "id" => "srvtoolu_3", "name" => "web_search", "input" => { "query" => "q3" } },
@@ -88,8 +88,8 @@ RSpec.describe Raif::Agent, type: :model do
       FB.create(
         :raif_model_completion,
         source: agent,
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-20241022",
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5",
         available_model_tools: [],
         response_array: [
           { "type" => "server_tool_use", "id" => "srvtoolu_1", "name" => "web_search", "input" => { "query" => "q1" } },

@@ -2,14 +2,14 @@
 http_interactions:
 - request:
     method: post
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2:0/converse-stream
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-5/converse-stream
     body:
       encoding: UTF-8
       string: '{"messages":[{"role":"user","content":[{"text":"Can you you tell me
         a joke? Respond in json."}]}],"system":[{"text":"You are a helpful assistant
         who specializes in telling jokes. Your response should be a properly formatted
         JSON object containing a single `joke` key and a single `answer` key. Do not
-        include any other text in your response outside the JSON object."}],"inferenceConfig":{"maxTokens":8192}}'
+        include any other text in your response outside the JSON object."}],"inferenceConfig":{"maxTokens":128000}}'
     headers:
       Accept-Encoding:
       - ''

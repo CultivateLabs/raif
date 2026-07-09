@@ -447,8 +447,8 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
           system_prompt: "You are a helpful assistant.",
-          llm_model_key: "open_router_claude_3_7_sonnet",
-          model_api_name: "anthropic/claude-3.7-sonnet",
+          llm_model_key: "open_router_claude_5_sonnet",
+          model_api_name: "anthropic/claude-sonnet-5",
           temperature: 0.5
         )
       end
@@ -456,7 +456,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       it "builds the correct parameters with system prompt" do
         params = llm.send(:build_request_parameters, model_completion)
 
-        expect(params[:model]).to eq("anthropic/claude-3.7-sonnet")
+        expect(params[:model]).to eq("anthropic/claude-sonnet-5")
         expect(params[:temperature]).to eq(0.5)
         expect(params[:messages].first["role"]).to eq("system")
         expect(params[:messages].first["content"]).to eq("You are a helpful assistant.")
@@ -470,8 +470,8 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "I need information" }],
-          llm_model_key: "open_router_claude_3_7_sonnet",
-          model_api_name: "anthropic/claude-3.7-sonnet",
+          llm_model_key: "open_router_claude_5_sonnet",
+          model_api_name: "anthropic/claude-sonnet-5",
           available_model_tools: ["Raif::TestModelTool"]
         )
       end
@@ -495,8 +495,8 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Tell me a joke" }],
-          llm_model_key: "open_router_claude_3_7_sonnet",
-          model_api_name: "anthropic/claude-3.7-sonnet",
+          llm_model_key: "open_router_claude_5_sonnet",
+          model_api_name: "anthropic/claude-sonnet-5",
           response_format: "json",
           source: test_task
         )
@@ -559,8 +559,8 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Tell me a joke" }],
-          llm_model_key: "open_router_claude_3_7_sonnet",
-          model_api_name: "anthropic/claude-3.7-sonnet",
+          llm_model_key: "open_router_claude_5_sonnet",
+          model_api_name: "anthropic/claude-sonnet-5",
           response_format: "json"
         )
       end

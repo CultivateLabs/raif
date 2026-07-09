@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::Anthropic, type: :model do
-  let(:llm){ Raif.llm(:anthropic_claude_3_5_haiku) }
+  let(:llm){ Raif.llm(:anthropic_claude_4_1_opus) }
 
   let(:stubs) { Faraday::Adapter::Test::Stubs.new }
   let(:test_connection) do
@@ -22,8 +22,8 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
   describe "#update_model_completion" do
     let(:model_completion) do
       Raif::ModelCompletion.new(
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-latest"
+        llm_model_key: "anthropic_claude_4_1_opus",
+        model_api_name: "claude-opus-4-1"
       )
     end
 
@@ -61,8 +61,8 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect(model_completion.completion_tokens).to eq(20)
         expect(model_completion.prompt_tokens).to eq(14)
         expect(model_completion.total_tokens).to eq(34)
-        expect(model_completion.llm_model_key).to eq("anthropic_claude_3_5_haiku")
-        expect(model_completion.model_api_name).to eq("claude-3-5-haiku-latest")
+        expect(model_completion.llm_model_key).to eq("anthropic_claude_4_1_opus")
+        expect(model_completion.model_api_name).to eq("claude-opus-4-1")
         expect(model_completion.response_format).to eq("text")
         expect(model_completion.temperature).to eq(0.7)
         expect(model_completion.system_prompt).to eq("You are a helpful assistant.")
@@ -86,8 +86,8 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect(model_completion.completion_tokens).to eq(23)
         expect(model_completion.prompt_tokens).to eq(35)
         expect(model_completion.total_tokens).to eq(58)
-        expect(model_completion.llm_model_key).to eq("anthropic_claude_3_5_haiku")
-        expect(model_completion.model_api_name).to eq("claude-3-5-haiku-latest")
+        expect(model_completion.llm_model_key).to eq("anthropic_claude_4_1_opus")
+        expect(model_completion.model_api_name).to eq("claude-opus-4-1")
         expect(model_completion.response_format).to eq("json")
         expect(model_completion.response_id).to eq("msg_abc123")
         expect(model_completion.response_array).to eq([{ "type" => "text", "text" => "{\n    \"name\": \"John Doe\",\n    \"age\": 35\n}" }])
@@ -486,8 +486,8 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     let(:model_completion) do
       Raif::ModelCompletion.new(
         messages: [{ role: "user", content: "Hello" }],
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-latest",
+        llm_model_key: "anthropic_claude_4_1_opus",
+        model_api_name: "claude-opus-4-1",
         available_model_tools: available_model_tools,
         response_format: response_format,
         source: source
@@ -887,8 +887,8 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     let(:model_completion) do
       Raif::ModelCompletion.new(
         messages: [{ role: "user", content: "Hello" }],
-        llm_model_key: "anthropic_claude_4_sonnet",
-        model_api_name: "claude-sonnet-4-20250514",
+        llm_model_key: "anthropic_claude_4_5_sonnet",
+        model_api_name: "claude-sonnet-4-5",
         temperature: 0.8,
         response_format: "text",
         system_prompt: "You are a helpful assistant"
@@ -956,12 +956,12 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     end
 
     context "with a json_response_schema but a non-supporting model" do
-      let(:llm){ Raif.llm(:anthropic_claude_3_5_haiku) }
+      let(:llm){ Raif.llm(:anthropic_claude_4_1_opus) }
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Tell me a joke" }],
-          llm_model_key: "anthropic_claude_3_5_haiku",
-          model_api_name: "claude-3-5-haiku-latest",
+          llm_model_key: "anthropic_claude_4_1_opus",
+          model_api_name: "claude-opus-4-1",
           response_format: "json",
           source: test_task
         )
@@ -1023,8 +1023,8 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     let(:model_completion) do
       Raif::ModelCompletion.new(
         messages: [{ role: "user", content: "Hello" }],
-        llm_model_key: "anthropic_claude_4_sonnet",
-        model_api_name: "claude-sonnet-4-20250514",
+        llm_model_key: "anthropic_claude_4_5_sonnet",
+        model_api_name: "claude-sonnet-4-5",
         temperature: 0.8,
         response_format: "text",
         system_prompt: "You are a helpful assistant",

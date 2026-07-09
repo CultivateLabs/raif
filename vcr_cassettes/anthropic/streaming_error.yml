@@ -5,8 +5,8 @@ http_interactions:
     uri: https://api.anthropic.com/v1/messages
     body:
       encoding: UTF-8
-      string: '{"model":"claude-3-5-haiku-latest","messages":[{"role":"user","content":[{"type":"text","text":"trigger
-        error"}]}],"temperature":0.7,"max_tokens":8192,"stream":true}'
+      string: '{"model":"claude-opus-4-1","messages":[{"role":"user","content":[{"type":"text","text":"trigger
+        error"}]}],"temperature":0.7,"max_tokens":32000,"stream":true}'
     headers:
       Anthropic-Version:
       - '2023-06-01'

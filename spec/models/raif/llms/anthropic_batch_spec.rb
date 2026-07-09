@@ -3,13 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::Anthropic, "batch inference" do
-  let(:llm) { Raif.llm(:anthropic_claude_3_5_haiku) }
+  let(:llm) { Raif.llm(:anthropic_claude_4_5_haiku) }
   let(:creator) { FB.build(:raif_test_user) }
   let(:batch) do
     FB.create(
       :raif_model_completion_batch_anthropic,
-      llm_model_key: "anthropic_claude_3_5_haiku",
-      model_api_name: "claude-3-5-haiku-latest"
+      llm_model_key: "anthropic_claude_4_5_haiku",
+      model_api_name: "claude-haiku-4-5"
     )
   end
 
@@ -58,7 +58,7 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
         batch: batch,
         batch_custom_id: "task_1",
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
     end
 
@@ -67,7 +67,7 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
         batch: batch,
         batch_custom_id: "task_2",
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
     end
 
@@ -105,7 +105,7 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       expect(sent_body["requests"].map { |r| r["custom_id"] }).to contain_exactly("task_1", "task_2")
 
       first = sent_body["requests"].first
-      expect(first["params"]).to include("model" => "claude-3-5-haiku-latest")
+      expect(first["params"]).to include("model" => "claude-haiku-4-5")
       expect(first["params"]["messages"]).to eq([
         { "role" => "user", "content" => [{ "type" => "text", "text" => "Tell me a joke" }] }
       ])
@@ -251,7 +251,7 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
         batch: batch,
         batch_custom_id: "win",
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
     end
 
@@ -260,7 +260,7 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
         batch: batch,
         batch_custom_id: "lose",
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
     end
 
@@ -314,7 +314,7 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
 
       # raif_model_completions costs are stored as decimal(10,6); compare with
       # tolerance loose enough to absorb the storage rounding for very small per-token costs.
-      llm_config = Raif.llm_config(:anthropic_claude_3_5_haiku)
+      llm_config = Raif.llm_config(:anthropic_claude_4_5_haiku)
       expected_prompt_cost = (llm_config[:input_token_cost] * 17) * 0.5
       expected_output_cost = (llm_config[:output_token_cost] * 12) * 0.5
       expect(win_mc.prompt_token_cost.to_f).to be_within(1e-6).of(expected_prompt_cost.to_f)

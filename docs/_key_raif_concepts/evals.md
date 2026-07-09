@@ -392,7 +392,7 @@ You can configure the LLM model used for judging in your initializer:
 ```ruby
 Raif.configure do |config|
   # Use a specific model for LLM-as-judge
-  config.evals_default_llm_judge_model_key = :anthropic_claude_3_5_sonnet
+  config.evals_default_llm_judge_model_key = :anthropic_claude_5_sonnet
 end
 ```
 
@@ -403,7 +403,7 @@ expect_llm_judge_passes(
   task.parsed_response,
   criteria: "Appropriate for the target audience",
   additional_context: "The user is a beginner programmer with no Ruby experience",
-  llm_judge_model_key: :anthropic_claude_3_5_sonnet
+  llm_judge_model_key: :anthropic_claude_5_sonnet
 )
 ```
 
@@ -604,7 +604,7 @@ end
 Raif defaults to using `Raif.config.default_llm_model_key` for LLM API calls. You can override this setting via the `RAIF_DEFAULT_LLM_MODEL_KEY` environment variable.
 
 ```bash
-RAIF_DEFAULT_LLM_MODEL_KEY=anthropic_claude_4_sonnet bundle exec raif evals
+RAIF_DEFAULT_LLM_MODEL_KEY=anthropic_claude_5_sonnet bundle exec raif evals
 ```
 
 # Verbose Output

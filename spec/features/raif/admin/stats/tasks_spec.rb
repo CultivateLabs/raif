@@ -7,7 +7,7 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
 
   describe "index page" do
     # Create tasks of different types with explicit llm_model_key values
-    let!(:task1) { FB.create(:raif_test_task, creator: creator, llm_model_key: "anthropic_claude_3_7_sonnet", created_at: 12.hours.ago) }
+    let!(:task1) { FB.create(:raif_test_task, creator: creator, llm_model_key: "anthropic_claude_4_5_sonnet", created_at: 12.hours.ago) }
     let!(:task2) { FB.create(:raif_test_task, :completed, creator: creator, llm_model_key: "open_ai_gpt_4o", created_at: 12.hours.ago) }
     let!(:task3) { FB.create(:raif_test_task, creator: creator, llm_model_key: "open_ai_gpt_4o", created_at: 12.hours.ago) }
 
@@ -15,8 +15,8 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
     let!(:model_completion1) do
       FB.create(
         :raif_model_completion,
-        llm_model_key: "anthropic_claude_3_7_sonnet",
-        model_api_name: "claude-3-7-sonnet-latest",
+        llm_model_key: "anthropic_claude_4_5_sonnet",
+        model_api_name: "claude-sonnet-4-5",
         source: task1,
         prompt_tokens: 1000,
         completion_tokens: 500,
@@ -116,7 +116,7 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
 
       # Should show separate rows for each model
       within("table tbody") do
-        expect(page).to have_content("anthropic_claude_3_7_sonnet")
+        expect(page).to have_content("anthropic_claude_4_5_sonnet")
         expect(page).to have_content("open_ai_gpt_4o")
       end
 

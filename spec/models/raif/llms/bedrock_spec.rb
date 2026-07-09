@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::Bedrock, type: :model do
-  let(:llm){ Raif.llm(:bedrock_claude_3_5_sonnet) }
+  let(:llm){ Raif.llm(:bedrock_claude_5_sonnet) }
 
   before do
     allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
@@ -22,8 +22,8 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
   describe "#update_model_completion" do
     let(:model_completion) do
       Raif::ModelCompletion.new(
-        llm_model_key: "bedrock_claude_3_5_sonnet",
-        model_api_name: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        llm_model_key: "bedrock_claude_5_sonnet",
+        model_api_name: "anthropic.claude-sonnet-5"
       )
     end
 
@@ -63,8 +63,8 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         expect(model_completion.completion_tokens).to eq(12)
         expect(model_completion.prompt_tokens).to eq(14)
         expect(model_completion.total_tokens).to eq(26)
-        expect(model_completion.llm_model_key).to eq("bedrock_claude_3_5_sonnet")
-        expect(model_completion.model_api_name).to eq("us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+        expect(model_completion.llm_model_key).to eq("bedrock_claude_5_sonnet")
+        expect(model_completion.model_api_name).to eq("us.anthropic.claude-sonnet-5")
         expect(model_completion.response_format).to eq("text")
         expect(model_completion.temperature).to eq(0.7)
         expect(model_completion.system_prompt).to eq("You are a helpful assistant.")
@@ -85,8 +85,8 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         expect(model_completion.completion_tokens).to eq(15)
         expect(model_completion.prompt_tokens).to eq(35)
         expect(model_completion.total_tokens).to eq(50)
-        expect(model_completion.llm_model_key).to eq("bedrock_claude_3_5_sonnet")
-        expect(model_completion.model_api_name).to eq("us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+        expect(model_completion.llm_model_key).to eq("bedrock_claude_5_sonnet")
+        expect(model_completion.model_api_name).to eq("us.anthropic.claude-sonnet-5")
         expect(model_completion.response_format).to eq("json")
         expect(model_completion.response_id).to eq(nil)
         expect(model_completion.response_array).to eq([{ "text" => "{\"name\": \"John\", \"age\": 25}" }])
@@ -297,14 +297,14 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       Raif::ModelCompletion.new(
         messages:,
         system_prompt: "You are a helpful assistant.",
-        llm_model_key: "bedrock_claude_3_5_sonnet",
-        model_api_name: "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+        llm_model_key: "bedrock_claude_5_sonnet",
+        model_api_name: "us.anthropic.claude-sonnet-5"
       )
     end
 
     it "builds the correct parameters" do
       parameters = llm.send(:build_request_parameters, model_completion)
-      expect(parameters[:model_id]).to eq("us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+      expect(parameters[:model_id]).to eq("us.anthropic.claude-sonnet-5")
       expect(parameters[:inference_config][:max_tokens]).to eq(8192)
 
       # It replaces the tmp_base64_data with bytes
@@ -340,8 +340,8 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     it "prefixes non-gpt-oss model ids when a prefix is configured" do
       allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return("us")
 
-      resolved = llm.send(:resolve_model_api_name, "anthropic.claude-3-5-sonnet-20241022-v2:0")
-      expect(resolved).to eq("us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+      resolved = llm.send(:resolve_model_api_name, "anthropic.claude-sonnet-5")
+      expect(resolved).to eq("us.anthropic.claude-sonnet-5")
     end
 
     it "does not prefix gpt-oss model ids when a prefix is configured" do
@@ -361,8 +361,8 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     it "does not double-prefix model ids that already have the configured prefix" do
       allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return("us")
 
-      resolved = llm.send(:resolve_model_api_name, "us.anthropic.claude-3-5-sonnet-20241022-v2:0")
-      expect(resolved).to eq("us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+      resolved = llm.send(:resolve_model_api_name, "us.anthropic.claude-sonnet-5")
+      expect(resolved).to eq("us.anthropic.claude-sonnet-5")
     end
   end
 
@@ -451,8 +451,8 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     let(:model_completion) do
       Raif::ModelCompletion.new(
         messages: [{ role: "user", content: "Hello" }],
-        llm_model_key: "bedrock_claude_3_5_sonnet",
-        model_api_name: "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        llm_model_key: "bedrock_claude_5_sonnet",
+        model_api_name: "us.anthropic.claude-sonnet-5",
         available_model_tools: available_model_tools,
         response_format: response_format,
         source: source
@@ -854,8 +854,8 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     let(:model_completion) do
       Raif::ModelCompletion.new(
         messages: [{ role: "user", content: [{ text: "Hello" }] }],
-        llm_model_key: "bedrock_claude_3_5_sonnet",
-        model_api_name: "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        llm_model_key: "bedrock_claude_5_sonnet",
+        model_api_name: "us.anthropic.claude-sonnet-5",
         temperature: 0.8,
         response_format: "text",
         system_prompt: "You are a helpful assistant"
@@ -936,12 +936,12 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
 
     context "with a json_response_schema but a non-supporting model" do
-      let(:llm){ Raif.llm(:bedrock_claude_3_5_sonnet) }
+      let(:llm){ Raif.llm(:bedrock_claude_5_sonnet) }
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: [{ text: "Tell me a joke" }] }],
-          llm_model_key: "bedrock_claude_3_5_sonnet",
-          model_api_name: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+          llm_model_key: "bedrock_claude_5_sonnet",
+          model_api_name: "anthropic.claude-sonnet-5",
           response_format: "json",
           source: test_task
         )

@@ -2,8 +2,8 @@
 
 FactoryBot.define do
   factory :raif_model_completion_batch_anthropic, class: "Raif::ModelCompletionBatches::Anthropic" do
-    llm_model_key { "anthropic_claude_3_5_haiku" }
-    model_api_name { "claude-3-5-haiku-latest" }
+    llm_model_key { "anthropic_claude_4_5_haiku" }
+    model_api_name { "claude-haiku-4-5" }
     status { "pending" }
   end
 

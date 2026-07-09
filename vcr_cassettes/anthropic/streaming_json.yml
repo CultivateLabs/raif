@@ -5,8 +5,8 @@ http_interactions:
     uri: https://api.anthropic.com/v1/messages
     body:
       encoding: UTF-8
-      string: '{"model":"claude-3-5-haiku-latest","messages":[{"role":"user","content":[{"type":"text","text":"Can
-        you you tell me a joke? Respond in json."}]}],"temperature":0.7,"max_tokens":8192,"system":"You
+      string: '{"model":"claude-opus-4-1","messages":[{"role":"user","content":[{"type":"text","text":"Can
+        you you tell me a joke? Respond in json."}]}],"temperature":0.7,"max_tokens":32000,"system":"You
         are a helpful assistant who specializes in telling jokes. Your response should
         be a properly formatted JSON object containing a single `joke` key and a single
         `answer` key. Do not include any other text in your response outside the JSON

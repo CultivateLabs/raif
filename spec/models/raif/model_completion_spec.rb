@@ -239,8 +239,8 @@ RSpec.describe Raif::ModelCompletion, type: :model do
           # Anthropic: prompt_tokens does NOT include cached tokens
           # Cache read multiplier is 0.1x, cache creation multiplier is 1.25x
           model_completion = described_class.new(
-            llm_model_key: "anthropic_claude_3_5_sonnet",
-            model_api_name: "claude-3-5-sonnet-latest",
+            llm_model_key: "anthropic_claude_4_5_sonnet",
+            model_api_name: "claude-sonnet-4-5",
             prompt_tokens: 400,
             cache_read_input_tokens: 600,
             cache_creation_input_tokens: 200
@@ -315,16 +315,16 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         let(:batch) do
           FB.create(
             :raif_model_completion_batch_anthropic,
-            llm_model_key: "anthropic_claude_3_5_haiku",
-            model_api_name: "claude-3-5-haiku-latest"
+            llm_model_key: "anthropic_claude_4_5_haiku",
+            model_api_name: "claude-haiku-4-5"
           )
         end
 
         it "halves the per-token costs for a model completion attached to a batch" do
-          llm_config = Raif.llm_config(:anthropic_claude_3_5_haiku)
+          llm_config = Raif.llm_config(:anthropic_claude_4_5_haiku)
           model_completion = described_class.new(
-            llm_model_key: "anthropic_claude_3_5_haiku",
-            model_api_name: "claude-3-5-haiku-latest",
+            llm_model_key: "anthropic_claude_4_5_haiku",
+            model_api_name: "claude-haiku-4-5",
             prompt_tokens: 100,
             completion_tokens: 50,
             cache_read_input_tokens: 0,
@@ -350,12 +350,12 @@ RSpec.describe Raif::ModelCompletion, type: :model do
               end
             end
           )
-          llm_config = Raif.llm_config(:anthropic_claude_3_5_haiku).merge(llm_class: Raif::Llms::AnthropicCustomDiscount)
+          llm_config = Raif.llm_config(:anthropic_claude_4_5_haiku).merge(llm_class: Raif::Llms::AnthropicCustomDiscount)
           allow(Raif).to receive(:llm_config).and_return(llm_config)
 
           model_completion = described_class.new(
-            llm_model_key: "anthropic_claude_3_5_haiku",
-            model_api_name: "claude-3-5-haiku-latest",
+            llm_model_key: "anthropic_claude_4_5_haiku",
+            model_api_name: "claude-haiku-4-5",
             prompt_tokens: 100,
             completion_tokens: 50,
             cache_read_input_tokens: 0,
@@ -370,12 +370,12 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         end
 
         it "is a no-op when the multiplier is exactly 1.0" do
-          llm_config = Raif.llm_config(:anthropic_claude_3_5_haiku)
+          llm_config = Raif.llm_config(:anthropic_claude_4_5_haiku)
           allow(Raif::Llms::Anthropic).to receive(:batch_inference_cost_multiplier).and_return(1.0)
 
           model_completion = described_class.new(
-            llm_model_key: "anthropic_claude_3_5_haiku",
-            model_api_name: "claude-3-5-haiku-latest",
+            llm_model_key: "anthropic_claude_4_5_haiku",
+            model_api_name: "claude-haiku-4-5",
             prompt_tokens: 100,
             completion_tokens: 50,
             cache_read_input_tokens: 0,
@@ -398,8 +398,8 @@ RSpec.describe Raif::ModelCompletion, type: :model do
           # batch completions diverge from non-batch completions on aggregate
           # queries that filter on total_cost IS NULL.
           model_completion = described_class.new(
-            llm_model_key: "anthropic_claude_3_5_haiku",
-            model_api_name: "claude-3-5-haiku-latest",
+            llm_model_key: "anthropic_claude_4_5_haiku",
+            model_api_name: "claude-haiku-4-5",
             raif_model_completion_batch: batch
           )
 
@@ -778,8 +778,8 @@ RSpec.describe Raif::ModelCompletion, type: :model do
   describe "#provider_managed_tool_calls" do
     it "extracts anthropic-style provider-managed web search details" do
       model_completion = described_class.new(
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-20241022",
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5",
         available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
         response_array: [
           {
@@ -929,8 +929,8 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
     it "includes provider-managed tool calls alongside developer-managed ones" do
       model_completion = described_class.new(
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-20241022",
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5",
         available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
         response_tool_calls: [{ "name" => "google_search_tool" }],
         response_array: [

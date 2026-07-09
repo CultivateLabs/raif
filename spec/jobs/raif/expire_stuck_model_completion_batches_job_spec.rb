@@ -50,8 +50,8 @@ RSpec.describe Raif::ExpireStuckModelCompletionBatchesJob, type: :job do
       :raif_model_completion,
       raif_model_completion_batch: stuck,
       batch_custom_id: "stuck1",
-      model_api_name: "claude-3-5-haiku-latest",
-      llm_model_key: "anthropic_claude_3_5_haiku"
+      model_api_name: "claude-haiku-4-5",
+      llm_model_key: "anthropic_claude_4_5_haiku"
     )
 
     cancel_called_for = []

@@ -5,8 +5,8 @@ http_interactions:
     uri: https://api.anthropic.com/v1/messages
     body:
       encoding: UTF-8
-      string: '{"model":"claude-3-5-haiku-latest","messages":[{"role":"user","content":[{"type":"text","text":"What
-        are the latest developments in Ruby on Rails?"}]}],"temperature":0.7,"max_tokens":8192,"tools":[{"type":"web_search_20250305","name":"web_search","max_uses":5}]}'
+      string: '{"model":"claude-opus-4-1","messages":[{"role":"user","content":[{"type":"text","text":"What
+        are the latest developments in Ruby on Rails?"}]}],"temperature":0.7,"max_tokens":32000,"tools":[{"type":"web_search_20250305","name":"web_search","max_uses":5}]}'
     headers:
       Anthropic-Version:
       - '2023-06-01'

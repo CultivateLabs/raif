@@ -58,8 +58,8 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
     let!(:html_completion) do
       Raif::ModelCompletion.create!(
         source: task2,
-        llm_model_key: "bedrock_claude_3_5_sonnet",
-        model_api_name: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+        llm_model_key: "bedrock_claude_5_sonnet",
+        model_api_name: "anthropic.claude-sonnet-5",
         response_format: "html",
         raw_response: "<div>Test HTML</div>",
         prompt_tokens: 75,
@@ -102,7 +102,7 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
       # Check model names
       expect(page).to have_content("open_ai_gpt_4o_mini")
       expect(page).to have_content("open_ai_gpt_4o")
-      expect(page).to have_content("bedrock_claude_3_5_sonnet")
+      expect(page).to have_content("bedrock_claude_5_sonnet")
 
       # Check token counts
       expect(page).to have_content("1,000")
@@ -126,11 +126,11 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
       expect(page).to have_css("tr.raif-model-completion", count: 5)
 
       # Filter by bedrock model
-      select "bedrock_claude_3_5_sonnet", from: "llm_model_key"
+      select "bedrock_claude_5_sonnet", from: "llm_model_key"
       click_button I18n.t("raif.admin.common.filter")
 
       expect(page).to have_css("tr.raif-model-completion", count: 1)
-      expect(page).to have_content("bedrock_claude_3_5_sonnet")
+      expect(page).to have_content("bedrock_claude_5_sonnet")
     end
   end
 
@@ -228,8 +228,8 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
       let!(:html_completion) do
         Raif::ModelCompletion.create!(
           source: task2,
-          llm_model_key: "bedrock_claude_3_5_sonnet",
-          model_api_name: "anthropic.claude-3-5-sonnet-20240620-v1:0",
+          llm_model_key: "bedrock_claude_5_sonnet",
+          model_api_name: "anthropic.claude-sonnet-5",
           response_format: "html",
           raw_response: "<div><h1>Test</h1><p>HTML content</p></div>",
           total_tokens: 200
@@ -255,8 +255,8 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
       let!(:provider_managed_completion) do
         Raif::ModelCompletion.create!(
           source: task,
-          llm_model_key: "anthropic_claude_3_5_haiku",
-          model_api_name: "claude-3-5-haiku-20241022",
+          llm_model_key: "anthropic_claude_4_5_haiku",
+          model_api_name: "claude-haiku-4-5",
           response_format: "text",
           raw_response: "Rails has seen several recent updates.",
           total_tokens: 250,

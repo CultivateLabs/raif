@@ -9,10 +9,10 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
   describe ".handle_batch_completion" do
     it "runs the registered on_batch_completion block with `batch` and `tasks` accessible" do
       task_a = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "a", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "a", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
       task_b = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "b", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "b", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       task_a.raif_model_completion.update!(raw_response: "a")
@@ -37,7 +37,7 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
 
     it "is a no-op when no on_batch_completion block has been registered (hydration still runs)" do
       task = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "x", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "x", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
       task.raif_model_completion.update!(raw_response: "x")
       task.raif_model_completion.completed!
@@ -52,14 +52,14 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
       batch: batch,
       batch_custom_id: "win",
       creator: creator,
-      llm_model_key: "anthropic_claude_3_5_haiku"
+      llm_model_key: "anthropic_claude_4_5_haiku"
     )
 
     fail_task = Raif::TestTask.build_for_batch(
       batch: batch,
       batch_custom_id: "lose",
       creator: creator,
-      llm_model_key: "anthropic_claude_3_5_haiku"
+      llm_model_key: "anthropic_claude_4_5_haiku"
     )
 
     # Pretend the provider's batch results pipeline ran: success_task's
@@ -86,8 +86,8 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
       :raif_model_completion,
       raif_model_completion_batch: batch,
       batch_custom_id: "no_source",
-      model_api_name: "claude-3-5-haiku-latest",
-      llm_model_key: "anthropic_claude_3_5_haiku",
+      model_api_name: "claude-haiku-4-5",
+      llm_model_key: "anthropic_claude_4_5_haiku",
       source: nil
     )
     mc.update!(raw_response: "ignored")
@@ -102,13 +102,13 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
       batch: batch,
       batch_custom_id: "good",
       creator: creator,
-      llm_model_key: "anthropic_claude_3_5_haiku"
+      llm_model_key: "anthropic_claude_4_5_haiku"
     )
     bad_task = Raif::TestTask.build_for_batch(
       batch: batch,
       batch_custom_id: "bad",
       creator: creator,
-      llm_model_key: "anthropic_claude_3_5_haiku"
+      llm_model_key: "anthropic_claude_4_5_haiku"
     )
 
     good_task.raif_model_completion.update!(raw_response: "good answer")
@@ -137,7 +137,7 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
   describe ".hydrate_tasks idempotency" do
     it "skips tasks already in a terminal state" do
       task = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "done", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "done", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
       mc = task.raif_model_completion
       mc.update!(raw_response: "answer")
@@ -170,7 +170,7 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
       end
 
       task = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "iso", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "iso", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
       task.raif_model_completion.update!(raw_response: "ok")
       task.raif_model_completion.completed!
@@ -195,7 +195,7 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
       end
 
       Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "h", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "h", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       ).raif_model_completion.tap do |mc|
         mc.update!(raw_response: "ok")
         mc.completed!
@@ -227,7 +227,7 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
   describe "whole-batch failure routing" do
     it "calls process_completion! for force-failed completions so tasks transition to failed" do
       task = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "fail", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "fail", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       # Simulate Raif::ModelCompletionBatch#force_fail! having marked the child
@@ -255,7 +255,7 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
 
     def attach_completed_task!
       task = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "ok", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "ok", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
       task.raif_model_completion.update!(raw_response: "ok")
       task.raif_model_completion.completed!
@@ -333,7 +333,7 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
 
     it "exposes batch and tasks readers inside on_batch_failure (tasks reflects the force-failed children)" do
       task = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "ff", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "ff", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
       task.raif_model_completion.update!(failure_error: "x", failure_reason: "y")
       task.raif_model_completion.failed!

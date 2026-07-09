@@ -11,7 +11,7 @@ RSpec.describe "Raif::Task batch preparation" do
       task = Raif::TestTask.build_for_batch(
         batch: batch,
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       expect(task).to be_persisted
@@ -25,7 +25,7 @@ RSpec.describe "Raif::Task batch preparation" do
       task = Raif::TestTask.build_for_batch(
         batch: batch,
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       mc = task.raif_model_completion
@@ -34,8 +34,8 @@ RSpec.describe "Raif::Task batch preparation" do
       expect(mc).to be_pending
       expect(mc.raif_model_completion_batch).to eq(batch)
       expect(mc.source).to eq(task)
-      expect(mc.llm_model_key).to eq("anthropic_claude_3_5_haiku")
-      expect(mc.model_api_name).to eq("claude-3-5-haiku-latest")
+      expect(mc.llm_model_key).to eq("anthropic_claude_4_5_haiku")
+      expect(mc.model_api_name).to eq("claude-haiku-4-5")
       expect(mc.system_prompt).to include("You are also good at telling jokes.")
       expect(mc.messages).to eq([{ "role" => "user", "content" => [{ "type" => "text", "text" => "Tell me a joke" }] }])
     end
@@ -44,7 +44,7 @@ RSpec.describe "Raif::Task batch preparation" do
       task = Raif::TestTask.build_for_batch(
         batch: batch,
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       expect(task.raif_model_completion.batch_custom_id).to eq("raif_task_#{task.id}")
@@ -55,7 +55,7 @@ RSpec.describe "Raif::Task batch preparation" do
         batch: batch,
         batch_custom_id: "explicit-custom-id",
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       expect(task.raif_model_completion.batch_custom_id).to eq("explicit-custom-id")
@@ -65,7 +65,7 @@ RSpec.describe "Raif::Task batch preparation" do
       task = Raif::TestCachedTask.build_for_batch(
         batch: batch,
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       expect(task.raif_model_completion.anthropic_prompt_caching_enabled).to be(true)
@@ -75,7 +75,7 @@ RSpec.describe "Raif::Task batch preparation" do
       task = Raif::TestJsonTask.build_for_batch(
         batch: batch,
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       expect(task.raif_model_completion.response_format).to eq("json")
@@ -89,7 +89,7 @@ RSpec.describe "Raif::Task batch preparation" do
       task = Raif::TestTask.build_for_batch(
         batch: batch,
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
       mc = task.raif_model_completion
       mc.failure_error = "Anthropic batch entry errored"
@@ -106,7 +106,7 @@ RSpec.describe "Raif::Task batch preparation" do
       task = Raif::TestTask.build_for_batch(
         batch: batch,
         creator: creator,
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
       mc = task.raif_model_completion
       mc.update!(raw_response: "joke!")
@@ -121,7 +121,7 @@ RSpec.describe "Raif::Task batch preparation" do
 
   describe "#prepare_for_batch!" do
     it "rebuilds prompts via #build_prompt / #build_system_prompt by default" do
-      task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_3_5_haiku")
+      task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_4_5_haiku")
       task.save!
       task.update!(prompt: "stale-caller-prompt", system_prompt: "stale-caller-system-prompt")
 
@@ -132,7 +132,7 @@ RSpec.describe "Raif::Task batch preparation" do
     end
 
     it "preserves caller-set prompts when skip_prompt_population: true" do
-      task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_3_5_haiku")
+      task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_4_5_haiku")
       task.save!
 
       sentinel_prompt = "FROZEN_PROMPT_SENTINEL"
