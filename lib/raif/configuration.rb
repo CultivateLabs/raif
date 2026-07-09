@@ -29,6 +29,7 @@ module Raif
       :llm_api_requests_enabled,
       :llm_request_max_retries,
       :llm_request_retriable_exceptions,
+      :model_completion_authorizer,
       :model_completion_batch_max_age,
       :model_completion_batch_poll_schedule,
       :model_superclass,
@@ -109,6 +110,13 @@ module Raif
         10.minutes,
         30.minutes
       ]
+      # Optional lambda called with llm:/source: keyword args at the start of
+      # Raif::Llm#chat, before the Raif::ModelCompletion is created or any
+      # provider API call is made. Raise from it to veto the request (e.g. a
+      # host app enforcing per-account usage limits); the exception propagates
+      # to the caller. Return values are ignored. Does not apply to embedding
+      # generation or batch API submissions.
+      @model_completion_authorizer = nil
       # Hard ceiling for any non-terminal Raif::ModelCompletionBatch. Older
       # batches are expired by the hourly safety sweep
       # (Raif::ExpireStuckModelCompletionBatchesJob) and the polling job's
@@ -193,6 +201,13 @@ module Raif
       else
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.authorize_admin_controller_action must respond to :call and return a boolean"
+      end
+
+      if model_completion_authorizer.nil? || model_completion_authorizer.respond_to?(:call)
+        model_completion_authorizer&.freeze
+      else
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.model_completion_authorizer must be nil or respond to :call"
       end
 
       if open_ai_models_enabled && open_ai_api_key.blank?

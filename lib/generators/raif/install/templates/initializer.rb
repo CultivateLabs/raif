@@ -253,6 +253,17 @@ Raif.configure do |config|
   # Use this to globally disable requests to LLM APIs.
   # config.llm_api_requests_enabled = true
 
+  # Optional lambda called with llm:/source: keyword args at the start of
+  # Raif::Llm#chat, before the Raif::ModelCompletion is created or any provider
+  # API call is made (and before the llm_api_requests_enabled guard). Raise
+  # from it to veto the request; return values are ignored. Useful for
+  # enforcing per-account usage limits. Does not apply to embedding generation
+  # or batch API submissions. Defaults to nil (all requests allowed).
+  # config.model_completion_authorizer = ->(llm:, source:) {
+  #   account = source.account if source.respond_to?(:account)
+  #   raise MyApp::UsageLimitExceededError if account && !account.within_llm_usage_limits?
+  # }
+
   # Timeout settings for LLM API requests (in seconds). All default to nil (use Faraday defaults).
   # config.request_open_timeout = nil  # Time to wait for a connection to be opened
   # config.request_read_timeout = nil  # Time to wait for data to be read
