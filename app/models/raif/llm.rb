@@ -104,6 +104,11 @@ module Raif
           "Raif::Llm#chat - Invalid tool choice: #{tool_choice} is not included in the available model tools: #{available_model_tools.join(", ")}"
       end
 
+      # Runs before the ModelCompletion is created or any provider call is made,
+      # and before the llm_api_requests_enabled guard so authorization applies
+      # even when API requests are disabled. Vetoes by raising.
+      Raif.config.model_completion_authorizer&.call(llm: self, source: source)
+
       unless Raif.config.llm_api_requests_enabled
         Raif.logger.warn("LLM API requests are disabled. Skipping request to #{api_name}.")
         return

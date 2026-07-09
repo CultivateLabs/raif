@@ -68,6 +68,27 @@ Raif.configure do |config|
 end
 ```
 
+# Authorizing Model Completions
+
+You can register a lambda that is called at the start of `Raif::Llm#chat`, before the `Raif::ModelCompletion` record is created or any provider API call is made. It receives `llm:` (the `Raif::Llm` instance) and `source:` (the completion's source - typically a conversation entry, task, or agent). To veto the request, raise an exception - it propagates to the caller. Return values are ignored.
+
+This is useful for enforcing per-account usage limits (e.g. a monthly inference spend budget):
+
+```ruby
+Raif.configure do |config|
+  config.model_completion_authorizer = ->(llm:, source:) {
+    account = source.account if source.respond_to?(:account)
+    raise MyApp::UsageLimitExceededError if account && !account.within_llm_usage_limits?
+  }
+end
+```
+
+Notes:
+
+- The authorizer runs before the `llm_api_requests_enabled` guard, so it applies even when API requests are disabled.
+- Because agents call `Raif::Llm#chat` on every iteration, raising from the authorizer also stops in-progress agent runs.
+- It does not apply to embedding generation or batch API submissions, which do not go through `Raif::Llm#chat`.
+
 # Prompt Caching
 
 Anthropic and AWS Bedrock support prompt caching on supported Claude models. Raif does not enable prompt caching by default. To enable it on a per-class basis, use the `enable_anthropic_prompt_caching` and/or `enable_bedrock_prompt_caching` class directives on your `Raif::Task`, `Raif::Conversation`, or `Raif::Agent` subclasses:

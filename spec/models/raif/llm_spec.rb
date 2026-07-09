@@ -30,6 +30,48 @@ RSpec.describe Raif::Llm, type: :model do
       end
     end
 
+    context "when model_completion_authorizer is configured" do
+      before do
+        stub_raif_llm(test_llm) do |_messages|
+          "Test response"
+        end
+      end
+
+      it "raises the authorizer's error and does not create a ModelCompletion" do
+        allow(Raif.config).to receive(:model_completion_authorizer).and_return(->(**) { raise "Usage limit exceeded" })
+
+        expect do
+          expect { test_llm.chat(messages: messages) }.to raise_error("Usage limit exceeded")
+        end.to_not change(Raif::ModelCompletion, :count)
+      end
+
+      it "receives the llm and source" do
+        received_args = nil
+        allow(Raif.config).to receive(:model_completion_authorizer).and_return(->(llm:, source:) { received_args = { llm: llm, source: source } })
+
+        user = FB.create(:raif_test_user)
+        test_llm.chat(messages: messages, source: user)
+
+        expect(received_args[:llm]).to eq(test_llm)
+        expect(received_args[:source]).to eq(user)
+      end
+
+      it "does not block the request when the authorizer returns a falsey value" do
+        allow(Raif.config).to receive(:model_completion_authorizer).and_return(->(**) { false })
+
+        result = test_llm.chat(messages: messages)
+        expect(result).to be_a(Raif::ModelCompletion)
+        expect(result).to be_persisted
+      end
+
+      it "runs even when llm_api_requests_enabled is false" do
+        allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(false)
+        allow(Raif.config).to receive(:model_completion_authorizer).and_return(->(**) { raise "Usage limit exceeded" })
+
+        expect { test_llm.chat(messages: messages) }.to raise_error("Usage limit exceeded")
+      end
+    end
+
     context "when llm_api_requests_enabled is true" do
       before do
         allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
