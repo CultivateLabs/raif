@@ -45,6 +45,15 @@ RSpec.describe Raif::Llm, type: :model do
         end.to_not change(Raif::ModelCompletion, :count)
       end
 
+      it "tags the raised error with ModelCompletionAuthorizationError so wrapped flows can re-raise it" do
+        allow(Raif.config).to receive(:model_completion_authorizer).and_return(->(**) { raise "Usage limit exceeded" })
+
+        expect { test_llm.chat(messages: messages) }.to raise_error do |error|
+          expect(error).to be_a(Raif::Errors::ModelCompletionAuthorizationError)
+          expect(error.message).to eq("Usage limit exceeded")
+        end
+      end
+
       it "receives the llm and source" do
         received_args = nil
         allow(Raif.config).to receive(:model_completion_authorizer).and_return(->(llm:, source:) { received_args = { llm: llm, source: source } })

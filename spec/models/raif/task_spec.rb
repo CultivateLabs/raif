@@ -144,6 +144,24 @@ RSpec.describe Raif::Task, type: :model do
       end
     end
 
+    context "when the model_completion_authorizer vetoes the request" do
+      before do
+        stub_raif_task(Raif::TestTask) do |_messages|
+          "This should never be reached"
+        end
+
+        allow(Raif.config).to receive(:model_completion_authorizer).and_return(->(**) { raise "Usage limit exceeded" })
+      end
+
+      it "re-raises the veto to the caller and marks the task failed" do
+        task = nil
+        expect { task = Raif::TestTask.run(creator: user) }.to raise_error("Usage limit exceeded")
+
+        expect(Raif::TestTask.last).to be_failed
+        expect(task).to be_nil
+      end
+    end
+
     context "for a task requesting a JSON response" do
       before do
         stub_raif_task(Raif::TestJsonTask) do |_messages|

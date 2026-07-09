@@ -87,6 +87,8 @@ Notes:
 
 - The authorizer runs before the `llm_api_requests_enabled` guard, so it applies even when API requests are disabled.
 - Because agents call `Raif::Llm#chat` on every iteration, raising from the authorizer also stops in-progress agent runs.
+- The veto propagates to the caller even through `Raif::Task.run`, which otherwise rescues `StandardError`: the task is marked `failed` and then the original exception is re-raised (rather than being logged and reported as an ordinary model failure), so callers can distinguish an intentional veto from a model error.
+- Conversation responses run in a background job (`Raif::ConversationEntryJob`), so there is no host caller to receive a raise. A veto there surfaces as a failed `Raif::ConversationEntry` (marked `failed` and broadcast to the UI) rather than propagating.
 - It does not apply to embedding generation or batch API submissions, which do not go through `Raif::Llm#chat`.
 
 # Prompt Caching

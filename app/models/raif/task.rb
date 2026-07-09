@@ -117,6 +117,10 @@ module Raif
     rescue StandardError => e
       task&.failed!
 
+      # An authorization veto is intentional, not a model failure - re-raise it
+      # to the caller instead of logging/reporting it as an error.
+      raise if e.is_a?(Raif::Errors::ModelCompletionAuthorizationError)
+
       logger.error e.message
       logger.error e.backtrace.join("\n")
 
