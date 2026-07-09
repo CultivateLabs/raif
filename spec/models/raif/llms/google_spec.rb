@@ -985,8 +985,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
-          llm_model_key: "google_gemini_2_0_flash",
-          model_api_name: "gemini-2.0-flash",
+          llm_model_key: "google_gemini_2_5_flash",
+          model_api_name: "gemini-2.5-flash",
           temperature: 0.8,
           response_format: "text",
           system_prompt: "You are a helpful assistant",
@@ -1008,8 +1008,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
-          llm_model_key: "google_gemini_2_0_flash",
-          model_api_name: "gemini-2.0-flash",
+          llm_model_key: "google_gemini_2_5_flash",
+          model_api_name: "gemini-2.5-flash",
           temperature: 0.8,
           response_format: "text",
           system_prompt: "You are a helpful assistant",
@@ -1030,8 +1030,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
-          llm_model_key: "google_gemini_2_0_flash",
-          model_api_name: "gemini-2.0-flash",
+          llm_model_key: "google_gemini_2_5_flash",
+          model_api_name: "gemini-2.5-flash",
           temperature: 0.8,
           response_format: "text",
           system_prompt: "You are a helpful assistant",

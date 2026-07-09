@@ -156,13 +156,6 @@ module Raif
         model_provider_settings: { supports_temperature: false },
       },
       {
-        key: :open_ai_o1_mini,
-        api_name: "o1-mini",
-        input_token_cost: 1.1 / 1_000_000,
-        output_token_cost: 4.4 / 1_000_000,
-        model_provider_settings: { supports_temperature: false },
-      },
-      {
         key: :open_ai_o3,
         api_name: "o3",
         input_token_cost: 2.0 / 1_000_000,
@@ -195,9 +188,6 @@ module Raif
         ]
       )
     end
-
-    # o1-mini is not supported by the OpenAI Responses API.
-    open_ai_responses_models.delete_if{|model| model[:key] == :open_ai_o1_mini }
 
     # These models are not supported by the OpenAI Completions API, but are supported by the OpenAI Responses API.
     open_ai_responses_models << {
@@ -456,6 +446,20 @@ module Raif
           max_completion_tokens: 64_000
         },
         {
+          key: :bedrock_claude_3_7_sonnet,
+          api_name: "anthropic.claude-3-7-sonnet-20250219-v1:0",
+          input_token_cost: 0.003 / 1000,
+          output_token_cost: 0.015 / 1000,
+          max_completion_tokens: 8192
+        },
+        {
+          key: :bedrock_claude_3_5_sonnet,
+          api_name: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+          input_token_cost: 0.003 / 1000,
+          output_token_cost: 0.015 / 1000,
+          max_completion_tokens: 8192
+        },
+        {
           key: :bedrock_amazon_nova_micro,
           api_name: "amazon.nova-micro-v1:0",
           input_token_cost: 0.0000115 / 1000,
@@ -543,12 +547,6 @@ module Raif
           output_token_cost: 0.38 / 1_000_000,
         },
         {
-          key: :open_router_gemini_2_0_flash,
-          api_name: "google/gemini-2.0-flash-001",
-          input_token_cost: 0.1 / 1_000_000,
-          output_token_cost: 0.4 / 1_000_000,
-        },
-        {
           key: :open_router_gemini_2_5_flash,
           api_name: "google/gemini-2.5-flash",
           input_token_cost: 0.3 / 1_000_000,
@@ -567,12 +565,6 @@ module Raif
           output_token_cost: 10.0 / 1_000_000,
         },
         {
-          key: :open_router_gemini_3_pro_preview,
-          api_name: "google/gemini-3-pro-preview",
-          input_token_cost: 2.0 / 1_000_000,
-          output_token_cost: 12.0 / 1_000_000,
-        },
-        {
           key: :open_router_gemini_3_1_pro_preview,
           api_name: "google/gemini-3.1-pro-preview",
           input_token_cost: 2.0 / 1_000_000,
@@ -583,18 +575,6 @@ module Raif
           api_name: "google/gemini-3.1-flash-lite-preview",
           input_token_cost: 0.25 / 1_000_000,
           output_token_cost: 1.5 / 1_000_000,
-        },
-        {
-          key: :open_router_grok_4,
-          api_name: "x-ai/grok-4",
-          input_token_cost: 3.0 / 1_000_000,
-          output_token_cost: 15.0 / 1_000_000,
-        },
-        {
-          key: :open_router_grok_4_1_fast,
-          api_name: "x-ai/grok-4.1-fast",
-          input_token_cost: 0.2 / 1_000_000,
-          output_token_cost: 0.5 / 1_000_000,
         },
         {
           key: :open_router_kimi_k2_thinking,
@@ -739,16 +719,6 @@ module Raif
           ]
         },
         {
-          key: :google_gemini_3_0_pro,
-          api_name: "gemini-3-pro-preview",
-          input_token_cost: 2.0 / 1_000_000,
-          output_token_cost: 12.0 / 1_000_000,
-          supported_provider_managed_tools: [
-            Raif::ModelTools::ProviderManaged::WebSearch,
-            Raif::ModelTools::ProviderManaged::CodeExecution
-          ]
-        },
-        {
           key: :google_gemini_3_0_flash,
           api_name: "gemini-3-flash-preview",
           input_token_cost: 0.5 / 1_000_000,
@@ -760,7 +730,7 @@ module Raif
         },
         {
           key: :google_gemini_2_5_pro,
-          api_name: "gemini-2.5-pro-preview-06-05",
+          api_name: "gemini-2.5-pro",
           input_token_cost: 1.25 / 1_000_000,
           output_token_cost: 10.0 / 1_000_000,
           supported_provider_managed_tools: [

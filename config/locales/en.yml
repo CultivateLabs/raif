@@ -66,6 +66,8 @@ en:
       bedrock_amazon_nova_lite: Amazon Nova Lite (via AWS Bedrock)
       bedrock_amazon_nova_micro: Amazon Nova Micro (via AWS Bedrock)
       bedrock_amazon_nova_pro: Amazon Nova Pro (via AWS Bedrock)
+      bedrock_claude_3_5_sonnet: Anthropic Claude 3.5 Sonnet (via AWS Bedrock)
+      bedrock_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via AWS Bedrock)
       bedrock_claude_4_1_opus: Claude 4.1 Opus (via AWS Bedrock)
       bedrock_claude_4_5_haiku: Anthropic Claude 4.5 Haiku (via AWS Bedrock)
       bedrock_claude_4_5_opus: Anthropic Claude 4.5 Opus (via AWS Bedrock)
@@ -84,7 +86,6 @@ en:
       google_gemini_2_5_flash: Google Gemini 2.5 Flash
       google_gemini_2_5_pro: Google Gemini 2.5 Pro
       google_gemini_3_0_flash: Google Gemini 3 Flash
-      google_gemini_3_0_pro: Google Gemini 3 Pro
       google_gemini_3_1_flash_lite: Google Gemini 3.1 Flash-Lite
       google_gemini_3_1_pro: Google Gemini 3.1 Pro
       google_gemini_3_5_flash: Google Gemini 3.5 Flash
@@ -105,7 +106,6 @@ en:
       open_ai_gpt_5_mini: OpenAI GPT-5 Mini
       open_ai_gpt_5_nano: OpenAI GPT-5 Nano
       open_ai_o1: OpenAI o1
-      open_ai_o1_mini: OpenAI o1 Mini
       open_ai_o3: OpenAI o3
       open_ai_o3_mini: OpenAI o3 Mini
       open_ai_o4_mini: OpenAI o4 Mini
@@ -130,7 +130,6 @@ en:
       open_ai_responses_gpt_5_nano: OpenAI GPT-5 Nano (Responses API)
       open_ai_responses_gpt_5_pro: OpenAI GPT-5 Pro (Responses API)
       open_ai_responses_o1: OpenAI o1 (Responses API)
-      open_ai_responses_o1_mini: OpenAI o1 Mini (Responses API)
       open_ai_responses_o1_pro: OpenAI o1 Pro (Responses API)
       open_ai_responses_o3: OpenAI o3 (Responses API)
       open_ai_responses_o3_mini: OpenAI o3 Mini (Responses API)
@@ -142,16 +141,12 @@ en:
       open_router_deepseek_chat_v3: DeepSeek Chat v3 (via OpenRouter)
       open_router_deepseek_v3_1: DeepSeek v3.1 (via OpenRouter)
       open_router_deepseek_v3_2: DeepSeek v3.2 (via OpenRouter)
-      open_router_gemini_2_0_flash: Google Gemini 2.0 Flash (via OpenRouter)
       open_router_gemini_2_5_flash: Gemini 2.5 Flash (via OpenRouter)
       open_router_gemini_2_5_pro: Gemini 2.5 Pro (via OpenRouter)
       open_router_gemini_3_1_flash_lite_preview: Gemini 3.1 Flash-Lite Preview (via OpenRouter)
       open_router_gemini_3_1_pro_preview: Gemini 3.1 Pro Preview (via OpenRouter)
       open_router_gemini_3_5_flash: Gemini 3.5 Flash (via OpenRouter)
-      open_router_gemini_3_pro_preview: Gemini 3 Pro Preview (via OpenRouter)
       open_router_google_gemma_4_31b_it: Google Gemma 4 31B IT (via OpenRouter)
-      open_router_grok_4: Grok 4 (via OpenRouter)
-      open_router_grok_4_1_fast: Grok 4.1 Fast (via OpenRouter)
       open_router_grok_4_20: Grok 4.20 (via OpenRouter)
       open_router_kimi_k2_5: Kimi K2.5 (via OpenRouter)
       open_router_kimi_k2_thinking: Kimi K2 Thinking (via OpenRouter)
