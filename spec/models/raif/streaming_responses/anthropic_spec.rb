@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Raif::StreamingResponses::Anthropic, type: :model do
   subject(:streaming_response) { described_class.new }
 
-  let(:llm){ Raif.llm(:anthropic_claude_3_5_haiku) }
+  let(:llm){ Raif.llm(:anthropic_claude_4_5_haiku) }
 
   before do
     allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
@@ -13,8 +13,8 @@ RSpec.describe Raif::StreamingResponses::Anthropic, type: :model do
 
   def model_completion
     @model_completion ||= Raif::ModelCompletion.new(
-      llm_model_key: "anthropic_claude_3_5_haiku",
-      model_api_name: "claude-3-5-haiku-latest"
+      llm_model_key: "anthropic_claude_4_5_haiku",
+      model_api_name: "claude-haiku-4-5"
     )
   end
 

@@ -118,12 +118,6 @@ Raif.configure do |config|
   #   anthropic_claude_4_5_sonnet
   #   anthropic_claude_4_5_haiku
   #   anthropic_claude_4_1_opus
-  #   anthropic_claude_4_opus
-  #   anthropic_claude_4_sonnet
-  #   anthropic_claude_3_7_sonnet
-  #   anthropic_claude_3_5_sonnet
-  #   anthropic_claude_3_5_haiku
-  #   anthropic_claude_3_opus
   #   bedrock_claude_4_7_opus
   #   bedrock_claude_4_6_opus
   #   bedrock_claude_4_6_sonnet
@@ -131,12 +125,7 @@ Raif.configure do |config|
   #   bedrock_claude_4_5_sonnet
   #   bedrock_claude_4_5_haiku
   #   bedrock_claude_4_1_opus
-  #   bedrock_claude_4_opus
   #   bedrock_claude_4_sonnet
-  #   bedrock_claude_3_7_sonnet
-  #   bedrock_claude_3_5_sonnet
-  #   bedrock_claude_3_5_haiku
-  #   bedrock_claude_3_opus
   #   bedrock_amazon_nova_micro
   #   bedrock_amazon_nova_lite
   #   bedrock_amazon_nova_pro
@@ -144,7 +133,6 @@ Raif.configure do |config|
   #   bedrock_deepseek_r1
   #   bedrock_gpt_oss_120b
   #   bedrock_gpt_oss_20b
-  #   open_router_claude_3_7_sonnet
   #   open_router_deepseek_chat_v3
   #   open_router_deepseek_v3_1
   #   open_router_deepseek_v3_2

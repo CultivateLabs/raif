@@ -5,9 +5,9 @@ http_interactions:
     uri: https://api.anthropic.com/v1/messages
     body:
       encoding: UTF-8
-      string: '{"model":"claude-3-5-haiku-latest","messages":[{"role":"user","content":[{"type":"text","text":"Please
+      string: '{"model":"claude-opus-4-1","messages":[{"role":"user","content":[{"type":"text","text":"Please
         give me a JSON object with a joke and answer. Don''t include any other text
-        in your response."}]}],"temperature":0.7,"max_tokens":8192,"tools":[{"name":"json_response","description":"Generate
+        in your response."}]}],"temperature":0.7,"max_tokens":32000,"tools":[{"name":"json_response","description":"Generate
         a structured JSON response based on the provided schema.","input_schema":{"type":"object","additionalProperties":false,"properties":{"joke":{"type":"string"},"answer":{"type":"string"}},"required":["joke","answer"]}}]}'
     headers:
       Anthropic-Version:

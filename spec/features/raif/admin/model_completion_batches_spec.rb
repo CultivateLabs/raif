@@ -120,8 +120,8 @@ RSpec.describe "Admin::ModelCompletionBatches", type: :feature do
       Raif::ModelCompletion.create!(
         raif_model_completion_batch: batch,
         batch_custom_id: "item_1",
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-latest",
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5",
         response_format: "text",
         raw_response: "First batch result",
         prompt_tokens: 100,
@@ -137,8 +137,8 @@ RSpec.describe "Admin::ModelCompletionBatches", type: :feature do
       Raif::ModelCompletion.create!(
         raif_model_completion_batch: batch,
         batch_custom_id: "item_2",
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-latest",
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5",
         response_format: "text",
         raw_response: "Second batch result",
         prompt_tokens: 80,
@@ -156,8 +156,8 @@ RSpec.describe "Admin::ModelCompletionBatches", type: :feature do
       expect(page).to have_content(I18n.t("raif.admin.model_completion_batches.show.title", id: batch.id))
 
       expect(page).to have_content("Raif::ModelCompletionBatches::Anthropic")
-      expect(page).to have_content("anthropic_claude_3_5_haiku")
-      expect(page).to have_content("claude-3-5-haiku-latest")
+      expect(page).to have_content("anthropic_claude_4_5_haiku")
+      expect(page).to have_content("claude-haiku-4-5")
       expect(page).to have_content("batch_show_123")
       expect(page).to have_content("SomeHandler")
 

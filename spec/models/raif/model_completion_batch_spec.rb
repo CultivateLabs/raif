@@ -46,8 +46,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
   describe "validations" do
     it "requires type, llm_model_key, model_api_name, and a known status" do
       batch = Raif::ModelCompletionBatches::Anthropic.new(
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-latest"
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5"
       )
       expect(batch).to be_valid
 
@@ -60,8 +60,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
   describe "defaults" do
     it "initializes jsonb columns as empty hashes" do
       batch = Raif::ModelCompletionBatches::Anthropic.new(
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-latest"
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5"
       )
       expect(batch.metadata).to eq({})
       expect(batch.provider_response).to eq({})
@@ -70,8 +70,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
 
     it "defaults status to pending" do
       batch = Raif::ModelCompletionBatches::Anthropic.new(
-        llm_model_key: "anthropic_claude_3_5_haiku",
-        model_api_name: "claude-3-5-haiku-latest"
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5"
       )
       expect(batch.status).to eq("pending")
       expect(batch.terminal?).to be(false)
@@ -141,8 +141,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         :raif_model_completion,
         raif_model_completion_batch: batch,
         batch_custom_id: "task_42",
-        model_api_name: "claude-3-5-haiku-latest",
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        model_api_name: "claude-haiku-4-5",
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       expect(batch.reload.raif_model_completions).to include(mc)
@@ -165,10 +165,10 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
 
     it "returns the Raif::Task records attached to this batch via their child completions" do
       task_a = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "a", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "a", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
       task_b = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "b", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "b", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       expect(batch.tasks).to contain_exactly(task_a, task_b)
@@ -176,7 +176,7 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
 
     it "excludes raw Raif::ModelCompletion children (non-task producers) from the result" do
       task = Raif::TestTask.build_for_batch(
-        batch: batch, batch_custom_id: "task", creator: creator, llm_model_key: "anthropic_claude_3_5_haiku"
+        batch: batch, batch_custom_id: "task", creator: creator, llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       # Simulate a non-task producer attaching a pending completion directly.
@@ -184,8 +184,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         :raif_model_completion,
         raif_model_completion_batch: batch,
         batch_custom_id: "raw",
-        model_api_name: "claude-3-5-haiku-latest",
-        llm_model_key: "anthropic_claude_3_5_haiku",
+        model_api_name: "claude-haiku-4-5",
+        llm_model_key: "anthropic_claude_4_5_haiku",
         source: nil
       )
 
@@ -254,7 +254,7 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
     let(:batch) { FB.create(:raif_model_completion_batch_anthropic) }
 
     it "attaches an unsaved task to the batch and returns it persisted with a pending completion" do
-      task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_3_5_haiku")
+      task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_4_5_haiku")
 
       returned = batch.add_task(task, batch_custom_id: "doc_1")
 
@@ -267,13 +267,13 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
     end
 
     it "uses the default batch_custom_id when none is provided" do
-      task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_3_5_haiku")
+      task = Raif::TestTask.new(creator: creator, llm_model_key: "anthropic_claude_4_5_haiku")
       batch.add_task(task)
       expect(task.raif_model_completion.batch_custom_id).to eq("raif_task_#{task.id}")
     end
 
     it "works when the task has already been saved" do
-      task = Raif::TestTask.create!(creator: creator, llm_model_key: "anthropic_claude_3_5_haiku")
+      task = Raif::TestTask.create!(creator: creator, llm_model_key: "anthropic_claude_4_5_haiku")
 
       expect { batch.add_task(task, batch_custom_id: "x") }.not_to(change { Raif::Task.count })
       expect(task.raif_model_completion.raif_model_completion_batch).to eq(batch)
@@ -439,8 +439,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         :raif_model_completion,
         raif_model_completion_batch: batch,
         batch_custom_id: "x1",
-        model_api_name: "claude-3-5-haiku-latest",
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        model_api_name: "claude-haiku-4-5",
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       batch.finalize!
@@ -525,8 +525,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         :raif_model_completion,
         raif_model_completion_batch: batch,
         batch_custom_id: "dup",
-        model_api_name: "claude-3-5-haiku-latest",
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        model_api_name: "claude-haiku-4-5",
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       expect do
@@ -534,8 +534,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
           :raif_model_completion,
           raif_model_completion_batch: batch,
           batch_custom_id: "dup",
-          model_api_name: "claude-3-5-haiku-latest",
-          llm_model_key: "anthropic_claude_3_5_haiku"
+          model_api_name: "claude-haiku-4-5",
+          llm_model_key: "anthropic_claude_4_5_haiku"
         )
       end.to raise_error(ActiveRecord::RecordNotUnique)
     end
@@ -547,8 +547,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         :raif_model_completion,
         raif_model_completion_batch: batch,
         batch_custom_id: "shared",
-        model_api_name: "claude-3-5-haiku-latest",
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        model_api_name: "claude-haiku-4-5",
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       expect do
@@ -556,8 +556,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
           :raif_model_completion,
           raif_model_completion_batch: other_batch,
           batch_custom_id: "shared",
-          model_api_name: "claude-3-5-haiku-latest",
-          llm_model_key: "anthropic_claude_3_5_haiku"
+          model_api_name: "claude-haiku-4-5",
+          llm_model_key: "anthropic_claude_4_5_haiku"
         )
       end.not_to raise_error
     end
@@ -567,8 +567,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         :raif_model_completion,
         raif_model_completion_batch: nil,
         batch_custom_id: nil,
-        model_api_name: "claude-3-5-haiku-latest",
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        model_api_name: "claude-haiku-4-5",
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       expect do
@@ -576,8 +576,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
           :raif_model_completion,
           raif_model_completion_batch: nil,
           batch_custom_id: nil,
-          model_api_name: "claude-3-5-haiku-latest",
-          llm_model_key: "anthropic_claude_3_5_haiku"
+          model_api_name: "claude-haiku-4-5",
+          llm_model_key: "anthropic_claude_4_5_haiku"
         )
       end.not_to raise_error
     end
@@ -658,8 +658,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         :raif_model_completion,
         raif_model_completion_batch: batch,
         batch_custom_id: "x1",
-        model_api_name: "claude-3-5-haiku-latest",
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        model_api_name: "claude-haiku-4-5",
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
 
       # Simulate a child write blowing up mid-iteration. With the transaction
@@ -695,8 +695,8 @@ RSpec.describe Raif::ModelCompletionBatch, type: :model do
         :raif_model_completion,
         raif_model_completion_batch: batch,
         batch_custom_id: "x1",
-        model_api_name: "claude-3-5-haiku-latest",
-        llm_model_key: "anthropic_claude_3_5_haiku"
+        model_api_name: "claude-haiku-4-5",
+        llm_model_key: "anthropic_claude_4_5_haiku"
       )
       # Make sure the child completion has NULL cost columns. The factory's
       # prompt_tokens/completion_tokens trigger calculate_costs, so we null

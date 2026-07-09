@@ -120,11 +120,12 @@ The Anthropic adapter provides access to [provider-managed tools](../key_raif_co
 Raif.configure do |config|
   config.anthropic_models_enabled = true
   config.anthropic_api_key = ENV["ANTHROPIC_API_KEY"]
-  config.default_llm_model_key = "anthropic_claude_3_5_sonnet"
+  config.default_llm_model_key = "anthropic_claude_5_sonnet"
 end
 ```
 
 Currently supported Anthropic models:
+- `anthropic_claude_5_sonnet`
 - `anthropic_claude_4_7_opus`
 - `anthropic_claude_4_6_opus`
 - `anthropic_claude_4_6_sonnet`
@@ -132,12 +133,6 @@ Currently supported Anthropic models:
 - `anthropic_claude_4_5_sonnet`
 - `anthropic_claude_4_5_haiku`
 - `anthropic_claude_4_1_opus`
-- `anthropic_claude_4_opus`
-- `anthropic_claude_4_sonnet`
-- `anthropic_claude_3_7_sonnet`
-- `anthropic_claude_3_5_sonnet`
-- `anthropic_claude_3_5_haiku`
-- `anthropic_claude_3_opus`
 
 ## AWS Bedrock
 
@@ -147,11 +142,12 @@ Note: Raif utilizes the [AWS Bedrock gem](https://docs.aws.amazon.com/sdk-for-ru
 Raif.configure do |config|
   config.bedrock_models_enabled = true
   config.aws_bedrock_region = "us-east-1"
-  config.default_llm_model_key = "bedrock_claude_3_5_sonnet"
+  config.default_llm_model_key = "bedrock_claude_5_sonnet"
 end
 ```
 
 Currently supported Bedrock models:
+- `bedrock_claude_5_sonnet`
 - `bedrock_claude_4_7_opus`
 - `bedrock_claude_4_6_opus`
 - `bedrock_claude_4_6_sonnet`
@@ -159,12 +155,7 @@ Currently supported Bedrock models:
 - `bedrock_claude_4_5_sonnet`
 - `bedrock_claude_4_5_haiku`
 - `bedrock_claude_4_1_opus`
-- `bedrock_claude_4_opus`
 - `bedrock_claude_4_sonnet`
-- `bedrock_claude_3_7_sonnet`
-- `bedrock_claude_3_5_sonnet`
-- `bedrock_claude_3_5_haiku`
-- `bedrock_claude_3_opus`
 - `bedrock_amazon_nova_micro`
 - `bedrock_amazon_nova_lite`
 - `bedrock_amazon_nova_pro`
@@ -184,12 +175,12 @@ Raif.configure do |config|
   config.open_router_api_key = ENV["OPEN_ROUTER_API_KEY"]
   config.open_router_app_name = "Your App Name" # Optional
   config.open_router_site_url = "https://yourdomain.com" # Optional
-  config.default_llm_model_key = "open_router_claude_3_7_sonnet"
+  config.default_llm_model_key = "open_router_claude_5_sonnet"
 end
 ```
 
 Currently included OpenRouter models:
-- `open_router_claude_3_7_sonnet`
+- `open_router_claude_5_sonnet`
 - `open_router_deepseek_chat_v3`
 - `open_router_deepseek_v3_1`
 - `open_router_deepseek_v3_2`

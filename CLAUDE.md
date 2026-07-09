@@ -55,8 +55,8 @@ bundle exec rake yard          # Generate YARD docs
 ### Registry Pattern
 ```ruby
 # Providers are registered dynamically
-Raif.register_llm(Raif::Llms::Anthropic, key: :anthropic_claude_3_5_sonnet, ...)
-Raif.llm(:anthropic_claude_3_5_sonnet)  # Returns configured instance
+Raif.register_llm(Raif::Llms::Anthropic, key: :anthropic_claude_5_sonnet, ...)
+Raif.llm(:anthropic_claude_5_sonnet)  # Returns configured instance
 ```
 
 ### Key Design Patterns

@@ -20,9 +20,9 @@ RSpec.describe "Batch lifecycle", type: :model do
   end
 
   it "drives a batch from submit through poll, finalize, handler dispatch, and per-task completion" do
-    llm = Raif.llm(:anthropic_claude_3_5_haiku)
+    llm = Raif.llm(:anthropic_claude_4_5_haiku)
     batch = Raif::ModelCompletionBatches::Anthropic.create!(
-      llm_model_key: "anthropic_claude_3_5_haiku",
+      llm_model_key: "anthropic_claude_4_5_haiku",
       model_api_name: llm.api_name,
       completion_handler_class_name: "Raif::TaskBatchCompletionHandler"
     )
@@ -31,14 +31,14 @@ RSpec.describe "Batch lifecycle", type: :model do
       batch: batch,
       batch_custom_id: "win",
       creator: creator,
-      llm_model_key: "anthropic_claude_3_5_haiku"
+      llm_model_key: "anthropic_claude_4_5_haiku"
     )
 
     fail_task = Raif::TestTask.build_for_batch(
       batch: batch,
       batch_custom_id: "lose",
       creator: creator,
-      llm_model_key: "anthropic_claude_3_5_haiku"
+      llm_model_key: "anthropic_claude_4_5_haiku"
     )
 
     # Provider stubs:

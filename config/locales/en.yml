@@ -53,10 +53,6 @@ en:
       vi: Vietnamese
       zh: Chinese
     model_names:
-      anthropic_claude_3_5_haiku: Anthropic Claude 3.5 Haiku
-      anthropic_claude_3_5_sonnet: Anthropic Claude 3.5 Sonnet
-      anthropic_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet
-      anthropic_claude_3_opus: Anthropic Claude 3 Opus
       anthropic_claude_4_1_opus: Anthropic Claude 4.1 Opus
       anthropic_claude_4_5_haiku: Anthropic Claude 4.5 Haiku
       anthropic_claude_4_5_opus: Anthropic Claude 4.5 Opus
@@ -65,17 +61,11 @@ en:
       anthropic_claude_4_6_sonnet: Anthropic Claude 4.6 Sonnet
       anthropic_claude_4_7_opus: Anthropic Claude 4.7 Opus
       anthropic_claude_4_8_opus: Anthropic Claude 4.8 Opus
-      anthropic_claude_4_opus: Anthropic Claude 4 Opus
-      anthropic_claude_4_sonnet: Anthropic Claude 4 Sonnet
       anthropic_claude_5_fable: Anthropic Claude Fable 5
       anthropic_claude_5_sonnet: Anthropic Claude 5 Sonnet
       bedrock_amazon_nova_lite: Amazon Nova Lite (via AWS Bedrock)
       bedrock_amazon_nova_micro: Amazon Nova Micro (via AWS Bedrock)
       bedrock_amazon_nova_pro: Amazon Nova Pro (via AWS Bedrock)
-      bedrock_claude_3_5_haiku: Anthropic Claude 3.5 Haiku (via AWS Bedrock)
-      bedrock_claude_3_5_sonnet: Anthropic Claude 3.5 Sonnet (via AWS Bedrock)
-      bedrock_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via AWS Bedrock)
-      bedrock_claude_3_opus: Anthropic Claude 3 Opus (via AWS Bedrock)
       bedrock_claude_4_1_opus: Claude 4.1 Opus (via AWS Bedrock)
       bedrock_claude_4_5_haiku: Anthropic Claude 4.5 Haiku (via AWS Bedrock)
       bedrock_claude_4_5_opus: Anthropic Claude 4.5 Opus (via AWS Bedrock)
@@ -84,7 +74,6 @@ en:
       bedrock_claude_4_6_sonnet: Anthropic Claude 4.6 Sonnet (via AWS Bedrock)
       bedrock_claude_4_7_opus: Anthropic Claude 4.7 Opus (via AWS Bedrock)
       bedrock_claude_4_8_opus: Anthropic Claude 4.8 Opus (via AWS Bedrock)
-      bedrock_claude_4_opus: Anthropic Claude 4 Opus (via AWS Bedrock)
       bedrock_claude_4_sonnet: Anthropic Claude 4 Sonnet (via AWS Bedrock)
       bedrock_claude_5_fable: Anthropic Claude Fable 5 (via AWS Bedrock)
       bedrock_claude_5_sonnet: Anthropic Claude 5 Sonnet (via AWS Bedrock)
@@ -147,7 +136,6 @@ en:
       open_ai_responses_o3_mini: OpenAI o3 Mini (Responses API)
       open_ai_responses_o3_pro: OpenAI o3 Pro (Responses API)
       open_ai_responses_o4_mini: OpenAI o4 Mini (Responses API)
-      open_router_claude_3_7_sonnet: Anthropic Claude 3.7 Sonnet (via OpenRouter)
       open_router_claude_4_8_opus: Anthropic Claude 4.8 Opus (via OpenRouter)
       open_router_claude_5_fable: Anthropic Claude Fable 5 (via OpenRouter)
       open_router_claude_5_sonnet: Anthropic Claude 5 Sonnet (via OpenRouter)
