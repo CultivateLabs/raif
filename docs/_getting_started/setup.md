@@ -58,8 +58,13 @@ end
 ```
 
 Currently supported OpenAI Responses API models:
+- `open_ai_responses_gpt_5_5`
+- `open_ai_responses_gpt_5_5_pro`
 - `open_ai_responses_gpt_5_4`
 - `open_ai_responses_gpt_5_4_pro`
+- `open_ai_responses_gpt_5_4_mini`
+- `open_ai_responses_gpt_5_4_nano`
+- `open_ai_responses_gpt_5_3`
 - `open_ai_responses_gpt_5_2`
 - `open_ai_responses_gpt_5_2_pro`
 - `open_ai_responses_gpt_5_1`
@@ -93,7 +98,11 @@ end
 ```
 
 Currently supported OpenAI Completions API models:
+- `open_ai_gpt_5_5`
 - `open_ai_gpt_5_4`
+- `open_ai_gpt_5_4_mini`
+- `open_ai_gpt_5_4_nano`
+- `open_ai_gpt_5_3`
 - `open_ai_gpt_5_2`
 - `open_ai_gpt_5_1`
 - `open_ai_gpt_5`
@@ -109,7 +118,6 @@ Currently supported OpenAI Completions API models:
 - `open_ai_o3`
 - `open_ai_o3_mini`
 - `open_ai_o1`
-- `open_ai_o1_mini`
 
 
 ## Anthropic
@@ -125,7 +133,9 @@ end
 ```
 
 Currently supported Anthropic models:
+- `anthropic_claude_5_fable`
 - `anthropic_claude_5_sonnet`
+- `anthropic_claude_4_8_opus`
 - `anthropic_claude_4_7_opus`
 - `anthropic_claude_4_6_opus`
 - `anthropic_claude_4_6_sonnet`
@@ -147,7 +157,9 @@ end
 ```
 
 Currently supported Bedrock models:
+- `bedrock_claude_5_fable`
 - `bedrock_claude_5_sonnet`
+- `bedrock_claude_4_8_opus`
 - `bedrock_claude_4_7_opus`
 - `bedrock_claude_4_6_opus`
 - `bedrock_claude_4_6_sonnet`
@@ -156,6 +168,8 @@ Currently supported Bedrock models:
 - `bedrock_claude_4_5_haiku`
 - `bedrock_claude_4_1_opus`
 - `bedrock_claude_4_sonnet`
+- `bedrock_claude_3_7_sonnet`
+- `bedrock_claude_3_5_sonnet`
 - `bedrock_amazon_nova_micro`
 - `bedrock_amazon_nova_lite`
 - `bedrock_amazon_nova_pro`
@@ -180,16 +194,17 @@ end
 ```
 
 Currently included OpenRouter models:
+- `open_router_claude_5_fable`
 - `open_router_claude_5_sonnet`
+- `open_router_claude_4_8_opus`
 - `open_router_deepseek_chat_v3`
 - `open_router_deepseek_v3_1`
 - `open_router_deepseek_v3_2`
-- `open_router_gemini_2_0_flash`
+- `open_router_gemini_3_5_flash`
+- `open_router_gemini_3_1_pro_preview`
+- `open_router_gemini_3_1_flash_lite_preview`
 - `open_router_gemini_2_5_flash`
 - `open_router_gemini_2_5_pro`
-- `open_router_gemini_3_pro_preview`
-- `open_router_grok_4`
-- `open_router_grok_4_1_fast`
 - `open_router_grok_4_20`
 - `open_router_grok_4_5`
 - `open_router_kimi_k2_thinking`
@@ -203,10 +218,9 @@ Currently included OpenRouter models:
 - `open_router_minimax_m2_5`
 - `open_router_mistral_large_3_2512`
 - `open_router_mistral_small_3_2_24b`
-- `open_router_gemini_3_1_pro_preview`
-- `open_router_gemini_3_1_flash_lite_preview`
 - `open_router_open_ai_gpt_oss_120b`
 - `open_router_open_ai_gpt_oss_20b`
+- `open_router_google_gemma_4_31b_it`
 
 ## Google AI
 
@@ -223,9 +237,9 @@ end
 ```
 
 Currently supported Google AI models:
+- `google_gemini_3_5_flash`
 - `google_gemini_3_1_pro`
 - `google_gemini_3_1_flash_lite`
-- `google_gemini_3_0_pro`
 - `google_gemini_3_0_flash`
 - `google_gemini_2_5_pro`
 - `google_gemini_2_5_flash`
