@@ -23,6 +23,7 @@
 #   open_ai_responses            All OpenAI Responses API models
 #   open_router                  All OpenRouter models
 #   google                       All Google models
+#   x_ai                         All xAI models
 #   <model_key>                  A specific model key (e.g. open_router_grok_4_20)
 #
 # Environment variables:
@@ -30,6 +31,7 @@
 #   OPENAI_API_KEY               Required for OpenAI models
 #   OPEN_ROUTER_API_KEY          Required for OpenRouter models (also accepts OPENROUTER_API_KEY)
 #   GOOGLE_AI_API_KEY            Required for Google models (also accepts GOOGLE_API_KEY)
+#   XAI_API_KEY                  Required for xAI models (also accepts X_AI_API_KEY)
 #   AWS_REGION                   AWS region for Bedrock (default: us-east-1)
 #   RAIF_PROBE_MODELS            Comma-separated selectors (used when no arguments are given)
 #
