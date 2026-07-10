@@ -142,6 +142,8 @@ Raif.configure do |config|
   #   open_router_gemini_3_pro_preview
   #   open_router_grok_4
   #   open_router_grok_4_1_fast
+  #   open_router_grok_4_20
+  #   open_router_grok_4_5
   #   open_router_kimi_k2_thinking
   #   open_router_kimi_k2_5
   #   open_router_llama_3_1_8b_instruct
@@ -163,6 +165,7 @@ Raif.configure do |config|
   #   google_gemini_3_0_flash
   #   google_gemini_2_5_pro
   #   google_gemini_2_5_flash
+  #   x_ai_grok_4_5
   #   x_ai_grok_4_3
   #   x_ai_grok_4_20_reasoning
   #   x_ai_grok_4_20_non_reasoning
