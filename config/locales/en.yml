@@ -148,6 +148,7 @@ en:
       open_router_gemini_3_5_flash: Gemini 3.5 Flash (via OpenRouter)
       open_router_google_gemma_4_31b_it: Google Gemma 4 31B IT (via OpenRouter)
       open_router_grok_4_20: Grok 4.20 (via OpenRouter)
+      open_router_grok_4_5: Grok 4.5 (via OpenRouter)
       open_router_kimi_k2_5: Kimi K2.5 (via OpenRouter)
       open_router_kimi_k2_thinking: Kimi K2 Thinking (via OpenRouter)
       open_router_llama_3_1_8b_instruct: Meta Llama 3.1 8B Instruct (via OpenRouter)
@@ -165,3 +166,4 @@ en:
       x_ai_grok_4_20_non_reasoning: xAI Grok 4.20 (non-reasoning)
       x_ai_grok_4_20_reasoning: xAI Grok 4.20 (reasoning)
       x_ai_grok_4_3: xAI Grok 4.3
+      x_ai_grok_4_5: xAI Grok 4.5

@@ -661,6 +661,12 @@ module Raif
           output_token_cost: 6.0 / 1_000_000,
         },
         {
+          key: :open_router_grok_4_5,
+          api_name: "x-ai/grok-4.5",
+          input_token_cost: 2.00 / 1_000_000,
+          output_token_cost: 6.00 / 1_000_000,
+        },
+        {
           key: :open_router_google_gemma_4_31b_it,
           api_name: "google/gemma-4-31b-it",
           input_token_cost: 0.14 / 1_000_000,
@@ -668,6 +674,12 @@ module Raif
         },
       ],
       Raif::Llms::XAi => [
+        {
+          key: :x_ai_grok_4_5,
+          api_name: "grok-4.5",
+          input_token_cost: 2.00 / 1_000_000,
+          output_token_cost: 6.00 / 1_000_000,
+        },
         {
           key: :x_ai_grok_4_3,
           api_name: "grok-4.3",
