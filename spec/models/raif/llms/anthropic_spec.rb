@@ -931,10 +931,9 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     end
   end
 
-  # Degenerate tool-input shapes captured from production Claude Sonnet 5
-  # responses (2026-07-14): payload nested under a json_response key,
-  # double-encoded JSON strings, and stub inputs that carry none of the
-  # schema's properties.
+  # Degenerate tool-input shapes models have been observed to emit: payload
+  # nested under a json_response key, double-encoded JSON strings, and stub
+  # inputs that carry none of the schema's properties.
   describe "#extract_json_response normalization" do
     let(:schema) do
       {
