@@ -530,6 +530,67 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       end
     end
 
+    context "with JSON response format on a model that supports strict tool use" do
+      let(:llm) { Raif.llm(:anthropic_claude_5_sonnet) }
+      # WebSearch suppresses native structured outputs (citations
+      # incompatibility), forcing the synthetic json_response tool path --
+      # strict mode is what keeps that path schema-enforced.
+      let(:available_model_tools) { [Raif::ModelTools::ProviderManaged::WebSearch] }
+      let(:response_format) { "json" }
+      let(:source) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+
+      it "marks the json_response tool strict so the API enforces the input schema" do
+        result = llm.send(:build_tools_parameter, model_completion)
+
+        tool = result.find { |t| t[:name] == "json_response" }
+        expect(tool).to be_present
+        expect(tool[:strict]).to eq(true)
+        expect(tool[:input_schema]).to eq({
+          type: "object",
+          additionalProperties: false,
+          required: ["joke", "answer"],
+          properties: {
+            joke: { type: "string" },
+            answer: { type: "string" }
+          }
+        })
+      end
+    end
+
+    describe "#strict_compatible_schema" do
+      it "strips numeric and size constraint keywords recursively while keeping enums and structure" do
+        schema = {
+          type: "object",
+          additionalProperties: false,
+          required: ["probabilities"],
+          properties: {
+            probabilities: {
+              type: "array",
+              minItems: 1,
+              items: {
+                type: "object",
+                additionalProperties: false,
+                required: ["answer_guid", "probability"],
+                properties: {
+                  answer_guid: { type: "string", enum: ["aaa111", "bbb222"], minLength: 6 },
+                  probability: { type: "integer", minimum: 0, maximum: 100 }
+                }
+              }
+            }
+          }
+        }
+
+        sanitized = llm.send(:strict_compatible_schema, schema)
+
+        item_props = sanitized[:properties][:probabilities][:items][:properties]
+        expect(item_props[:answer_guid]).to eq({ type: "string", enum: ["aaa111", "bbb222"] })
+        expect(item_props[:probability]).to eq({ type: "integer" })
+        expect(sanitized[:properties][:probabilities]).not_to have_key(:minItems)
+        expect(sanitized[:properties][:probabilities][:items][:required]).to eq(["answer_guid", "probability"])
+        expect(sanitized[:additionalProperties]).to eq(false)
+      end
+    end
+
     context "with developer-managed tools" do
       let(:available_model_tools) { [Raif::TestModelTool] }
 
@@ -867,6 +928,77 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         { "role" => "assistant", "content" => [{ "type" => "text", "text" => "Second" }] },
         { "role" => "user", "content" => [{ "type" => "text", "text" => "Third" }] }
       ])
+    end
+  end
+
+  # Degenerate tool-input shapes captured from production Claude Sonnet 5
+  # responses (2026-07-14): payload nested under a json_response key,
+  # double-encoded JSON strings, and stub inputs that carry none of the
+  # schema's properties.
+  describe "#extract_json_response normalization" do
+    let(:schema) do
+      {
+        type: "object",
+        additionalProperties: false,
+        required: ["joke", "answer"],
+        properties: {
+          joke: { type: "string" },
+          answer: { type: "string" }
+        }
+      }
+    end
+
+    let(:model_completion) do
+      instance_double(Raif::ModelCompletion, json_response_schema: schema)
+    end
+
+    def response_with_tool_input(input, text_blocks: [])
+      content = text_blocks.map { |text| { "type" => "text", "text" => text } }
+      content << { "type" => "tool_use", "name" => "json_response", "input" => input }
+      { "content" => content }
+    end
+
+    it "passes a schema-conforming input through unchanged" do
+      resp = response_with_tool_input({ "joke" => "A joke", "answer" => "An answer" })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "unwraps a payload nested under a json_response key" do
+      resp = response_with_tool_input({ "json_response" => { "joke" => "A joke", "answer" => "An answer" } })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "decodes a double-encoded payload (single key whose value is a JSON string)" do
+      resp = response_with_tool_input({ "json_response" => { "joke" => "A joke", "answer" => "An answer" }.to_json })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "falls back to text blocks when the tool input carries none of the schema's properties" do
+      json_in_text = { "joke" => "From text", "answer" => "Also from text" }.to_json
+      resp = response_with_tool_input({ "query" => "forecast" }, text_blocks: [json_in_text])
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "From text", "answer" => "Also from text" })
+    end
+
+    it "returns empty text when a stub input has no usable candidate and no text blocks exist" do
+      resp = response_with_tool_input({ "query" => {} })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(extracted).to eq("")
+    end
+
+    it "passes the input through unchanged when no schema is available" do
+      resp = response_with_tool_input({ "query" => "forecast" })
+
+      extracted = llm.send(:extract_json_response, resp, instance_double(Raif::ModelCompletion, json_response_schema: nil))
+      expect(JSON.parse(extracted)).to eq({ "query" => "forecast" })
     end
   end
 

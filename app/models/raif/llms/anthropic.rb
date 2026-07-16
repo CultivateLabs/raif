@@ -50,7 +50,7 @@ private
 
   def update_model_completion(model_completion, response_json)
     model_completion.raw_response = if model_completion.response_format_json?
-      extract_json_response(response_json)
+      extract_json_response(response_json, model_completion)
     else
       extract_text_response(response_json)
     end
@@ -141,7 +141,7 @@ private
     resp.dig("content").select{|v| v["type"] == "text" }.map{|v| v["text"] }.join("\n")
   end
 
-  def extract_json_response(resp)
+  def extract_json_response(resp, model_completion = nil)
     return extract_text_response(resp) if resp&.dig("content").nil?
 
     # Look for tool_use blocks in the content array
@@ -150,10 +150,60 @@ private
     end
 
     if tool_response
-      JSON.generate(tool_response["input"])
-    else
-      extract_text_response(resp)
+      input = normalize_json_response_tool_input(
+        tool_response["input"],
+        model_completion&.json_response_schema
+      )
+      return JSON.generate(input) if input
     end
+
+    extract_text_response(resp)
+  end
+
+  # Models occasionally emit degenerate json_response tool inputs: the real
+  # payload nested under a "json_response" key, or double-encoded as a JSON
+  # string value. When a schema is available, pick the candidate carrying the
+  # most schema properties; an input carrying none is treated as unusable so
+  # extraction can fall back to text blocks (which sometimes hold the JSON
+  # instead). Without a schema, the input passes through unchanged.
+  def normalize_json_response_tool_input(input, schema)
+    return input unless input.is_a?(Hash)
+
+    candidates = [input]
+
+    unwrapped = input["json_response"] || input[:json_response]
+    candidates << unwrapped if unwrapped.is_a?(Hash)
+
+    if input.size == 1
+      decoded = try_parse_json_object(input.values.first)
+      candidates << decoded if decoded
+    end
+
+    expected_keys = schema_property_names(schema)
+    return input if expected_keys.empty?
+
+    best = candidates.max_by { |candidate| (candidate.keys.map(&:to_s) & expected_keys).size }
+    return best if best && best.keys.map(&:to_s).intersect?(expected_keys)
+
+    nil
+  end
+
+  def schema_property_names(schema)
+    return [] if schema.blank?
+
+    properties = schema[:properties] || schema["properties"]
+    return [] unless properties.is_a?(Hash)
+
+    properties.keys.map(&:to_s)
+  end
+
+  def try_parse_json_object(value)
+    return unless value.is_a?(String)
+
+    parsed = JSON.parse(value)
+    parsed.is_a?(Hash) ? parsed : nil
+  rescue JSON::ParserError
+    nil
   end
 
   def extract_citations(resp)

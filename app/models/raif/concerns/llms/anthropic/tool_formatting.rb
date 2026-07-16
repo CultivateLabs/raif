@@ -21,11 +21,7 @@ module Raif::Concerns::Llms::Anthropic::ToolFormatting
     if model_completion.response_format_json? &&
         model_completion.json_response_schema.present? &&
         !use_native_structured_outputs?(model_completion)
-      tools << {
-        name: "json_response",
-        description: "Generate a structured JSON response based on the provided schema.",
-        input_schema: model_completion.json_response_schema
-      }
+      tools << json_response_tool_definition(model_completion)
     end
 
     # If we support native tool use and have tools available, add them to the request
@@ -44,6 +40,58 @@ module Raif::Concerns::Llms::Anthropic::ToolFormatting
     end
 
     tools
+  end
+
+  # Without strict tool use the synthetic tool is advisory only, and models
+  # occasionally emit stub or malformed inputs (empty objects, placeholder
+  # values, payloads nested one level deep). strict: true makes the API
+  # enforce the input schema via constrained decoding on models that support
+  # it (gated on the same provider setting as native structured outputs,
+  # which shipped together with strict tool use).
+  def json_response_tool_definition(model_completion)
+    tool = {
+      name: "json_response",
+      description: "Generate a structured JSON response based on the provided schema.",
+      input_schema: model_completion.json_response_schema
+    }
+
+    if supports_structured_outputs?
+      tool[:strict] = true
+      tool[:input_schema] = strict_compatible_schema(tool[:input_schema])
+    end
+
+    tool
+  end
+
+  # Strict schemas reject numeric and size constraint keywords; callers keep
+  # their own range validation. additionalProperties: false and full required
+  # lists (also mandatory for strict mode) are already emitted by
+  # Raif::JsonSchemaBuilder.
+  UNSUPPORTED_STRICT_SCHEMA_KEYS = [
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "multipleOf",
+    "minLength",
+    "maxLength",
+    "minItems",
+    "maxItems"
+  ].freeze
+
+  def strict_compatible_schema(schema)
+    case schema
+    when Hash
+      schema.each_with_object({}) do |(key, value), out|
+        next if UNSUPPORTED_STRICT_SCHEMA_KEYS.include?(key.to_s)
+
+        out[key] = strict_compatible_schema(value)
+      end
+    when Array
+      schema.map { |item| strict_compatible_schema(item) }
+    else
+      schema
+    end
   end
 
   def format_provider_managed_tool(tool)
