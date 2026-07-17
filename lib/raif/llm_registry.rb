@@ -515,18 +515,21 @@ module Raif
           api_name: "anthropic/claude-fable-5",
           input_token_cost: 10.0 / 1_000_000,
           output_token_cost: 50.0 / 1_000_000,
+          model_provider_settings: { supports_temperature: false },
         },
         {
           key: :open_router_claude_4_8_opus,
           api_name: "anthropic/claude-opus-4.8",
           input_token_cost: 5.0 / 1_000_000,
           output_token_cost: 25.0 / 1_000_000,
+          model_provider_settings: { supports_temperature: false },
         },
         {
           key: :open_router_claude_5_sonnet,
           api_name: "anthropic/claude-sonnet-5",
           input_token_cost: 3.0 / 1_000_000,
           output_token_cost: 15.0 / 1_000_000,
+          model_provider_settings: { supports_temperature: false },
         },
         {
           key: :open_router_deepseek_chat_v3,
