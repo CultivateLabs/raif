@@ -1002,4 +1002,81 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       expect(parameters).not_to have_key(:parallel_tool_calls)
     end
   end
+
+  describe "#extract_json_response normalization" do
+    let(:schema) do
+      {
+        type: "object",
+        additionalProperties: false,
+        required: ["joke", "answer"],
+        properties: {
+          joke: { type: "string" },
+          answer: { type: "string" }
+        }
+      }
+    end
+
+    let(:model_completion) do
+      instance_double(Raif::ModelCompletion, json_response_schema: schema)
+    end
+
+    def response_with_tool_input(input, text_blocks: [])
+      content = text_blocks.map { |text| Aws::BedrockRuntime::Types::ContentBlock::Text.new(text: text) }
+      content << Aws::BedrockRuntime::Types::ContentBlock.new(
+        tool_use: Aws::BedrockRuntime::Types::ToolUseBlock.new(
+          tool_use_id: "tooluse_abc123",
+          name: "json_response",
+          input: input
+        )
+      )
+
+      message = Aws::BedrockRuntime::Types::Message.new(role: "assistant", content: content)
+      output = Aws::BedrockRuntime::Types::ConverseOutput::Message.new(message: message)
+      usage = Aws::BedrockRuntime::Types::TokenUsage.new(input_tokens: 1, output_tokens: 1, total_tokens: 2)
+      Aws::BedrockRuntime::Types::ConverseResponse.new(output: output, usage: usage, stop_reason: "tool_use")
+    end
+
+    it "passes a schema-conforming input through unchanged" do
+      resp = response_with_tool_input({ "joke" => "A joke", "answer" => "An answer" })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "unwraps a payload nested under a json_response key" do
+      resp = response_with_tool_input({ "json_response" => { "joke" => "A joke", "answer" => "An answer" } })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "decodes a double-encoded payload (single key whose value is a JSON string)" do
+      resp = response_with_tool_input({ "json_response" => { "joke" => "A joke", "answer" => "An answer" }.to_json })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "falls back to text blocks when the tool input carries none of the schema's properties" do
+      json_in_text = { "joke" => "From text", "answer" => "Also from text" }.to_json
+      resp = response_with_tool_input({ "query" => "forecast" }, text_blocks: [json_in_text])
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "From text", "answer" => "Also from text" })
+    end
+
+    it "returns nil when a stub input has no usable candidate and no text blocks exist" do
+      resp = response_with_tool_input({ "query" => {} })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(extracted).to be_nil
+    end
+
+    it "passes the input through unchanged when no schema is available" do
+      resp = response_with_tool_input({ "query" => "forecast" })
+
+      extracted = llm.send(:extract_json_response, resp, instance_double(Raif::ModelCompletion, json_response_schema: nil))
+      expect(JSON.parse(extracted)).to eq({ "query" => "forecast" })
+    end
+  end
 end

@@ -4,6 +4,7 @@ class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::MessageFormatting
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
   include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
+  include Raif::Concerns::Llms::JsonResponseNormalization
 
   def self.prompt_tokens_include_cached_tokens?
     false
@@ -73,7 +74,7 @@ private
     return if resp.nil?
 
     model_completion.raw_response = if model_completion.response_format_json?
-      extract_json_response(resp)
+      extract_json_response(resp, model_completion)
     else
       extract_text_response(resp)
     end
@@ -182,7 +183,7 @@ private
     text_block&.text
   end
 
-  def extract_json_response(resp)
+  def extract_json_response(resp, model_completion = nil)
     # Get the message from the response object
     message = resp.output.message
 
@@ -194,10 +195,14 @@ private
     end
 
     if tool_response&.tool_use
-      JSON.generate(tool_response.tool_use.input)
-    else
-      extract_text_response(resp)
+      input = normalize_json_response_tool_input(
+        tool_response.tool_use.input,
+        model_completion&.json_response_schema
+      )
+      return JSON.generate(input) if input
     end
+
+    extract_text_response(resp)
   end
 
   def streaming_chunk_handler(model_completion, &block)
