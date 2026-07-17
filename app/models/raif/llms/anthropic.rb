@@ -5,7 +5,6 @@ class Raif::Llms::Anthropic < Raif::Llm
   include Raif::Concerns::Llms::Anthropic::ToolFormatting
   include Raif::Concerns::Llms::Anthropic::ResponseToolCalls
   include Raif::Concerns::Llms::Anthropic::BatchInference
-  include Raif::Concerns::Llms::JsonResponseNormalization
 
   def self.prompt_tokens_include_cached_tokens?
     false
@@ -151,9 +150,9 @@ private
     end
 
     if tool_response
-      input = normalize_json_response_tool_input(
-        tool_response["input"],
-        model_completion&.json_response_schema
+      input = Raif::Llms::SyntheticJsonResponseToolInputNormalizer.call(
+        input: tool_response["input"],
+        schema: model_completion&.json_response_schema
       )
       return JSON.generate(input) if input
     end

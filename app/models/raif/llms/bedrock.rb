@@ -4,7 +4,6 @@ class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::MessageFormatting
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
   include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
-  include Raif::Concerns::Llms::JsonResponseNormalization
 
   def self.prompt_tokens_include_cached_tokens?
     false
@@ -195,9 +194,9 @@ private
     end
 
     if tool_response&.tool_use
-      input = normalize_json_response_tool_input(
-        tool_response.tool_use.input,
-        model_completion&.json_response_schema
+      input = Raif::Llms::SyntheticJsonResponseToolInputNormalizer.call(
+        input: tool_response.tool_use.input,
+        schema: model_completion&.json_response_schema
       )
       return JSON.generate(input) if input
     end
