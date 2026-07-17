@@ -7,10 +7,11 @@ private
 
   # Models occasionally emit degenerate json_response tool inputs: the real
   # payload nested under a "json_response" key, or double-encoded as a JSON
-  # string value. When a schema is available, pick the candidate carrying the
-  # most schema properties; an input carrying none is treated as unusable so
-  # extraction can fall back to text blocks (which sometimes hold the JSON
-  # instead). Without a schema, the input passes through unchanged.
+  # string value. When a schema is available, remove unknown root properties if
+  # the schema forbids them, then pick the valid candidate carrying the most
+  # schema properties. If none satisfies the original schema, extraction can fall
+  # back to text blocks (which sometimes hold the JSON instead). Without a schema,
+  # the input passes through unchanged.
   def normalize_json_response_tool_input(input, schema)
     return input unless input.is_a?(Hash)
 
@@ -27,10 +28,10 @@ private
     expected_keys = schema_property_names(schema)
     return input if expected_keys.empty?
 
-    best = candidates.max_by { |candidate| (candidate.keys.map(&:to_s) & expected_keys).size }
-    return best if best && best.keys.map(&:to_s).intersect?(expected_keys)
-
-    nil
+    candidates
+      .map { |candidate| prepare_schema_candidate(candidate, schema, expected_keys) }
+      .select { |candidate| schema_matching_candidate?(candidate, schema, expected_keys) }
+      .max_by { |candidate| matching_key_count(candidate, expected_keys) }
   end
 
   def schema_property_names(schema)
@@ -49,5 +50,24 @@ private
     parsed.is_a?(Hash) ? parsed : nil
   rescue JSON::ParserError
     nil
+  end
+
+  def schema_matching_candidate?(candidate, schema, expected_keys)
+    matching_key_count(candidate, expected_keys).positive? && JSON::Validator.validate(schema, candidate)
+  end
+
+  def prepare_schema_candidate(candidate, schema, expected_keys)
+    normalized = candidate.deep_stringify_keys
+    return normalized unless additional_properties_forbidden?(schema)
+
+    normalized.slice(*expected_keys)
+  end
+
+  def additional_properties_forbidden?(schema)
+    schema[:additionalProperties] == false || schema["additionalProperties"] == false
+  end
+
+  def matching_key_count(candidate, expected_keys)
+    (candidate.keys.map(&:to_s) & expected_keys).size
   end
 end

@@ -557,40 +557,6 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       end
     end
 
-    describe "#strict_compatible_schema" do
-      it "strips numeric and size constraint keywords recursively while keeping enums and structure" do
-        schema = {
-          type: "object",
-          additionalProperties: false,
-          required: ["probabilities"],
-          properties: {
-            probabilities: {
-              type: "array",
-              minItems: 1,
-              items: {
-                type: "object",
-                additionalProperties: false,
-                required: ["answer_guid", "probability"],
-                properties: {
-                  answer_guid: { type: "string", enum: ["aaa111", "bbb222"], minLength: 6 },
-                  probability: { type: "integer", minimum: 0, maximum: 100 }
-                }
-              }
-            }
-          }
-        }
-
-        sanitized = llm.send(:strict_compatible_schema, schema)
-
-        item_props = sanitized[:properties][:probabilities][:items][:properties]
-        expect(item_props[:answer_guid]).to eq({ type: "string", enum: ["aaa111", "bbb222"] })
-        expect(item_props[:probability]).to eq({ type: "integer" })
-        expect(sanitized[:properties][:probabilities]).not_to have_key(:minItems)
-        expect(sanitized[:properties][:probabilities][:items][:required]).to eq(["answer_guid", "probability"])
-        expect(sanitized[:additionalProperties]).to eq(false)
-      end
-    end
-
     context "with developer-managed tools" do
       let(:available_model_tools) { [Raif::TestModelTool] }
 
@@ -941,7 +907,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         additionalProperties: false,
         required: ["joke", "answer"],
         properties: {
-          joke: { type: "string" },
+          joke: { type: "string", minLength: 5 },
           answer: { type: "string" }
         }
       }
@@ -981,6 +947,22 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     it "falls back to text blocks when the tool input carries none of the schema's properties" do
       json_in_text = { "joke" => "From text", "answer" => "Also from text" }.to_json
       resp = response_with_tool_input({ "query" => "forecast" }, text_blocks: [json_in_text])
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "From text", "answer" => "Also from text" })
+    end
+
+    it "falls back to text blocks when the tool input only partially satisfies the schema" do
+      json_in_text = { "joke" => "From text", "answer" => "Also from text" }.to_json
+      resp = response_with_tool_input({ "joke" => "Incomplete" }, text_blocks: [json_in_text])
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "From text", "answer" => "Also from text" })
+    end
+
+    it "falls back to text blocks when the tool input violates a stripped constraint" do
+      json_in_text = { "joke" => "From text", "answer" => "Also from text" }.to_json
+      resp = response_with_tool_input({ "joke" => "No", "answer" => "An answer" }, text_blocks: [json_in_text])
 
       extracted = llm.send(:extract_json_response, resp, model_completion)
       expect(JSON.parse(extracted)).to eq({ "joke" => "From text", "answer" => "Also from text" })
@@ -1044,7 +1026,18 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
   end
 
   describe "#build_request_parameters with native structured outputs" do
-    let(:test_task){ Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+    let(:test_task) do
+      Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)).tap do |task|
+        allow(task).to receive(:json_response_schema).and_return({
+          type: "object",
+          additionalProperties: false,
+          required: ["score"],
+          properties: {
+            score: { type: "number", minimum: 0, maximum: 1 }
+          }
+        })
+      end
+    end
 
     context "with a json_response_schema and a supporting model" do
       let(:llm){ Raif.llm(:anthropic_claude_4_5_sonnet) }
@@ -1058,13 +1051,20 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         )
       end
 
-      it "emits output_config.format with the source's json_response_schema" do
+      it "emits output_config.format with a strict-compatible version of the source's schema" do
         params = llm.send(:build_request_parameters, model_completion)
 
         expect(params[:output_config]).to eq({
           format: {
             type: "json_schema",
-            schema: model_completion.json_response_schema
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["score"],
+              properties: {
+                score: { type: "number" }
+              }
+            }
           }
         })
       end

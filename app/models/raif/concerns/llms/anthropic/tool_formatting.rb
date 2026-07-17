@@ -57,41 +57,10 @@ module Raif::Concerns::Llms::Anthropic::ToolFormatting
 
     if supports_structured_outputs?
       tool[:strict] = true
-      tool[:input_schema] = strict_compatible_schema(tool[:input_schema])
+      tool[:input_schema] = Raif::Llms::Anthropic::StrictSchemaTransformer.call(tool[:input_schema])
     end
 
     tool
-  end
-
-  # Strict schemas reject numeric and size constraint keywords; callers keep
-  # their own range validation. additionalProperties: false and full required
-  # lists (also mandatory for strict mode) are already emitted by
-  # Raif::JsonSchemaBuilder.
-  UNSUPPORTED_STRICT_SCHEMA_KEYS = [
-    "minimum",
-    "maximum",
-    "exclusiveMinimum",
-    "exclusiveMaximum",
-    "multipleOf",
-    "minLength",
-    "maxLength",
-    "minItems",
-    "maxItems"
-  ].freeze
-
-  def strict_compatible_schema(schema)
-    case schema
-    when Hash
-      schema.each_with_object({}) do |(key, value), out|
-        next if UNSUPPORTED_STRICT_SCHEMA_KEYS.include?(key.to_s)
-
-        out[key] = strict_compatible_schema(value)
-      end
-    when Array
-      schema.map { |item| strict_compatible_schema(item) }
-    else
-      schema
-    end
   end
 
   def format_provider_managed_tool(tool)

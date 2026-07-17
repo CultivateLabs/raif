@@ -97,7 +97,7 @@ private
       params[:output_config] = {
         format: {
           type: "json_schema",
-          schema: model_completion.json_response_schema
+          schema: Raif::Llms::Anthropic::StrictSchemaTransformer.call(model_completion.json_response_schema)
         }
       }
       model_completion.response_format_parameter = "json_schema"

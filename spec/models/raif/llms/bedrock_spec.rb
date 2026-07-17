@@ -1043,6 +1043,22 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
     end
 
+    it "strips unknown root properties before validating an otherwise conforming input" do
+      resp = response_with_tool_input({ "joke" => "A joke", "answer" => "An answer", "confidence" => 0.9 })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "preserves unknown root properties when the schema allows them" do
+      permissive_schema = schema.merge(additionalProperties: true)
+      completion = instance_double(Raif::ModelCompletion, json_response_schema: permissive_schema)
+      resp = response_with_tool_input({ "joke" => "A joke", "answer" => "An answer", "confidence" => 0.9 })
+
+      extracted = llm.send(:extract_json_response, resp, completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer", "confidence" => 0.9 })
+    end
+
     it "unwraps a payload nested under a json_response key" do
       resp = response_with_tool_input({ "json_response" => { "joke" => "A joke", "answer" => "An answer" } })
 
