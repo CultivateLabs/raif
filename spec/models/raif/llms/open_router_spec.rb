@@ -490,6 +490,43 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       end
     end
 
+    context "when the model supports temperature" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "open_router_llama_3_1_8b_instruct",
+          model_api_name: "meta-llama/llama-3.1-8b-instruct",
+          temperature: 0.5
+        )
+      end
+
+      it "includes temperature in the request parameters" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params[:temperature]).to eq(0.5)
+      end
+    end
+
+    context "when the model does not support temperature" do
+      # OpenRouter routes with provider.require_parameters: true on schema'd
+      # JSON requests, so a request carrying an unsupported parameter matches
+      # zero endpoints and 404s. Models that deprecate temperature (Claude 5
+      # generation) must not receive it.
+      let(:llm){ Raif.llm(:open_router_claude_5_sonnet) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "open_router_claude_5_sonnet",
+          model_api_name: "anthropic/claude-sonnet-5",
+          temperature: 0.5
+        )
+      end
+
+      it "omits temperature from the request parameters" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params).not_to have_key(:temperature)
+      end
+    end
+
     context "with a json_response_schema present" do
       let(:test_task){ Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
       let(:model_completion) do
