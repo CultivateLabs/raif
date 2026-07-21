@@ -206,8 +206,12 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
 
     case result["type"]
     when "succeeded"
-      update_model_completion(mc, result["message"])
-      mc.completed!
+      begin
+        update_model_completion(mc, result["message"])
+        mc.completed!
+      rescue Raif::Errors::InvalidJsonResponseError => e
+        mc.record_failure!(e)
+      end
     else
       type = result["type"].to_s
       error = result["error"] || {}
