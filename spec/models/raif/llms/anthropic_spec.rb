@@ -530,6 +530,33 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       end
     end
 
+    context "with JSON response format on a model that supports strict tool use" do
+      let(:llm) { Raif.llm(:anthropic_claude_5_sonnet) }
+      # WebSearch suppresses native structured outputs (citations
+      # incompatibility), forcing the synthetic json_response tool path --
+      # strict mode is what keeps that path schema-enforced.
+      let(:available_model_tools) { [Raif::ModelTools::ProviderManaged::WebSearch] }
+      let(:response_format) { "json" }
+      let(:source) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+
+      it "marks the json_response tool strict so the API enforces the input schema" do
+        result = llm.send(:build_tools_parameter, model_completion)
+
+        tool = result.find { |t| t[:name] == "json_response" }
+        expect(tool).to be_present
+        expect(tool[:strict]).to eq(true)
+        expect(tool[:input_schema]).to eq({
+          type: "object",
+          additionalProperties: false,
+          required: ["joke", "answer"],
+          properties: {
+            joke: { type: "string" },
+            answer: { type: "string" }
+          }
+        })
+      end
+    end
+
     context "with developer-managed tools" do
       let(:available_model_tools) { [Raif::TestModelTool] }
 
@@ -870,6 +897,92 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     end
   end
 
+  # Degenerate tool-input shapes models have been observed to emit: payload
+  # nested under a json_response key, double-encoded JSON strings, and stub
+  # inputs that carry none of the schema's properties.
+  describe "#extract_json_response normalization" do
+    let(:schema) do
+      {
+        type: "object",
+        additionalProperties: false,
+        required: ["joke", "answer"],
+        properties: {
+          joke: { type: "string", minLength: 5 },
+          answer: { type: "string" }
+        }
+      }
+    end
+
+    let(:model_completion) do
+      instance_double(Raif::ModelCompletion, json_response_schema: schema)
+    end
+
+    def response_with_tool_input(input, text_blocks: [])
+      content = text_blocks.map { |text| { "type" => "text", "text" => text } }
+      content << { "type" => "tool_use", "name" => "json_response", "input" => input }
+      { "content" => content }
+    end
+
+    it "passes a schema-conforming input through unchanged" do
+      resp = response_with_tool_input({ "joke" => "A joke", "answer" => "An answer" })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "unwraps a payload nested under a json_response key" do
+      resp = response_with_tool_input({ "json_response" => { "joke" => "A joke", "answer" => "An answer" } })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "decodes a double-encoded payload (single key whose value is a JSON string)" do
+      resp = response_with_tool_input({ "json_response" => { "joke" => "A joke", "answer" => "An answer" }.to_json })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "falls back to text blocks when the tool input carries none of the schema's properties" do
+      json_in_text = { "joke" => "From text", "answer" => "Also from text" }.to_json
+      resp = response_with_tool_input({ "query" => "forecast" }, text_blocks: [json_in_text])
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "From text", "answer" => "Also from text" })
+    end
+
+    it "falls back to text blocks when the tool input only partially satisfies the schema" do
+      json_in_text = { "joke" => "From text", "answer" => "Also from text" }.to_json
+      resp = response_with_tool_input({ "joke" => "Incomplete" }, text_blocks: [json_in_text])
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "From text", "answer" => "Also from text" })
+    end
+
+    it "falls back to text blocks when the tool input violates a stripped constraint" do
+      json_in_text = { "joke" => "From text", "answer" => "Also from text" }.to_json
+      resp = response_with_tool_input({ "joke" => "No", "answer" => "An answer" }, text_blocks: [json_in_text])
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "From text", "answer" => "Also from text" })
+    end
+
+    it "returns empty text when a stub input has no usable candidate and no text blocks exist" do
+      resp = response_with_tool_input({ "query" => {} })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(extracted).to eq("")
+    end
+
+    it "passes the input through unchanged when no schema is available" do
+      resp = response_with_tool_input({ "query" => "forecast" })
+
+      extracted = llm.send(:extract_json_response, resp, instance_double(Raif::ModelCompletion, json_response_schema: nil))
+      expect(JSON.parse(extracted)).to eq({ "query" => "forecast" })
+    end
+  end
+
   describe "#build_forced_tool_choice" do
     it "returns the correct format for forcing a specific tool" do
       result = llm.build_forced_tool_choice("agent_final_answer")
@@ -913,7 +1026,18 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
   end
 
   describe "#build_request_parameters with native structured outputs" do
-    let(:test_task){ Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
+    let(:test_task) do
+      Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)).tap do |task|
+        allow(task).to receive(:json_response_schema).and_return({
+          type: "object",
+          additionalProperties: false,
+          required: ["score"],
+          properties: {
+            score: { type: "number", minimum: 0, maximum: 1 }
+          }
+        })
+      end
+    end
 
     context "with a json_response_schema and a supporting model" do
       let(:llm){ Raif.llm(:anthropic_claude_4_5_sonnet) }
@@ -927,13 +1051,20 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         )
       end
 
-      it "emits output_config.format with the source's json_response_schema" do
+      it "emits output_config.format with a strict-compatible version of the source's schema" do
         params = llm.send(:build_request_parameters, model_completion)
 
         expect(params[:output_config]).to eq({
           format: {
             type: "json_schema",
-            schema: model_completion.json_response_schema
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["score"],
+              properties: {
+                score: { type: "number", description: "Must be at least 0. Must be at most 1." }
+              }
+            }
           }
         })
       end
@@ -952,6 +1083,67 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       it "sets model_completion.response_format_parameter to 'json_schema'" do
         llm.send(:build_request_parameters, model_completion)
         expect(model_completion.response_format_parameter).to eq("json_schema")
+      end
+
+      it "rejects native output that violates constraints removed from the provider schema" do
+        response_json = {
+          "id" => "msg_123",
+          "content" => [{ "type" => "text", "text" => { score: -1 }.to_json }],
+          "stop_reason" => "end_turn",
+          "usage" => { "input_tokens" => 10, "output_tokens" => 5 }
+        }
+
+        expect do
+          llm.send(:update_model_completion, model_completion, response_json)
+        end.to raise_error(Raif::Errors::InvalidJsonResponseError) do |error|
+          expect(error.message).to include("score")
+        end
+
+        expect(model_completion.reload.raw_response).to eq({ score: -1 }.to_json)
+      end
+
+      it "leaves blank responses for the existing blank-response handling" do
+        response_json = {
+          "id" => "msg_123",
+          "content" => [],
+          "stop_reason" => "end_turn",
+          "usage" => { "input_tokens" => 10, "output_tokens" => 0 }
+        }
+
+        expect do
+          llm.send(:update_model_completion, model_completion, response_json)
+        end.not_to raise_error
+
+        expect do
+          llm.send(:ensure_model_completion_present!, model_completion)
+        end.to raise_error(Raif::Errors::BlankResponseError)
+      end
+
+      it "does not validate an intermediate developer-managed tool response as final JSON" do
+        response_json = {
+          "id" => "msg_123",
+          "content" => [
+            { "type" => "text", "text" => "I'll fetch that first." },
+            {
+              "type" => "tool_use",
+              "id" => "toolu_123",
+              "name" => "fetch_url",
+              "input" => { "url" => "https://example.com" }
+            }
+          ],
+          "stop_reason" => "tool_use",
+          "usage" => { "input_tokens" => 10, "output_tokens" => 5 }
+        }
+
+        expect do
+          llm.send(:update_model_completion, model_completion, response_json)
+        end.not_to raise_error
+
+        expect(model_completion.response_tool_calls).to contain_exactly(
+          "provider_tool_call_id" => "toolu_123",
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://example.com" }
+        )
       end
     end
 

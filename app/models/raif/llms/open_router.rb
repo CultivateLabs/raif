@@ -147,17 +147,10 @@ private
   end
 
   def extract_json_response(resp)
-    tool_calls = resp&.dig("choices", 0, "message", "tool_calls")
-    return extract_text_response(resp) if tool_calls.blank?
-
-    tool_response = tool_calls.find do |tool_call|
-      tool_call["function"]["name"] == "json_response"
-    end
-
-    if tool_response&.dig("function", "arguments")
-      tool_response["function"]["arguments"]
-    else
-      extract_text_response(resp)
-    end
+    # JSON output is enforced provider-side via response_format (json_schema
+    # or json_object), so the payload arrives as ordinary message content.
+    # The synthetic json_response function-tool workaround is no longer sent,
+    # so there is no tool call to unwrap.
+    extract_text_response(resp)
   end
 end

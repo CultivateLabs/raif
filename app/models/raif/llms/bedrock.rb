@@ -73,7 +73,7 @@ private
     return if resp.nil?
 
     model_completion.raw_response = if model_completion.response_format_json?
-      extract_json_response(resp)
+      extract_json_response(resp, model_completion)
     else
       extract_text_response(resp)
     end
@@ -182,7 +182,7 @@ private
     text_block&.text
   end
 
-  def extract_json_response(resp)
+  def extract_json_response(resp, model_completion = nil)
     # Get the message from the response object
     message = resp.output.message
 
@@ -194,10 +194,14 @@ private
     end
 
     if tool_response&.tool_use
-      JSON.generate(tool_response.tool_use.input)
-    else
-      extract_text_response(resp)
+      input = Raif::Llms::SyntheticJsonResponseToolInputNormalizer.call(
+        input: tool_response.tool_use.input,
+        schema: model_completion&.json_response_schema
+      )
+      return JSON.generate(input) if input
     end
+
+    extract_text_response(resp)
   end
 
   def streaming_chunk_handler(model_completion, &block)

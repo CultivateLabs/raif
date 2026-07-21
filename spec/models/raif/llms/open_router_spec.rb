@@ -78,7 +78,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
       end
     end
 
-    context "when the response format is json and model does not use json_response tool" do
+    context "when the response format is json without a schema" do
       it "makes a request to the OpenRouter API and processes the json response", vcr: { cassette_name: "open_router/json_response" } do
         model_completion = llm.chat(
           messages: [{ role: "user", content: "Can you you tell me a joke? Respond in JSON format. Include nothing outside of the JSON." }],
@@ -108,10 +108,8 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
 
     context "when the response format is JSON and a json_response_schema is present" do
       # Under the documented `response_format: json_schema` mechanism (provider
-      # enforces the schema), OpenRouter returns the JSON in `message.content`
-      # rather than as a `json_response` tool call. `extract_json_response`
-      # falls through to `extract_text_response` for that shape; these specs
-      # cover that path without a live API.
+      # enforces the schema), OpenRouter returns the JSON in `message.content`;
+      # these specs cover that path without a live API.
       let(:llm){ Raif.llm(:open_router_llama_3_1_8b_instruct) }
       let(:json_payload){ '{"joke":"Why don\'t scientists trust atoms?","answer":"Because they make up everything."}' }
       let(:response_json) do
@@ -135,9 +133,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         }
       end
 
-      it "extracts the JSON payload from message.content via the text fallback" do
-        # extract_json_response falls back to extract_text_response when
-        # there are no tool_calls — that's what the new path produces.
+      it "extracts the JSON payload from message.content" do
         result = llm.send(:extract_json_response, response_json)
         expect(result).to eq(json_payload)
       end

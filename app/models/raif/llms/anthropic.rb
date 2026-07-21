@@ -50,7 +50,7 @@ private
 
   def update_model_completion(model_completion, response_json)
     model_completion.raw_response = if model_completion.response_format_json?
-      extract_json_response(response_json)
+      extract_json_response(response_json, model_completion)
     else
       extract_text_response(response_json)
     end
@@ -66,6 +66,7 @@ private
     model_completion.cache_read_input_tokens = response_json&.dig("usage", "cache_read_input_tokens")
     model_completion.cache_creation_input_tokens = response_json&.dig("usage", "cache_creation_input_tokens")
     model_completion.save!
+    validate_native_json_response!(model_completion)
   end
 
   def build_request_parameters(model_completion)
@@ -96,7 +97,7 @@ private
       params[:output_config] = {
         format: {
           type: "json_schema",
-          schema: model_completion.json_response_schema
+          schema: Raif::Llms::Anthropic::StrictSchemaTransformer.call(model_completion.json_response_schema)
         }
       }
       model_completion.response_format_parameter = "json_schema"
@@ -135,13 +136,32 @@ private
     true
   end
 
+  def validate_native_json_response!(model_completion)
+    return unless use_native_structured_outputs?(model_completion)
+    return if model_completion.response_finish_reason.blank?
+    return if model_completion.raw_response.blank?
+    return if model_completion.response_tool_calls.present?
+
+    validation_errors = JSON::Validator.fully_validate(
+      model_completion.json_response_schema,
+      model_completion.parsed_response(force_reparse: true)
+    )
+    return if validation_errors.empty?
+
+    raise Raif::Errors::InvalidJsonResponseError,
+      "Native JSON response did not satisfy the original schema: #{validation_errors.join("; ")}"
+  rescue JSON::ParserError => e
+    raise Raif::Errors::InvalidJsonResponseError,
+      "Native JSON response could not be parsed: #{e.message}"
+  end
+
   def extract_text_response(resp)
     return if resp&.dig("content").blank?
 
     resp.dig("content").select{|v| v["type"] == "text" }.map{|v| v["text"] }.join("\n")
   end
 
-  def extract_json_response(resp)
+  def extract_json_response(resp, model_completion = nil)
     return extract_text_response(resp) if resp&.dig("content").nil?
 
     # Look for tool_use blocks in the content array
@@ -150,10 +170,14 @@ private
     end
 
     if tool_response
-      JSON.generate(tool_response["input"])
-    else
-      extract_text_response(resp)
+      input = Raif::Llms::SyntheticJsonResponseToolInputNormalizer.call(
+        input: tool_response["input"],
+        schema: model_completion&.json_response_schema
+      )
+      return JSON.generate(input) if input
     end
+
+    extract_text_response(resp)
   end
 
   def extract_citations(resp)
