@@ -7,7 +7,13 @@ class Raif::Llms::OpenRouter < Raif::Llm
   include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
 
   def perform_model_completion!(model_completion, &block)
-    model_completion.temperature ||= default_temperature
+    if supports_temperature?
+      model_completion.temperature ||= default_temperature
+    else
+      Raif.logger.warn "Temperature is not supported for #{api_name}. Ignoring temperature parameter." if model_completion.temperature.present?
+      model_completion.temperature = nil
+    end
+
     parameters = build_request_parameters(model_completion)
     response = connection.post("chat/completions") do |req|
       req.body = parameters
@@ -38,6 +44,10 @@ private
     Raif::StreamingResponses::OpenAiCompletions
   end
 
+  def supports_temperature?
+    provider_settings.key?(:supports_temperature) ? provider_settings[:supports_temperature] : true
+  end
+
   def update_model_completion(model_completion, response_json)
     return if response_json.nil?
 
@@ -64,9 +74,17 @@ private
     params = {
       model: model_completion.model_api_name,
       messages: model_completion.messages,
-      temperature: model_completion.temperature.to_f,
-      max_tokens: model_completion.max_completion_tokens || default_max_completion_tokens,
     }
+
+    # Models that deprecate temperature (Claude 5 generation) list it as
+    # unsupported on their OpenRouter endpoints. Since schema'd JSON requests
+    # send provider.require_parameters: true, including temperature for those
+    # models matches zero endpoints and the request 404s.
+    if supports_temperature?
+      params[:temperature] = model_completion.temperature.to_f
+    end
+
+    params[:max_tokens] = model_completion.max_completion_tokens || default_max_completion_tokens
 
     # Add system message to the messages array if present
     if model_completion.system_prompt.present?

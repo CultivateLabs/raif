@@ -91,32 +91,29 @@ You can define the system prompt either in the template or by overriding `build_
 ```ruby
 module Raif
   module Agents
-    class WikipediaResearchAgent < Raif::Agent
+    class WikipediaResearchAgent < Raif::ApplicationAgent
       # If you want to always include a certain set of model tools with this agent type,
       # uncomment this callback to populate the available_model_tools attribute with your desired model tools.
-      # before_create -> {
-      #   self.available_model_tools ||= [
+      # def populate_default_model_tools
+      #   self.available_model_tools = [
       #     Raif::ModelTools::WikipediaSearch,
       #     Raif::ModelTools::FetchUrl
       #   ]
-      # }
+      # end
 
-      # Enter your agent's system prompt here. Alternatively, you can define it in
-      # app/views/raif/agents/wikipedia_research_agent.system_prompt.erb
-      def build_system_prompt
-        # TODO: Implement your system prompt here
-      end
-
-      # Each iteration of the agent loop will generate a new Raif::ModelCompletion record and
-      # then call this method with it as an argument.
-      def process_iteration_model_completion(model_completion)
-        # TODO: Implement your iteration processing here
-      end
+      # System prompt is defined in app/views/raif/agents/wikipedia_research_agent.system_prompt.erb
+      # Alternatively, you can change your agent's superclass to an existing agent type
+      # (like Raif::Agents::NativeToolCallingAgent) to utilize an existing system prompt,
+      # or override build_system_prompt directly:
+      # def build_system_prompt
+      #   "Your system prompt here"
+      # end
     end
   end
 end
 
 ```
+
 
 ---
 

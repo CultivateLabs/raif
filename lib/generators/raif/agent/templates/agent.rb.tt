@@ -16,11 +16,5 @@
     # def build_system_prompt
     #   "Your system prompt here"
     # end
-
-    # Each iteration of the agent loop will generate a new Raif::ModelCompletion record and
-    # then call this method with it as an argument.
-    def process_iteration_model_completion(model_completion)
-      # TODO: Implement your iteration processing here
-    end
   end
 <% end -%>

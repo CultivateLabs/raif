@@ -26,7 +26,7 @@ RSpec.describe Raif::Generators::AgentGenerator, type: :generator do
 
       content = File.read(File.join(tmp_dir, "app/models/raif/application_agent.rb"))
       expect(content).to include("module Raif")
-      expect(content).to include("class ApplicationAgent < Raif::Agent")
+      expect(content).to include("class ApplicationAgent < Raif::Agents::NativeToolCallingAgent")
       expect(content).to include("# Add any shared agent behavior here")
     end
 
@@ -41,9 +41,11 @@ RSpec.describe Raif::Generators::AgentGenerator, type: :generator do
       expect(content).to include("module Raif")
       expect(content).to include("module Agents")
       expect(content).to include("class MyAgent < Raif::ApplicationAgent")
-      expect(content).to include("def build_system_prompt")
-      expect(content).to include("def process_iteration_model_completion")
+      expect(content).to include("# def build_system_prompt")
       expect(content).to include("# def populate_default_model_tools")
+      # Must not override NativeToolCallingAgent#process_iteration_model_completion
+      # with an empty stub — that would prevent tool calling and final answers.
+      expect(content).not_to include("def process_iteration_model_completion")
     end
 
     it "creates the eval set file" do
