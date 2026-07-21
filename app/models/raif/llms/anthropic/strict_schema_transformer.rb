@@ -16,18 +16,11 @@ class Raif::Llms::Anthropic::StrictSchemaTransformer
     minItems
     maxItems
     pattern
+    uniqueItems
+    minProperties
+    maxProperties
+    patternProperties
   ].freeze
-
-  CONSTRAINT_NOTES = {
-    "minimum" => ->(value) { "Must be at least #{value}." },
-    "maximum" => ->(value) { "Must be at most #{value}." },
-    "exclusiveMinimum" => ->(value) { "Must be greater than #{value}." },
-    "exclusiveMaximum" => ->(value) { "Must be less than #{value}." },
-    "multipleOf" => ->(value) { "Must be a multiple of #{value}." },
-    "minLength" => ->(value) { "Must be at least #{value} characters long." },
-    "maxLength" => ->(value) { "Must be at most #{value} characters long." },
-    "pattern" => ->(value) { "Must match the pattern /#{value}/." }
-  }.freeze
 
   # The strict subset does support minItems values of 0 and 1, so instead of
   # dropping the constraint entirely, larger bounds are clamped to 1 -- the
@@ -35,6 +28,7 @@ class Raif::Llms::Anthropic::StrictSchemaTransformer
   # bound rides in the description and the caller's local validation.
   WIRE_MIN_ITEMS_MAX = 1
 
+  DATA_VALUE_KEYS = %w[enum const default examples].freeze
   SCHEMA_NAME_MAP_KEYS = %w[properties $defs definitions].freeze
 
   def self.call(schema)
@@ -66,11 +60,14 @@ private
     schema.each do |key, value|
       key_string = key.to_s
 
-      if key_string == "minItems"
+      if key_string == "contains"
+        raise Raif::Errors::UnsupportedFeatureError,
+          "Anthropic structured outputs do not support contains, and Raif cannot enforce it locally"
+      elsif key_string == "minItems"
         clamped = clamp_min_items(value)
         transformed[key] = clamped unless clamped.nil?
       elsif UNSUPPORTED_KEYS.include?(key_string)
-        notes << CONSTRAINT_NOTES[key_string]&.call(value)
+        notes << constraint_note(schema, key_string, value)
       else
         transformed[key] = transform_schema_value(key, value)
       end
@@ -82,6 +79,7 @@ private
   end
 
   def transform_schema_value(key, value)
+    return value if DATA_VALUE_KEYS.include?(key.to_s)
     return transform_name_map(value) if schema_name_map?(key, value)
 
     transform(value)
@@ -96,7 +94,8 @@ private
   end
 
   def clamp_min_items(value)
-    return unless value.is_a?(Integer) && value >= 0
+    value = integer_constraint_value(value)
+    return if value.nil? || value.negative?
 
     [value, WIRE_MIN_ITEMS_MAX].min
   end
@@ -120,8 +119,83 @@ private
   end
 
   def constraint_value(schema, key)
-    value = schema[key.to_sym] || schema[key]
-    value if value.is_a?(Integer)
+    integer_constraint_value(schema_value(schema, key))
+  end
+
+  def constraint_note(schema, key, value)
+    case key
+    when "minimum"
+      numeric_note("at least", value) unless draft_4_exclusive?(schema, "exclusiveMinimum")
+    when "maximum"
+      numeric_note("at most", value) unless draft_4_exclusive?(schema, "exclusiveMaximum")
+    when "exclusiveMinimum"
+      exclusive_note("greater than", value, schema_value(schema, "minimum"))
+    when "exclusiveMaximum"
+      exclusive_note("less than", value, schema_value(schema, "maximum"))
+    when "multipleOf"
+      "Must be a multiple of #{value}." if value.is_a?(Numeric)
+    when "minLength"
+      length_note("at least", value)
+    when "maxLength"
+      length_note("at most", value)
+    when "pattern"
+      "Must match the pattern /#{value}/." if value.is_a?(String)
+    when "uniqueItems"
+      "Items must be unique." if value == true
+    when "minProperties"
+      count_note("at least", value, "property")
+    when "maxProperties"
+      count_note("at most", value, "property")
+    when "patternProperties"
+      pattern_properties_note(value)
+    end
+  end
+
+  def draft_4_exclusive?(schema, key)
+    schema_value(schema, key) == true
+  end
+
+  def exclusive_note(qualifier, value, draft_4_bound)
+    bound = value == true ? draft_4_bound : value
+    numeric_note(qualifier, bound)
+  end
+
+  def numeric_note(qualifier, value)
+    "Must be #{qualifier} #{value}." if value.is_a?(Numeric)
+  end
+
+  def count_note(qualifier, value, noun)
+    count = integer_constraint_value(value)
+    return unless count
+
+    "Must contain #{qualifier} #{count} #{count == 1 ? noun : noun.pluralize}."
+  end
+
+  def length_note(qualifier, value)
+    count = integer_constraint_value(value)
+    return unless count
+
+    "Must be #{qualifier} #{count} #{count == 1 ? "character" : "characters"} long."
+  end
+
+  def pattern_properties_note(value)
+    return unless value.is_a?(Hash)
+
+    value.map do |pattern, subschema|
+      "Properties matching /#{pattern}/ must satisfy #{JSON.generate(subschema)}."
+    end.join(" ")
+  end
+
+  def integer_constraint_value(value)
+    return unless value.is_a?(Numeric) && value.to_i == value
+
+    value.to_i
+  end
+
+  def schema_value(schema, key)
+    return schema[key.to_sym] if schema.key?(key.to_sym)
+
+    schema[key]
   end
 
   def append_description_notes(transformed, notes)

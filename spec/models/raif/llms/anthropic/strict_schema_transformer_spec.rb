@@ -120,6 +120,104 @@ RSpec.describe Raif::Llms::Anthropic::StrictSchemaTransformer do
       })
     end
 
+    it "preserves data-bearing schema keyword values without transforming them" do
+      literal = { "pattern" => "abc", "minimum" => 1 }
+      schema = {
+        type: "object",
+        properties: {
+          payload: {
+            enum: [literal],
+            const: literal,
+            default: literal,
+            examples: [literal]
+          }
+        }
+      }
+
+      transformed = described_class.call(schema)
+
+      expect(transformed[:properties][:payload]).to eq({
+        enum: [literal],
+        const: literal,
+        default: literal,
+        examples: [literal]
+      })
+    end
+
+    it "removes additional unsupported constraints and describes them for the model" do
+      schema = {
+        type: "object",
+        minProperties: 2,
+        maxProperties: 4,
+        patternProperties: {
+          "^x-" => { type: "string", minLength: 3 }
+        },
+        properties: {
+          tags: {
+            type: "array",
+            uniqueItems: true,
+            items: { type: "string" }
+          }
+        }
+      }
+
+      transformed = described_class.call(schema)
+
+      expect(transformed).not_to include(:minProperties, :maxProperties, :patternProperties)
+      expect(transformed[:description]).to eq(
+        "Must contain at least 2 properties. Must contain at most 4 properties. " \
+          "Properties matching /^x-/ must satisfy {\"type\":\"string\",\"minLength\":3}."
+      )
+      expect(transformed[:properties][:tags]).to eq({
+        type: "array",
+        items: { type: "string" },
+        description: "Items must be unique."
+      })
+    end
+
+    it "rejects contains because local validation cannot enforce it" do
+      schema = {
+        type: "array",
+        contains: { type: "integer" },
+        items: { type: ["integer", "string"] }
+      }
+
+      expect do
+        described_class.call(schema)
+      end.to raise_error(
+        Raif::Errors::UnsupportedFeatureError,
+        "Anthropic structured outputs do not support contains, and Raif cannot enforce it locally"
+      )
+    end
+
+    it "describes Draft 4 boolean exclusive bounds using their numeric bounds" do
+      schema = {
+        type: "number",
+        minimum: 0,
+        exclusiveMinimum: true,
+        maximum: 10,
+        exclusiveMaximum: false
+      }
+
+      transformed = described_class.call(schema)
+
+      expect(transformed[:description]).to eq("Must be greater than 0. Must be at most 10.")
+    end
+
+    it "normalizes integral numeric item counts" do
+      schema = {
+        type: "array",
+        minItems: 2.0,
+        maxItems: 4.0,
+        items: { type: "string" }
+      }
+
+      transformed = described_class.call(schema)
+
+      expect(transformed[:minItems]).to eq(1)
+      expect(transformed[:description]).to eq("Must contain at least 2 items. Must contain at most 4 items.")
+    end
+
     it "does not mutate the original schema" do
       schema = {
         type: "object",
