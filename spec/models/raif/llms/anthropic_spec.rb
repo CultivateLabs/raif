@@ -1062,7 +1062,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
               additionalProperties: false,
               required: ["score"],
               properties: {
-                score: { type: "number" }
+                score: { type: "number", description: "Must be at least 0. Must be at most 1." }
               }
             }
           }
