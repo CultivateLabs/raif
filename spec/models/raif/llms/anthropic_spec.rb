@@ -1084,6 +1084,24 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         llm.send(:build_request_parameters, model_completion)
         expect(model_completion.response_format_parameter).to eq("json_schema")
       end
+
+      it "rejects native output that violates constraints removed from the provider schema" do
+        response_json = {
+          "id" => "msg_123",
+          "content" => [{ "type" => "text", "text" => { score: -1 }.to_json }],
+          "stop_reason" => "end_turn",
+          "usage" => { "input_tokens" => 10, "output_tokens" => 5 }
+        }
+
+        expect do
+          llm.send(:update_model_completion, model_completion, response_json)
+        end.to raise_error do |error|
+          expect(error.class.name).to eq("Raif::Errors::InvalidJsonResponseError")
+          expect(error.message).to include("score")
+        end
+
+        expect(model_completion.reload.raw_response).to eq({ score: -1 }.to_json)
+      end
     end
 
     context "with a json_response_schema but a non-supporting model" do

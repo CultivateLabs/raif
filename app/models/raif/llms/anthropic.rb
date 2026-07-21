@@ -66,6 +66,7 @@ private
     model_completion.cache_read_input_tokens = response_json&.dig("usage", "cache_read_input_tokens")
     model_completion.cache_creation_input_tokens = response_json&.dig("usage", "cache_creation_input_tokens")
     model_completion.save!
+    validate_native_json_response!(model_completion)
   end
 
   def build_request_parameters(model_completion)
@@ -133,6 +134,23 @@ private
     return false if uses_provider_managed_web_search?(model_completion)
 
     true
+  end
+
+  def validate_native_json_response!(model_completion)
+    return unless use_native_structured_outputs?(model_completion)
+    return if model_completion.response_finish_reason.blank?
+
+    validation_errors = JSON::Validator.fully_validate(
+      model_completion.json_response_schema,
+      model_completion.parsed_response(force_reparse: true)
+    )
+    return if validation_errors.empty?
+
+    raise Raif::Errors::InvalidJsonResponseError,
+      "Native JSON response did not satisfy the original schema: #{validation_errors.join("; ")}"
+  rescue JSON::ParserError => e
+    raise Raif::Errors::InvalidJsonResponseError,
+      "Native JSON response could not be parsed: #{e.message}"
   end
 
   def extract_text_response(resp)
