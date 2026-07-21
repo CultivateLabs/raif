@@ -14,6 +14,9 @@ class Raif::Llms::SyntheticJsonResponseToolInputNormalizer
     return @input unless @input.is_a?(Hash)
     return @input if expected_keys.empty?
 
+    normalized_input = @input.deep_stringify_keys
+    return normalized_input if JSON::Validator.validate(@schema, normalized_input)
+
     valid_candidates.max_by { |candidate| matching_key_count(candidate) }
   end
 

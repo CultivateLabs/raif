@@ -50,6 +50,19 @@ RSpec.describe Raif::Llms::SyntheticJsonResponseToolInputNormalizer do
     expect(normalize(input)).to be_nil
   end
 
+  it "accepts a valid empty object without accepting a stub repaired into one" do
+    optional_schema = {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        note: { type: "string" }
+      }
+    }
+
+    expect(normalize({}, with_schema: optional_schema)).to eq({})
+    expect(normalize({ "query" => {} }, with_schema: optional_schema)).to be_nil
+  end
+
   it "passes the input through when no schema is available" do
     input = { "query" => "forecast" }
 
