@@ -1095,12 +1095,55 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
 
         expect do
           llm.send(:update_model_completion, model_completion, response_json)
-        end.to raise_error do |error|
-          expect(error.class.name).to eq("Raif::Errors::InvalidJsonResponseError")
+        end.to raise_error(Raif::Errors::InvalidJsonResponseError) do |error|
           expect(error.message).to include("score")
         end
 
         expect(model_completion.reload.raw_response).to eq({ score: -1 }.to_json)
+      end
+
+      it "leaves blank responses for the existing blank-response handling" do
+        response_json = {
+          "id" => "msg_123",
+          "content" => [],
+          "stop_reason" => "end_turn",
+          "usage" => { "input_tokens" => 10, "output_tokens" => 0 }
+        }
+
+        expect do
+          llm.send(:update_model_completion, model_completion, response_json)
+        end.not_to raise_error
+
+        expect do
+          llm.send(:ensure_model_completion_present!, model_completion)
+        end.to raise_error(Raif::Errors::BlankResponseError)
+      end
+
+      it "does not validate an intermediate developer-managed tool response as final JSON" do
+        response_json = {
+          "id" => "msg_123",
+          "content" => [
+            { "type" => "text", "text" => "I'll fetch that first." },
+            {
+              "type" => "tool_use",
+              "id" => "toolu_123",
+              "name" => "fetch_url",
+              "input" => { "url" => "https://example.com" }
+            }
+          ],
+          "stop_reason" => "tool_use",
+          "usage" => { "input_tokens" => 10, "output_tokens" => 5 }
+        }
+
+        expect do
+          llm.send(:update_model_completion, model_completion, response_json)
+        end.not_to raise_error
+
+        expect(model_completion.response_tool_calls).to contain_exactly(
+          "provider_tool_call_id" => "toolu_123",
+          "name" => "fetch_url",
+          "arguments" => { "url" => "https://example.com" }
+        )
       end
     end
 

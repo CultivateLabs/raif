@@ -139,6 +139,8 @@ private
   def validate_native_json_response!(model_completion)
     return unless use_native_structured_outputs?(model_completion)
     return if model_completion.response_finish_reason.blank?
+    return if model_completion.raw_response.blank?
+    return if model_completion.response_tool_calls.present?
 
     validation_errors = JSON::Validator.fully_validate(
       model_completion.json_response_schema,
