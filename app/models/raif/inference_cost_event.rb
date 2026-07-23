@@ -75,8 +75,20 @@ class Raif::InferenceCostEvent < Raif::ApplicationRecord
     Raif::ModelCompletion
       .where.missing(:raif_inference_cost_event)
       .where("completed_at IS NOT NULL OR failed_at IS NOT NULL")
-      .includes(:source)
-      .find_each(batch_size: batch_size) { |model_completion| model_completion.send(:sync_inference_cost_event) }
+      .in_batches(of: batch_size) do |batch|
+        completions = begin
+          batch.includes(:source).to_a
+        rescue ActiveRecord::SubclassNotFound, NameError
+          # A source row whose STI type no longer exists in the host app
+          # (SubclassNotFound), or a source_type whose class was removed
+          # entirely (NameError), makes the whole polymorphic preload raise.
+          # Fall back to lazy per-record source loads for this batch; each
+          # record's sync handles its own source resolution failure.
+          batch.to_a
+        end
+
+        completions.each { |model_completion| model_completion.send(:sync_inference_cost_event) }
+      end
   end
 
   # Column check, not a query: the FK is nullified at the DB level the moment

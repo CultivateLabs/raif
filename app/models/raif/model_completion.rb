@@ -264,7 +264,7 @@ private
       original_model_completion_id: id,
       source_type: source_type,
       source_id: source_id,
-      source_class_name: source&.class&.name || source_type,
+      source_class_name: resolved_source_class_name,
       llm_model_key: llm_model_key,
       model_api_name: model_api_name,
       prompt_tokens: prompt_tokens,
@@ -287,6 +287,17 @@ private
     end
 
     event.save!
+  end
+
+  # The source may have been deleted, reference an STI class the host app has
+  # since renamed or removed (SubclassNotFound), or have a source_type whose
+  # class was removed entirely (NameError); fall back to the stored
+  # source_type rather than failing the sync (which would leave the completion
+  # permanently un-evented and re-enqueue the repair job forever).
+  def resolved_source_class_name
+    source&.class&.name || source_type
+  rescue ActiveRecord::SubclassNotFound, NameError
+    source_type
   end
 
   def report_inference_cost_event_sync_failure(error)

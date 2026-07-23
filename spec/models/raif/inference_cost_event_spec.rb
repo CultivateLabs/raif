@@ -173,5 +173,50 @@ RSpec.describe Raif::InferenceCostEvent, type: :model do
       expect(event.source_id).to eq(task.id)
       expect(event.source_class_name).to eq("Raif::Task")
     end
+
+    it "tolerates a source whose STI class no longer exists, falling back to source_type for source_class_name" do
+      stale_task = FB.create(:raif_test_task)
+      task = FB.create(:raif_test_task)
+      stale_completion, completion = without_live_sync do
+        [
+          create_completion(completed_at: 1.day.ago, source: stale_task),
+          create_completion(completed_at: 1.day.ago, source: task),
+        ]
+      end
+      stale_task.update_column(:type, "Raif::Tasks::RemovedLegacyTask")
+
+      expect do
+        described_class.backfill!
+      end.to change(described_class, :count).by(2)
+
+      stale_event = stale_completion.reload.raif_inference_cost_event
+      expect(stale_event.source_type).to eq("Raif::Task")
+      expect(stale_event.source_id).to eq(stale_task.id)
+      expect(stale_event.source_class_name).to eq("Raif::Task")
+
+      expect(completion.reload.raif_inference_cost_event.source_class_name).to eq("Raif::TestTask")
+    end
+
+    it "tolerates a source_type whose class was removed entirely, falling back to source_type for source_class_name" do
+      task = FB.create(:raif_test_task)
+      stale_completion, completion = without_live_sync do
+        [
+          create_completion(completed_at: 1.day.ago),
+          create_completion(completed_at: 1.day.ago, source: task),
+        ]
+      end
+      stale_completion.update_columns(source_type: "RemovedLegacyModel", source_id: 123)
+
+      expect do
+        described_class.backfill!
+      end.to change(described_class, :count).by(2)
+
+      stale_event = stale_completion.reload.raif_inference_cost_event
+      expect(stale_event.source_type).to eq("RemovedLegacyModel")
+      expect(stale_event.source_id).to eq(123)
+      expect(stale_event.source_class_name).to eq("RemovedLegacyModel")
+
+      expect(completion.reload.raif_inference_cost_event.source_class_name).to eq("Raif::TestTask")
+    end
   end
 end
