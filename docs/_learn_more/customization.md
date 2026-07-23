@@ -91,6 +91,33 @@ Notes:
 - Conversation responses run in a background job (`Raif::ConversationEntryJob`), so there is no host caller to receive a raise. A veto there surfaces as a failed `Raif::ConversationEntry` (marked `failed` and broadcast to the UI) rather than propagating.
 - It does not apply to embedding generation or batch API submissions, which do not go through `Raif::Llm#chat`.
 
+# Inference Cost Events
+
+Each time a `Raif::ModelCompletion` reaches a terminal state (completed or failed), Raif creates a durable `Raif::InferenceCostEvent` - a slim record of the completion's token counts and costs. Cost events survive deletion of the completion row (and, later, its source), so cost reporting keeps working even after old completions are culled. This is enabled by default and can be disabled:
+
+```ruby
+Raif.configure do |config|
+  config.inference_cost_events_enabled = false
+end
+```
+
+You can attach host application context (e.g. account or workflow ids) to each event via a metadata resolver. It receives `model_completion:` and returns a hash that is merged into the event's `metadata` column:
+
+```ruby
+Raif.configure do |config|
+  config.inference_cost_event_metadata = ->(model_completion:) {
+    source = model_completion.source
+    { account_id: source.account_id } if source.respond_to?(:account_id)
+  }
+end
+```
+
+Notes:
+
+- Events are created for terminal completions only. Failed completions get events too (their cost columns are usually `NULL`, so cost sums are unaffected).
+- A sync failure never fails the completion save. The error is reported via `Rails.error` and the idempotent `Raif::RepairInferenceCostEventsJob` is enqueued to self-heal.
+- After upgrading, run `rails raif:backfill_inference_cost_events` to create events for existing completions. Raif's admin stats read from events, so they show partial history until the backfill completes.
+
 # Prompt Caching
 
 Anthropic and AWS Bedrock support prompt caching on supported Claude models. Raif does not enable prompt caching by default. To enable it on a per-class basis, use the `enable_anthropic_prompt_caching` and/or `enable_bedrock_prompt_caching` class directives on your `Raif::Task`, `Raif::Conversation`, or `Raif::Agent` subclasses:

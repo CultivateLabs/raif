@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_04_174827) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_23_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -118,6 +118,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_174827) do
     t.index ["creator_type", "creator_id"], name: "index_raif_conversations_on_creator"
     t.index ["source_type", "source_id"], name: "index_raif_conversations_on_source"
     t.index ["subject_type", "subject_id"], name: "index_raif_conversations_on_subject"
+  end
+
+  create_table "raif_inference_cost_events", force: :cascade do |t|
+    t.integer "cache_creation_input_tokens"
+    t.integer "cache_read_input_tokens"
+    t.datetime "completion_completed_at"
+    t.datetime "completion_failed_at"
+    t.integer "completion_tokens"
+    t.datetime "created_at", null: false
+    t.datetime "incurred_at", null: false
+    t.string "llm_model_key", null: false
+    t.jsonb "metadata"
+    t.string "model_api_name", null: false
+    t.bigint "original_model_completion_id", null: false
+    t.decimal "output_token_cost", precision: 10, scale: 6
+    t.decimal "prompt_token_cost", precision: 10, scale: 6
+    t.integer "prompt_tokens"
+    t.bigint "raif_model_completion_batch_id"
+    t.bigint "raif_model_completion_id"
+    t.integer "retry_count", default: 0, null: false
+    t.string "source_class_name"
+    t.bigint "source_id"
+    t.string "source_type"
+    t.decimal "total_cost", precision: 10, scale: 6
+    t.integer "total_tokens"
+    t.datetime "updated_at", null: false
+    t.index ["incurred_at"], name: "index_raif_inference_cost_events_on_incurred_at"
+    t.index ["original_model_completion_id"], name: "index_raif_inference_cost_events_on_original_completion_id"
+    t.index ["raif_model_completion_id"], name: "index_raif_inference_cost_events_on_raif_model_completion_id", unique: true
+    t.index ["source_type", "incurred_at"], name: "index_raif_inference_cost_events_on_source_type_incurred_at"
+    t.index ["source_type", "source_id"], name: "index_raif_inference_cost_events_on_source_type_and_source_id"
   end
 
   create_table "raif_model_completion_batches", force: :cascade do |t|
@@ -300,6 +331,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_174827) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "raif_conversation_entries", "raif_conversations"
+  add_foreign_key "raif_inference_cost_events", "raif_model_completions", on_delete: :nullify
   add_foreign_key "raif_model_completions", "raif_model_completion_batches"
   add_foreign_key "raif_prompt_studio_batch_run_items", "raif_prompt_studio_batch_runs", column: "batch_run_id"
   add_foreign_key "raif_prompt_studio_batch_run_items", "raif_tasks", column: "judge_task_id"
