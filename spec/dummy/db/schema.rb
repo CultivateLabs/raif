@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_23_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_23_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -77,11 +77,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_000000) do
   end
 
   create_table "raif_conversation_entries", force: :cascade do |t|
+    t.jsonb "citations"
     t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.bigint "creator_id", null: false
     t.string "creator_type", null: false
     t.datetime "failed_at"
+    t.string "llm_model_key"
     t.text "model_response_message"
     t.bigint "raif_conversation_id", null: false
     t.text "raw_response"

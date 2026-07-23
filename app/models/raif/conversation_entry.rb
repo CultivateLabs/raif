@@ -5,9 +5,11 @@
 # Table name: raif_conversation_entries
 #
 #  id                     :bigint           not null, primary key
+#  citations              :jsonb
 #  completed_at           :datetime
 #  creator_type           :string           not null
 #  failed_at              :datetime
+#  llm_model_key          :string
 #  model_response_message :text
 #  raw_response           :text
 #  started_at             :datetime
@@ -61,7 +63,11 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
     inverse_of: :source
 
   delegate :available_model_tools, to: :raif_conversation
-  delegate :system_prompt, :llm_model_key, :citations, to: :raif_model_completion, allow_nil: true
+  # citations and llm_model_key are denormalized local columns (copied from
+  # the winning completion in finalize_entry!) so they survive culling of old
+  # completion rows. system_prompt stays delegated: it's admin-only debugging
+  # and too large to be worth denormalizing.
+  delegate :system_prompt, to: :raif_model_completion, allow_nil: true
 
   accepts_nested_attributes_for :raif_user_tool_invocation
 
@@ -69,11 +75,34 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   boolean_timestamp :completed_at
   boolean_timestamp :failed_at
 
+  after_initialize -> { self.citations ||= [] }
+
   before_validation :add_user_tool_invocation_to_user_message, on: :create
   after_create_commit :update_conversation_latest_entry_at
 
   normalizes :model_response_message, with: ->(value) { value&.strip }
   normalizes :user_message, with: ->(value) { value&.strip }
+
+  # One-time backfill for entries created before citations/llm_model_key were
+  # denormalized onto this table (see the
+  # raif:backfill_conversation_entry_completion_fields rake task). Copies from
+  # the newest model completion via update_columns, skipping callbacks and
+  # updated_at on historical rows. Idempotent: entries that already have both
+  # fields populated fall out of the scope. Entries with no completion are
+  # left untouched.
+  def self.backfill_denormalized_completion_fields!(batch_size: 500)
+    where("citations IS NULL OR llm_model_key IS NULL")
+      .includes(:raif_model_completion)
+      .find_each(batch_size: batch_size) do |entry|
+        completion = entry.raif_model_completion
+        next if completion.nil?
+
+        entry.update_columns(
+          citations: completion.citations,
+          llm_model_key: completion.llm_model_key
+        )
+      end
+  end
 
   def add_user_tool_invocation_to_user_message
     return unless raif_user_tool_invocation.present?
@@ -187,6 +216,12 @@ private
         message: model_completion.parsed_response,
         entry: self
       )
+      # Copy from the winning (not retried) completion so these survive
+      # culling of old completion rows. Runs once per finalized entry, after
+      # retry attempts resolve; all provider adapter paths (including
+      # streaming) have set citations on the in-memory completion by now.
+      self.citations = model_completion.citations
+      self.llm_model_key = model_completion.llm_model_key
       save!
 
       tool_calls = model_completion.response_tool_calls || []
