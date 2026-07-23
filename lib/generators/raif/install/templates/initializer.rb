@@ -284,6 +284,20 @@ Raif.configure do |config|
   #   raise MyApp::UsageLimitExceededError if account && !account.within_llm_usage_limits?
   # }
 
+  # Whether Raif creates a durable Raif::InferenceCostEvent for each model
+  # completion that reaches a terminal state (completed or failed). Cost
+  # events are slim rows that survive deletion of the completion, so cost
+  # reporting keeps working after old completions are culled. Defaults to true.
+  # config.inference_cost_events_enabled = true
+
+  # Optional callable receiving a model_completion: keyword argument and
+  # returning a hash merged into the Raif::InferenceCostEvent's metadata when
+  # the event is created/updated. Use this to attach host application context
+  # (e.g. account or workflow ids) without monkeypatching. Defaults to nil.
+  # config.inference_cost_event_metadata = ->(model_completion:) {
+  #   { account_id: model_completion.source.try(:account_id) }
+  # }
+
   # Timeout settings for LLM API requests (in seconds). All default to nil (use Faraday defaults).
   # config.request_open_timeout = nil  # Time to wait for a connection to be opened
   # config.request_read_timeout = nil  # Time to wait for data to be read
