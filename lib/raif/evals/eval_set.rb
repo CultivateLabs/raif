@@ -63,6 +63,11 @@ module Raif
         ActiveRecord::Base.transaction do
           instance_eval(&self.class.setup_block) if self.class.setup_block
 
+          # Baseline id captured after setup so we only record the LLM calls the eval
+          # itself makes. Model completions are persisted during the eval but rolled back
+          # below, so they must be captured before the rollback.
+          model_completions_start_id = Raif::ModelCompletion.maximum(:id) || 0
+
           begin
             instance_eval(&eval_definition[:block])
           rescue => e
@@ -78,6 +83,8 @@ module Raif
           ensure
             instance_eval(&self.class.teardown_block) if self.class.teardown_block
           end
+
+          capture_model_completions(model_completions_start_id)
 
           raise ActiveRecord::Rollback
         end
@@ -104,6 +111,18 @@ module Raif
         else
           raise ArgumentError, "File #{filename} does not exist in raif_evals/files/"
         end
+      end
+
+    private
+
+      # Records the model completions created during the eval (those with an id greater
+      # than the baseline captured before the eval ran) onto the current eval so they can
+      # be exported. Wrapped defensively so a capture failure never fails the eval itself.
+      def capture_model_completions(start_id)
+        completions = Raif::ModelCompletion.where("id > ?", start_id).order(:id).to_a
+        @current_eval.record_model_completions(completions)
+      rescue => e
+        output.puts Raif::Utils::Colors.red("  Error capturing model completions: #{e.message}")
       end
 
     end
