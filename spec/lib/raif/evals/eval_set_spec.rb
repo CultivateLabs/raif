@@ -121,13 +121,15 @@ RSpec.describe Raif::Evals::EvalSet do
           creator = FB.create(:raif_test_user)
           conversation = FB.create(:raif_conversation, creator: creator)
           @entry = FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator)
-          FB.create(:raif_model_completion,
+          FB.create(
+            :raif_model_completion,
             source: @entry,
             llm_model_key: "raif_test_llm",
             model_api_name: "raif-test-llm",
             prompt_tokens: 15,
             completion_tokens: 5,
-            total_tokens: 20)
+            total_tokens: 20
+          )
 
           expect "ran" do
             true
