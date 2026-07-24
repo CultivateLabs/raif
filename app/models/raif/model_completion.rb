@@ -350,13 +350,29 @@ private
 
   # The source may have been deleted, reference an STI class the host app has
   # since renamed or removed (SubclassNotFound), or have a source_type whose
-  # class was removed entirely (NameError); fall back to the stored
-  # source_type rather than failing the sync (which would leave the completion
-  # permanently un-evented and re-enqueue the repair job forever).
+  # class was removed entirely (NameError); never fail the sync for these
+  # (that would leave the completion permanently un-evented and re-enqueue
+  # the repair job forever). For a stale STI row the concrete class name
+  # still sits in the row's inheritance column, so prefer that over
+  # collapsing the event's grouping to the generic base class; fall back to
+  # the stored source_type otherwise.
   def resolved_source_class_name
     source&.class&.name || source_type
   rescue ActiveRecord::SubclassNotFound, NameError
-    source_type
+    stored_source_sti_type || source_type
+  end
+
+  # Reads the concrete class name straight off the source row's inheritance
+  # column. pick never instantiates the record, so STI resolution cannot
+  # raise. Safe for the NameError case too: safe_constantize returns nil and
+  # we fall through to source_type.
+  def stored_source_sti_type
+    base_class = source_type&.safe_constantize
+    return unless base_class.is_a?(Class) && base_class < ActiveRecord::Base && source_id.present?
+
+    base_class.unscoped.where(id: source_id).pick(base_class.inheritance_column).presence
+  rescue StandardError
+    nil
   end
 
   def report_inference_cost_event_sync_failure(error, enqueue_repair:)

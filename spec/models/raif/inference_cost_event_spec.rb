@@ -192,7 +192,9 @@ RSpec.describe Raif::InferenceCostEvent, type: :model do
       stale_event = stale_completion.reload.raif_inference_cost_event
       expect(stale_event.source_type).to eq("Raif::Task")
       expect(stale_event.source_id).to eq(stale_task.id)
-      expect(stale_event.source_class_name).to eq("Raif::Task")
+      # The concrete class name is read off the row's inheritance column so
+      # cost attribution is not collapsed to the generic base class.
+      expect(stale_event.source_class_name).to eq("Raif::Tasks::RemovedLegacyTask")
 
       expect(completion.reload.raif_inference_cost_event.source_class_name).to eq("Raif::TestTask")
     end
