@@ -87,7 +87,10 @@ class Raif::InferenceCostEvent < Raif::ApplicationRecord
           batch.to_a
         end
 
-        completions.each { |model_completion| model_completion.send(:sync_inference_cost_event) }
+        # enqueue_repair_on_failure: false because this IS the repair path; a
+        # persistently failing record must not enqueue another full run per
+        # failure (failures still report via Rails.error).
+        completions.each { |model_completion| model_completion.send(:sync_inference_cost_event, enqueue_repair_on_failure: false) }
       end
   end
 

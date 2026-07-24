@@ -197,6 +197,17 @@ RSpec.describe Raif::InferenceCostEvent, type: :model do
       expect(completion.reload.raif_inference_cost_event.source_class_name).to eq("Raif::TestTask")
     end
 
+    it "reports per-record failures without enqueueing repair jobs, since a repair run must not multiply itself" do
+      without_live_sync { create_completion(completed_at: 1.day.ago) }
+      allow_any_instance_of(Raif::ModelCompletion).to receive(:create_or_update_inference_cost_event!)
+        .and_raise(ActiveRecord::StatementInvalid, "boom")
+      expect(Rails.error).to receive(:report).with(instance_of(ActiveRecord::StatementInvalid), handled: true, severity: :error)
+
+      expect do
+        described_class.backfill!
+      end.not_to have_enqueued_job(Raif::RepairInferenceCostEventsJob)
+    end
+
     it "tolerates a source_type whose class was removed entirely, falling back to source_type for source_class_name" do
       task = FB.create(:raif_test_task)
       stale_completion, completion = without_live_sync do

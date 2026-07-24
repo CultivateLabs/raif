@@ -141,7 +141,16 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   before_save :set_total_tokens
   before_save :calculate_costs
-  after_save :sync_inference_cost_event, if: :inference_cost_event_sync_needed?
+  # The event write must happen OUTSIDE this record's transaction: a DB-level
+  # failure (statement error, unique violation) aborts the enclosing
+  # PostgreSQL transaction even when rescued in Ruby, which would silently
+  # roll back the terminal save this event exists to record. So after_save
+  # only marks the sync as pending (the per-save predicate correctly catches
+  # a terminal transition even when later saves happen in the same
+  # transaction) and after_commit performs it.
+  after_save -> { @inference_cost_event_sync_pending = true }, if: :inference_cost_event_sync_needed?
+  after_commit :sync_inference_cost_event, on: [:create, :update], if: -> { @inference_cost_event_sync_pending }
+  after_rollback -> { @inference_cost_event_sync_pending = nil }
 
   after_initialize -> { self.messages ||= [] }
   after_initialize -> { self.available_model_tools ||= [] }
@@ -207,8 +216,12 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   # Columns copied onto the inference cost event. A post-terminal change to
   # any of them (e.g. batch results applying token counts after completed_at
-  # was already set) re-syncs the event.
+  # was already set) re-syncs the event so it stays a faithful mirror.
   INFERENCE_COST_EVENT_SYNCED_COLUMNS = %w[
+    source_type
+    source_id
+    llm_model_key
+    model_api_name
     prompt_tokens
     completion_tokens
     total_tokens
@@ -218,6 +231,7 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     output_token_cost
     total_cost
     retry_count
+    raif_model_completion_batch_id
   ].freeze
 
 private
@@ -236,25 +250,32 @@ private
     became_terminal || (terminal && INFERENCE_COST_EVENT_SYNCED_COLUMNS.any? { |column| saved_change_to_attribute?(column) })
   end
 
-  # Failures here must never fail the completion save: raising inside
-  # after_save would roll back the terminal save and destroy a provider
-  # response that was already paid for. Instead we report the error and
-  # enqueue the idempotent repair job. The archive job's per-record
-  # durability guard means an un-evented terminal completion can never be
-  # culled, so undercounting is temporary and loud, never silent data loss.
-  def sync_inference_cost_event
+  # Runs after commit, so the completion's terminal save is already durable
+  # and nothing here can roll it back or poison its transaction. Failures are
+  # reported and (on the live path) the idempotent repair job is enqueued.
+  # The archive job's per-record durability guard means an un-evented
+  # terminal completion can never be culled, so undercounting is temporary
+  # and loud, never silent data loss.
+  #
+  # enqueue_repair_on_failure: the backfill/repair path passes false, since
+  # each of its failing records would otherwise enqueue another full repair
+  # run and a persistent failure would multiply jobs without bound. Failures
+  # there still report; recovery is the next scheduled repair/backfill run.
+  def sync_inference_cost_event(enqueue_repair_on_failure: true)
+    @inference_cost_event_sync_pending = nil
     create_or_update_inference_cost_event!
   rescue ActiveRecord::RecordNotUnique
     # A concurrent writer inserted the event first (unique index on
-    # raif_model_completion_id). Reload and sync onto their row.
+    # raif_model_completion_id). We're outside any enclosing transaction, so
+    # it's safe to query again: reload and sync onto their row.
     begin
       association(:raif_inference_cost_event).reload
       create_or_update_inference_cost_event!
     rescue StandardError => e
-      report_inference_cost_event_sync_failure(e)
+      report_inference_cost_event_sync_failure(e, enqueue_repair: enqueue_repair_on_failure)
     end
   rescue StandardError => e
-    report_inference_cost_event_sync_failure(e)
+    report_inference_cost_event_sync_failure(e, enqueue_repair: enqueue_repair_on_failure)
   end
 
   def create_or_update_inference_cost_event!
@@ -300,9 +321,13 @@ private
     source_type
   end
 
-  def report_inference_cost_event_sync_failure(error)
+  def report_inference_cost_event_sync_failure(error, enqueue_repair:)
     Rails.error.report(error, handled: true, severity: :error)
-    Raif::RepairInferenceCostEventsJob.perform_later
+    Raif::RepairInferenceCostEventsJob.perform_later if enqueue_repair
+  rescue StandardError => e
+    # Last resort (e.g. the queue backend is down): never let failure
+    # handling itself raise out of the after_commit hook.
+    Raif.logger.error("Raif::ModelCompletion##{id}: inference cost event sync failure handling failed: #{e.class}: #{e.message}")
   end
 
   def calculate_prompt_token_cost(total_attempts)

@@ -1080,6 +1080,15 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       expect(event.source_class_name).to eq("Raif::Task")
     end
 
+    it "re-syncs the event when a copied identity column changes post-terminal" do
+      model_completion.completed!
+      event = model_completion.raif_inference_cost_event
+
+      model_completion.update!(model_api_name: "raif-test-llm-updated")
+
+      expect(event.reload.model_api_name).to eq("raif-test-llm-updated")
+    end
+
     describe "sync failure handling" do
       it "never fails the completion save: reports the error and enqueues the repair job" do
         allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!).and_raise(ActiveRecord::StatementInvalid, "boom")
@@ -1091,6 +1100,14 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
         expect(model_completion.reload.completed?).to eq(true)
         expect(model_completion.raif_inference_cost_event).to be_nil
+      end
+
+      it "never raises out of the after_commit hook, even when enqueueing the repair job fails" do
+        allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!).and_raise(ActiveRecord::StatementInvalid, "boom")
+        allow(Raif::RepairInferenceCostEventsJob).to receive(:perform_later).and_raise(StandardError, "queue backend down")
+
+        expect { model_completion.completed! }.not_to raise_error
+        expect(model_completion.reload.completed?).to eq(true)
       end
 
       it "retries once onto the concurrent writer's row when the unique index is hit" do
@@ -1123,6 +1140,37 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
         expect(concurrent_event.reload.prompt_tokens).to eq(100)
         expect(concurrent_event.completion_completed_at).to eq(model_completion.completed_at)
+      end
+    end
+
+    describe "isolation from the completion's transaction" do
+      # Transactional tests would let a genuine PostgreSQL statement error
+      # inside the event write poison the example-wrapping transaction, so
+      # this group runs without one to prove the production property: the
+      # event write happens after commit, where a DB-level failure cannot
+      # roll back the already-committed terminal save.
+      self.use_transactional_tests = false
+
+      after do
+        Raif::InferenceCostEvent.delete_all
+        Raif::ModelCompletion.delete_all
+      end
+
+      it "commits the terminal save even when the event write fails at the database level" do
+        completion = FB.create(
+          :raif_model_completion,
+          llm_model_key: "raif_test_llm",
+          model_api_name: "raif-test-llm"
+        )
+
+        allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!) do
+          ActiveRecord::Base.connection.execute("SELECT 1/0")
+        end
+
+        expect { completion.completed! }.not_to raise_error
+
+        expect(Raif::ModelCompletion.where(id: completion.id).pick(:completed_at)).to be_present
+        expect(Raif::InferenceCostEvent.where(original_model_completion_id: completion.id)).to be_empty
       end
     end
   end
