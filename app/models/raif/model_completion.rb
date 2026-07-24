@@ -156,6 +156,12 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   # a terminal state always yields a durable event.
   after_commit :sync_inference_cost_event, if: -> { @inference_cost_event_sync_pending }
   after_rollback -> { @inference_cost_event_sync_pending = nil }
+  # A destroyed completion can never be repaired (the repair job scans
+  # existing completion rows), so a terminal completion must not be deleted
+  # until its event is durable. Syncs inline when the event is missing; any
+  # failure aborts the destroy, leaving the completion in place and
+  # repairable instead of silently losing the spend record.
+  before_destroy :ensure_durable_inference_cost_event!
 
   after_initialize -> { self.messages ||= [] }
   after_initialize -> { self.available_model_tools ||= [] }
@@ -314,6 +320,20 @@ private
     end
 
     event.save!
+  end
+
+  # Checks durability via original_model_completion_id, NOT the has_one
+  # association: dependent: :nullify registers its callback at the
+  # association declaration, so by the time this runs an existing event's FK
+  # may already be nulled and the association lookup would wrongly report the
+  # event missing (and create a duplicate).
+  def ensure_durable_inference_cost_event!
+    return unless Raif.config.inference_cost_events_enabled
+    return if completed_at.blank? && failed_at.blank?
+    return if Raif::InferenceCostEvent.exists?(original_model_completion_id: id)
+
+    create_or_update_inference_cost_event!
+    @inference_cost_event_sync_pending = nil
   end
 
   # On a destroy commit the completion row is already gone: dependent:

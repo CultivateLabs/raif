@@ -1106,6 +1106,38 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       expect(event.source_class_name).to eq("Raif::TestTask")
     end
 
+    it "aborts the destroy when a terminal completion's missing event cannot be persisted" do
+      allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!).and_raise(ActiveRecord::StatementInvalid, "boom")
+
+      model_completion.completed!
+      expect(model_completion.reload.raif_inference_cost_event).to be_nil
+
+      expect { model_completion.destroy! }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(Raif::ModelCompletion.exists?(model_completion.id)).to eq(true)
+    end
+
+    it "persists the missing event during destroy when an earlier live sync failed" do
+      original_save = Raif::InferenceCostEvent.instance_method(:save!)
+      fail_once = true
+      allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!) do |event, **args|
+        if fail_once
+          fail_once = false
+          raise ActiveRecord::StatementInvalid, "transient failure"
+        end
+
+        original_save.bind_call(event, **args)
+      end
+
+      model_completion.completed!
+      expect(model_completion.reload.raif_inference_cost_event).to be_nil
+
+      expect { model_completion.destroy! }.to change(Raif::InferenceCostEvent, :count).by(1)
+
+      event = Raif::InferenceCostEvent.find_by(original_model_completion_id: model_completion.id)
+      expect(event.raif_model_completion_id).to be_nil
+      expect(event.completion_completed_at).to be_present
+    end
+
     it "updates the existing event without duplicating when a terminal completion is modified and destroyed in one transaction" do
       model_completion.completed!
       event = model_completion.raif_inference_cost_event
