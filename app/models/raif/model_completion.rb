@@ -149,7 +149,12 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   # a terminal transition even when later saves happen in the same
   # transaction) and after_commit performs it.
   after_save -> { @inference_cost_event_sync_pending = true }, if: :inference_cost_event_sync_needed?
-  after_commit :sync_inference_cost_event, on: [:create, :update], if: -> { @inference_cost_event_sync_pending }
+  # No on: restriction: when a completion is terminalized and destroyed in
+  # the same outer transaction, Rails consolidates the commit into a destroy
+  # action; the pending flag still fires the sync there, which creates a
+  # detached event (nil FK, as if the completion had been culled) so reaching
+  # a terminal state always yields a durable event.
+  after_commit :sync_inference_cost_event, if: -> { @inference_cost_event_sync_pending }
   after_rollback -> { @inference_cost_event_sync_pending = nil }
 
   after_initialize -> { self.messages ||= [] }
@@ -279,9 +284,10 @@ private
   end
 
   def create_or_update_inference_cost_event!
-    event = raif_inference_cost_event || build_raif_inference_cost_event
+    event = find_or_build_inference_cost_event
 
     event.assign_attributes(
+      raif_model_completion_id: destroyed? ? nil : id,
       original_model_completion_id: id,
       source_type: source_type,
       source_id: source_id,
@@ -308,6 +314,18 @@ private
     end
 
     event.save!
+  end
+
+  # On a destroy commit the completion row is already gone: dependent:
+  # :nullify has cleared any existing event's FK, so look the event up by
+  # original_model_completion_id and leave it (or a newly built one)
+  # detached rather than pointing the FK at a deleted row.
+  def find_or_build_inference_cost_event
+    if destroyed?
+      Raif::InferenceCostEvent.find_by(original_model_completion_id: id) || Raif::InferenceCostEvent.new
+    else
+      raif_inference_cost_event || build_raif_inference_cost_event
+    end
   end
 
   # The source may have been deleted, reference an STI class the host app has

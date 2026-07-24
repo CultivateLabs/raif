@@ -1089,6 +1089,39 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       expect(event.reload.model_api_name).to eq("raif-test-llm-updated")
     end
 
+    it "creates a detached event when the completion is terminalized and destroyed in the same transaction" do
+      completion_id = model_completion.id
+
+      expect do
+        ActiveRecord::Base.transaction do
+          model_completion.completed!
+          model_completion.destroy!
+        end
+      end.to change(Raif::InferenceCostEvent, :count).by(1)
+
+      event = Raif::InferenceCostEvent.find_by(original_model_completion_id: completion_id)
+      expect(event.raif_model_completion_id).to be_nil
+      expect(event.completion_completed_at).to be_present
+      expect(event.prompt_tokens).to eq(100)
+      expect(event.source_class_name).to eq("Raif::TestTask")
+    end
+
+    it "updates the existing event without duplicating when a terminal completion is modified and destroyed in one transaction" do
+      model_completion.completed!
+      event = model_completion.raif_inference_cost_event
+
+      expect do
+        ActiveRecord::Base.transaction do
+          model_completion.update!(prompt_tokens: 999, total_tokens: nil)
+          model_completion.destroy!
+        end
+      end.not_to change(Raif::InferenceCostEvent, :count)
+
+      event.reload
+      expect(event.raif_model_completion_id).to be_nil
+      expect(event.prompt_tokens).to eq(999)
+    end
+
     describe "sync failure handling" do
       it "never fails the completion save: reports the error and enqueues the repair job" do
         allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!).and_raise(ActiveRecord::StatementInvalid, "boom")

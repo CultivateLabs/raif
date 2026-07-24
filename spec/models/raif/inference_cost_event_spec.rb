@@ -197,15 +197,40 @@ RSpec.describe Raif::InferenceCostEvent, type: :model do
       expect(completion.reload.raif_inference_cost_event.source_class_name).to eq("Raif::TestTask")
     end
 
-    it "reports per-record failures without enqueueing repair jobs, since a repair run must not multiply itself" do
+    it "reports per-record failures without enqueueing repair jobs, then raises so the run itself fails" do
       without_live_sync { create_completion(completed_at: 1.day.ago) }
       allow_any_instance_of(Raif::ModelCompletion).to receive(:create_or_update_inference_cost_event!)
         .and_raise(ActiveRecord::StatementInvalid, "boom")
       expect(Rails.error).to receive(:report).with(instance_of(ActiveRecord::StatementInvalid), handled: true, severity: :error)
 
       expect do
-        described_class.backfill!
+        expect do
+          described_class.backfill!
+        end.to raise_error(Raif::Errors::InferenceCostEventsBackfillError, /1 model completion/)
       end.not_to have_enqueued_job(Raif::RepairInferenceCostEventsJob)
+    end
+
+    it "still syncs the other records when one fails, and names the failed ids in the error" do
+      failing, healthy = without_live_sync do
+        [
+          create_completion(completed_at: 1.day.ago),
+          create_completion(completed_at: 1.day.ago),
+        ]
+      end
+
+      allow_any_instance_of(Raif::ModelCompletion).to receive(:create_or_update_inference_cost_event!)
+        .and_wrap_original do |original, *args|
+          raise ActiveRecord::StatementInvalid, "boom" if original.receiver.id == failing.id
+
+          original.call(*args)
+        end
+
+      expect do
+        described_class.backfill!
+      end.to raise_error(Raif::Errors::InferenceCostEventsBackfillError, /ids: #{failing.id}\b/)
+
+      expect(healthy.reload.raif_inference_cost_event).to be_present
+      expect(failing.reload.raif_inference_cost_event).to be_nil
     end
 
     it "tolerates a source_type whose class was removed entirely, falling back to source_type for source_class_name" do

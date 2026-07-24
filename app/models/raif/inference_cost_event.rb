@@ -72,6 +72,8 @@ class Raif::InferenceCostEvent < Raif::ApplicationRecord
   # Goes through the same sync path as live creation, so host hooks
   # (Raif.config.inference_cost_event_metadata) fire for backfilled events too.
   def self.backfill!(batch_size: 500)
+    failed_model_completion_ids = []
+
     Raif::ModelCompletion
       .where.missing(:raif_inference_cost_event)
       .where("completed_at IS NOT NULL OR failed_at IS NOT NULL")
@@ -90,8 +92,22 @@ class Raif::InferenceCostEvent < Raif::ApplicationRecord
         # enqueue_repair_on_failure: false because this IS the repair path; a
         # persistently failing record must not enqueue another full run per
         # failure (failures still report via Rails.error).
-        completions.each { |model_completion| model_completion.send(:sync_inference_cost_event, enqueue_repair_on_failure: false) }
+        completions.each do |model_completion|
+          model_completion.send(:sync_inference_cost_event, enqueue_repair_on_failure: false)
+          failed_model_completion_ids << model_completion.id unless model_completion.raif_inference_cost_event&.persisted?
+        end
       end
+
+    return if failed_model_completion_ids.empty?
+
+    # Per-record failures were already reported via Rails.error; raising here
+    # makes the run itself fail so callers see the partial failure - the rake
+    # task exits non-zero and Raif::RepairInferenceCostEventsJob gets bounded
+    # retries from its queue backend instead of reporting success with events
+    # still missing.
+    raise Raif::Errors::InferenceCostEventsBackfillError,
+      "Failed to create inference cost events for #{failed_model_completion_ids.size} model completion(s) " \
+        "(ids: #{failed_model_completion_ids.first(20).join(", ")}#{failed_model_completion_ids.size > 20 ? ", ..." : ""})"
   end
 
   # Column check, not a query: the FK is nullified at the DB level the moment
