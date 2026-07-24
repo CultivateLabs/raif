@@ -168,12 +168,24 @@ module Raif
           evals.sum { |e| e[:expectation_results].count { |r| r[:status] == :passed } }
         end
 
+        all_evals = @results.values.flatten
+        total_model_completions = all_evals.sum { |e| e.dig(:usage, :model_completions).to_i }
+        total_prompt_tokens = all_evals.sum { |e| e.dig(:usage, :prompt_tokens).to_i }
+        total_completion_tokens = all_evals.sum { |e| e.dig(:usage, :completion_tokens).to_i }
+        total_tokens = all_evals.sum { |e| e.dig(:usage, :total_tokens).to_i }
+        total_cost = all_evals.sum { |e| e.dig(:usage, :total_cost).to_f }.round(6)
+
         {
           total_eval_sets: total_eval_sets,
           total_evals: total_evals,
           passed_evals: passed_evals,
           total_expectations: total_expectations,
-          passed_expectations: passed_expectations
+          passed_expectations: passed_expectations,
+          total_model_completions: total_model_completions,
+          total_prompt_tokens: total_prompt_tokens,
+          total_completion_tokens: total_completion_tokens,
+          total_tokens: total_tokens,
+          total_cost: total_cost
         }
       end
 
@@ -195,6 +207,13 @@ module Raif
         output.puts "  #{data[:total_expectations]} total"
         output.puts Raif::Utils::Colors.green("  #{data[:passed_expectations]} passed")
         output.puts Raif::Utils::Colors.red("  #{data[:total_expectations] - data[:passed_expectations]} failed")
+        output.puts ""
+        output.puts "LLM Usage:"
+        output.puts "  #{data[:total_model_completions]} LLM calls"
+        output.puts "  #{data[:total_prompt_tokens]} prompt tokens"
+        output.puts "  #{data[:total_completion_tokens]} completion tokens"
+        output.puts "  #{data[:total_tokens]} total tokens"
+        output.puts "  $#{format("%.6f", data[:total_cost])} total cost"
         output.puts ""
       end
     end
