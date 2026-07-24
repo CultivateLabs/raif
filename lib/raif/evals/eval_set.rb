@@ -81,10 +81,14 @@ module Raif
               )
             )
           ensure
+            # Capture completions before teardown: sources like Raif::Agent and
+            # Raif::ConversationEntry declare `has_many :raif_model_completions,
+            # dependent: :destroy`, so a teardown that destroys them would delete the
+            # rows we need before we can read them.
+            capture_model_completions(model_completions_start_id)
+
             instance_eval(&self.class.teardown_block) if self.class.teardown_block
           end
-
-          capture_model_completions(model_completions_start_id)
 
           raise ActiveRecord::Rollback
         end

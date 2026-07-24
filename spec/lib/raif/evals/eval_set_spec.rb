@@ -111,6 +111,37 @@ RSpec.describe Raif::Evals::EvalSet do
       )
     end
 
+    it "captures model completions before a teardown that destroys their source" do
+      eval_set_with_destructive_teardown = Class.new(described_class) do
+        teardown do
+          @entry&.destroy
+        end
+
+        eval "makes an LLM call whose source is destroyed in teardown" do
+          creator = FB.create(:raif_test_user)
+          conversation = FB.create(:raif_conversation, creator: creator)
+          @entry = FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator)
+          FB.create(:raif_model_completion,
+            source: @entry,
+            llm_model_key: "raif_test_llm",
+            model_api_name: "raif-test-llm",
+            prompt_tokens: 15,
+            completion_tokens: 5,
+            total_tokens: 20)
+
+          expect "ran" do
+            true
+          end
+        end
+      end
+
+      results = eval_set_with_destructive_teardown.run
+      eval_result = results.first
+
+      expect(eval_result.model_completions.size).to eq(1)
+      expect(eval_result.usage[:total_tokens]).to eq(20)
+    end
+
     it "does not capture model completions created before the eval ran (setup)" do
       completion_before = FB.create(
         :raif_model_completion,
