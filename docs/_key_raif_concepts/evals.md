@@ -134,6 +134,46 @@ While Raif makes it intentionally difficult to run your normal test suite using 
 
 Once your evals have run, a JSON file will be created in `raif_evals/results` with the results of each eval.
 
+## Captured LLM Calls
+
+Every LLM call made during an eval is captured and included in the results JSON. Because each eval runs in a transaction that is rolled back, these records are captured before the rollback so they're preserved in the results even though the underlying `Raif::ModelCompletion` rows are not persisted.
+
+For each eval, the results include:
+- A `model_completions` array with one entry per LLM call. Each entry captures the `llm_model_key`, `model_api_name`, `system_prompt`, `messages`, the model's `response`, any `response_tool_calls`, token counts (`prompt_tokens`, `completion_tokens`, `total_tokens`, and cache token counts), and cost (`prompt_token_cost`, `output_token_cost`, `total_cost`).
+- A `usage` object summarizing the number of LLM calls, total tokens, and total cost for that eval.
+
+```json
+{
+  "description": "Raif::Tasks::DocumentSummarization produces expected output",
+  "passed": true,
+  "expectation_results": [ ... ],
+  "usage": {
+    "model_completions": 1,
+    "prompt_tokens": 1200,
+    "completion_tokens": 300,
+    "total_tokens": 1500,
+    "total_cost": 0.0075
+  },
+  "model_completions": [
+    {
+      "llm_model_key": "open_ai_gpt_4o",
+      "model_api_name": "gpt-4o",
+      "system_prompt": "...",
+      "messages": [ ... ],
+      "response": "...",
+      "prompt_tokens": 1200,
+      "completion_tokens": 300,
+      "total_tokens": 1500,
+      "total_cost": 0.0075
+    }
+  ]
+}
+```
+
+The run's top-level `summary` also aggregates totals across every eval: `total_model_completions`, `total_prompt_tokens`, `total_completion_tokens`, `total_tokens`, and `total_cost`. These totals are also printed to the console at the end of the run under an `LLM Usage` heading.
+
+> Note: LLM calls made by [LLM judges](#llm-as-judge-expectations) run within the eval and are captured and counted in these totals alongside the calls made by the code under test.
+
 ## Adding Result Metadata to Expectations
 
 You can attach metadata to any `expect` block to capture additional context that will be stored in the results JSON file. This is useful for tracking scores, metrics, or other relevant information alongside pass/fail results.
