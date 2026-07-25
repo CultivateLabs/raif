@@ -86,6 +86,15 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     inverse_of: :raif_model_completions,
     optional: true
 
+  # Durable cost/token record that outlives this row. dependent: :nullify
+  # covers the AR destroy path; raw delete_all culls rely on the DB-level
+  # ON DELETE SET NULL on the foreign key.
+  has_one :raif_inference_cost_event,
+    class_name: "Raif::InferenceCostEvent",
+    foreign_key: :raif_model_completion_id,
+    dependent: :nullify,
+    inverse_of: :raif_model_completion
+
   validates :llm_model_key, presence: true, inclusion: { in: ->{ Raif.available_llm_keys.map(&:to_s) } }
   validates :model_api_name, presence: true
 
@@ -132,6 +141,27 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   before_save :set_total_tokens
   before_save :calculate_costs
+  # The event write must happen OUTSIDE this record's transaction: a DB-level
+  # failure (statement error, unique violation) aborts the enclosing
+  # PostgreSQL transaction even when rescued in Ruby, which would silently
+  # roll back the terminal save this event exists to record. So after_save
+  # only marks the sync as pending (the per-save predicate correctly catches
+  # a terminal transition even when later saves happen in the same
+  # transaction) and after_commit performs it.
+  after_save -> { @inference_cost_event_sync_pending = true }, if: :inference_cost_event_sync_needed?
+  # No on: restriction: when a completion is terminalized and destroyed in
+  # the same outer transaction, Rails consolidates the commit into a destroy
+  # action; the pending flag still fires the sync there, which creates a
+  # detached event (nil FK, as if the completion had been culled) so reaching
+  # a terminal state always yields a durable event.
+  after_commit :sync_inference_cost_event, if: -> { @inference_cost_event_sync_pending }
+  after_rollback -> { @inference_cost_event_sync_pending = nil }
+  # A destroyed completion can never be repaired (the repair job scans
+  # existing completion rows), so a terminal completion must not be deleted
+  # until its event is durable. Syncs inline when the event is missing; any
+  # failure aborts the destroy, leaving the completion in place and
+  # repairable instead of silently losing the spend record.
+  before_destroy :ensure_durable_inference_cost_event!
 
   after_initialize -> { self.messages ||= [] }
   after_initialize -> { self.available_model_tools ||= [] }
@@ -195,7 +225,164 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     save!
   end
 
+  # Columns copied onto the inference cost event. A post-terminal change to
+  # any of them (e.g. batch results applying token counts after completed_at
+  # was already set) re-syncs the event so it stays a faithful mirror.
+  INFERENCE_COST_EVENT_SYNCED_COLUMNS = %w[
+    source_type
+    source_id
+    llm_model_key
+    model_api_name
+    prompt_tokens
+    completion_tokens
+    total_tokens
+    cache_read_input_tokens
+    cache_creation_input_tokens
+    prompt_token_cost
+    output_token_cost
+    total_cost
+    retry_count
+    raif_model_completion_batch_id
+  ].freeze
+
 private
+
+  # Streaming saves this row per-chunk mid-flight, so gate on the terminal
+  # transition (or a post-terminal change to a copied column) to get exactly
+  # one event per completion. Costs are final at the terminal save because
+  # calculate_costs runs before_save and includes the batch discount and the
+  # final retry_count.
+  def inference_cost_event_sync_needed?
+    return false unless Raif.config.inference_cost_events_enabled
+
+    became_terminal = saved_change_to_completed_at? || saved_change_to_failed_at?
+    terminal = completed_at.present? || failed_at.present?
+
+    became_terminal || (terminal && INFERENCE_COST_EVENT_SYNCED_COLUMNS.any? { |column| saved_change_to_attribute?(column) })
+  end
+
+  # Runs after commit, so the completion's terminal save is already durable
+  # and nothing here can roll it back or poison its transaction. Failures are
+  # reported and (on the live path) the idempotent repair job is enqueued.
+  # The archive job's per-record durability guard means an un-evented
+  # terminal completion can never be culled, so undercounting is temporary
+  # and loud, never silent data loss.
+  #
+  # enqueue_repair_on_failure: the backfill/repair path passes false, since
+  # each of its failing records would otherwise enqueue another full repair
+  # run and a persistent failure would multiply jobs without bound. Failures
+  # there still report; recovery is the next scheduled repair/backfill run.
+  def sync_inference_cost_event(enqueue_repair_on_failure: true)
+    @inference_cost_event_sync_pending = nil
+    create_or_update_inference_cost_event!
+  rescue ActiveRecord::RecordNotUnique
+    # A concurrent writer inserted the event first (unique index on
+    # raif_model_completion_id). We're outside any enclosing transaction, so
+    # it's safe to query again: reload and sync onto their row.
+    begin
+      association(:raif_inference_cost_event).reload
+      create_or_update_inference_cost_event!
+    rescue StandardError => e
+      report_inference_cost_event_sync_failure(e, enqueue_repair: enqueue_repair_on_failure)
+    end
+  rescue StandardError => e
+    report_inference_cost_event_sync_failure(e, enqueue_repair: enqueue_repair_on_failure)
+  end
+
+  def create_or_update_inference_cost_event!
+    event = find_or_build_inference_cost_event
+
+    event.assign_attributes(
+      raif_model_completion_id: destroyed? ? nil : id,
+      original_model_completion_id: id,
+      source_type: source_type,
+      source_id: source_id,
+      source_class_name: resolved_source_class_name,
+      llm_model_key: llm_model_key,
+      model_api_name: model_api_name,
+      prompt_tokens: prompt_tokens,
+      completion_tokens: completion_tokens,
+      total_tokens: total_tokens,
+      cache_read_input_tokens: cache_read_input_tokens,
+      cache_creation_input_tokens: cache_creation_input_tokens,
+      prompt_token_cost: prompt_token_cost,
+      output_token_cost: output_token_cost,
+      total_cost: total_cost,
+      retry_count: retry_count,
+      raif_model_completion_batch_id: raif_model_completion_batch_id,
+      incurred_at: created_at,
+      completion_completed_at: completed_at,
+      completion_failed_at: failed_at
+    )
+
+    if (resolver = Raif.config.inference_cost_event_metadata)
+      event.metadata = event.metadata.to_h.merge(resolver.call(model_completion: self) || {})
+    end
+
+    event.save!
+  end
+
+  # Checks durability via original_model_completion_id, NOT the has_one
+  # association: dependent: :nullify registers its callback at the
+  # association declaration, so by the time this runs an existing event's FK
+  # may already be nulled and the association lookup would wrongly report the
+  # event missing (and create a duplicate).
+  def ensure_durable_inference_cost_event!
+    return unless Raif.config.inference_cost_events_enabled
+    return if completed_at.blank? && failed_at.blank?
+    return if Raif::InferenceCostEvent.exists?(original_model_completion_id: id)
+
+    create_or_update_inference_cost_event!
+    @inference_cost_event_sync_pending = nil
+  end
+
+  # On a destroy commit the completion row is already gone: dependent:
+  # :nullify has cleared any existing event's FK, so look the event up by
+  # original_model_completion_id and leave it (or a newly built one)
+  # detached rather than pointing the FK at a deleted row.
+  def find_or_build_inference_cost_event
+    if destroyed?
+      Raif::InferenceCostEvent.find_by(original_model_completion_id: id) || Raif::InferenceCostEvent.new
+    else
+      raif_inference_cost_event || build_raif_inference_cost_event
+    end
+  end
+
+  # The source may have been deleted, reference an STI class the host app has
+  # since renamed or removed (SubclassNotFound), or have a source_type whose
+  # class was removed entirely (NameError); never fail the sync for these
+  # (that would leave the completion permanently un-evented and re-enqueue
+  # the repair job forever). For a stale STI row the concrete class name
+  # still sits in the row's inheritance column, so prefer that over
+  # collapsing the event's grouping to the generic base class; fall back to
+  # the stored source_type otherwise.
+  def resolved_source_class_name
+    source&.class&.name || source_type
+  rescue ActiveRecord::SubclassNotFound, NameError
+    stored_source_sti_type || source_type
+  end
+
+  # Reads the concrete class name straight off the source row's inheritance
+  # column. pick never instantiates the record, so STI resolution cannot
+  # raise. Safe for the NameError case too: safe_constantize returns nil and
+  # we fall through to source_type.
+  def stored_source_sti_type
+    base_class = source_type&.safe_constantize
+    return unless base_class.is_a?(Class) && base_class < ActiveRecord::Base && source_id.present?
+
+    base_class.unscoped.where(id: source_id).pick(base_class.inheritance_column).presence
+  rescue StandardError
+    nil
+  end
+
+  def report_inference_cost_event_sync_failure(error, enqueue_repair:)
+    Rails.error.report(error, handled: true, severity: :error)
+    Raif::RepairInferenceCostEventsJob.perform_later if enqueue_repair
+  rescue StandardError => e
+    # Last resort (e.g. the queue backend is down): never let failure
+    # handling itself raise out of the after_commit hook.
+    Raif.logger.error("Raif::ModelCompletion##{id}: inference cost event sync failure handling failed: #{e.class}: #{e.message}")
+  end
 
   def calculate_prompt_token_cost(total_attempts)
     input_cost = llm_config[:input_token_cost]

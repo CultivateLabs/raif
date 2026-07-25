@@ -5,9 +5,11 @@
 # Table name: raif_conversation_entries
 #
 #  id                     :bigint           not null, primary key
+#  citations              :jsonb
 #  completed_at           :datetime
 #  creator_type           :string           not null
 #  failed_at              :datetime
+#  llm_model_key          :string
 #  model_response_message :text
 #  raw_response           :text
 #  started_at             :datetime
@@ -142,6 +144,40 @@ RSpec.describe Raif::ConversationEntry, type: :model do
         expect(entry.raif_model_tool_invocations.count).to eq(1)
         expect(entry.raif_model_tool_invocations.first.tool_name).to eq("test_model_tool")
         expect(entry.raif_model_tool_invocations.first.tool_arguments).to eq({ "items" => [{ "title" => "foo", "description" => "bar" }] })
+      end
+    end
+
+    context "when the completion carries citations" do
+      let(:citations) do
+        [{ "url" => "https://example.com/article", "title" => "Example Article" }]
+      end
+
+      before do
+        stub_raif_conversation(conversation) do |_messages, model_completion|
+          model_completion.citations = citations
+
+          "Cited response"
+        end
+      end
+
+      it "copies citations and llm_model_key onto the entry at finalization" do
+        entry.process_entry!
+
+        entry.reload
+        expect(entry.citations).to eq(citations)
+        expect(entry.llm_model_key).to eq(entry.raif_model_completion.llm_model_key)
+      end
+
+      it "keeps citations and llm_model_key readable after the completion rows are culled" do
+        entry.process_entry!
+        expected_llm_model_key = entry.raif_model_completion.llm_model_key
+
+        Raif::ModelCompletion.where(source: entry).delete_all
+
+        entry.reload
+        expect(entry.raif_model_completion).to be_nil
+        expect(entry.citations).to eq(citations)
+        expect(entry.llm_model_key).to eq(expected_llm_model_key)
       end
     end
 
@@ -560,6 +596,68 @@ RSpec.describe Raif::ConversationEntry, type: :model do
         expect(entry.reload).to be_failed
         expect(entry.raif_model_completion).to eq(model_completion)
       end
+    end
+  end
+
+  describe ".backfill_denormalized_completion_fields!" do
+    let(:conversation) { FB.create(:raif_test_conversation, creator: creator) }
+
+    def create_legacy_entry
+      entry = FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator)
+      # Entries created before the columns existed have NULL in both.
+      entry.update_columns(citations: nil, llm_model_key: nil)
+      entry
+    end
+
+    def create_completion(entry, citations:, created_at: Time.current, llm_model_key: "raif_test_llm")
+      FB.create(
+        :raif_model_completion,
+        source: entry,
+        llm_model_key: llm_model_key,
+        model_api_name: "raif-test-llm",
+        citations: citations,
+        created_at: created_at
+      )
+    end
+
+    it "copies citations and llm_model_key from the newest completion without touching updated_at" do
+      entry = create_legacy_entry
+      create_completion(entry, citations: [{ "url" => "https://old.example.com" }], created_at: 2.hours.ago)
+      create_completion(entry, citations: [{ "url" => "https://new.example.com" }], created_at: 1.hour.ago)
+      original_updated_at = entry.reload.updated_at
+
+      Raif::ConversationEntry.backfill_denormalized_completion_fields!
+
+      entry.reload
+      expect(entry.citations).to eq([{ "url" => "https://new.example.com" }])
+      expect(entry.llm_model_key).to eq("raif_test_llm")
+      expect(entry.updated_at).to eq(original_updated_at)
+    end
+
+    it "leaves entries without a completion untouched" do
+      entry = create_legacy_entry
+
+      Raif::ConversationEntry.backfill_denormalized_completion_fields!
+
+      # after_initialize defaults citations to [] on loaded records, so check
+      # the raw column values.
+      expect(Raif::ConversationEntry.where(id: entry.id).pick(:citations, :llm_model_key)).to eq([nil, nil])
+    end
+
+    it "is idempotent and does not clobber already-populated entries" do
+      entry = create_legacy_entry
+      completion = create_completion(entry, citations: [{ "url" => "https://first.example.com" }])
+
+      Raif::ConversationEntry.backfill_denormalized_completion_fields!
+
+      # A later change to the completion must not overwrite the entry's copy.
+      completion.update!(citations: [{ "url" => "https://changed.example.com" }])
+
+      expect do
+        Raif::ConversationEntry.backfill_denormalized_completion_fields!
+      end.not_to change { entry.reload.citations }
+
+      expect(entry.citations).to eq([{ "url" => "https://first.example.com" }])
     end
   end
 end
