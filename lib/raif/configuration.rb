@@ -26,6 +26,8 @@ module Raif
       :google_api_key,
       :google_embedding_models_enabled,
       :google_models_enabled,
+      :inference_cost_event_metadata,
+      :inference_cost_events_enabled,
       :llm_api_requests_enabled,
       :llm_request_max_retries,
       :llm_request_retriable_exceptions,
@@ -91,6 +93,14 @@ module Raif
       @google_api_key = default_disable_llm_api_requests? ? "placeholder-google-api-key" : google_api_key
       @google_embedding_models_enabled = false
       @google_models_enabled = @google_api_key.present?
+      # Optional callable receiving a model_completion: keyword argument and
+      # returning a hash merged into Raif::InferenceCostEvent#metadata at sync
+      # time. The sanctioned host extension point for attaching app-specific
+      # context (e.g. account/workflow ids) to cost events.
+      @inference_cost_event_metadata = nil
+      # When true, a durable Raif::InferenceCostEvent is created for each
+      # model completion that reaches a terminal state (completed or failed).
+      @inference_cost_events_enabled = true
       @llm_api_requests_enabled = !default_disable_llm_api_requests?
       @llm_request_max_retries = 2
       @llm_request_retriable_exceptions = [

@@ -947,4 +947,296 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       expect(model_completion.tool_call_summary).to be_nil
     end
   end
+
+  describe "inference cost event sync" do
+    let(:task) { FB.create(:raif_test_task) }
+
+    let(:model_completion) do
+      FB.create(
+        :raif_model_completion,
+        llm_model_key: "raif_test_llm",
+        model_api_name: "raif-test-llm",
+        source: task,
+        prompt_tokens: 100,
+        completion_tokens: 50,
+        total_tokens: 150
+      )
+    end
+
+    it "creates exactly one event with copied values when the completion completes" do
+      expect do
+        model_completion.completed!
+      end.to change(Raif::InferenceCostEvent, :count).by(1)
+
+      event = model_completion.raif_inference_cost_event
+      expect(event.original_model_completion_id).to eq(model_completion.id)
+      expect(event.source).to eq(task)
+      expect(event.source_type).to eq("Raif::Task")
+      expect(event.source_class_name).to eq("Raif::TestTask")
+      expect(event.llm_model_key).to eq("raif_test_llm")
+      expect(event.model_api_name).to eq("raif-test-llm")
+      expect(event.prompt_tokens).to eq(100)
+      expect(event.completion_tokens).to eq(50)
+      expect(event.total_tokens).to eq(150)
+      expect(event.prompt_token_cost).to eq(model_completion.prompt_token_cost)
+      expect(event.output_token_cost).to eq(model_completion.output_token_cost)
+      expect(event.total_cost).to eq(model_completion.total_cost)
+      expect(event.retry_count).to eq(model_completion.retry_count)
+      expect(event.incurred_at).to eq(model_completion.created_at)
+      expect(event.completion_completed_at).to eq(model_completion.completed_at)
+      expect(event.completion_failed_at).to be_nil
+    end
+
+    it "creates an event when the completion fails via record_failure!" do
+      expect do
+        model_completion.record_failure!(StandardError.new("provider exploded"))
+      end.to change(Raif::InferenceCostEvent, :count).by(1)
+
+      event = model_completion.raif_inference_cost_event
+      expect(event.completion_failed_at).to eq(model_completion.failed_at)
+      expect(event.completion_completed_at).to be_nil
+    end
+
+    it "does not duplicate the event on repeated post-terminal saves and re-syncs copied columns" do
+      model_completion.completed!
+      event = model_completion.raif_inference_cost_event
+
+      expect do
+        model_completion.update!(prompt_tokens: 999, total_tokens: nil)
+      end.not_to change(Raif::InferenceCostEvent, :count)
+
+      expect(event.reload.prompt_tokens).to eq(999)
+    end
+
+    it "does not re-sync on post-terminal saves that touch no copied column" do
+      model_completion.completed!
+      event = model_completion.raif_inference_cost_event
+
+      expect do
+        model_completion.update!(raw_response: "updated response")
+      end.not_to change { event.reload.updated_at }
+    end
+
+    it "creates nothing for non-terminal saves (e.g. streaming mid-flight updates)" do
+      expect do
+        model_completion.update!(raw_response: "partial chunk", prompt_tokens: 10)
+      end.not_to change(Raif::InferenceCostEvent, :count)
+    end
+
+    it "carries batch-discounted costs on the event" do
+      batch = FB.create(
+        :raif_model_completion_batch_anthropic,
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5"
+      )
+
+      batch_completion = described_class.new(
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5",
+        prompt_tokens: 100,
+        completion_tokens: 50,
+        cache_read_input_tokens: 0,
+        cache_creation_input_tokens: 0,
+        raif_model_completion_batch: batch,
+        completed_at: Time.current
+      )
+      batch_completion.save(validate: false)
+
+      event = batch_completion.raif_inference_cost_event
+      expect(event).to be_present
+      expect(event.raif_model_completion_batch_id).to eq(batch.id)
+      # calculate_costs runs before_save (including the batch discount), so the
+      # event carries the discounted values.
+      expect(event.prompt_token_cost).to eq(batch_completion.prompt_token_cost)
+      expect(event.output_token_cost).to eq(batch_completion.output_token_cost)
+      expect(event.total_cost).to eq(batch_completion.total_cost)
+    end
+
+    it "creates nothing when inference_cost_events_enabled is false" do
+      allow(Raif.config).to receive(:inference_cost_events_enabled).and_return(false)
+
+      expect do
+        model_completion.completed!
+      end.not_to change(Raif::InferenceCostEvent, :count)
+    end
+
+    it "merges the configured metadata resolver's output into the event metadata" do
+      allow(Raif.config).to receive(:inference_cost_event_metadata).and_return(
+        ->(model_completion:) { { "account_id" => 42, "source_id" => model_completion.source_id } }
+      )
+
+      model_completion.completed!
+
+      event = model_completion.raif_inference_cost_event
+      expect(event.metadata).to eq({ "account_id" => 42, "source_id" => task.id })
+    end
+
+    it "falls back to source_type for source_class_name when the source is gone" do
+      model_completion.update_columns(source_id: task.id + 1_000_000)
+
+      model_completion.completed!
+
+      event = model_completion.raif_inference_cost_event
+      expect(event.source_class_name).to eq("Raif::Task")
+    end
+
+    it "re-syncs the event when a copied identity column changes post-terminal" do
+      model_completion.completed!
+      event = model_completion.raif_inference_cost_event
+
+      model_completion.update!(model_api_name: "raif-test-llm-updated")
+
+      expect(event.reload.model_api_name).to eq("raif-test-llm-updated")
+    end
+
+    it "creates a detached event when the completion is terminalized and destroyed in the same transaction" do
+      completion_id = model_completion.id
+
+      expect do
+        ActiveRecord::Base.transaction do
+          model_completion.completed!
+          model_completion.destroy!
+        end
+      end.to change(Raif::InferenceCostEvent, :count).by(1)
+
+      event = Raif::InferenceCostEvent.find_by(original_model_completion_id: completion_id)
+      expect(event.raif_model_completion_id).to be_nil
+      expect(event.completion_completed_at).to be_present
+      expect(event.prompt_tokens).to eq(100)
+      expect(event.source_class_name).to eq("Raif::TestTask")
+    end
+
+    it "aborts the destroy when a terminal completion's missing event cannot be persisted" do
+      allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!).and_raise(ActiveRecord::StatementInvalid, "boom")
+
+      model_completion.completed!
+      expect(model_completion.reload.raif_inference_cost_event).to be_nil
+
+      expect { model_completion.destroy! }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(Raif::ModelCompletion.exists?(model_completion.id)).to eq(true)
+    end
+
+    it "persists the missing event during destroy when an earlier live sync failed" do
+      original_save = Raif::InferenceCostEvent.instance_method(:save!)
+      fail_once = true
+      allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!) do |event, **args|
+        if fail_once
+          fail_once = false
+          raise ActiveRecord::StatementInvalid, "transient failure"
+        end
+
+        original_save.bind_call(event, **args)
+      end
+
+      model_completion.completed!
+      expect(model_completion.reload.raif_inference_cost_event).to be_nil
+
+      expect { model_completion.destroy! }.to change(Raif::InferenceCostEvent, :count).by(1)
+
+      event = Raif::InferenceCostEvent.find_by(original_model_completion_id: model_completion.id)
+      expect(event.raif_model_completion_id).to be_nil
+      expect(event.completion_completed_at).to be_present
+    end
+
+    it "updates the existing event without duplicating when a terminal completion is modified and destroyed in one transaction" do
+      model_completion.completed!
+      event = model_completion.raif_inference_cost_event
+
+      expect do
+        ActiveRecord::Base.transaction do
+          model_completion.update!(prompt_tokens: 999, total_tokens: nil)
+          model_completion.destroy!
+        end
+      end.not_to change(Raif::InferenceCostEvent, :count)
+
+      event.reload
+      expect(event.raif_model_completion_id).to be_nil
+      expect(event.prompt_tokens).to eq(999)
+    end
+
+    describe "sync failure handling" do
+      it "never fails the completion save: reports the error and enqueues the repair job" do
+        allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!).and_raise(ActiveRecord::StatementInvalid, "boom")
+        expect(Rails.error).to receive(:report).with(instance_of(ActiveRecord::StatementInvalid), handled: true, severity: :error)
+
+        expect do
+          model_completion.completed!
+        end.to have_enqueued_job(Raif::RepairInferenceCostEventsJob)
+
+        expect(model_completion.reload.completed?).to eq(true)
+        expect(model_completion.raif_inference_cost_event).to be_nil
+      end
+
+      it "never raises out of the after_commit hook, even when enqueueing the repair job fails" do
+        allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!).and_raise(ActiveRecord::StatementInvalid, "boom")
+        allow(Raif::RepairInferenceCostEventsJob).to receive(:perform_later).and_raise(StandardError, "queue backend down")
+
+        expect { model_completion.completed! }.not_to raise_error
+        expect(model_completion.reload.completed?).to eq(true)
+      end
+
+      it "retries once onto the concurrent writer's row when the unique index is hit" do
+        # Simulate losing the insert race: another process created the event
+        # between our miss on the association read and our insert.
+        concurrent_event = nil
+        original_save = Raif::InferenceCostEvent.instance_method(:save!)
+        already_raised = false
+
+        allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!) do |event, **args|
+          if event.new_record? && !already_raised
+            already_raised = true
+            concurrent_event = FB.create(
+              :raif_inference_cost_event,
+              raif_model_completion_id: model_completion.id,
+              original_model_completion_id: model_completion.id,
+              prompt_tokens: nil,
+              completion_tokens: nil,
+              total_tokens: nil
+            )
+            raise ActiveRecord::RecordNotUnique, "duplicate key"
+          else
+            original_save.bind_call(event, **args)
+          end
+        end
+
+        expect do
+          model_completion.completed!
+        end.to change(Raif::InferenceCostEvent, :count).by(1)
+
+        expect(concurrent_event.reload.prompt_tokens).to eq(100)
+        expect(concurrent_event.completion_completed_at).to eq(model_completion.completed_at)
+      end
+    end
+
+    describe "isolation from the completion's transaction" do
+      # Transactional tests would let a genuine PostgreSQL statement error
+      # inside the event write poison the example-wrapping transaction, so
+      # this group runs without one to prove the production property: the
+      # event write happens after commit, where a DB-level failure cannot
+      # roll back the already-committed terminal save.
+      self.use_transactional_tests = false
+
+      after do
+        Raif::InferenceCostEvent.delete_all
+        Raif::ModelCompletion.delete_all
+      end
+
+      it "commits the terminal save even when the event write fails at the database level" do
+        completion = FB.create(
+          :raif_model_completion,
+          llm_model_key: "raif_test_llm",
+          model_api_name: "raif-test-llm"
+        )
+
+        allow_any_instance_of(Raif::InferenceCostEvent).to receive(:save!) do
+          ActiveRecord::Base.connection.execute("SELECT 1/0")
+        end
+
+        expect { completion.completed! }.not_to raise_error
+
+        expect(Raif::ModelCompletion.where(id: completion.id).pick(:completed_at)).to be_present
+        expect(Raif::InferenceCostEvent.where(original_model_completion_id: completion.id)).to be_empty
+      end
+    end
+  end
 end
