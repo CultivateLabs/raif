@@ -953,6 +953,30 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         llm.send(:build_request_parameters, model_completion)
         expect(model_completion.response_format_parameter).to eq("json_schema")
       end
+
+      it "strips constraints Anthropic's structured-output validator rejects" do
+        allow(model_completion).to receive(:json_response_schema).and_return({
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            probability: { type: "integer", minimum: 0, maximum: 100 },
+            probabilities: { type: "array", minItems: 3, maxItems: 3, items: { type: "string" } }
+          },
+          required: ["probability", "probabilities"]
+        })
+
+        params = llm.send(:build_request_parameters, model_completion)
+
+        expect(params.dig(:output_config, :format, :schema)).to eq({
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            probability: { type: "integer" },
+            probabilities: { type: "array", items: { type: "string" } }
+          },
+          required: ["probability", "probabilities"]
+        })
+      end
     end
 
     context "with a json_response_schema but a non-supporting model" do

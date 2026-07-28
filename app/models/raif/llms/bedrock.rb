@@ -4,6 +4,7 @@ class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::MessageFormatting
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
   include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
+  include Raif::Concerns::Llms::Anthropic::StructuredOutputSchemaSanitization
 
   def self.prompt_tokens_include_cached_tokens?
     false
@@ -127,7 +128,7 @@ private
             json_schema: {
               name: "json_response_schema",
               description: "Generate a structured JSON response based on the provided schema.",
-              schema: JSON.generate(model_completion.json_response_schema)
+              schema: JSON.generate(sanitize_structured_output_schema(model_completion.json_response_schema))
             }
           }
         }

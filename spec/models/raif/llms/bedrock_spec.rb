@@ -933,6 +933,20 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         llm.send(:build_request_parameters, model_completion)
         expect(model_completion.response_format_parameter).to eq("json_schema")
       end
+
+      it "strips constraints the structured-output validator rejects" do
+        allow(model_completion).to receive(:json_response_schema).and_return({
+          type: "object",
+          additionalProperties: false,
+          properties: { probability: { type: "integer", minimum: 0, maximum: 100 } },
+          required: ["probability"]
+        })
+
+        params = llm.send(:build_request_parameters, model_completion)
+        schema = JSON.parse(params.dig(:output_config, :text_format, :structure, :json_schema, :schema))
+
+        expect(schema.dig("properties", "probability")).to eq({ "type" => "integer" })
+      end
     end
 
     context "with a json_response_schema but a non-supporting model" do
