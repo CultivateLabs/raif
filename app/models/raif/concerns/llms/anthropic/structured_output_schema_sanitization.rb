@@ -28,37 +28,55 @@ module Raif::Concerns::Llms::Anthropic::StructuredOutputSchemaSanitization
   # says "possibly empty" (0) or "non-empty" (1). Any other bound is rejected.
   SUPPORTED_MIN_ITEMS_VALUES = [0, 1].freeze
 
+  # Recursion is limited to keywords whose values are themselves schemas.
+  # Everything else -- `enum`, `const`, `default`, `examples`, `description` --
+  # is instance data or an annotation and is copied through untouched: an
+  # object-valued `enum` entry that happens to look like a schema is a literal
+  # the caller expects back verbatim, and rewriting it would change which values
+  # the schema accepts. Descending only where schemas can appear also means an
+  # unrecognized keyword is left alone, which risks a provider 400 rather than a
+  # silently altered schema.
+  SCHEMA_MAP_KEYWORDS = %w[properties patternProperties $defs definitions].freeze
+  SCHEMA_ARRAY_KEYWORDS = %w[allOf anyOf oneOf prefixItems].freeze
+  SCHEMA_KEYWORDS = %w[additionalItems additionalProperties contains else if not propertyNames then unevaluatedItems unevaluatedProperties].freeze
+
   def sanitize_structured_output_schema(schema)
+    return schema unless schema.is_a?(Hash)
+
     sanitize_schema_node(schema)
   end
 
 private
 
   def sanitize_schema_node(node)
-    case node
-    when Hash
-      sanitize_schema_hash(node)
-    when Array
-      node.map { |element| sanitize_schema_node(element) }
-    else
-      node
-    end
-  end
+    return node unless node.is_a?(Hash)
 
-  def sanitize_schema_hash(node)
     unsupported = unsupported_schema_constraints_for(node)
 
     node.each_with_object({}) do |(key, value), sanitized|
-      next if unsupported.include?(key.to_s)
-      next if key.to_s == "minItems" && unsupported_min_items?(node, value)
+      keyword = key.to_s
+      next if unsupported.include?(keyword)
+      next if keyword == "minItems" && unsupported_min_items?(node, value)
 
-      sanitized[key] = sanitize_schema_node(value)
+      sanitized[key] = sanitize_schema_keyword_value(keyword, value)
     end
   end
 
-  # Keyed off the node's declared `type`, so a *property named* "minimum" or
-  # "maxItems" inside a `properties` hash is left alone -- that hash's "type"
-  # entry, if any, is a subschema rather than a type name.
+  def sanitize_schema_keyword_value(keyword, value)
+    if SCHEMA_MAP_KEYWORDS.include?(keyword) && value.is_a?(Hash)
+      value.transform_values { |subschema| sanitize_schema_node(subschema) }
+    elsif SCHEMA_ARRAY_KEYWORDS.include?(keyword) && value.is_a?(Array)
+      value.map { |subschema| sanitize_schema_node(subschema) }
+    elsif SCHEMA_KEYWORDS.include?(keyword) || keyword == "items"
+      # `items` takes either a single schema or, in tuple form, an array of them.
+      value.is_a?(Array) ? value.map { |subschema| sanitize_schema_node(subschema) } : sanitize_schema_node(value)
+    else
+      value
+    end
+  end
+
+  # Which constraints are rejected depends on the node's declared `type`:
+  # `minLength` on a string is fine, `minimum` on the same node would not be.
   def unsupported_schema_constraints_for(node)
     type = schema_node_type(node)
     return [] if type.nil?

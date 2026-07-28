@@ -154,6 +154,32 @@ RSpec.describe Raif::Concerns::Llms::Anthropic::StructuredOutputSchemaSanitizati
       expect(sanitize(schema)["properties"]["probability"]).to eq({ "type" => "integer" })
     end
 
+    it "leaves object-valued enum entries verbatim rather than treating them as schemas" do
+      schema = {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          threshold: { type: "string", enum: [{ type: "integer", minimum: 0, maxItems: 3 }, "other"] }
+        },
+        required: ["threshold"]
+      }
+
+      expect(sanitize(schema)).to eq(schema)
+    end
+
+    it "leaves const, default, and examples values verbatim" do
+      schema = {
+        type: "object",
+        properties: {
+          a: { type: "string", const: { type: "integer", minimum: 0 } },
+          b: { type: "string", default: { type: "array", maxItems: 2 } },
+          c: { type: "string", examples: [{ type: "number", multipleOf: 5 }] }
+        }
+      }
+
+      expect(sanitize(schema)).to eq(schema)
+    end
+
     it "does not strip properties that happen to be named after a constraint" do
       schema = {
         type: "object",
