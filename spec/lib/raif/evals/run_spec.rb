@@ -222,10 +222,28 @@ RSpec.describe Raif::Evals::Run do
       expect(json_content["summary"]).to include(
         "total_eval_sets" => 2,
         "total_evals" => 3,
-        "passed_evals" => 2
+        "passed_evals" => 2,
+        "total_model_completions" => 0,
+        "total_prompt_tokens" => 0,
+        "total_completion_tokens" => 0,
+        "total_tokens" => 0,
+        "total_cost" => 0.0
       )
     ensure
       FileUtils.rm(json_file)
+    end
+
+    it "includes usage and captured model completions for each eval in the results" do
+      run.execute
+
+      eval_result = run.results["TestEvalSet"].first
+      expect(eval_result).to include(:usage, :model_completions)
+      expect(eval_result[:usage]).to include(
+        model_completions: 0,
+        total_tokens: 0,
+        total_cost: 0.0
+      )
+      expect(eval_result[:model_completions]).to eq([])
     end
 
     it "prints summary to output" do
@@ -245,6 +263,10 @@ RSpec.describe Raif::Evals::Run do
       expect(output_string).to include("  3 total")
       expect(output_string).to include("  2 passed")
       expect(output_string).to include("  1 failed")
+      expect(output_string).to include("LLM Usage:")
+      expect(output_string).to include("0 LLM calls")
+      expect(output_string).to include("0 total tokens")
+      expect(output_string).to include("$0.000000 total cost")
     end
   end
 end

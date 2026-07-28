@@ -20,7 +20,8 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
         source: task1,
         prompt_tokens: 1000,
         completion_tokens: 500,
-        created_at: 12.hours.ago
+        created_at: 12.hours.ago,
+        completed_at: 12.hours.ago
       )
     end
 
@@ -32,7 +33,8 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
         source: task2,
         prompt_tokens: 2000,
         completion_tokens: 1000,
-        created_at: 12.hours.ago
+        created_at: 12.hours.ago,
+        completed_at: 12.hours.ago
       )
     end
 
@@ -44,7 +46,8 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
         source: task3,
         prompt_tokens: 3000,
         completion_tokens: 1500,
-        created_at: 12.hours.ago
+        created_at: 12.hours.ago,
+        completed_at: 12.hours.ago
       )
     end
 
@@ -58,7 +61,8 @@ RSpec.describe "Admin::Stats::Tasks", type: :feature do
         source: old_task,
         prompt_tokens: 3000,
         completion_tokens: 1500,
-        created_at: 2.days.ago
+        created_at: 2.days.ago,
+        completed_at: 2.days.ago
       )
     end
 

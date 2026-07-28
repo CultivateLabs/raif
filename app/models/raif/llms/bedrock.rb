@@ -120,6 +120,11 @@ private
       # in the Ruby SDK). The schema must be a JSON-encoded *string* and is
       # nested inside `structure.json_schema`. See
       # https://docs.aws.amazon.com/bedrock/latest/userguide/structured-output.html
+      #
+      # The schema goes through the Anthropic transformer because Bedrock does
+      # not validate it itself -- it forwards the Anthropic validator's message
+      # verbatim ("The model returned the following errors:
+      # output_config.format.schema: ..."), so the same strict subset applies.
       params[:output_config] = {
         text_format: {
           type: "json_schema",
@@ -127,7 +132,7 @@ private
             json_schema: {
               name: "json_response_schema",
               description: "Generate a structured JSON response based on the provided schema.",
-              schema: JSON.generate(model_completion.json_response_schema)
+              schema: JSON.generate(Raif::Llms::Anthropic::StrictSchemaTransformer.call(model_completion.json_response_schema))
             }
           }
         }

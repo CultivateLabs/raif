@@ -33,7 +33,8 @@ RSpec.describe Raif::Llms::Anthropic::StrictSchemaTransformer do
       expect(item_schema[:items][:properties]).to eq({
         code: {
           type: "string",
-          description: "Must match the pattern /^[A-Z]+$/. Must be at least 2 characters long."
+          pattern: "^[A-Z]+$",
+          minLength: 2
         },
         score: {
           type: "number",
@@ -110,14 +111,22 @@ RSpec.describe Raif::Llms::Anthropic::StrictSchemaTransformer do
 
       expect(transformed[:properties]).to eq({
         minimum: { "$ref" => "#/$defs/maximum" },
-        pattern: { type: "string", description: "Must be at most 10 characters long." },
+        pattern: { type: "string", maxLength: 10 },
         legacy: { "$ref" => "#/definitions/pattern" }
       })
       expect(transformed["$defs"]["maximum"]).to eq({ type: "number", description: "Must be at most 100." })
-      expect(transformed[:definitions][:pattern]).to eq({
-        type: "string",
-        description: "Must match the pattern /^[a-z]+$/."
-      })
+      expect(transformed[:definitions][:pattern]).to eq({ type: "string", pattern: "^[a-z]+$" })
+    end
+
+    it "keeps the string constraints Anthropic accepts on the wire" do
+      schema = {
+        type: "object",
+        properties: {
+          slug: { type: "string", minLength: 2, maxLength: 40, pattern: "^[a-z]+$", format: "date" }
+        }
+      }
+
+      expect(described_class.call(schema)).to eq(schema)
     end
 
     it "preserves data-bearing schema keyword values without transforming them" do

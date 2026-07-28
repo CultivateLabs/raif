@@ -933,6 +933,27 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         llm.send(:build_request_parameters, model_completion)
         expect(model_completion.response_format_parameter).to eq("json_schema")
       end
+
+      # Bedrock does not validate the schema itself -- it forwards the Anthropic
+      # validator's message verbatim -- so the same strict subset applies here.
+      it "sends no constraint the structured-output validator rejects" do
+        allow(model_completion).to receive(:json_response_schema).and_return({
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            probability: { type: "integer", minimum: 0, maximum: 100 },
+            probabilities: { type: "array", minItems: 3, maxItems: 3, items: { type: "string" } }
+          },
+          required: ["probability", "probabilities"]
+        })
+
+        params = llm.send(:build_request_parameters, model_completion)
+        schema = JSON.parse(params.dig(:output_config, :text_format, :structure, :json_schema, :schema))
+
+        expect(schema.to_s).not_to match(/maximum|minimum|maxItems|uniqueItems|multipleOf/)
+        expect(schema.dig("properties", "probabilities", "minItems")).to eq(1)
+        expect(schema.dig("properties", "probability", "description")).to eq("Must be at least 0. Must be at most 100.")
+      end
     end
 
     context "with a json_response_schema but a non-supporting model" do

@@ -5,17 +5,19 @@ class Raif::Llms::Anthropic::StrictSchemaTransformer
   # They are removed from the wire schema and folded into the property's
   # description so the model still sees them. The caller's original schema
   # remains unchanged and can still be used locally.
+  #
+  # `minLength`, `maxLength`, and `pattern` are deliberately absent: the API
+  # accepts all three on both the strict-tool and native structured-output
+  # paths, so removing them would trade real constrained-decoding enforcement
+  # for a description the model may ignore. Verified against claude-opus-4-8.
   UNSUPPORTED_KEYS = %w[
     minimum
     maximum
     exclusiveMinimum
     exclusiveMaximum
     multipleOf
-    minLength
-    maxLength
     minItems
     maxItems
-    pattern
     uniqueItems
     minProperties
     maxProperties
@@ -134,12 +136,6 @@ private
       exclusive_note("less than", value, schema_value(schema, "maximum"))
     when "multipleOf"
       "Must be a multiple of #{value}." if value.is_a?(Numeric)
-    when "minLength"
-      length_note("at least", value)
-    when "maxLength"
-      length_note("at most", value)
-    when "pattern"
-      "Must match the pattern /#{value}/." if value.is_a?(String)
     when "uniqueItems"
       "Items must be unique." if value == true
     when "minProperties"
@@ -169,13 +165,6 @@ private
     return unless count
 
     "Must contain #{qualifier} #{count} #{count == 1 ? noun : noun.pluralize}."
-  end
-
-  def length_note(qualifier, value)
-    count = integer_constraint_value(value)
-    return unless count
-
-    "Must be #{qualifier} #{count} #{count == 1 ? "character" : "characters"} long."
   end
 
   def pattern_properties_note(value)

@@ -84,8 +84,58 @@ RSpec.describe Raif::Evals::Eval do
         expectation_results: [
           { description: "first", status: :passed },
           { description: "second", status: :failed }
-        ]
+        ],
+        usage: {
+          model_completions: 0,
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0,
+          total_cost: 0.0
+        },
+        model_completions: []
       })
+    end
+  end
+
+  describe "#record_model_completions" do
+    let(:eval) { described_class.new(description: "test eval") }
+
+    let(:model_completion) do
+      FB.create(
+        :raif_model_completion,
+        llm_model_key: "raif_test_llm",
+        model_api_name: "raif-test-llm",
+        prompt_tokens: 100,
+        completion_tokens: 25,
+        total_tokens: 125
+      )
+    end
+
+    it "serializes model completions and aggregates usage" do
+      eval.record_model_completions([model_completion])
+
+      expect(eval.model_completions.size).to eq(1)
+      serialized = eval.model_completions.first
+      expect(serialized[:llm_model_key]).to eq("raif_test_llm")
+      expect(serialized[:prompt_tokens]).to eq(100)
+      expect(serialized[:completion_tokens]).to eq(25)
+      expect(serialized[:messages]).to eq(model_completion.messages)
+      expect(serialized[:response]).to eq(model_completion.raw_response)
+
+      expect(eval.usage).to include(
+        model_completions: 1,
+        prompt_tokens: 100,
+        completion_tokens: 25,
+        total_tokens: 125
+      )
+    end
+
+    it "includes serialized completions and usage in to_h" do
+      eval.record_model_completions([model_completion])
+
+      hash = eval.to_h
+      expect(hash[:model_completions].size).to eq(1)
+      expect(hash[:usage][:total_tokens]).to eq(125)
     end
   end
 end
