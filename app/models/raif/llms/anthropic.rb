@@ -5,6 +5,7 @@ class Raif::Llms::Anthropic < Raif::Llm
   include Raif::Concerns::Llms::Anthropic::ToolFormatting
   include Raif::Concerns::Llms::Anthropic::ResponseToolCalls
   include Raif::Concerns::Llms::Anthropic::BatchInference
+  include Raif::Concerns::Llms::Anthropic::StructuredOutputSchemaSanitization
 
   def self.prompt_tokens_include_cached_tokens?
     false
@@ -96,7 +97,7 @@ private
       params[:output_config] = {
         format: {
           type: "json_schema",
-          schema: model_completion.json_response_schema
+          schema: sanitize_structured_output_schema(model_completion.json_response_schema)
         }
       }
       model_completion.response_format_parameter = "json_schema"
