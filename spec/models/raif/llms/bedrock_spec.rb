@@ -934,18 +934,25 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         expect(model_completion.response_format_parameter).to eq("json_schema")
       end
 
-      it "strips constraints the structured-output validator rejects" do
+      # Bedrock does not validate the schema itself -- it forwards the Anthropic
+      # validator's message verbatim -- so the same strict subset applies here.
+      it "sends no constraint the structured-output validator rejects" do
         allow(model_completion).to receive(:json_response_schema).and_return({
           type: "object",
           additionalProperties: false,
-          properties: { probability: { type: "integer", minimum: 0, maximum: 100 } },
-          required: ["probability"]
+          properties: {
+            probability: { type: "integer", minimum: 0, maximum: 100 },
+            probabilities: { type: "array", minItems: 3, maxItems: 3, items: { type: "string" } }
+          },
+          required: ["probability", "probabilities"]
         })
 
         params = llm.send(:build_request_parameters, model_completion)
         schema = JSON.parse(params.dig(:output_config, :text_format, :structure, :json_schema, :schema))
 
-        expect(schema.dig("properties", "probability")).to eq({ "type" => "integer" })
+        expect(schema.to_s).not_to match(/maximum|minimum|maxItems|uniqueItems|multipleOf/)
+        expect(schema.dig("properties", "probabilities", "minItems")).to eq(1)
+        expect(schema.dig("properties", "probability", "description")).to eq("Must be at least 0. Must be at most 100.")
       end
     end
 
@@ -1014,6 +1021,99 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
 
     it "does not include parallel_tool_calls" do
       expect(parameters).not_to have_key(:parallel_tool_calls)
+    end
+  end
+
+  describe "#extract_json_response normalization" do
+    let(:schema) do
+      {
+        type: "object",
+        additionalProperties: false,
+        required: ["joke", "answer"],
+        properties: {
+          joke: { type: "string" },
+          answer: { type: "string" }
+        }
+      }
+    end
+
+    let(:model_completion) do
+      instance_double(Raif::ModelCompletion, json_response_schema: schema)
+    end
+
+    def response_with_tool_input(input, text_blocks: [])
+      content = text_blocks.map { |text| Aws::BedrockRuntime::Types::ContentBlock::Text.new(text: text) }
+      content << Aws::BedrockRuntime::Types::ContentBlock.new(
+        tool_use: Aws::BedrockRuntime::Types::ToolUseBlock.new(
+          tool_use_id: "tooluse_abc123",
+          name: "json_response",
+          input: input
+        )
+      )
+
+      message = Aws::BedrockRuntime::Types::Message.new(role: "assistant", content: content)
+      output = Aws::BedrockRuntime::Types::ConverseOutput::Message.new(message: message)
+      usage = Aws::BedrockRuntime::Types::TokenUsage.new(input_tokens: 1, output_tokens: 1, total_tokens: 2)
+      Aws::BedrockRuntime::Types::ConverseResponse.new(output: output, usage: usage, stop_reason: "tool_use")
+    end
+
+    it "passes a schema-conforming input through unchanged" do
+      resp = response_with_tool_input({ "joke" => "A joke", "answer" => "An answer" })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "strips unknown root properties before validating an otherwise conforming input" do
+      resp = response_with_tool_input({ "joke" => "A joke", "answer" => "An answer", "confidence" => 0.9 })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "preserves unknown root properties when the schema allows them" do
+      permissive_schema = schema.merge(additionalProperties: true)
+      completion = instance_double(Raif::ModelCompletion, json_response_schema: permissive_schema)
+      resp = response_with_tool_input({ "joke" => "A joke", "answer" => "An answer", "confidence" => 0.9 })
+
+      extracted = llm.send(:extract_json_response, resp, completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer", "confidence" => 0.9 })
+    end
+
+    it "unwraps a payload nested under a json_response key" do
+      resp = response_with_tool_input({ "json_response" => { "joke" => "A joke", "answer" => "An answer" } })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "decodes a double-encoded payload (single key whose value is a JSON string)" do
+      resp = response_with_tool_input({ "json_response" => { "joke" => "A joke", "answer" => "An answer" }.to_json })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "A joke", "answer" => "An answer" })
+    end
+
+    it "falls back to text blocks when the tool input carries none of the schema's properties" do
+      json_in_text = { "joke" => "From text", "answer" => "Also from text" }.to_json
+      resp = response_with_tool_input({ "query" => "forecast" }, text_blocks: [json_in_text])
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(JSON.parse(extracted)).to eq({ "joke" => "From text", "answer" => "Also from text" })
+    end
+
+    it "returns nil when a stub input has no usable candidate and no text blocks exist" do
+      resp = response_with_tool_input({ "query" => {} })
+
+      extracted = llm.send(:extract_json_response, resp, model_completion)
+      expect(extracted).to be_nil
+    end
+
+    it "passes the input through unchanged when no schema is available" do
+      resp = response_with_tool_input({ "query" => "forecast" })
+
+      extracted = llm.send(:extract_json_response, resp, instance_double(Raif::ModelCompletion, json_response_schema: nil))
+      expect(JSON.parse(extracted)).to eq({ "query" => "forecast" })
     end
   end
 end

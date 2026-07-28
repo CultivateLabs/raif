@@ -384,6 +384,59 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       expect(Raif.logger).to have_received(:error).with(a_string_matching(/skipping malformed JSONL/))
     end
 
+    it "fails an invalid native JSON completion without poisoning valid siblings" do
+      invalid_task = Raif::TestJsonTask.build_for_batch(
+        batch: batch,
+        batch_custom_id: "invalid_json",
+        creator: creator,
+        llm_model_key: "anthropic_claude_4_5_haiku"
+      )
+      valid_task = Raif::TestJsonTask.build_for_batch(
+        batch: batch,
+        batch_custom_id: "valid_json",
+        creator: creator,
+        llm_model_key: "anthropic_claude_4_5_haiku"
+      )
+      body = [
+        {
+          custom_id: "invalid_json",
+          result: {
+            type: "succeeded",
+            message: {
+              id: "msg_invalid",
+              content: [{ type: "text", text: { joke: "Missing the answer" }.to_json }],
+              stop_reason: "end_turn",
+              usage: { input_tokens: 2, output_tokens: 2 }
+            }
+          }
+        },
+        {
+          custom_id: "valid_json",
+          result: {
+            type: "succeeded",
+            message: {
+              id: "msg_valid",
+              content: [{ type: "text", text: { joke: "A valid joke", answer: "A valid answer" }.to_json }],
+              stop_reason: "end_turn",
+              usage: { input_tokens: 3, output_tokens: 3 }
+            }
+          }
+        }
+      ].map(&:to_json).join("\n")
+      stub_request(:get, results_url).to_return(status: 200, body: body)
+
+      expect { llm.fetch_batch_results!(batch) }.not_to raise_error
+
+      invalid_completion = invalid_task.raif_model_completion.reload
+      expect(invalid_completion.failed?).to be(true)
+      expect(invalid_completion.failure_error).to eq("Raif::Errors::InvalidJsonResponseError")
+      expect(invalid_completion.raw_response).to eq({ joke: "Missing the answer" }.to_json)
+
+      valid_completion = valid_task.raif_model_completion.reload
+      expect(valid_completion.completed?).to be(true)
+      expect(valid_completion.raw_response).to eq({ joke: "A valid joke", answer: "A valid answer" }.to_json)
+    end
+
     it "fails any child completion that doesn't appear in the results stream" do
       partial_jsonl = [
         {

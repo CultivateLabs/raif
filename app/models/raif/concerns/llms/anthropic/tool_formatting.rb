@@ -21,11 +21,7 @@ module Raif::Concerns::Llms::Anthropic::ToolFormatting
     if model_completion.response_format_json? &&
         model_completion.json_response_schema.present? &&
         !use_native_structured_outputs?(model_completion)
-      tools << {
-        name: "json_response",
-        description: "Generate a structured JSON response based on the provided schema.",
-        input_schema: model_completion.json_response_schema
-      }
+      tools << json_response_tool_definition(model_completion)
     end
 
     # If we support native tool use and have tools available, add them to the request
@@ -44,6 +40,27 @@ module Raif::Concerns::Llms::Anthropic::ToolFormatting
     end
 
     tools
+  end
+
+  # Without strict tool use the synthetic tool is advisory only, and models
+  # occasionally emit stub or malformed inputs (empty objects, placeholder
+  # values, payloads nested one level deep). strict: true makes the API
+  # enforce the input schema via constrained decoding on models that support
+  # it (gated on the same provider setting as native structured outputs,
+  # which shipped together with strict tool use).
+  def json_response_tool_definition(model_completion)
+    tool = {
+      name: "json_response",
+      description: "Generate a structured JSON response based on the provided schema.",
+      input_schema: model_completion.json_response_schema
+    }
+
+    if supports_structured_outputs?
+      tool[:strict] = true
+      tool[:input_schema] = Raif::Llms::Anthropic::StrictSchemaTransformer.call(tool[:input_schema])
+    end
+
+    tool
   end
 
   def format_provider_managed_tool(tool)

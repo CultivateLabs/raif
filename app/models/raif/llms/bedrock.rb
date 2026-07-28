@@ -4,7 +4,6 @@ class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::MessageFormatting
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
   include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
-  include Raif::Concerns::Llms::Anthropic::StructuredOutputSchemaSanitization
 
   def self.prompt_tokens_include_cached_tokens?
     false
@@ -74,7 +73,7 @@ private
     return if resp.nil?
 
     model_completion.raw_response = if model_completion.response_format_json?
-      extract_json_response(resp)
+      extract_json_response(resp, model_completion)
     else
       extract_text_response(resp)
     end
@@ -121,6 +120,11 @@ private
       # in the Ruby SDK). The schema must be a JSON-encoded *string* and is
       # nested inside `structure.json_schema`. See
       # https://docs.aws.amazon.com/bedrock/latest/userguide/structured-output.html
+      #
+      # The schema goes through the Anthropic transformer because Bedrock does
+      # not validate it itself -- it forwards the Anthropic validator's message
+      # verbatim ("The model returned the following errors:
+      # output_config.format.schema: ..."), so the same strict subset applies.
       params[:output_config] = {
         text_format: {
           type: "json_schema",
@@ -128,7 +132,7 @@ private
             json_schema: {
               name: "json_response_schema",
               description: "Generate a structured JSON response based on the provided schema.",
-              schema: JSON.generate(sanitize_structured_output_schema(model_completion.json_response_schema))
+              schema: JSON.generate(Raif::Llms::Anthropic::StrictSchemaTransformer.call(model_completion.json_response_schema))
             }
           }
         }
@@ -183,7 +187,7 @@ private
     text_block&.text
   end
 
-  def extract_json_response(resp)
+  def extract_json_response(resp, model_completion = nil)
     # Get the message from the response object
     message = resp.output.message
 
@@ -195,10 +199,14 @@ private
     end
 
     if tool_response&.tool_use
-      JSON.generate(tool_response.tool_use.input)
-    else
-      extract_text_response(resp)
+      input = Raif::Llms::SyntheticJsonResponseToolInputNormalizer.call(
+        input: tool_response.tool_use.input,
+        schema: model_completion&.json_response_schema
+      )
+      return JSON.generate(input) if input
     end
+
+    extract_text_response(resp)
   end
 
   def streaming_chunk_handler(model_completion, &block)
