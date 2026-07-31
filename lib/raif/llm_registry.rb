@@ -42,6 +42,27 @@ module Raif
   def self.default_llms
     open_ai_models = [
       {
+        key: :open_ai_gpt_5_6_sol,
+        api_name: "gpt-5.6-sol",
+        input_token_cost: 5.0 / 1_000_000,
+        output_token_cost: 30.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_gpt_5_6_terra,
+        api_name: "gpt-5.6-terra",
+        input_token_cost: 2.0 / 1_000_000,
+        output_token_cost: 12.0 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
+        key: :open_ai_gpt_5_6_luna,
+        api_name: "gpt-5.6-luna",
+        input_token_cost: 0.20 / 1_000_000,
+        output_token_cost: 1.20 / 1_000_000,
+        model_provider_settings: { supports_temperature: false },
+      },
+      {
         key: :open_ai_gpt_5_5,
         api_name: "gpt-5.5",
         input_token_cost: 5.0 / 1_000_000,
