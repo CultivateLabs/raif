@@ -73,6 +73,9 @@ Raif.configure do |config|
 
   # The default LLM model to use. Defaults to "open_ai_gpt_4o"
   # Available keys:
+  #   open_ai_gpt_5_6_sol
+  #   open_ai_gpt_5_6_terra
+  #   open_ai_gpt_5_6_luna
   #   open_ai_gpt_5_5
   #   open_ai_gpt_5_4
   #   open_ai_gpt_5_4_mini
@@ -93,6 +96,9 @@ Raif.configure do |config|
   #   open_ai_o3
   #   open_ai_o3_mini
   #   open_ai_o1
+  #   open_ai_responses_gpt_5_6_sol
+  #   open_ai_responses_gpt_5_6_terra
+  #   open_ai_responses_gpt_5_6_luna
   #   open_ai_responses_gpt_5_5
   #   open_ai_responses_gpt_5_5_pro
   #   open_ai_responses_gpt_5_4
