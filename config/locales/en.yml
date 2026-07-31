@@ -103,6 +103,9 @@ en:
       open_ai_gpt_5_4_mini: OpenAI GPT-5.4 Mini
       open_ai_gpt_5_4_nano: OpenAI GPT-5.4 Nano
       open_ai_gpt_5_5: OpenAI GPT-5.5
+      open_ai_gpt_5_6_luna: OpenAI GPT-5.6 Luna
+      open_ai_gpt_5_6_sol: OpenAI GPT-5.6 Sol
+      open_ai_gpt_5_6_terra: OpenAI GPT-5.6 Terra
       open_ai_gpt_5_mini: OpenAI GPT-5 Mini
       open_ai_gpt_5_nano: OpenAI GPT-5 Nano
       open_ai_o1: OpenAI o1
@@ -126,6 +129,9 @@ en:
       open_ai_responses_gpt_5_4_pro: OpenAI GPT-5.4 Pro (Responses API)
       open_ai_responses_gpt_5_5: OpenAI GPT-5.5 (Responses API)
       open_ai_responses_gpt_5_5_pro: OpenAI GPT-5.5 Pro (Responses API)
+      open_ai_responses_gpt_5_6_luna: OpenAI GPT-5.6 Luna (Responses API)
+      open_ai_responses_gpt_5_6_sol: OpenAI GPT-5.6 Sol (Responses API)
+      open_ai_responses_gpt_5_6_terra: OpenAI GPT-5.6 Terra (Responses API)
       open_ai_responses_gpt_5_mini: OpenAI GPT-5 Mini (Responses API)
       open_ai_responses_gpt_5_nano: OpenAI GPT-5 Nano (Responses API)
       open_ai_responses_gpt_5_pro: OpenAI GPT-5 Pro (Responses API)
