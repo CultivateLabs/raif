@@ -179,14 +179,18 @@ module Raif
       # One row per distinct eval, collapsing its repeats into a pass rate. With repeats
       # this is the comparable number between models - a single pass/fail cannot separate
       # a real quality difference from one unlucky sample.
+      #
+      # Grouped by eval_index rather than description: the DSL does not enforce unique
+      # descriptions, and two same-named eval blocks grouped together would report 2N runs
+      # and a single blended rate instead of one rate each.
       def eval_pass_rates
         @results.flat_map do |eval_set_name, evals|
-          evals.group_by { |e| e[:description] }.map do |description, runs|
+          evals.group_by { |e| e[:eval_index] || e[:description] }.map do |_key, runs|
             passed = runs.count { |e| e[:passed] }
 
             {
               eval_set: eval_set_name,
-              description: description,
+              description: runs.first[:description],
               runs: runs.count,
               passed: passed,
               pass_rate: (passed.to_f / runs.count).round(4)
@@ -271,7 +275,7 @@ module Raif
               :yellow
             end
 
-            output.puts "  #{Raif::Utils::Colors.public_send(colorize, rate)} #{row[:description]}"
+            output.puts "  #{Raif::Utils::Colors.public_send(colorize, rate)} #{row[:eval_set]}: #{row[:description]}"
           end
           output.puts ""
         end

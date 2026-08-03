@@ -262,6 +262,34 @@ RSpec.describe Raif::Evals::Run do
           { eval_set: "AnotherEvalSet", description: "another test", runs: 3, passed: 3, pass_rate: 1.0 }
         )
       end
+
+      # The DSL does not enforce unique descriptions, and grouping by description would
+      # report one blended row of 6 runs instead of one row per eval block.
+      context "when two eval blocks share a description" do
+        let(:test_eval_set) do
+          Class.new(Raif::Evals::EvalSet) do
+            eval "same name" do
+              expect("always true") { true }
+            end
+
+            eval "same name" do
+              expect("always false") { false }
+            end
+          end
+        end
+
+        it "keeps them as separate rows" do
+          run.execute
+
+          rates = run.send(:summary_data)[:eval_pass_rates].select { |r| r[:eval_set] == "TestEvalSet" }
+
+          expect(rates.size).to eq(2)
+          expect(rates).to contain_exactly(
+            { eval_set: "TestEvalSet", description: "same name", runs: 3, passed: 3, pass_rate: 1.0 },
+            { eval_set: "TestEvalSet", description: "same name", runs: 3, passed: 0, pass_rate: 0.0 }
+          )
+        end
+      end
     end
 
     it "omits the run index when each eval runs only once" do

@@ -3,11 +3,15 @@
 module Raif
   module Evals
     class Eval
-      attr_reader :description, :expectation_results, :model_completions, :run_index
+      attr_reader :description, :expectation_results, :model_completions, :run_index, :eval_index
 
-      def initialize(description:, run_index: nil)
+      # eval_index identifies which eval block produced this result. Descriptions are not
+      # unique - the DSL does not enforce it - so it is the only stable way to tell two
+      # same-named eval blocks apart when collapsing repeats into a pass rate.
+      def initialize(description:, run_index: nil, eval_index: nil)
         @description = description
         @run_index = run_index
+        @eval_index = eval_index
         @expectation_results = []
         @model_completions = []
       end
@@ -40,6 +44,7 @@ module Raif
       def to_h
         {
           description: description,
+          eval_index: eval_index,
           run_index: run_index,
           passed: passed?,
           expectation_results: expectation_results.map(&:to_h),

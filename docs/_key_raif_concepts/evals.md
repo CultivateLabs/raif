@@ -152,7 +152,7 @@ Once your evals have run, a JSON file will be created in `raif_evals/results` wi
 
 LLM responses vary between runs, so a single pass/fail per eval cannot separate a real quality difference from one unlucky sample. `--repeat N` (or `RAIF_EVAL_REPEATS=N`) runs each eval N times, re-running `setup` and the eval block for each so the repeats are independent samples rather than a re-scoring of one response.
 
-Each result gains a `run_index`, and the run's `summary` gains an `eval_pass_rates` array with one row per distinct eval:
+Each result gains a `run_index` plus an `eval_index` identifying which eval block produced it, and the run's `summary` gains an `eval_pass_rates` array with one row per distinct eval. Rows are keyed on `eval_index` rather than the description, so two eval blocks that happen to share a description still get a rate each:
 
 ```json
 {

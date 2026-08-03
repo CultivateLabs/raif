@@ -51,17 +51,21 @@ module Raif
       def run(repeats: 1)
         @results = []
 
-        self.class.evals.each do |eval_definition|
+        self.class.evals.each_with_index do |eval_definition, eval_index|
           repeats.times do |i|
-            @results << run_eval(eval_definition, run_index: (i + 1 if repeats > 1))
+            @results << run_eval(eval_definition, run_index: (i + 1 if repeats > 1), eval_index: eval_index)
           end
         end
 
         @results
       end
 
-      def run_eval(eval_definition, run_index: nil)
-        @current_eval = Eval.new(description: eval_definition[:description], run_index: run_index)
+      def run_eval(eval_definition, run_index: nil, eval_index: nil)
+        @current_eval = Eval.new(
+          description: eval_definition[:description],
+          run_index: run_index,
+          eval_index: eval_index || self.class.evals.index(eval_definition)
+        )
 
         output.puts "Running: #{eval_definition[:description]}#{" (run #{run_index})" if run_index}"
 
