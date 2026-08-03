@@ -141,8 +141,8 @@ RSpec.describe Raif::Evals::Run do
     end
 
     it "runs all eval sets" do
-      expect(TestEvalSet).to receive(:run).with(output: output).and_call_original
-      expect(AnotherEvalSet).to receive(:run).with(output: output).and_call_original
+      expect(TestEvalSet).to receive(:run).with(output: output, repeats: 1).and_call_original
+      expect(AnotherEvalSet).to receive(:run).with(output: output, repeats: 1).and_call_original
 
       run.execute
     end
@@ -213,12 +213,17 @@ RSpec.describe Raif::Evals::Run do
 
       run.execute
 
-      json_file = results_dir.join("eval_run_20240101_120000.json")
+      json_file = results_dir.join("eval_run_20240101_120000_#{Raif.config.default_llm_model_key}.json")
       expect(File.exist?(json_file)).to be true
 
       json_content = JSON.parse(File.read(json_file))
       expect(Time.parse(json_content["run_at"])).to eq(Time.new(2024, 1, 1, 12, 0, 0))
       expect(json_content["results"]).to be_a(Hash)
+      expect(json_content["configuration"]).to eq(
+        "default_llm_model_key" => Raif.config.default_llm_model_key.to_s,
+        "evals_default_llm_judge_model_key" => Raif.config.evals_default_llm_judge_model_key,
+        "repeats" => 1
+      )
       expect(json_content["summary"]).to include(
         "total_eval_sets" => 2,
         "total_evals" => 3,
@@ -231,6 +236,38 @@ RSpec.describe Raif::Evals::Run do
       )
     ensure
       FileUtils.rm(json_file)
+    end
+
+    context "with repeats" do
+      let(:run) { described_class.new(output: output, repeats: 3) }
+
+      it "runs each eval once per repeat and tags them with a run index" do
+        run.execute
+
+        expect(run.results["TestEvalSet"].size).to eq(6)
+        expect(run.results["AnotherEvalSet"].size).to eq(3)
+
+        indexes = run.results["AnotherEvalSet"].map { |e| e[:run_index] }
+        expect(indexes).to eq([1, 2, 3])
+      end
+
+      it "collapses the repeats into a per-eval pass rate" do
+        run.execute
+
+        rates = run.send(:summary_data)[:eval_pass_rates]
+
+        expect(rates).to include(
+          { eval_set: "TestEvalSet", description: "passes", runs: 3, passed: 3, pass_rate: 1.0 },
+          { eval_set: "TestEvalSet", description: "fails", runs: 3, passed: 0, pass_rate: 0.0 },
+          { eval_set: "AnotherEvalSet", description: "another test", runs: 3, passed: 3, pass_rate: 1.0 }
+        )
+      end
+    end
+
+    it "omits the run index when each eval runs only once" do
+      run.execute
+
+      expect(run.results["AnotherEvalSet"].first).not_to have_key(:run_index)
     end
 
     it "includes usage and captured model completions for each eval in the results" do

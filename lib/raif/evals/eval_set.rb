@@ -40,25 +40,30 @@ module Raif
           @teardown_block = block
         end
 
-        def run(output: $stdout)
-          new(output: output).run
+        def run(output: $stdout, repeats: 1)
+          new(output: output).run(repeats: repeats)
         end
       end
 
-      def run
+      # Each repeat re-runs setup and the eval block from scratch, so the repeats are
+      # independent samples of a non-deterministic model rather than a re-scoring of one
+      # response. Comparing models needs the pass rate across them, not a single draw.
+      def run(repeats: 1)
         @results = []
 
         self.class.evals.each do |eval_definition|
-          @results << run_eval(eval_definition)
+          repeats.times do |i|
+            @results << run_eval(eval_definition, run_index: (i + 1 if repeats > 1))
+          end
         end
 
         @results
       end
 
-      def run_eval(eval_definition)
-        @current_eval = Eval.new(description: eval_definition[:description])
+      def run_eval(eval_definition, run_index: nil)
+        @current_eval = Eval.new(description: eval_definition[:description], run_index: run_index)
 
-        output.puts "Running: #{eval_definition[:description]}"
+        output.puts "Running: #{eval_definition[:description]}#{" (run #{run_index})" if run_index}"
 
         ActiveRecord::Base.transaction do
           instance_eval(&self.class.setup_block) if self.class.setup_block

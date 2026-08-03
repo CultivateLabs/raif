@@ -11,11 +11,17 @@ module Raif
         ENV["RAILS_ENV"] ||= "test"
         ENV["RAIF_RUNNING_EVALS"] = "true"
 
+        repeats = ENV.fetch("RAIF_EVAL_REPEATS", 1).to_i
+
         OptionParser.new do |opts|
           opts.banner = "Usage: raif evals [options] [FILE_PATHS]"
 
           opts.on("-e", "--environment ENV", "Rails environment (default: test)") do |env|
             ENV["RAILS_ENV"] = env
+          end
+
+          opts.on("-r", "--repeat N", Integer, "Run each eval N times and report a pass rate (default: 1)") do |n|
+            repeats = n
           end
 
           opts.on("-h", "--help", "Show this help message") do
@@ -39,7 +45,7 @@ module Raif
 
         require "raif/evals"
 
-        run = Raif::Evals::Run.new(file_paths: file_paths)
+        run = Raif::Evals::Run.new(file_paths: file_paths, repeats: repeats)
         run.execute
       end
     end

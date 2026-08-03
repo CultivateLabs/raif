@@ -3,10 +3,11 @@
 module Raif
   module Evals
     class Eval
-      attr_reader :description, :expectation_results, :model_completions
+      attr_reader :description, :expectation_results, :model_completions, :run_index
 
-      def initialize(description:)
+      def initialize(description:, run_index: nil)
         @description = description
+        @run_index = run_index
         @expectation_results = []
         @model_completions = []
       end
@@ -39,11 +40,12 @@ module Raif
       def to_h
         {
           description: description,
+          run_index: run_index,
           passed: passed?,
           expectation_results: expectation_results.map(&:to_h),
           usage: usage,
           model_completions: model_completions
-        }
+        }.compact
       end
 
     private
