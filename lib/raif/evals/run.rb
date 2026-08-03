@@ -6,11 +6,17 @@ require "json"
 module Raif
   module Evals
     class Run
-      attr_reader :eval_sets, :results, :output
+      attr_reader :eval_sets, :results, :output, :repeats
 
-      def initialize(file_paths: nil, output: $stdout)
+      def initialize(file_paths: nil, output: $stdout, repeats: 1)
         @output = output
         @results = {}
+        @repeats = [repeats.to_i, 1].max
+
+        # Before the eval sets, not after: loading an eval set evaluates its class body,
+        # so anything setup.rb defines for the sets to use (shared helper modules,
+        # scoring rubrics) has to exist by then or the `include` raises NameError.
+        load_setup_file
 
         @eval_sets = if file_paths&.any?
           load_eval_sets_from_files(file_paths)
@@ -20,20 +26,11 @@ module Raif
       end
 
       def execute
-        # Load setup file if it exists
-        setup_file = Rails.root.join("raif_evals", "setup.rb")
-        if File.exist?(setup_file)
-          require setup_file
-        else
-          output.puts Raif::Utils::Colors.red("\n\nNo setup file found. To set up Raif evals, run:\n")
-          output.puts Raif::Utils::Colors.red("bundle exec raif evals:setup\n")
-          exit 1
-        end
-
         output.puts "\nStarting Raif Eval Run"
         output.puts ""
         output.puts "Raif.config.default_llm_model_key: #{Raif.config.default_llm_model_key}"
         output.puts "Raif.config.evals_default_llm_judge_model_key: #{Raif.config.evals_default_llm_judge_model_key}"
+        output.puts "Repeats per eval: #{repeats}"
         output.puts ""
         output.puts "=" * 50
 
@@ -55,7 +52,7 @@ module Raif
             output.puts "\nRunning #{eval_set_class.name}"
             output.puts "-" * 50
 
-            eval_results = eval_set_class.run(output: output)
+            eval_results = eval_set_class.run(output: output, repeats: repeats)
           end
 
           @results[eval_set_class.name] = eval_results.map(&:to_h)
@@ -71,6 +68,18 @@ module Raif
       end
 
     private
+
+      def load_setup_file
+        setup_file = Rails.root.join("raif_evals", "setup.rb")
+
+        if File.exist?(setup_file)
+          require setup_file
+        else
+          output.puts Raif::Utils::Colors.red("\n\nNo setup file found. To set up Raif evals, run:\n")
+          output.puts Raif::Utils::Colors.red("bundle exec raif evals:setup\n")
+          exit 1
+        end
+      end
 
       def load_eval_sets_from_files(file_paths)
         eval_sets = []
@@ -112,7 +121,7 @@ module Raif
         end
 
         instance = eval_set_class.new(output: output)
-        [instance.run_eval(target_eval)]
+        repeats.times.map { |i| instance.run_eval(target_eval, run_index: (i + 1 if repeats > 1)) }
       end
 
       def discover_eval_sets
@@ -139,20 +148,55 @@ module Raif
         end.select { |klass| klass < Raif::Evals::EvalSet }
       end
 
+      # The model key goes in both the filename and the payload: comparing models means
+      # holding several result files side by side, and a run that only names its model in
+      # stdout cannot be attributed back to one once the terminal is gone.
       def export_results
         results_dir = Rails.root.join("raif_evals", "results")
         FileUtils.mkdir_p(results_dir)
 
         timestamp = Time.current.strftime("%Y%m%d_%H%M%S")
-        filename = results_dir.join("eval_run_#{timestamp}.json")
+        filename = results_dir.join("eval_run_#{timestamp}_#{Raif.config.default_llm_model_key}.json")
 
         File.write(filename, JSON.pretty_generate({
           run_at: Time.current.iso8601,
+          configuration: configuration_data,
           results: @results,
           summary: summary_data
         }))
 
         output.puts "\nResults exported to: #{filename}"
+      end
+
+      def configuration_data
+        {
+          default_llm_model_key: Raif.config.default_llm_model_key,
+          evals_default_llm_judge_model_key: Raif.config.evals_default_llm_judge_model_key,
+          repeats: repeats
+        }
+      end
+
+      # One row per distinct eval, collapsing its repeats into a pass rate. With repeats
+      # this is the comparable number between models - a single pass/fail cannot separate
+      # a real quality difference from one unlucky sample.
+      #
+      # Grouped by eval_index rather than description: the DSL does not enforce unique
+      # descriptions, and two same-named eval blocks grouped together would report 2N runs
+      # and a single blended rate instead of one rate each.
+      def eval_pass_rates
+        @results.flat_map do |eval_set_name, evals|
+          evals.group_by { |e| e[:eval_index] || e[:description] }.map do |_key, runs|
+            passed = runs.count { |e| e[:passed] }
+
+            {
+              eval_set: eval_set_name,
+              description: runs.first[:description],
+              runs: runs.count,
+              passed: passed,
+              pass_rate: (passed.to_f / runs.count).round(4)
+            }
+          end
+        end
       end
 
       def summary_data
@@ -185,7 +229,8 @@ module Raif
           total_prompt_tokens: total_prompt_tokens,
           total_completion_tokens: total_completion_tokens,
           total_tokens: total_tokens,
-          total_cost: total_cost
+          total_cost: total_cost,
+          eval_pass_rates: eval_pass_rates
         }
       end
 
@@ -196,6 +241,8 @@ module Raif
         output.puts "\n" + "=" * 50
         output.puts "SUMMARY"
         output.puts "=" * 50
+        output.puts "Model: #{Raif.config.default_llm_model_key}"
+        output.puts "Judge: #{Raif.config.evals_default_llm_judge_model_key}"
         output.puts "Eval Sets: #{data[:total_eval_sets]}"
         output.puts ""
         output.puts "Evals:"
@@ -215,6 +262,23 @@ module Raif
         output.puts "  #{data[:total_tokens]} total tokens"
         output.puts "  $#{format("%.6f", data[:total_cost])} total cost"
         output.puts ""
+
+        if repeats > 1
+          output.puts "Pass rates:"
+          data[:eval_pass_rates].each do |row|
+            rate = "#{row[:passed]}/#{row[:runs]} (#{(row[:pass_rate] * 100).round}%)"
+            colorize = if row[:pass_rate] == 1.0
+              :green
+            elsif row[:pass_rate].zero?
+              :red
+            else
+              :yellow
+            end
+
+            output.puts "  #{Raif::Utils::Colors.public_send(colorize, rate)} #{row[:eval_set]}: #{row[:description]}"
+          end
+          output.puts ""
+        end
       end
     end
   end

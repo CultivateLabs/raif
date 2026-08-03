@@ -126,13 +126,45 @@ bundle exec raif evals ./raif_evals/eval_sets/my_eval_set.rb:23
 
 # Run multiple files
 bundle exec raif evals ./raif_evals/eval_sets/file1.rb ./raif_evals/eval_sets/file2.rb:15
+
+# Run each eval 5 times and report a pass rate for each
+bundle exec raif evals --repeat 5
 ```
 
 By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
 
 While Raif makes it intentionally difficult to run your normal test suite using real LLM provider API keys, the nature of evals makes it essential that actual API keys are available. When running evals, Raif will load API keys from your initializer, as described in the [setup docs](../getting_started/setup#initial-setup).
 
-Once your evals have run, a JSON file will be created in `raif_evals/results` with the results of each eval.
+Once your evals have run, a JSON file will be created in `raif_evals/results` with the results of each eval. The filename and the file's `configuration` block both record the model the run used, so results from different models can be told apart:
+
+```json
+{
+  "run_at": "2026-08-02T18:14:22Z",
+  "configuration": {
+    "default_llm_model_key": "open_ai_responses_gpt_5_6_terra",
+    "evals_default_llm_judge_model_key": "anthropic_claude_5_sonnet",
+    "repeats": 5
+  }
+}
+```
+
+## Repeating Evals
+
+LLM responses vary between runs, so a single pass/fail per eval cannot separate a real quality difference from one unlucky sample. `--repeat N` (or `RAIF_EVAL_REPEATS=N`) runs each eval N times, re-running `setup` and the eval block for each so the repeats are independent samples rather than a re-scoring of one response.
+
+Each result gains a `run_index` plus an `eval_index` identifying which eval block produced it, and the run's `summary` gains an `eval_pass_rates` array with one row per distinct eval. Rows are keyed on `eval_index` rather than the description, so two eval blocks that happen to share a description still get a rate each:
+
+```json
+{
+  "eval_set": "MyEvalSet",
+  "description": "produces expected output",
+  "runs": 5,
+  "passed": 4,
+  "pass_rate": 0.8
+}
+```
+
+Pass rates are printed to the console at the end of the run. This is the number to compare when evaluating one model against another.
 
 ## Captured LLM Calls
 
