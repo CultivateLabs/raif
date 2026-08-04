@@ -245,10 +245,14 @@ module Raif
       false
     end
 
-    # Instance-level shortcut for the class-level predicate so callers can use the
-    # idiomatic Raif.llm(:some_key).supports_batch_inference? form instead of
-    # reaching through to the class.
+    # Whether *this model* can be submitted through its provider's Batch API.
+    # Batch support is not uniformly provider-wide: xAI serves grok-4.5 on the
+    # synchronous endpoint but rejects it at batch-file validation, so the
+    # registry entry needs to be able to opt a single model out of a provider
+    # that otherwise supports batching. Defaults to the provider's capability.
     def supports_batch_inference?
+      return provider_settings[:supports_batch_inference] if provider_settings.key?(:supports_batch_inference)
+
       self.class.supports_batch_inference?
     end
 

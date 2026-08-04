@@ -17,6 +17,20 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
     end
   end
 
+  describe "#supports_batch_inference?" do
+    it "is true for models the provider will batch" do
+      expect(Raif.llm(:x_ai_grok_4_3).supports_batch_inference?).to be(true)
+      expect(Raif.llm(:x_ai_grok_4_20_reasoning).supports_batch_inference?).to be(true)
+      expect(Raif.llm(:x_ai_grok_4_20_non_reasoning).supports_batch_inference?).to be(true)
+    end
+
+    # xAI serves grok-4.5 on /chat/completions but rejects it at batch-file
+    # validation, so the opt-out has to be per model, not per provider.
+    it "is false for grok-4.5, which xAI refuses to batch" do
+      expect(Raif.llm(:x_ai_grok_4_5).supports_batch_inference?).to be(false)
+    end
+  end
+
   describe "#batch_class" do
     it "returns Raif::ModelCompletionBatches::XAi" do
       expect(llm.batch_class).to eq(Raif::ModelCompletionBatches::XAi)
@@ -65,7 +79,7 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
           headers: { "Content-Type" => "application/json" },
           body: {
             batch_id: "batch_xai_1",
-            expires_at: 1.day.from_now.iso8601,
+            expire_time: 1.day.from_now.iso8601,
             state: { num_requests: 2, num_pending: 2 }
           }.to_json
         )
@@ -212,17 +226,65 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       expect(llm.fetch_batch_status!(batch)).to eq("canceled")
     end
 
-    it "maps a past expires_at with pending entries to expired" do
+    # xAI names this field expire_time, not expires_at, and sends it as a date
+    # (not a timestamp) -- stub it that way to exercise the real parsing path.
+    it "maps a past expire_time with pending entries to expired" do
       stub_request(:get, "#{base_url}/batches/batch_status_target").to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },
         body: {
           batch_id: "batch_status_target",
           state: { num_requests: 2, num_pending: 2, num_success: 0 },
-          expires_at: 1.minute.ago.iso8601
+          expire_time: 2.days.ago.to_date.iso8601
         }.to_json
       )
       expect(llm.fetch_batch_status!(batch)).to eq("expired")
+    end
+
+    # A freshly-created batch reports every count at zero because xAI parses
+    # the input file asynchronously. Calling that terminal would declare the
+    # batch complete before it started and force-fail every child entry.
+    it "maps an all-zero state to in_progress rather than ended" do
+      stub_request(:get, "#{base_url}/batches/batch_status_target").to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {
+          batch_id: "batch_status_target",
+          state: { num_requests: 0, num_pending: 0, num_success: 0, num_error: 0, num_cancelled: 0 }
+        }.to_json
+      )
+
+      expect(llm.fetch_batch_status!(batch)).to eq("in_progress")
+      expect(batch.reload.ended_at).to be_nil
+    end
+
+    context "when xAI rejects the batch server-side" do
+      let(:rejection) { "JSONL file validation failed: Model grok-4.5 is not supported for batch processing." }
+
+      before do
+        stub_request(:get, "#{base_url}/batches/batch_status_target").to_return(
+          status: 200,
+          headers: { "Content-Type" => "application/json" },
+          body: {
+            batch_id: "batch_status_target",
+            cancel_time: "2026-08-04",
+            cancel_by_xai_message: rejection,
+            state: { num_requests: 0, num_pending: 0, num_success: 0, num_error: 0, num_cancelled: 0 }
+          }.to_json
+        )
+      end
+
+      it "maps to failed and records xAI's reason" do
+        expect(llm.fetch_batch_status!(batch)).to eq("failed")
+
+        batch.reload
+        expect(batch.status).to eq("failed")
+        expect(batch.failed_at).to be_present
+        expect(batch.ended_at).to be_present
+        expect(batch.failure_error).to eq("xAI rejected batch")
+        expect(batch.failure_reason).to eq(rejection)
+        expect(batch.provider_response["cancel_by_xai_message"]).to eq(rejection)
+      end
     end
 
     it "preserves previously-persisted request_counts when a poll body omits state" do
@@ -275,6 +337,21 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
         }.to_json
       )
       expect(llm.cancel_batch!(batch)).to eq("canceled")
+    end
+
+    it "treats an all-zero cancel ack (input file never parsed) as canceled" do
+      stub_request(:post, "#{base_url}/batches/batch_cancel_target:cancel").to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {
+          batch_id: "batch_cancel_target",
+          state: { num_requests: 0, num_pending: 0, num_success: 0, num_error: 0, num_cancelled: 0 }
+        }.to_json
+      )
+
+      expect(llm.cancel_batch!(batch)).to eq("canceled")
+      expect(batch.reload.status).to eq("canceled")
+      expect(batch.ended_at).to be_present
     end
 
     it "raises if the batch has no provider_batch_id" do
