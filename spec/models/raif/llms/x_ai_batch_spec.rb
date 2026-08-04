@@ -226,7 +226,8 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       expect(llm.fetch_batch_status!(batch)).to eq("canceled")
     end
 
-    # xAI names this field expire_time, not expires_at.
+    # xAI names this field expire_time, not expires_at, and sends it as a date
+    # (not a timestamp) -- stub it that way to exercise the real parsing path.
     it "maps a past expire_time with pending entries to expired" do
       stub_request(:get, "#{base_url}/batches/batch_status_target").to_return(
         status: 200,
@@ -234,7 +235,7 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
         body: {
           batch_id: "batch_status_target",
           state: { num_requests: 2, num_pending: 2, num_success: 0 },
-          expire_time: 1.minute.ago.iso8601
+          expire_time: 2.days.ago.to_date.iso8601
         }.to_json
       )
       expect(llm.fetch_batch_status!(batch)).to eq("expired")
@@ -336,6 +337,21 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
         }.to_json
       )
       expect(llm.cancel_batch!(batch)).to eq("canceled")
+    end
+
+    it "treats an all-zero cancel ack (input file never parsed) as canceled" do
+      stub_request(:post, "#{base_url}/batches/batch_cancel_target:cancel").to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {
+          batch_id: "batch_cancel_target",
+          state: { num_requests: 0, num_pending: 0, num_success: 0, num_error: 0, num_cancelled: 0 }
+        }.to_json
+      )
+
+      expect(llm.cancel_batch!(batch)).to eq("canceled")
+      expect(batch.reload.status).to eq("canceled")
+      expect(batch.ended_at).to be_present
     end
 
     it "raises if the batch has no provider_batch_id" do

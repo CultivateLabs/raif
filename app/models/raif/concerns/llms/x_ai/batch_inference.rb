@@ -361,12 +361,21 @@ private
     num_pending = state["num_pending"]
     num_cancelled = state["num_cancelled"].to_i
 
-    expires_at = parse_time(body["expire_time"])
-    if expires_at && Time.current >= expires_at && num_pending.to_i > 0
+    expire_time = parse_time(body["expire_time"])
+    if expire_time && Time.current >= expire_time && num_pending.to_i > 0
       return "expired"
     end
 
     return "in_progress" if num_pending.nil? || num_pending.to_i > 0
+
+    # A cancel acknowledgement with no pending entries is a settled
+    # cancellation, even when xAI never parsed the input file (every count left
+    # at zero). This has to be classified before the zero-request guard below,
+    # which would otherwise bounce the ack back to in_progress. Since later
+    # status polls arrive without post_cancel and see the same all-zero state,
+    # they'd keep returning in_progress and leave the batch active until
+    # expire_time despite the explicit cancel.
+    return "canceled" if post_cancel
 
     # xAI parses the input file asynchronously, so a just-created batch reports
     # num_requests == 0 alongside num_pending == 0. Treating that as terminal
@@ -375,11 +384,7 @@ private
     # entries is terminal.
     return "in_progress" if num_requests.nil? || num_requests.to_i.zero?
 
-    if post_cancel || num_cancelled > 0
-      "canceled"
-    else
-      "ended"
-    end
+    num_cancelled > 0 ? "canceled" : "ended"
   end
 
   # xAI reports server-side rejection only in `cancel_by_xai_message` (with
