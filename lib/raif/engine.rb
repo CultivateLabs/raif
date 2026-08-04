@@ -2,7 +2,7 @@
 
 begin
   require "factory_bot_rails"
-rescue LoadError # rubocop:disable Lint/SuppressedException
+rescue LoadError
 end
 
 module Raif
