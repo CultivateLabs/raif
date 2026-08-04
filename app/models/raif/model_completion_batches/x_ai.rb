@@ -47,15 +47,22 @@ module Raif
     # num_error, num_cancelled). The most relevant xAI-side metadata is mirrored
     # into `provider_response` by Raif::Llms::XAi#fetch_batch_status!:
     #
-    #   { "expires_at" => "...", "cost_breakdown" => { ... } }
+    #   { "expire_time" => "...", "cancel_by_xai_message" => "...",
+    #     "cost_breakdown" => { ... } }
     class XAi < Raif::ModelCompletionBatch
+      # xAI's field is `expire_time` (and it carries a date, not a timestamp).
       def expires_at
-        ts = provider_response&.dig("expires_at")
+        ts = provider_response&.dig("expire_time")
         return if ts.blank?
 
         Time.zone.parse(ts.to_s)
       rescue ArgumentError
         nil
+      end
+
+      # xAI's stated reason for killing the batch server-side, when it gave one.
+      def rejection_message
+        provider_response&.dig("cancel_by_xai_message")
       end
 
       def cost_breakdown

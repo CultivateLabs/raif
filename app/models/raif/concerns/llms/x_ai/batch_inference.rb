@@ -41,8 +41,14 @@ require "stringio"
 # carry an "error" / "error_message" field instead of "response".
 #
 # xAI has no batch-level state enum: terminal is derived locally from
-# num_pending hitting zero (or an explicit cancel acknowledgement, or
-# expires_at elapsing).
+# num_pending hitting zero against a nonzero num_requests (or an explicit
+# cancel acknowledgement, a `cancel_by_xai_message` rejection, or expire_time
+# elapsing). Note the counts are all zero both before xAI has parsed the input
+# file and after it has rejected it, so num_pending alone cannot be trusted.
+#
+# Not every model a provider serves synchronously can be batched: xAI rejects
+# grok-4.5 at JSONL validation, which is why Raif::Llm#supports_batch_inference?
+# is overridable per model via model_provider_settings.
 module Raif::Concerns::Llms::XAi::BatchInference
   extend ActiveSupport::Concern
 
@@ -86,7 +92,7 @@ module Raif::Concerns::Llms::XAi::BatchInference
         started_at: submitted_at,
         provider_response: (batch.provider_response || {}).merge(
           "input_file_id" => input_file_id,
-          "expires_at" => body["expires_at"],
+          "expire_time" => body["expire_time"],
           "cost_breakdown" => body["cost_breakdown"]
         ).compact,
         request_counts: derive_request_counts(body) || batch.request_counts
@@ -105,27 +111,7 @@ module Raif::Concerns::Llms::XAi::BatchInference
     body = response.body
     new_status = derive_batch_status(body, batch)
 
-    batch.with_lock do
-      return batch.status if batch.terminal?
-
-      provider_response_updates = (batch.provider_response || {}).merge(
-        "expires_at" => body["expires_at"],
-        "cost_breakdown" => body["cost_breakdown"]
-      ).compact
-
-      updates = {
-        status: new_status,
-        request_counts: derive_request_counts(body) || batch.request_counts,
-        provider_response: provider_response_updates
-      }
-      if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
-        updates[:ended_at] = Time.current
-      end
-
-      batch.update!(updates)
-    end
-
-    new_status
+    apply_batch_state!(batch, body, new_status)
   end
 
   # Cancellation is fire-and-forget for pending entries -- xAI continues to
@@ -143,27 +129,7 @@ module Raif::Concerns::Llms::XAi::BatchInference
     body = response.body
     new_status = derive_batch_status(body, batch, post_cancel: true)
 
-    batch.with_lock do
-      return batch.status if batch.terminal?
-
-      provider_response_updates = (batch.provider_response || {}).merge(
-        "expires_at" => body["expires_at"],
-        "cost_breakdown" => body["cost_breakdown"]
-      ).compact
-
-      updates = {
-        status: new_status,
-        request_counts: derive_request_counts(body) || batch.request_counts,
-        provider_response: provider_response_updates
-      }
-      if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
-        updates[:ended_at] = Time.current
-      end
-
-      batch.update!(updates)
-    end
-
-    new_status
+    apply_batch_state!(batch, body, new_status)
   end
 
   def fetch_batch_results!(batch)
@@ -244,6 +210,46 @@ module Raif::Concerns::Llms::XAi::BatchInference
   end
 
 private
+
+  # Persists a status-poll / cancel-ack response onto the batch. Returns the
+  # status actually in force afterwards, which is the batch's existing status
+  # when it was already terminal (first terminal write wins).
+  def apply_batch_state!(batch, body, new_status)
+    body = {} unless body.is_a?(Hash)
+    rejection = xai_rejection_message(body)
+
+    batch.with_lock do
+      return batch.status if batch.terminal?
+
+      updates = {
+        status: new_status,
+        request_counts: derive_request_counts(body) || batch.request_counts,
+        provider_response: (batch.provider_response || {}).merge(
+          "expire_time" => body["expire_time"],
+          "cost_breakdown" => body["cost_breakdown"],
+          "cancel_by_xai_message" => rejection
+        ).compact
+      }
+
+      if Raif::ModelCompletionBatch::TERMINAL_STATUSES.include?(new_status) && batch.ended_at.nil?
+        updates[:ended_at] = Time.current
+      end
+
+      # Surface xAI's own words. Without this the batch lands terminal with a
+      # null failure_reason and the only trace of *why* is a per-child
+      # "entry missing" message, which reads like a lost result rather than a
+      # rejected submission.
+      if rejection.present?
+        updates[:failed_at] = Time.current
+        updates[:failure_error] = "xAI rejected batch"
+        updates[:failure_reason] = rejection.truncate(1000)
+      end
+
+      batch.update!(updates)
+    end
+
+    new_status
+  end
 
   def batch_connection
     @batch_connection ||= Faraday.new(url: Raif.config.x_ai_base_url, request: Raif.default_request_options) do |f|
@@ -336,30 +342,54 @@ private
 
   # xAI has no batch-level status enum. We derive a Raif status from the
   # counts in `state` plus a couple of out-of-band signals:
-  #   - if num_pending == 0, the batch is terminal (every entry has either
-  #     succeeded, errored, or been cancelled)
+  #   - a `cancel_by_xai_message` means xAI rejected or killed the batch
+  #     server-side (most commonly JSONL validation). It is the *only* place
+  #     the reason is reported, and it arrives with counts still all-zero, so
+  #     it has to be checked before the count-based rules below.
+  #   - if num_requests > 0 and num_pending == 0, the batch is terminal (every
+  #     entry has either succeeded, errored, or been cancelled)
   #   - distinguish `canceled` vs `ended` by whether any entries were
   #     short-circuited by a cancel (num_cancelled > 0)
-  #   - if expires_at is past while entries are still pending, treat as `expired`
+  #   - if expire_time is past while entries are still pending, treat as `expired`
   def derive_batch_status(body, _batch, post_cancel: false)
     return "in_progress" unless body.is_a?(Hash)
 
+    return "failed" if xai_rejection_message(body).present?
+
     state = body["state"] || {}
+    num_requests = state["num_requests"]
     num_pending = state["num_pending"]
     num_cancelled = state["num_cancelled"].to_i
 
-    expires_at = parse_time(body["expires_at"])
+    expires_at = parse_time(body["expire_time"])
     if expires_at && Time.current >= expires_at && num_pending.to_i > 0
       return "expired"
     end
 
     return "in_progress" if num_pending.nil? || num_pending.to_i > 0
 
+    # xAI parses the input file asynchronously, so a just-created batch reports
+    # num_requests == 0 alongside num_pending == 0. Treating that as terminal
+    # declares a healthy batch complete before it starts and force-fails every
+    # child in fetch_batch_results!. Only zero *of a known-nonzero* set of
+    # entries is terminal.
+    return "in_progress" if num_requests.nil? || num_requests.to_i.zero?
+
     if post_cancel || num_cancelled > 0
       "canceled"
     else
       "ended"
     end
+  end
+
+  # xAI reports server-side rejection only in `cancel_by_xai_message` (with
+  # `cancel_time` set and every count left at zero). Nothing in `state`
+  # distinguishes it from an unparsed batch, so this string is the sole signal
+  # that the batch will never produce results.
+  def xai_rejection_message(body)
+    return unless body.is_a?(Hash)
+
+    body["cancel_by_xai_message"].presence
   end
 
   def parse_time(value)

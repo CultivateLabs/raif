@@ -703,6 +703,7 @@ module Raif
           api_name: "grok-4.5",
           input_token_cost: 2.00 / 1_000_000,
           output_token_cost: 6.00 / 1_000_000,
+          model_provider_settings: { supports_batch_inference: false },
         },
         {
           key: :x_ai_grok_4_3,
