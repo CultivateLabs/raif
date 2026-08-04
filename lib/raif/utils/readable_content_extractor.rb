@@ -21,7 +21,7 @@ class Raif::Utils::ReadableContentExtractor
     "style",
     "svg",
     "footer"
-  ]
+  ].freeze
 
   # This will first remove all tags in TAG_REMOVE_LIST and their children.
   # Things in TAG_REMOVE_LIST are things that we do not consider likely to contain readable content.

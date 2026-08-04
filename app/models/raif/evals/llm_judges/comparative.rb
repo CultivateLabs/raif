@@ -99,13 +99,13 @@ module Raif
         end
 
         def tie?
-          return unless completed? # rubocop:disable Style/ReturnNilInPredicateMethodDefinition
+          return unless completed?
 
           parsed_response["winner"] == "tie"
         end
 
         def correct_expected_winner?
-          return unless completed? # rubocop:disable Style/ReturnNilInPredicateMethodDefinition
+          return unless completed?
 
           parsed_response["winner"] == expected_winner
         end

@@ -14,7 +14,7 @@ class Raif::Utils::HtmlFragmentProcessor
     utm_term
     utm_content
     utm_id
-  ]
+  ].freeze
 
   class << self
     # Cleans and sanitizes an HTML fragment by removing empty text nodes and dangerous content.
