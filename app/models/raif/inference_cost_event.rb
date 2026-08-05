@@ -30,6 +30,7 @@
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null
 #  original_model_completion_id   :bigint           not null
+#  raif_archive_id                :bigint
 #  raif_model_completion_batch_id :bigint
 #  raif_model_completion_id       :bigint
 #  source_id                      :bigint
@@ -38,12 +39,14 @@
 #
 #  index_raif_inference_cost_events_on_incurred_at                (incurred_at)
 #  index_raif_inference_cost_events_on_original_completion_id     (original_model_completion_id)
+#  index_raif_inference_cost_events_on_raif_archive_id            (raif_archive_id)
 #  index_raif_inference_cost_events_on_raif_model_completion_id   (raif_model_completion_id) UNIQUE
 #  index_raif_inference_cost_events_on_source_type_and_source_id  (source_type,source_id)
 #  index_raif_inference_cost_events_on_source_type_incurred_at    (source_type,incurred_at)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (raif_archive_id => raif_archives.id) ON DELETE => nullify
 #  fk_rails_...  (raif_model_completion_id => raif_model_completions.id) ON DELETE => nullify
 #
 class Raif::InferenceCostEvent < Raif::ApplicationRecord
@@ -54,6 +57,16 @@ class Raif::InferenceCostEvent < Raif::ApplicationRecord
 
   # The source may be culled after the event is created; never validate presence.
   belongs_to :source, polymorphic: true, optional: true
+
+  # Stamped at cull time, immediately before the completion row is deleted,
+  # so culled spend links directly to the archive holding its completion.
+  # The stamp is authoritative: an event whose completion is gone but that
+  # carries no stamp was deleted outside the archive job (e.g. a source
+  # destroy cascade) and was never archived.
+  belongs_to :raif_archive,
+    class_name: "Raif::Archive",
+    optional: true,
+    inverse_of: :raif_inference_cost_events
 
   validates :original_model_completion_id, presence: true
   validates :llm_model_key, presence: true

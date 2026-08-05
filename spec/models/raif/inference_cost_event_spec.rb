@@ -27,6 +27,7 @@ require "rails_helper"
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null
 #  original_model_completion_id   :bigint           not null
+#  raif_archive_id                :bigint
 #  raif_model_completion_batch_id :bigint
 #  raif_model_completion_id       :bigint
 #  source_id                      :bigint
@@ -35,12 +36,14 @@ require "rails_helper"
 #
 #  index_raif_inference_cost_events_on_incurred_at                (incurred_at)
 #  index_raif_inference_cost_events_on_original_completion_id     (original_model_completion_id)
+#  index_raif_inference_cost_events_on_raif_archive_id            (raif_archive_id)
 #  index_raif_inference_cost_events_on_raif_model_completion_id   (raif_model_completion_id) UNIQUE
 #  index_raif_inference_cost_events_on_source_type_and_source_id  (source_type,source_id)
 #  index_raif_inference_cost_events_on_source_type_incurred_at    (source_type,incurred_at)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (raif_archive_id => raif_archives.id) ON DELETE => nullify
 #  fk_rails_...  (raif_model_completion_id => raif_model_completions.id) ON DELETE => nullify
 #
 RSpec.describe Raif::InferenceCostEvent, type: :model do
