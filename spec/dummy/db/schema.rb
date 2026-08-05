@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_23_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_05_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -76,6 +76,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_000001) do
     t.index ["source_type", "source_id"], name: "index_raif_agents_on_source"
   end
 
+  create_table "raif_archives", force: :cascade do |t|
+    t.string "checksum_sha256", null: false
+    t.bigint "compressed_bytes", null: false
+    t.datetime "created_at", null: false
+    t.datetime "cutoff_at", null: false
+    t.bigint "first_record_id", null: false
+    t.string "key", null: false
+    t.bigint "last_record_id", null: false
+    t.string "location"
+    t.integer "record_count", null: false
+    t.string "resource_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_raif_archives_on_key", unique: true
+    t.index ["resource_type", "first_record_id", "last_record_id"], name: "index_raif_archives_on_resource_type_and_record_id_range"
+  end
+
   create_table "raif_conversation_entries", force: :cascade do |t|
     t.jsonb "citations"
     t.datetime "completed_at"
@@ -137,6 +153,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_000001) do
     t.decimal "output_token_cost", precision: 10, scale: 6
     t.decimal "prompt_token_cost", precision: 10, scale: 6
     t.integer "prompt_tokens"
+    t.bigint "raif_archive_id"
     t.bigint "raif_model_completion_batch_id"
     t.bigint "raif_model_completion_id"
     t.integer "retry_count", default: 0, null: false
@@ -148,6 +165,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_000001) do
     t.datetime "updated_at", null: false
     t.index ["incurred_at"], name: "index_raif_inference_cost_events_on_incurred_at"
     t.index ["original_model_completion_id"], name: "index_raif_inference_cost_events_on_original_completion_id"
+    t.index ["raif_archive_id"], name: "index_raif_inference_cost_events_on_raif_archive_id"
     t.index ["raif_model_completion_id"], name: "index_raif_inference_cost_events_on_raif_model_completion_id", unique: true
     t.index ["source_type", "incurred_at"], name: "index_raif_inference_cost_events_on_source_type_incurred_at"
     t.index ["source_type", "source_id"], name: "index_raif_inference_cost_events_on_source_type_and_source_id"
@@ -333,6 +351,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_000001) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "raif_conversation_entries", "raif_conversations"
+  add_foreign_key "raif_inference_cost_events", "raif_archives", on_delete: :nullify
   add_foreign_key "raif_inference_cost_events", "raif_model_completions", on_delete: :nullify
   add_foreign_key "raif_model_completions", "raif_model_completion_batches"
   add_foreign_key "raif_prompt_studio_batch_run_items", "raif_prompt_studio_batch_runs", column: "batch_run_id"
