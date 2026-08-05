@@ -141,8 +141,8 @@ RSpec.describe Raif::Evals::Run do
     end
 
     it "runs all eval sets" do
-      expect(TestEvalSet).to receive(:run).with(output: output, repeats: 1).and_call_original
-      expect(AnotherEvalSet).to receive(:run).with(output: output, repeats: 1).and_call_original
+      expect(TestEvalSet).to receive(:run).with(output: output, repeats: 1, cases: nil, sample: nil, seed: nil).and_call_original
+      expect(AnotherEvalSet).to receive(:run).with(output: output, repeats: 1, cases: nil, sample: nil, seed: nil).and_call_original
 
       run.execute
     end
@@ -222,7 +222,10 @@ RSpec.describe Raif::Evals::Run do
       expect(json_content["configuration"]).to eq(
         "default_llm_model_key" => Raif.config.default_llm_model_key.to_s,
         "evals_default_llm_judge_model_key" => Raif.config.evals_default_llm_judge_model_key,
-        "repeats" => 1
+        "repeats" => 1,
+        "capture_model_completions" => "full",
+        "sample" => nil,
+        "seed" => nil
       )
       expect(json_content["summary"]).to include(
         "total_eval_sets" => 2,

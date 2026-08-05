@@ -12,6 +12,7 @@ module Raif
           empty_directory "raif_evals"
           empty_directory "raif_evals/eval_sets"
           empty_directory "raif_evals/files"
+          empty_directory "raif_evals/datasets"
           empty_directory "raif_evals/results"
         end
 

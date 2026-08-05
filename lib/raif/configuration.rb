@@ -2,6 +2,8 @@
 
 module Raif
   class Configuration
+    CAPTURE_MODEL_COMPLETION_MODES = ["full", "summary", "none"].freeze
+
     attr_accessor :agent_types,
       :anthropic_api_key,
       :anthropic_message_batches_beta_header,
@@ -21,6 +23,7 @@ module Raif
       :current_user_method,
       :default_embedding_model_key,
       :default_llm_model_key,
+      :evals_capture_model_completions,
       :evals_default_llm_judge_model_key,
       :evals_verbose_output,
       :google_api_key,
@@ -87,6 +90,11 @@ module Raif
       @current_user_method = :current_user
       @default_embedding_model_key = "open_ai_text_embedding_3_small"
       @default_llm_model_key = default_disable_llm_api_requests? ? :raif_test_llm : (ENV["RAIF_DEFAULT_LLM_MODEL_KEY"].presence || "open_ai_gpt_4o")
+      # :full captures every prompt, message, and response, which is what you want when
+      # debugging one eval and unmanageable for a dataset run. :summary keeps tokens and
+      # cost, :none omits the per-call array entirely. Usage totals are identical in all
+      # three modes.
+      @evals_capture_model_completions = :full
       @evals_default_llm_judge_model_key = ENV["RAIF_EVALS_DEFAULT_LLM_JUDGE_MODEL_KEY"].presence
       @evals_verbose_output = false
       google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
@@ -218,6 +226,11 @@ module Raif
       else
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.model_completion_authorizer must be nil or respond to :call"
+      end
+
+      unless CAPTURE_MODEL_COMPLETION_MODES.include?(evals_capture_model_completions.to_s)
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.evals_capture_model_completions was set to #{evals_capture_model_completions.inspect}, but must be one of: #{CAPTURE_MODEL_COMPLETION_MODES.join(", ")}" # rubocop:disable Layout/LineLength
       end
 
       if open_ai_models_enabled && open_ai_api_key.blank?

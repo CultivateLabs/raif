@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe Raif::Evals::Eval do
+RSpec.describe Raif::Evals::EvalResult do
   describe "#initialize" do
     it "creates an eval with description and empty expectation results" do
       eval = described_class.new(description: "test eval")

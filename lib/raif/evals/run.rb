@@ -6,12 +6,15 @@ require "json"
 module Raif
   module Evals
     class Run
-      attr_reader :eval_sets, :results, :output, :repeats
+      attr_reader :eval_sets, :results, :output, :repeats, :cases, :sample, :seed
 
-      def initialize(file_paths: nil, output: $stdout, repeats: 1)
+      def initialize(file_paths: nil, output: $stdout, repeats: 1, cases: nil, sample: nil, seed: nil)
         @output = output
         @results = {}
         @repeats = [repeats.to_i, 1].max
+        @cases = cases.presence
+        @sample = sample&.to_i
+        @seed = seed&.to_i
 
         # Before the eval sets, not after: loading an eval set evaluates its class body,
         # so anything setup.rb defines for the sets to use (shared helper modules,
@@ -31,6 +34,8 @@ module Raif
         output.puts "Raif.config.default_llm_model_key: #{Raif.config.default_llm_model_key}"
         output.puts "Raif.config.evals_default_llm_judge_model_key: #{Raif.config.evals_default_llm_judge_model_key}"
         output.puts "Repeats per eval: #{repeats}"
+        output.puts "Cases: #{cases.join(", ")}" if cases
+        output.puts "Sample per dataset: #{sample}#{" (seed #{seed})" if seed}" if sample
         output.puts ""
         output.puts "=" * 50
 
@@ -52,7 +57,7 @@ module Raif
             output.puts "\nRunning #{eval_set_class.name}"
             output.puts "-" * 50
 
-            eval_results = eval_set_class.run(output: output, repeats: repeats)
+            eval_results = eval_set_class.run(output: output, repeats: repeats, cases: cases, sample: sample, seed: seed)
           end
 
           @results[eval_set_class.name] = eval_results.map(&:to_h)
@@ -61,6 +66,15 @@ module Raif
 
           output.puts "-" * 50
           output.puts "#{eval_set_class.name}: #{passed_count}/#{total_count} evals passed"
+        end
+
+        # --cases filters every dataset in the run, so an id matching nothing anywhere is a
+        # typo rather than a selection. Checked against the case ids that actually ran rather
+        # than against the result count, since the non-dataset evals in the same set run
+        # regardless and would otherwise make a typo look like a suite that passed.
+        if cases && datasets_declared? && @results.values.flatten.none? { |e| e[:case_id] }
+          output.puts Raif::Utils::Colors.red("\nNo eval cases matched --cases #{cases.join(",")}")
+          exit 1
         end
 
         export_results
@@ -100,8 +114,12 @@ module Raif
 
           require absolute_path
 
+          # require is a no-op for a file already loaded (auto-discovery elsewhere in the
+          # process, or the same path given twice), so the subclass diff can be empty for a
+          # perfectly valid file. Fall back to matching the class by where its evals were
+          # defined.
           loaded_eval_sets = Raif::Evals::EvalSet.subclasses - subclasses_before
-          eval_set_class = loaded_eval_sets.first
+          eval_set_class = loaded_eval_sets.first || eval_set_class_defined_in(absolute_path)
 
           eval_set_entry = { class: eval_set_class, file_path: absolute_path }
           eval_set_entry[:line_number] = line_number if line_number
@@ -110,6 +128,19 @@ module Raif
         end
 
         eval_sets
+      end
+
+      def datasets_declared?
+        @eval_sets.any? do |eval_set_entry|
+          eval_set_class = eval_set_entry.is_a?(Hash) ? eval_set_entry[:class] : eval_set_entry
+          eval_set_class.datasets.any?
+        end
+      end
+
+      def eval_set_class_defined_in(absolute_path)
+        Raif::Evals::EvalSet.subclasses.find do |klass|
+          klass.evals.any? { |eval_definition| eval_definition[:definition_file] == absolute_path }
+        end
       end
 
       def run_eval_at_line(eval_set_class, file_path, line_number)
@@ -121,7 +152,7 @@ module Raif
         end
 
         instance = eval_set_class.new(output: output)
-        repeats.times.map { |i| instance.run_eval(target_eval, run_index: (i + 1 if repeats > 1)) }
+        instance.run_eval_definition(target_eval, repeats: repeats, cases: cases, sample: sample, seed: seed)
       end
 
       def discover_eval_sets
@@ -172,7 +203,10 @@ module Raif
         {
           default_llm_model_key: Raif.config.default_llm_model_key,
           evals_default_llm_judge_model_key: Raif.config.evals_default_llm_judge_model_key,
-          repeats: repeats
+          repeats: repeats,
+          capture_model_completions: Raif.config.evals_capture_model_completions.to_s,
+          sample: sample,
+          seed: seed
         }
       end
 
@@ -183,20 +217,100 @@ module Raif
       # Grouped by eval_index rather than description: the DSL does not enforce unique
       # descriptions, and two same-named eval blocks grouped together would report 2N runs
       # and a single blended rate instead of one rate each.
+      #
+      # A dataset eval reports a rate per case as well, because a model can improve on
+      # average while getting materially worse on one input. Non-dataset rows keep exactly
+      # the keys they have always had, so existing consumers of the results JSON are
+      # unaffected.
       def eval_pass_rates
-        @results.flat_map do |eval_set_name, evals|
-          evals.group_by { |e| e[:eval_index] || e[:description] }.map do |_key, runs|
-            passed = runs.count { |e| e[:passed] }
+        grouped_evals.map do |eval_set_name, runs|
+          passed = runs.count { |e| e[:passed] }
+
+          next pass_rate_row(eval_set_name, runs, passed) unless runs.any? { |e| e[:case_id] }
+
+          per_case = runs.group_by { |e| e[:case_id] }.map do |case_id, case_runs|
+            case_passed = case_runs.count { |e| e[:passed] }
+            { case_id: case_id, runs: case_runs.count, passed: case_passed, pass_rate: rate(case_passed, case_runs.count) }
+          end
+
+          {
+            eval_set: eval_set_name,
+            description: runs.first[:description],
+            eval_index: runs.first[:eval_index],
+            cases: per_case.count,
+            repeats: repeats,
+            runs: runs.count,
+            passed: passed,
+            pass_rate: rate(passed, runs.count),
+            per_case: per_case
+          }
+        end
+      end
+
+      # One row per score name per eval. This is the number that ranks two models, and
+      # stddev and ci95 sit next to it so a mean cannot be over-read: two models a tenth of
+      # a point apart with a spread of half a point have not been distinguished.
+      def score_summaries
+        grouped_evals.flat_map do |eval_set_name, runs|
+          entries = runs.flat_map do |e|
+            (e[:scores] || []).map { |score| score.merge(case_id: e[:case_id]) }
+          end
+
+          entries.group_by { |score| score[:name] }.map do |name, scores|
+            values = scores.map { |score| score[:value] }
+            per_case = score_per_case(scores)
 
             {
               eval_set: eval_set_name,
               description: runs.first[:description],
-              runs: runs.count,
-              passed: passed,
-              pass_rate: (passed.to_f / runs.count).round(4)
-            }
+              eval_index: runs.first[:eval_index],
+              name: name,
+              scale: scores.first[:scale],
+              higher_is_better: scores.first[:higher_is_better],
+              n: values.count,
+              mean: round(Statistics.mean(values)),
+              median: round(Statistics.median(values)),
+              stddev: round(Statistics.stddev(values)),
+              min: values.min,
+              max: values.max,
+              ci95: Statistics.bootstrap_ci95(per_case ? per_case.map { |c| c[:mean] } : values)&.map { |bound| round(bound) },
+              per_case: per_case
+            }.compact
           end
         end
+      end
+
+      def grouped_evals
+        @results.flat_map do |eval_set_name, evals|
+          evals.group_by { |e| e[:eval_index] || e[:description] }.map { |_key, runs| [eval_set_name, runs] }
+        end
+      end
+
+      def pass_rate_row(eval_set_name, runs, passed)
+        {
+          eval_set: eval_set_name,
+          description: runs.first[:description],
+          runs: runs.count,
+          passed: passed,
+          pass_rate: rate(passed, runs.count)
+        }
+      end
+
+      def score_per_case(scores)
+        return unless scores.any? { |score| score[:case_id] }
+
+        scores.group_by { |score| score[:case_id] }.map do |case_id, case_scores|
+          case_values = case_scores.map { |score| score[:value] }
+          { case_id: case_id, n: case_values.count, mean: round(Statistics.mean(case_values)) }
+        end
+      end
+
+      def rate(passed, total)
+        (passed.to_f / total).round(4)
+      end
+
+      def round(value)
+        value&.round(4)
       end
 
       def summary_data
@@ -230,7 +344,8 @@ module Raif
           total_completion_tokens: total_completion_tokens,
           total_tokens: total_tokens,
           total_cost: total_cost,
-          eval_pass_rates: eval_pass_rates
+          eval_pass_rates: eval_pass_rates,
+          score_summaries: score_summaries
         }
       end
 
@@ -263,22 +378,48 @@ module Raif
         output.puts "  $#{format("%.6f", data[:total_cost])} total cost"
         output.puts ""
 
-        if repeats > 1
+        # A dataset eval has a rate worth printing even at --repeat 1, because the rate is
+        # then over inputs rather than over repeats of one input.
+        if repeats > 1 || data[:eval_pass_rates].any? { |row| row[:per_case] }
           output.puts "Pass rates:"
           data[:eval_pass_rates].each do |row|
-            rate = "#{row[:passed]}/#{row[:runs]} (#{(row[:pass_rate] * 100).round}%)"
-            colorize = if row[:pass_rate] == 1.0
-              :green
-            elsif row[:pass_rate].zero?
-              :red
-            else
-              :yellow
-            end
+            output.puts "  #{colorized_rate(row)} #{row[:eval_set]}: #{row[:description]}"
 
-            output.puts "  #{Raif::Utils::Colors.public_send(colorize, rate)} #{row[:eval_set]}: #{row[:description]}"
+            row[:per_case]&.each do |per_case|
+              output.puts "    #{colorized_rate(per_case)} #{per_case[:case_id]}"
+            end
           end
           output.puts ""
         end
+
+        if data[:score_summaries].any?
+          output.puts "Scores:"
+          data[:score_summaries].each do |row|
+            spread = ["n #{row[:n]}"]
+            spread << "sd #{row[:stddev]}" if row[:stddev]
+            spread << "ci95 [#{row[:ci95].join(", ")}]" if row[:ci95]
+
+            output.puts "  #{row[:name]}: mean #{row[:mean]} (#{spread.join(", ")}) #{row[:eval_set]}: #{row[:description]}"
+
+            row[:per_case]&.each do |per_case|
+              output.puts "    #{per_case[:mean]} #{per_case[:case_id]} (n #{per_case[:n]})"
+            end
+          end
+          output.puts ""
+        end
+      end
+
+      def colorized_rate(row)
+        rate = "#{row[:passed]}/#{row[:runs]} (#{(row[:pass_rate] * 100).round}%)"
+        colorize = if row[:pass_rate] == 1.0
+          :green
+        elsif row[:pass_rate].zero?
+          :red
+        else
+          :yellow
+        end
+
+        Raif::Utils::Colors.public_send(colorize, rate)
       end
     end
   end

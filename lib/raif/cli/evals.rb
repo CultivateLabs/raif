@@ -12,6 +12,10 @@ module Raif
         ENV["RAIF_RUNNING_EVALS"] = "true"
 
         repeats = ENV.fetch("RAIF_EVAL_REPEATS", 1).to_i
+        cases = ENV["RAIF_EVAL_CASES"].to_s.split(",").map(&:strip).reject(&:empty?)
+        sample = ENV["RAIF_EVAL_SAMPLE"]&.to_i
+        seed = ENV["RAIF_EVAL_SEED"]&.to_i
+        verbose = false
 
         OptionParser.new do |opts|
           opts.banner = "Usage: raif evals [options] [FILE_PATHS]"
@@ -22,6 +26,22 @@ module Raif
 
           opts.on("-r", "--repeat N", Integer, "Run each eval N times and report a pass rate (default: 1)") do |n|
             repeats = n
+          end
+
+          opts.on("--cases a,b,c", Array, "Run only these dataset cases") do |ids|
+            cases = ids.map(&:strip).reject(&:empty?)
+          end
+
+          opts.on("--sample N", Integer, "Run a random N cases from each dataset") do |n|
+            sample = n
+          end
+
+          opts.on("--seed N", Integer, "Seed for --sample, so the same cases can be drawn again") do |n|
+            seed = n
+          end
+
+          opts.on("--verbose", "Print every expectation for every dataset case") do
+            verbose = true
           end
 
           opts.on("-h", "--help", "Show this help message") do
@@ -45,7 +65,15 @@ module Raif
 
         require "raif/evals"
 
-        run = Raif::Evals::Run.new(file_paths: file_paths, repeats: repeats)
+        Raif.config.evals_verbose_output = true if verbose
+
+        run = Raif::Evals::Run.new(
+          file_paths: file_paths,
+          repeats: repeats,
+          cases: (cases if cases.any?),
+          sample: sample,
+          seed: seed
+        )
         run.execute
       end
     end

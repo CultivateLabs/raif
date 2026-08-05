@@ -160,4 +160,27 @@ RSpec.describe Raif::Evals::ScoringRubric do
       end
     end
   end
+
+  describe "#scale" do
+    it "spans the discrete scores" do
+      expect(described_class.clarity.scale).to eq(1..5)
+    end
+
+    it "spans score ranges, honoring an exclusive end" do
+      rubric = described_class.new(
+        name: :code_quality,
+        description: "Evaluates code quality",
+        levels: [
+          { score_range: (9..10), description: "high" },
+          { score_range: (0...3), description: "low" }
+        ]
+      )
+
+      expect(rubric.scale).to eq(0..10)
+    end
+
+    it "is nil when there are no levels to derive it from" do
+      expect(described_class.new(name: :empty, description: "none", levels: []).scale).to be_nil
+    end
+  end
 end
