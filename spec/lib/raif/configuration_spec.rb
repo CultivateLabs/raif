@@ -34,5 +34,84 @@ RSpec.describe Raif::Configuration do
         )
       end
     end
+
+    describe "archive settings" do
+      around do |example|
+        originals = {
+          archive_enabled: Raif.config.archive_enabled,
+          archive_storage: Raif.config.archive_storage,
+          model_completion_retention_period: Raif.config.model_completion_retention_period
+        }
+        example.run
+      ensure
+        originals.each { |key, value| Raif.config.public_send("#{key}=", value) }
+      end
+
+      let(:storage) { Raif::ArchiveStorage::FileSystem.new(root: Dir.mktmpdir) }
+
+      it "defaults to disabled with no storage and no retention period" do
+        config = Raif::Configuration.new
+
+        expect(config.archive_enabled).to be(false)
+        expect(config.archive_storage).to be_nil
+        expect(config.model_completion_retention_period).to be_nil
+      end
+
+      it "allows a valid enabled configuration" do
+        Raif.config.archive_enabled = true
+        Raif.config.archive_storage = storage
+        Raif.config.model_completion_retention_period = 6.months
+
+        expect { Raif.config.validate! }.not_to raise_error
+      end
+
+      it "allows enabled with a nil retention period (culling disabled)" do
+        Raif.config.archive_enabled = true
+        Raif.config.archive_storage = storage
+        Raif.config.model_completion_retention_period = nil
+
+        expect { Raif.config.validate! }.not_to raise_error
+      end
+
+      it "requires archive_storage when archive_enabled is true" do
+        Raif.config.archive_enabled = true
+        Raif.config.archive_storage = nil
+        Raif.config.model_completion_retention_period = 6.months
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /archive_storage is required/
+        )
+      end
+
+      it "requires the storage adapter to implement write" do
+        Raif.config.archive_enabled = true
+        Raif.config.archive_storage = Object.new
+        Raif.config.model_completion_retention_period = 6.months
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /must implement write/
+        )
+      end
+
+      it "rejects retention periods below 1 month, even when archiving is disabled" do
+        Raif.config.archive_enabled = false
+        Raif.config.model_completion_retention_period = 3.weeks
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /must be at least 1 month/
+        )
+      end
+
+      it "accepts a retention period of exactly 1 month" do
+        Raif.config.archive_enabled = true
+        Raif.config.archive_storage = storage
+        Raif.config.model_completion_retention_period = 1.month
+
+        expect { Raif.config.validate! }.not_to raise_error
+      end
+    end
   end
 end
