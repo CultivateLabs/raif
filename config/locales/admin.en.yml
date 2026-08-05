@@ -6,9 +6,18 @@ en:
         show:
           back_to_agents: Back to Agents
           title: 'Agent #%{id}'
+      archives:
+        index:
+          retention_policy_notice: Model completions are retained for %{period}; older completions are archived to external storage and removed from the database.
+        show:
+          back_to_archives: Back to Archives
+          not_browsable_notice: Archive payloads are not browsable here; this record is the audit trail for an insurance archive stored externally. Retrieval is a manual operation against the storage key below.
+          title: 'Archive #%{id}'
       common:
         agents: Agents
         all: All
+        archived: Archived
+        archives: Archives
         arguments: Arguments
         arguments_schema: Arguments Schema
         at: at
@@ -19,12 +28,14 @@ en:
         batch_custom_id: Batch Custom ID
         cache_creation_input_tokens: Cache Creation Tokens
         cache_read_input_tokens: Cache Read Tokens
+        checksum_sha256: Checksum (SHA-256)
         citations: Citations
         completed: Completed
         completed_at: Completed At
         completion_handler: Completion Handler
         completion_tokens: Completion Tokens
         completions: Completions
+        compressed_bytes: Compressed Size
         config: Config
         conversation_entries: Conversation Entries
         conversation_history: Conversation History
@@ -32,6 +43,7 @@ en:
         count: Count
         created_at: Created At
         creator: Creator
+        cutoff_at: Cutoff
         default: default
         description: Description
         details: Details
@@ -57,20 +69,24 @@ en:
         invalid_json: Invalid JSON
         invocations: Invocations
         iterations: Iterations
+        key: Key
         language: Language
         latest_entry_at: Latest Entry At
         llms: LLMs
+        location: Location
         messages: Messages
         metadata: Metadata
         model: Model
         model_api_name: Model API Name
         model_completion: Model Completion
+        model_completion_archived_notice: The full completion row (prompts, messages, and raw response) has been archived to external storage and removed from the database. The durable cost and token data below is preserved.
         model_completion_batches: Model Completion Batches
         model_completions: Model Completions
         model_response: Model Response
         model_tool_invocations: Model Tool Invocations
         next_poll_at: Next Poll At
         no_agents: No agents found.
+        no_archives: No archives found.
         no_citations: No citations found in this response.
         no_conversations: No conversations found.
         no_model_completion_batches: No model completion batches found.
@@ -95,9 +111,12 @@ en:
         provider_response: Provider Response
         provider_tool_call_id: Provider Tool Call ID
         raw: Raw
+        record_count: Record Count
+        record_id_range: Record ID Range
         rendered: Rendered
         request_counts: Request Counts
         requested_language: Requested Language
+        resource_type: Resource Type
         response: Response
         response_array: Response Array
         response_format: Response Format
@@ -165,6 +184,9 @@ en:
           back_to_model_completion_batches: Back to Model Completion Batches
           title: 'Model Completion Batch #%{id}'
       model_completions:
+        index:
+          retention_banner: Completions older than %{period} are archived to external storage and removed from the database.
+          see_archives: See Archives
         show:
           back_to_model_completions: Back to Model Completions
           title: 'Model Completion #%{id}'
@@ -278,6 +300,8 @@ en:
             task_details: Task Details
             view_response: View Response
       stats:
+        index:
+          retention_footnote: Aggregate stats are backed by durable inference cost events and include archived completions. Per-request model completion drill-down is limited to the %{period} retention window.
         model_tool_invocations:
           back_to_stats: Back to Stats
           title: Model Tool Invocation Stats

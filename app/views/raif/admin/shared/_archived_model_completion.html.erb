@@ -1,0 +1,78 @@
+<%# Durable cost/token data (from Raif::InferenceCostEvent) for a model
+    completion whose row has been archived and culled. Locals: event, which
+    must carry a raif_archive stamp - the stamp is the only proof of
+    archiving (callers filter on raif_archive_id). %>
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <h5 class="mb-0"><%= t("raif.admin.common.model_completion") %></h5>
+    <%= link_to raif.admin_archive_path(event.raif_archive), class: "badge bg-secondary text-decoration-none" do %>
+      <%= t("raif.admin.common.archived") %>
+    <% end %>
+  </div>
+  <div class="card-body">
+    <p class="text-muted"><%= t("raif.admin.common.model_completion_archived_notice") %></p>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.id") %>:</strong></div>
+      <div class="col-md-9">#<%= event.original_model_completion_id %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.model") %>:</strong></div>
+      <div class="col-md-9"><%= event.llm_model_key %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
+      <div class="col-md-9"><%= event.incurred_at.rfc822 %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.retry_count") %>:</strong></div>
+      <div class="col-md-9"><%= event.retry_count %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.prompt_tokens") %>:</strong></div>
+      <div class="col-md-9">
+        <% if event.prompt_tokens %>
+          <%= number_with_delimiter(event.prompt_tokens) %>
+          <% if event.prompt_token_cost %>
+            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(event.prompt_token_cost, precision: 6) %>)</small>
+          <% end %>
+        <% else %>
+          -
+        <% end %>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.completion_tokens") %>:</strong></div>
+      <div class="col-md-9">
+        <% if event.completion_tokens %>
+          <%= number_with_delimiter(event.completion_tokens) %>
+          <% if event.output_token_cost %>
+            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(event.output_token_cost, precision: 6) %>)</small>
+          <% end %>
+        <% else %>
+          -
+        <% end %>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.total_tokens") %>:</strong></div>
+      <div class="col-md-9">
+        <% if event.total_tokens %>
+          <%= number_with_delimiter(event.total_tokens) %>
+          <% if event.total_cost %>
+            <small>(<%= t("raif.admin.common.est_cost") %>: <%= "$" %><%= number_with_precision(event.total_cost, precision: 6) %>)</small>
+          <% end %>
+        <% else %>
+          -
+        <% end %>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.cache_read_input_tokens") %>:</strong></div>
+      <div class="col-md-9"><%= event.cache_read_input_tokens ? number_with_delimiter(event.cache_read_input_tokens) : "-" %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.cache_creation_input_tokens") %>:</strong></div>
+      <div class="col-md-9"><%= event.cache_creation_input_tokens ? number_with_delimiter(event.cache_creation_input_tokens) : "-" %></div>
+    </div>
+  </div>
+</div>
