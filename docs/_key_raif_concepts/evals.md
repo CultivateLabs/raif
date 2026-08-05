@@ -272,7 +272,9 @@ produces expected output
       ✗ LLM judge score (clarity): >= 4
 ```
 
-Use `--verbose` (or `Raif.config.evals_verbose_output`) to get the full per-expectation output for every case.
+A failing expectation's description is truncated to 100 characters on these lines. An LLM judge expectation is described by its whole criteria, and the same one repeats under every case that failed it, so at full length it buries the case ids and counts the lines exist to show. Pass `label:` to the judge helpers to choose what appears here; the untruncated text is always in the results JSON, the HTML comparison report, and `--verbose` output.
+
+Use `--verbose` (or `Raif.config.evals_verbose_output`) to get the full per-expectation output for every case. An app that turned verbose output on in its initializer gets the compact output back with `--no-verbose`, since a dataset at `--repeat 2` prints several hundred lines of judge reasoning under verbose.
 
 # Running Evals
 
@@ -300,6 +302,9 @@ bundle exec raif evals --sample 5 --seed 42
 
 # Print every expectation for every case rather than one line per case
 bundle exec raif evals --verbose
+
+# Force the compact one-line-per-case output, even if your initializer turns verbose on
+bundle exec raif evals --no-verbose
 ```
 
 By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
@@ -496,6 +501,8 @@ And the run's `summary` gains a `score_summaries` array, with one row per score 
 ```
 
 `per_case` is present only for a [dataset](#datasets) eval, since without cases there is nothing to break the mean down by. `ci95` is a 95% bootstrap confidence interval over cases, resampled from a fixed seed so the same numbers always produce the same interval. It and `stddev` are reported alongside the mean because two models a tenth of a point apart with a standard deviation of half a point have not been distinguished.
+
+Both are omitted when there is only one observation to compute them from - a single-case run at `--repeat 1`, for instance. A standard deviation of `0.0` and a zero-width interval are what the arithmetic returns for one value, and in a summary read to decide whether a difference is real they would claim a spread had been measured when none was.
 
 > Note: [`expect_llm_judge_score`](#scored-evaluations) records a score named after its rubric automatically, in addition to its pass/fail expectation. You get both without writing a `score` call yourself.
 
@@ -1078,6 +1085,8 @@ Or per run, with `--verbose`:
 ```bash
 bundle exec raif evals --verbose
 ```
+
+`--no-verbose` (or `RAIF_EVAL_VERBOSE=0`) turns it back off for one run, which is what an app whose initializer sets `evals_verbose_output = true` needs to read a [dataset](#datasets) run: verbose prints every expectation for every case, so a 3-case dataset at `--repeat 2` buries the result in judge reasoning. Passing neither flag leaves the configured value alone.
 
 When enabled, this will display:
 - Result metadata for each expectation

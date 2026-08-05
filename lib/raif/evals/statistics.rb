@@ -34,8 +34,12 @@ module Raif
 
         # Population rather than sample standard deviation: these are all the runs there
         # were, not a sample drawn from a larger set of runs.
+        #
+        # One value has no spread to report. Returning 0.0 for it reads as "measured, and
+        # it does not vary" in a summary a human uses to decide whether a difference is
+        # real, when what happened is that nothing was measured.
         def stddev(values)
-          return if values.empty?
+          return if values.length < 2
 
           m = mean(values)
           Math.sqrt(values.sum { |value| (value - m)**2 } / values.length.to_f)
@@ -44,9 +48,11 @@ module Raif
         # Percentile bootstrap over whatever unit is passed in. Callers pass per-case means
         # for a dataset eval, so the interval reflects variation between inputs rather than
         # between repeats of the same input.
+        # Resampling one value can only ever draw that value, so the interval it produces
+        # is zero-width - a 95% confidence claim built from a single observation. Callers
+        # get nil and omit the interval instead.
         def bootstrap_ci95(values)
-          return if values.empty?
-          return [values.first.to_f, values.first.to_f] if values.length == 1
+          return if values.length < 2
 
           random = Random.new(BOOTSTRAP_SEED)
           size = values.length

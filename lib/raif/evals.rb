@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "raif/evals/statistics"
+require "raif/evals/console_line"
 require "raif/evals/expectation_result"
 require "raif/evals/score_result"
 require "raif/evals/eval_case"

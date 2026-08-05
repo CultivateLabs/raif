@@ -15,7 +15,14 @@ module Raif
         cases = ENV["RAIF_EVAL_CASES"].to_s.split(",").map(&:strip).reject(&:empty?)
         sample = ENV["RAIF_EVAL_SAMPLE"]&.to_i
         seed = ENV["RAIF_EVAL_SEED"]&.to_i
-        verbose = false
+        # nil leaves Raif.config.evals_verbose_output alone. An app that turned verbose
+        # output on in its initializer needs a way back to the compact dataset output
+        # without editing the initializer, so --no-verbose has to be able to win.
+        verbose = case ENV["RAIF_EVAL_VERBOSE"]
+        when nil, "" then nil
+        when "0", "false" then false
+        else true
+        end
 
         OptionParser.new do |opts|
           opts.banner = "Usage: raif evals [options] [FILE_PATHS]"
@@ -40,8 +47,8 @@ module Raif
             seed = n
           end
 
-          opts.on("--verbose", "Print every expectation for every dataset case") do
-            verbose = true
+          opts.on("--[no-]verbose", "Print every expectation for every dataset case (default: Raif.config.evals_verbose_output)") do |value|
+            verbose = value
           end
 
           opts.on("-h", "--help", "Show this help message") do
@@ -65,7 +72,7 @@ module Raif
 
         require "raif/evals"
 
-        Raif.config.evals_verbose_output = true if verbose
+        Raif.config.evals_verbose_output = verbose unless verbose.nil?
 
         run = Raif::Evals::Run.new(
           file_paths: file_paths,

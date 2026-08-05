@@ -78,6 +78,40 @@ RSpec.describe Raif::Evals::ComparisonReport do
       expect(described_class.new(comparison, color: false).render("text")).to include("no regression threshold set")
     end
 
+    # A one-case run at --repeat 1 has a single observation per side, and "sd 0.0 -> 0.0"
+    # there would claim a spread was measured when nothing was.
+    it "omits the standard deviation when neither side has more than one observation" do
+      single = Raif::Evals::Comparison.new(
+        baseline: payload([eval_result(case_id: "press-release", passed: true, score_value: 5.0)], model: "gpt_a", cost: 0.1),
+        candidate: payload([eval_result(case_id: "press-release", passed: true, score_value: 3.0)], model: "gpt_b", cost: 0.1),
+        baseline_label: "a.json",
+        candidate_label: "b.json"
+      )
+      rendered = described_class.new(single, color: false).render("text")
+
+      expect(rendered).to include("clarity  5.0 -> 3.0  -2.0  (n=1")
+      expect(rendered).not_to include("sd")
+    end
+
+    it "truncates an expectation description too long for one line" do
+      long = "The text does NOT set an analytic agenda for the reader: it does not tell the reader what questions to " \
+        "investigate, nor propose that further structured analysis be performed"
+      wordy = Raif::Evals::Comparison.new(
+        baseline: payload([eval_result(case_id: "press-release", passed: true, score_value: 5.0).merge(
+          "expectation_results" => [{ "description" => long, "status" => "passed" }]
+        )], model: "gpt_a", cost: 0.1),
+        candidate: payload([eval_result(case_id: "press-release", passed: false, score_value: 5.0).merge(
+          "expectation_results" => [{ "description" => long, "status" => "failed" }]
+        )], model: "gpt_b", cost: 0.1),
+        baseline_label: "a.json",
+        candidate_label: "b.json"
+      )
+      rendered = described_class.new(wordy, color: false).render("text")
+
+      expect(rendered).to include("#{long[0, Raif::Evals::ConsoleLine::MAX_DESCRIPTION_LENGTH].rstrip}...")
+      expect(rendered).not_to include(long)
+    end
+
     it "flags a judge mismatch in the header" do
       mismatched = Raif::Evals::Comparison.new(
         baseline: comparison.baseline,

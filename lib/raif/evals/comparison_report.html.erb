@@ -150,7 +150,7 @@
         </td>
         <td class="mono"><%= h row[:baseline_mean] %> &rarr; <%= h row[:candidate_mean] %></td>
         <td class="mono <%= row[:regression] > 0 ? "bad" : "good" %>"><%= h format_delta(row[:delta]) %></td>
-        <td class="mono muted">n=<%= h row[:candidate_n] %>, sd <%= h row[:baseline_stddev] %> &rarr; <%= h row[:candidate_stddev] %></td>
+        <td class="mono muted"><%= h score_spread(row) %></td>
       </tr>
         <% row[:per_case].each do |per_case| -%>
         <tr class="sub">

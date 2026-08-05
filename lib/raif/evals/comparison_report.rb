@@ -3,6 +3,10 @@
 require "erb"
 require "json"
 
+# evals:compare deliberately does not boot Rails, so this file is loaded on its own rather
+# than through raif/evals.rb and cannot rely on that file's require order.
+require_relative "console_line"
+
 module Raif
   module Evals
     # Renders a Comparison as console text, JSON, or a self-contained HTML file.
@@ -44,10 +48,21 @@ module Raif
       # of "improved" versus "regressed" cannot drift between the two.
       def score_headline(row)
         delta = format_delta(row[:delta])
-        spread = "n=#{row[:candidate_n]}, sd #{row[:baseline_stddev]} -> #{row[:candidate_stddev]}"
         gating = row[:gated] ? "" : ", not gated"
 
-        "#{row[:name]}  #{row[:baseline_mean]} -> #{row[:candidate_mean]}  #{delta}  (#{spread}#{gating})"
+        "#{row[:name]}  #{row[:baseline_mean]} -> #{row[:candidate_mean]}  #{delta}  (#{score_spread(row)}#{gating})"
+      end
+
+      # A single observation has no standard deviation, so one side of the transition can be
+      # absent while the other is real. Only the case where neither side has one drops the
+      # fragment; otherwise the missing side reads as "-" rather than an empty gap.
+      def score_spread(row)
+        baseline = row[:baseline_stddev]
+        candidate = row[:candidate_stddev]
+        parts = ["n=#{row[:candidate_n]}"]
+        parts << "sd #{baseline || "-"} -> #{candidate || "-"}" unless baseline.nil? && candidate.nil?
+
+        parts.join(", ")
       end
 
       def format_delta(delta)
@@ -122,7 +137,8 @@ module Raif
         lines << "    #{colorize("#{(row[:case_id] || "-").ljust(20)} #{transition}", color)}"
 
         row[:expectations].each do |move|
-          lines << "      #{format_rate(move[:baseline_rate])} -> #{format_rate(move[:candidate_rate])}  #{move[:description]}"
+          description = ConsoleLine.truncate_description(move[:description])
+          lines << "      #{format_rate(move[:baseline_rate])} -> #{format_rate(move[:candidate_rate])}  #{description}"
         end
 
         lines

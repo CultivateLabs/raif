@@ -301,7 +301,8 @@ module Raif
         console_output.puts Raif::Utils::Colors.public_send(color, parts.join("  "))
 
         result.expectation_results.reject(&:passed?).each do |expectation_result|
-          console_output.puts Raif::Utils::Colors.red("      ✗ #{expectation_result.description}")
+          description = ConsoleLine.truncate_description(expectation_result.description)
+          console_output.puts Raif::Utils::Colors.red("      ✗ #{description}")
         end
       end
 

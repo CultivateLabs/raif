@@ -81,6 +81,19 @@ RSpec.describe "Running a dataset eval set" do
     expect(clarity).to include(n: 6, mean: 5.0, stddev: 0.0, scale: "1..5", higher_is_better: true)
   end
 
+  # A single-case run at --repeat 1 measures no spread, and "sd 0.0, ci95 [5.0, 5.0]" would
+  # report one anyway.
+  it "omits stddev and ci95 from a score summary built from one observation" do
+    single = Raif::Evals::Run.new(file_paths: [{ file_path: eval_set_path }], output: output, repeats: 1, cases: ["chicken"])
+    single.execute
+
+    clarity = single.send(:summary_data)[:score_summaries].find { |s| s[:name] == "clarity" }
+
+    expect(clarity).to include(n: 1, mean: 5.0)
+    expect(clarity).not_to have_key(:stddev)
+    expect(clarity).not_to have_key(:ci95)
+  end
+
   it "prints one compact line per case per repeat, with the failing expectations beneath" do
     run.execute
 

@@ -31,6 +31,15 @@ RSpec.describe Raif::Evals::Statistics do
     it "is zero when every value is the same" do
       expect(described_class.stddev([3, 3, 3])).to eq(0.0)
     end
+
+    # 0.0 would read as "measured, and it does not vary" rather than "not measured".
+    it "returns nil for a single observation" do
+      expect(described_class.stddev([4.0])).to be_nil
+    end
+
+    it "returns nil for no values" do
+      expect(described_class.stddev([])).to be_nil
+    end
   end
 
   describe ".bootstrap_ci95" do
@@ -49,8 +58,10 @@ RSpec.describe Raif::Evals::Statistics do
       expect(described_class.bootstrap_ci95(values)).to eq(described_class.bootstrap_ci95(values))
     end
 
-    it "collapses to the value itself for a single observation" do
-      expect(described_class.bootstrap_ci95([4.0])).to eq([4.0, 4.0])
+    # Resampling one value can only draw that value, so the interval would be zero-width -
+    # a 95% confidence claim from a single observation.
+    it "returns nil for a single observation" do
+      expect(described_class.bootstrap_ci95([4.0])).to be_nil
     end
 
     it "returns nil for no values" do
