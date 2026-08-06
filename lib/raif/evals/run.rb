@@ -72,7 +72,7 @@ module Raif
         # typo rather than a selection. Checked against the case ids that actually ran rather
         # than against the result count, since the non-dataset evals in the same set run
         # regardless and would otherwise make a typo look like a suite that passed.
-        if cases && datasets_declared? && @results.values.flatten.none? { |e| e[:case_id] }
+        if cases && dataset_evals_present? && @results.values.flatten.none? { |e| e[:case_id] }
           output.puts Raif::Utils::Colors.red("\nNo eval cases matched --cases #{cases.join(",")}")
           exit 1
         end
@@ -130,10 +130,13 @@ module Raif
         eval_sets
       end
 
-      def datasets_declared?
+      # Keyed off eval definitions that actually use `dataset:`, not sets that merely declare
+      # one: a set can declare a dataset that no eval consumes, and running only its plain evals
+      # under --cases must not be mistaken for a filter that matched nothing.
+      def dataset_evals_present?
         @eval_sets.any? do |eval_set_entry|
           eval_set_class = eval_set_entry.is_a?(Hash) ? eval_set_entry[:class] : eval_set_entry
-          eval_set_class.datasets.any?
+          eval_set_class.evals.any? { |eval_definition| eval_definition[:dataset] }
         end
       end
 
@@ -257,6 +260,9 @@ module Raif
           entries.group_by { |score| score[:name] }.map do |name, scores|
             values = scores.map { |score| score[:value] }
             per_case = score_per_case(scores)
+            # Bootstrap over the unrounded per-case means. per_case is rounded for display, and
+            # resampling already-rounded inputs would quantize the interval bounds.
+            ci95_sample = per_case ? per_case_means(scores) : values
 
             {
               eval_set: eval_set_name,
@@ -271,7 +277,7 @@ module Raif
               stddev: round(Statistics.stddev(values)),
               min: values.min,
               max: values.max,
-              ci95: Statistics.bootstrap_ci95(per_case ? per_case.map { |c| c[:mean] } : values)&.map { |bound| round(bound) },
+              ci95: Statistics.bootstrap_ci95(ci95_sample)&.map { |bound| round(bound) },
               per_case: per_case
             }.compact
           end
@@ -300,6 +306,14 @@ module Raif
         scores.group_by { |score| score[:case_id] }.map do |case_id, case_scores|
           case_values = case_scores.map { |score| score[:value] }
           { case_id: case_id, n: case_values.count, mean: round(Statistics.mean(case_values)) }
+        end
+      end
+
+      # Unrounded per-case means, used as the bootstrap sample so the CI isn't computed from
+      # the rounded values score_per_case reports.
+      def per_case_means(scores)
+        scores.group_by { |score| score[:case_id] }.map do |_case_id, case_scores|
+          Statistics.mean(case_scores.map { |score| score[:value] })
         end
       end
 

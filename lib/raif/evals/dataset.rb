@@ -27,7 +27,12 @@ module Raif
       # raising. The run as a whole errors when a selection matched no case anywhere.
       def select_cases(ids: nil, sample: nil, seed: nil)
         selected = cases
-        selected = selected.select { |eval_case| Array(ids).map(&:to_s).include?(eval_case.id) } if ids
+
+        if ids
+          wanted = Array(ids).map(&:to_s).to_set
+          selected = selected.select { |eval_case| wanted.include?(eval_case.id) }
+        end
+
         selected = sample_cases(selected, sample.to_i, seed) if sample && sample.to_i < selected.length
 
         selected
