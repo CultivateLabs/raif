@@ -8,14 +8,15 @@ en:
           title: 'Agent #%{id}'
       archives:
         index:
-          retention_policy_notice: Model completions are retained for %{period}; older completions are archived to external storage and removed from the database.
+          retention_policy_notice: Model completions are retained for %{period}. Older completions are archived to external storage and removed from the database.
         show:
           back_to_archives: Back to Archives
-          not_browsable_notice: Archive payloads are not browsable here; this record is the audit trail for an insurance archive stored externally. Retrieval is a manual operation against the storage key below.
+          not_browsable_notice: Archive payloads are not browsable here. This record is the audit trail for an archive stored externally. Retrieval is a manual operation using the storage key below.
           title: 'Archive #%{id}'
       common:
         agents: Agents
         all: All
+        archive: Archive
         archived: Archived
         archives: Archives
         arguments: Arguments
@@ -79,7 +80,7 @@ en:
         model: Model
         model_api_name: Model API Name
         model_completion: Model Completion
-        model_completion_archived_notice: The full completion row (prompts, messages, and raw response) has been archived to external storage and removed from the database. The durable cost and token data below is preserved.
+        model_completion_archived_notice: The model completion's payloads (messages, system prompt, and raw response) have been archived to external storage and removed from the database. The cost and token data below is preserved. The prompt and response sections on this page belong to the task record itself and were not archived.
         model_completion_batches: Model Completion Batches
         model_completions: Model Completions
         model_response: Model Response
@@ -132,6 +133,7 @@ en:
         status: Status
         submitted_at: Submitted At
         system_prompt: System Prompt
+        system_prompt_archived_notice: Archived with the model completion.
         task: Task
         tasks: Tasks
         tool_arguments: Tool Arguments

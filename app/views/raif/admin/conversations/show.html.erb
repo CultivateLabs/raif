@@ -40,7 +40,14 @@
     <h5 class="mb-0"><%= t("raif.admin.common.system_prompt") %></h5>
   </div>
   <div class="card-body">
-    <pre><%= @conversation.entries.last&.system_prompt %></pre>
+    <% system_prompt = @conversation.entries.last&.system_prompt %>
+    <% if system_prompt.present? %>
+      <pre><%= system_prompt %></pre>
+    <% elsif Raif::InferenceCostEvent.where(source: @conversation.entries, raif_model_completion_id: nil).where.not(raif_archive_id: nil).exists? %>
+      <p class="text-muted mb-0"><%= t("raif.admin.common.system_prompt_archived_notice") %></p>
+    <% else %>
+      <pre><%= system_prompt %></pre>
+    <% end %>
   </div>
 </div>
 

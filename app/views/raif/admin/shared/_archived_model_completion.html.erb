@@ -3,17 +3,23 @@
     must carry a raif_archive stamp - the stamp is the only proof of
     archiving (callers filter on raif_archive_id). %>
 <div class="card mb-4">
-  <div class="card-header d-flex align-items-center gap-2">
+  <div class="card-header">
     <h5 class="mb-0"><%= t("raif.admin.common.model_completion") %></h5>
-    <%= link_to raif.admin_archive_path(event.raif_archive), class: "badge bg-secondary text-decoration-none" do %>
-      <%= t("raif.admin.common.archived") %>
-    <% end %>
   </div>
   <div class="card-body">
-    <p class="text-muted"><%= t("raif.admin.common.model_completion_archived_notice") %></p>
     <div class="row mb-3">
       <div class="col-md-3"><strong><%= t("raif.admin.common.id") %>:</strong></div>
-      <div class="col-md-9">#<%= event.original_model_completion_id %></div>
+      <div class="col-md-9">
+        #<%= event.original_model_completion_id %>
+        <span class="badge bg-info text-dark ms-1"><%= t("raif.admin.common.archived") %></span>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.archive") %>:</strong></div>
+      <div class="col-md-9">
+        <%= link_to "##{event.raif_archive_id}", raif.admin_archive_path(event.raif_archive) %>
+        <div class="text-muted small mt-1"><%= t("raif.admin.common.model_completion_archived_notice") %></div>
+      </div>
     </div>
     <div class="row mb-3">
       <div class="col-md-3"><strong><%= t("raif.admin.common.model") %>:</strong></div>

@@ -22,7 +22,9 @@ RSpec.describe "Admin::Archives", type: :feature do
       expect(page).to have_content("Raif::ModelCompletion")
       expect(page).to have_content("10-500")
       expect(page).to have_content("42")
-      expect(page).to have_content(archive.key)
+      expect(page).to have_content(archive.cutoff_at.to_date.to_s)
+      # The key displays truncated; the full value rides the copy-to-clipboard attribute.
+      expect(page).to have_css("[data-raif-copy-text='#{archive.key}']")
     end
 
     it "shows an empty state when no archives exist" do
@@ -123,10 +125,10 @@ RSpec.describe "Admin::Archives", type: :feature do
 
       visit raif.admin_task_path(task)
 
-      expect(page).to have_content(I18n.t("raif.admin.common.archived"))
+      expect(page).to have_css(".badge", text: I18n.t("raif.admin.common.archived"))
       expect(page).to have_content(I18n.t("raif.admin.common.model_completion_archived_notice"))
       expect(page).to have_content("333")
-      expect(page).to have_link(I18n.t("raif.admin.common.archived"), href: raif.admin_archive_path(archive))
+      expect(page).to have_link("##{archive.id}", href: raif.admin_archive_path(archive))
     end
 
     it "shows an archived badge linking to the archive on a conversation entry whose completion was culled" do
