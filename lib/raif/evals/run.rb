@@ -210,18 +210,16 @@ module Raif
         }
       end
 
-      # One row per distinct eval, collapsing its repeats into a pass rate. With repeats
-      # this is the comparable number between models - a single pass/fail cannot separate
-      # a real quality difference from one unlucky sample.
+      # One row per distinct eval, collapsing its repeats into a pass rate - the comparable
+      # number between models, since a single pass/fail cannot separate a real quality
+      # difference from one unlucky sample.
       #
       # Grouped by eval_index rather than description: the DSL does not enforce unique
-      # descriptions, and two same-named eval blocks grouped together would report 2N runs
-      # and a single blended rate instead of one rate each.
+      # descriptions, and two same-named eval blocks would otherwise report 2N runs and one
+      # blended rate instead of a rate each.
       #
-      # A dataset eval reports a rate per case as well, because a model can improve on
-      # average while getting materially worse on one input. Non-dataset rows keep exactly
-      # the keys they have always had, so existing consumers of the results JSON are
-      # unaffected.
+      # A dataset eval also reports a rate per case, since a model can improve on average
+      # while getting worse on one input. Non-dataset rows keep their existing keys.
       def eval_pass_rates
         grouped_evals.map do |eval_set_name, runs|
           passed = runs.count { |e| e[:passed] }

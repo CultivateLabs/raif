@@ -54,8 +54,8 @@ module Raif
       end
 
       # A single observation has no standard deviation, so one side of the transition can be
-      # absent while the other is real. Only the case where neither side has one drops the
-      # fragment; otherwise the missing side reads as "-" rather than an empty gap.
+      # absent while the other is real. The sd fragment is dropped only when neither side
+      # has one; otherwise the missing side shows as "-".
       def score_spread(row)
         baseline = row[:baseline_stddev]
         candidate = row[:candidate_stddev]

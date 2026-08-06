@@ -41,11 +41,10 @@ module Raif
         @expectation_results << result
       end
 
-      # A score name is a metric, and the run summary aggregates by it. Recording the same
-      # name twice for one eval would average the two into a single row, so a regression in
-      # one could be masked by an improvement in the other, and it would count values drawn
-      # from a single response as independent samples - narrowing the confidence interval on
-      # correlated data, which is what the interval is there to prevent.
+      # A score name is a metric the run summary aggregates by. Recording the same name
+      # twice for one eval would blend them into one row - masking a regression in one with
+      # an improvement in the other, and treating correlated values as independent samples,
+      # which falsely narrows the confidence interval.
       def add_score(score_result)
         if @scores.any? { |score| score.name == score_result.name }
           raise ArgumentError, "score #{score_result.name.inspect} was already recorded for this eval. Give the two scores distinct " \

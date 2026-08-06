@@ -2,10 +2,8 @@
 
 module Raif
   module Evals
-    # Diffs two eval run payloads. Deliberately free of Rails and of any provider call: the
-    # question "did this change make the product worse" has to be answerable without
-    # spending money, and a diff that can only be exercised by paying for a run cannot be
-    # trusted to classify one correctly.
+    # Diffs two eval run payloads. Deliberately free of Rails and of any provider call, so
+    # "did this change make the product worse" can be answered without spending money.
     #
     # Results are matched on eval set, eval index, expectation description, and case id.
     # Matching per case rather than per eval is what makes a dataset run diffable, since a
@@ -46,8 +44,8 @@ module Raif
         @score_moves ||= build_score_moves
       end
 
-      # Cases and expectations present on only one side. Never dropped: a silently omitted
-      # case looks exactly like agreement, which is the one thing a comparison must not fake.
+      # Cases and expectations present on only one side. Surfaced rather than dropped: a
+      # silently omitted case looks exactly like agreement.
       def not_comparable
         @not_comparable ||= build_not_comparable
       end
