@@ -43,7 +43,6 @@ require "rails_helper"
 #
 # Foreign Keys
 #
-#  fk_rails_...  (raif_archive_id => raif_archives.id) ON DELETE => nullify
 #  fk_rails_...  (raif_model_completion_id => raif_model_completions.id) ON DELETE => nullify
 #
 RSpec.describe Raif::InferenceCostEvent, type: :model do

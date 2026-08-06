@@ -351,7 +351,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_000000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "raif_conversation_entries", "raif_conversations"
-  add_foreign_key "raif_inference_cost_events", "raif_archives", on_delete: :nullify
   add_foreign_key "raif_inference_cost_events", "raif_model_completions", on_delete: :nullify
   add_foreign_key "raif_model_completions", "raif_model_completion_batches"
   add_foreign_key "raif_prompt_studio_batch_run_items", "raif_prompt_studio_batch_runs", column: "batch_run_id"

@@ -46,7 +46,6 @@
 #
 # Foreign Keys
 #
-#  fk_rails_...  (raif_archive_id => raif_archives.id) ON DELETE => nullify
 #  fk_rails_...  (raif_model_completion_id => raif_model_completions.id) ON DELETE => nullify
 #
 class Raif::InferenceCostEvent < Raif::ApplicationRecord

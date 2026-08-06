@@ -2,6 +2,28 @@
 
 require "rails_helper"
 
+# == Schema Information
+#
+# Table name: raif_archives
+#
+#  id               :bigint           not null, primary key
+#  checksum_sha256  :string           not null
+#  compressed_bytes :bigint           not null
+#  cutoff_at        :datetime         not null
+#  key              :string           not null
+#  location         :string
+#  record_count     :integer          not null
+#  resource_type    :string           not null
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  first_record_id  :bigint           not null
+#  last_record_id   :bigint           not null
+#
+# Indexes
+#
+#  index_raif_archives_on_key                                (key) UNIQUE
+#  index_raif_archives_on_resource_type_and_record_id_range  (resource_type,first_record_id,last_record_id)
+#
 RSpec.describe Raif::Archive, type: :model do
   describe "validations" do
     it "requires the audit fields" do

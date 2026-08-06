@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class CreateRaifArchives < ActiveRecord::Migration[7.1]
+  # Required for the concurrent index on raif_inference_cost_events below.
+  disable_ddl_transaction!
+
   def change
     create_table :raif_archives do |t|
       # The archived resource class (e.g. "Raif::ModelCompletion"). Kept
@@ -32,11 +35,18 @@ class CreateRaifArchives < ActiveRecord::Migration[7.1]
 
     # Stamped at cull time, immediately before the archived completions are
     # deleted, so culled spend links directly to the archive that holds its
-    # completion. ON DELETE SET NULL: the durable cost record must never
-    # dangle or block, even if an archive row is pruned.
-    add_reference :raif_inference_cost_events,
-      :raif_archive,
-      null: true,
-      foreign_key: { to_table: :raif_archives, on_delete: :nullify }
+    # completion. Plain bigint, no FK: archives are never deleted, and adding
+    # a foreign key to a host's large, hot events table blocks writes on both
+    # tables (arc's strong_migrations rejects it). Consistent with the other
+    # linkage columns on this table (source_id, original_model_completion_id).
+    add_column :raif_inference_cost_events, :raif_archive_id, :bigint
+
+    # The events table is large in host apps; on PostgreSQL the index must
+    # build without blocking writes.
+    if connection.adapter_name.downcase.include?("postg")
+      add_index :raif_inference_cost_events, :raif_archive_id, algorithm: :concurrently
+    else
+      add_index :raif_inference_cost_events, :raif_archive_id
+    end
   end
 end
