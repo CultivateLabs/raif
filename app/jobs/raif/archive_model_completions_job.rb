@@ -50,47 +50,53 @@ module Raif
       # A completion is safe to archive and delete only when ALL hold:
       #
       # - created_at is before the (job-frozen) retention cutoff
-      # - it is terminal (completed or failed); nonterminal stragglers are
-      #   counted and reported, never culled
       # - it has been quiescent: not updated within QUIESCENCE_PERIOD
       # - it is not a member of a model completion batch that is still
       #   non-terminal (belt-and-suspenders alongside quiescence)
-      # - durability guard: its Raif::InferenceCostEvent exists, so no spend
-      #   record is ever lost (self-healing after partial backfills or
-      #   repair-job lag; an un-evented completion just waits)
+      # - durability guard, TERMINAL rows only: its Raif::InferenceCostEvent
+      #   exists, so no spend record is ever lost (self-healing after partial
+      #   backfills or repair-job lag; an un-evented terminal completion just
+      #   waits). Nonterminal rows are eligible without it: they never
+      #   reached a terminal state, so no cost event was ever created and
+      #   there is no spend to protect. These are orphaned pending rows from
+      #   killed processes and crashed jobs (a third of one host's table in
+      #   practice) that would otherwise be immortal. They are archived
+      #   through the same path as everything else - NOT deleted outright,
+      #   despite the temptation (no response, near-zero historical value):
+      #   "every deleted completion exists in an archive" must hold without
+      #   exception. A delete-without-archive shortcut would be a second
+      #   deletion semantics that weakens the invariant this job's safety
+      #   rests on, to save pennies of mostly-redundant prompt storage.
       # - durable-citations guard: its citations, if any, have been copied to
       #   its Raif::ConversationEntry source (protects hosts that haven't run
       #   the conversation entry backfill)
       def eligible_scope(cutoff)
-        terminal_scope(cutoff)
+        base_scope(cutoff)
           .where(completions_table[:updated_at].lt(QUIESCENCE_PERIOD.ago))
           .where.not(id: active_batch_members)
-          .where(id: completions_with_cost_event)
+          .where.not(id: terminal_without_cost_event(cutoff))
           .where.not(id: completions_with_uncopied_citations)
       end
 
-      # Older than the cutoff but never reached a terminal state. Retained
-      # and reported, never culled; should be ~0 given batch expiry.
-      def nonterminal_stragglers_scope(cutoff)
-        base_scope(cutoff).where(completed_at: nil, failed_at: nil)
-      end
-
-      # Counts what a run under the given cutoff would archive, plus the
-      # per-guard exclusions among cutoff-aged terminal completions. Writes
-      # nothing; re-runnable anytime. Operators run this before enabling
-      # archiving (defaults to the configured retention period so it can be
-      # previewed while archive_enabled is still false).
+      # Counts what a run under the given cutoff would archive (split by
+      # terminal state), plus the per-guard exclusions among cutoff-aged
+      # completions. Writes nothing; re-runnable anytime. Operators run this
+      # before enabling archiving (defaults to the configured retention
+      # period so it can be previewed while archive_enabled is still false).
       def dry_run(cutoff: Raif.config.model_completion_retention_period&.ago)
         raise ArgumentError, "Provide a cutoff: or set Raif.config.model_completion_retention_period" if cutoff.nil?
 
+        eligible = eligible_scope(cutoff)
+
         {
           cutoff: cutoff,
-          eligible: eligible_scope(cutoff).count,
-          nonterminal_stragglers: nonterminal_stragglers_scope(cutoff).count,
-          excluded_by_quiescence: terminal_scope(cutoff).where(completions_table[:updated_at].gteq(QUIESCENCE_PERIOD.ago)).count,
-          excluded_by_active_batch: terminal_scope(cutoff).where(id: active_batch_members).count,
-          excluded_missing_cost_event: terminal_scope(cutoff).where.not(id: completions_with_cost_event).count,
-          excluded_uncopied_citations: terminal_scope(cutoff).where(id: completions_with_uncopied_citations).count
+          eligible: eligible.count,
+          eligible_terminal: eligible.where("completed_at IS NOT NULL OR failed_at IS NOT NULL").count,
+          eligible_nonterminal: eligible.where(completed_at: nil, failed_at: nil).count,
+          excluded_by_quiescence: base_scope(cutoff).where(completions_table[:updated_at].gteq(QUIESCENCE_PERIOD.ago)).count,
+          excluded_by_active_batch: base_scope(cutoff).where(id: active_batch_members).count,
+          excluded_missing_cost_event: base_scope(cutoff).where(id: terminal_without_cost_event(cutoff)).count,
+          excluded_uncopied_citations: base_scope(cutoff).where(id: completions_with_uncopied_citations).count
         }
       end
 
@@ -118,6 +124,10 @@ module Raif
 
       def completions_with_cost_event
         Raif::InferenceCostEvent.where.not(raif_model_completion_id: nil).select(:raif_model_completion_id)
+      end
+
+      def terminal_without_cost_event(cutoff)
+        terminal_scope(cutoff).where.not(id: completions_with_cost_event)
       end
 
       # Completions with citations whose Raif::ConversationEntry source has
@@ -167,7 +177,6 @@ module Raif
       with_advisory_lock do
         # Frozen at job start so every batch in this run shares one cutoff.
         cutoff = Raif.config.model_completion_retention_period.ago
-        report_nonterminal_stragglers(cutoff)
 
         max_batches.times do
           ids = self.class.eligible_scope(cutoff).order(:id).limit(BATCH_RECORD_LIMIT).pluck(:id)
@@ -244,19 +253,6 @@ module Raif
         Raif::ModelCompletion.where(id: deletable_ids).in_batches(of: 5_000).delete_all
       ensure
         File.unlink(serialized[:path]) if File.exist?(serialized[:path])
-      end
-    end
-
-    # Nonterminal rows older than the cutoff are never culled, but they
-    # should be ~0 given batch expiry, so surface them.
-    def report_nonterminal_stragglers(cutoff)
-      count = self.class.nonterminal_stragglers_scope(cutoff).count
-
-      if count > 0
-        Raif.logger.warn(
-          "Raif::ArchiveModelCompletionsJob: #{count} nonterminal model completion(s) older than #{cutoff} " \
-            "were retained (never culled). Investigate if this number grows."
-        )
       end
     end
 

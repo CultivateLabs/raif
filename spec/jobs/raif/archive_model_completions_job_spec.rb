@@ -185,17 +185,15 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       expect(Raif::ModelCompletion.exists?(protected_completion.id)).to be(true)
     end
 
-    it "retains and reports nonterminal stragglers without archiving them" do
-      straggler = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm")
-      straggler.update_columns(created_at: 8.months.ago, updated_at: 8.months.ago)
-
-      allow(Raif.logger).to receive(:warn)
+    it "archives and culls nonterminal rows, which have no cost event to require" do
+      zombie = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm")
+      zombie.update_columns(created_at: 8.months.ago, updated_at: 8.months.ago)
 
       perform
 
-      expect(Raif::ModelCompletion.exists?(straggler.id)).to be(true)
-      expect(Raif::Archive.count).to eq(0)
-      expect(Raif.logger).to have_received(:warn).with(/1 nonterminal model completion/)
+      expect(Raif::ModelCompletion.exists?(zombie.id)).to be(false)
+      expect(Raif::Archive.count).to eq(1)
+      expect(Raif::Archive.last.record_count).to eq(1)
     end
   end
 
@@ -356,11 +354,11 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
   end
 
   describe ".dry_run" do
-    it "reports eligible rows, nonterminal stragglers, and per-guard exclusions without writing anything" do
+    it "reports eligible rows (split by terminal state) and per-guard exclusions without writing anything" do
       eligible = create_terminal_completion
 
-      straggler = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm")
-      straggler.update_columns(created_at: 8.months.ago, updated_at: 8.months.ago)
+      zombie = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm")
+      zombie.update_columns(created_at: 8.months.ago, updated_at: 8.months.ago)
 
       non_quiescent = create_terminal_completion
       non_quiescent.update_columns(updated_at: 1.hour.ago)
@@ -382,8 +380,9 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       end.not_to change { [Raif::Archive.count, Raif::ModelCompletion.count] }
 
       expect(result[:cutoff]).to be_within(1.minute).of(retention_period.ago)
-      expect(result[:eligible]).to eq(1)
-      expect(result[:nonterminal_stragglers]).to eq(1)
+      expect(result[:eligible]).to eq(2)
+      expect(result[:eligible_terminal]).to eq(1)
+      expect(result[:eligible_nonterminal]).to eq(1)
       expect(result[:excluded_by_quiescence]).to eq(1)
       expect(result[:excluded_by_active_batch]).to eq(1)
       expect(result[:excluded_missing_cost_event]).to eq(1)
