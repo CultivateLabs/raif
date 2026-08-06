@@ -184,6 +184,23 @@ RSpec.describe Raif::Evals::Comparison do
 
       expect(one_sided.score_moves).to be_empty
     end
+
+    # A candidate sampled down to a subset must not look improved because the cases it dropped
+    # were the low-scoring ones. The only shared case here is unchanged, so there is no move.
+    it "compares score means only across the cases both runs recorded" do
+      subset = described_class.new(
+        baseline: payload({ "Set" => [
+          eval_result(case_id: "a", expectations: { "e" => true }, scores: [score(name: "clarity", value: 5.0, min: 4)]),
+          eval_result(case_id: "b", expectations: { "e" => true }, scores: [score(name: "clarity", value: 1.0, min: 4)])
+        ] }),
+        candidate: payload({ "Set" => [
+          eval_result(case_id: "a", expectations: { "e" => true }, scores: [score(name: "clarity", value: 5.0, min: 4)])
+        ] })
+      )
+
+      expect(subset.score_moves).to be_empty
+      expect(subset.regressions.select { |row| row[:kind] == :score }).to be_empty
+    end
   end
 
   describe "#not_comparable" do
@@ -265,6 +282,19 @@ RSpec.describe Raif::Evals::Comparison do
       expect(comparison.regressed?(0.25)).to be true
       expect(comparison.regressed?(0.5)).to be false
       expect(comparison.regressed?(nil)).to be false
+    end
+
+    # One expectation fixed while another broke leaves the eval rate flat, but it is still a
+    # new failure and --fail-on-regression 0 must catch it, so the magnitude comes from the
+    # expectation that dropped rather than from the (zero) rate delta.
+    it "gives an expectation-only trade a positive magnitude" do
+      traded = described_class.new(
+        baseline: payload({ "Set" => [eval_result(case_id: "a", expectations: { "first" => false, "second" => true })] }),
+        candidate: payload({ "Set" => [eval_result(case_id: "a", expectations: { "first" => true, "second" => false })] })
+      )
+
+      expect(traded.max_regression).to eq(1.0)
+      expect(traded.regressed?(0)).to be true
     end
 
     # A score gated by a ceiling is gated, so a move away from that ceiling counts.

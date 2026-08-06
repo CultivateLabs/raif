@@ -31,6 +31,16 @@ RSpec.describe Raif::Evals::Dataset do
       expect(dataset.cases.first.expected).to eq("s" => 1)
     end
 
+    # A binary-classification case can legitimately expect `false`; a `||` fallback would
+    # turn it into nil, silently changing what the case asserts.
+    it "preserves an explicit false expected value" do
+      symbol_keyed = described_class.new(name: :flags, cases: [{ id: "negative", input: { "topic" => "a" }, expected: false }])
+      string_keyed = described_class.new(name: :flags, cases: [{ "id" => "negative", "input" => { "topic" => "a" }, "expected" => false }])
+
+      expect(symbol_keyed.cases.first.expected).to be(false)
+      expect(string_keyed.cases.first.expected).to be(false)
+    end
+
     it "coerces non-string ids" do
       dataset = described_class.new(name: :topics, cases: [{ id: 7, input: {} }])
 

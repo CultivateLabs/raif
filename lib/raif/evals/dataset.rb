@@ -66,11 +66,14 @@ module Raif
 
           id = row[:id] || row["id"]
           input = row.key?(:input) ? row[:input] : row["input"]
+          # Read expected by key presence, not `||`: a binary-classification case can legitimately
+          # expect `false`, which a fallback would silently turn into `nil`.
+          expected = row.key?(:expected) ? row[:expected] : row["expected"]
 
           raise ArgumentError, "dataset #{name.inspect} case at index #{index} is missing an :id" if id.nil? || id.to_s.strip.empty?
           raise ArgumentError, "dataset #{name.inspect} case #{id.to_s.inspect} is missing an :input" if input.nil?
 
-          EvalCase.new(id: id, input: input, expected: row[:expected] || row["expected"])
+          EvalCase.new(id: id, input: input, expected: expected)
         end
       end
 

@@ -53,7 +53,16 @@ module Raif
       def regressions
         @regressions ||= begin
           from_evals = new_failures.map do |row|
-            { kind: :pass_rate, magnitude: -row[:delta], label: "#{row[:description]} [#{row[:case_id] || "no case"}]" }
+            magnitude = -row[:delta]
+            # A row whose overall pass rate held steady still reached new_failures because an
+            # expectation started failing (one failure traded for another). Take the magnitude
+            # from that expectation drop so --fail-on-regression 0 doesn't silently pass it.
+            if magnitude <= 0
+              worst_expectation = row[:expectations].map { |move| move[:delta] }.min
+              magnitude = -worst_expectation if worst_expectation&.negative?
+            end
+
+            { kind: :pass_rate, magnitude: magnitude, label: "#{row[:description]} [#{row[:case_id] || "no case"}]" }
           end
 
           from_scores = score_moves.select { |row| row[:gated] && row[:regression] > 0 }.map do |row|
@@ -206,8 +215,10 @@ module Raif
           baseline_score = baseline_scores[key]
           next if baseline_score.nil?
 
-          baseline_mean = Statistics.mean(baseline_score[:values])
-          candidate_mean = Statistics.mean(candidate_score[:values])
+          baseline_values, candidate_values = comparable_score_values(baseline_score, candidate_score)
+
+          baseline_mean = Statistics.mean(baseline_values)
+          candidate_mean = Statistics.mean(candidate_values)
           next if baseline_mean.nil? || candidate_mean.nil?
 
           delta = round(candidate_mean - baseline_mean)
@@ -227,13 +238,28 @@ module Raif
             candidate_mean: round(candidate_mean),
             delta: delta,
             regression: round(higher_is_better ? -delta : delta),
-            baseline_n: baseline_score[:values].count,
-            candidate_n: candidate_score[:values].count,
-            baseline_stddev: round(Statistics.stddev(baseline_score[:values])),
-            candidate_stddev: round(Statistics.stddev(candidate_score[:values])),
+            baseline_n: baseline_values.count,
+            candidate_n: candidate_values.count,
+            baseline_stddev: round(Statistics.stddev(baseline_values)),
+            candidate_stddev: round(Statistics.stddev(candidate_values)),
             per_case: score_per_case_moves(baseline_score, candidate_score)
           }
         end.sort_by { |row| -row[:regression] }
+      end
+
+      # When both sides carry a per-case breakdown (a dataset score), compare only the cases
+      # they share: a candidate sampled down to a subset must not look improved merely because
+      # the cases it dropped were the low-scoring ones. If the shared set is empty the means
+      # come back nil and the move is omitted. Non-dataset scores have no per-case breakdown
+      # and compare their full value lists.
+      def comparable_score_values(baseline_score, candidate_score)
+        return [baseline_score[:values], candidate_score[:values]] if baseline_score[:per_case].empty? || candidate_score[:per_case].empty?
+
+        shared = baseline_score[:per_case].keys & candidate_score[:per_case].keys
+        [
+          shared.flat_map { |case_id| baseline_score[:per_case][case_id] },
+          shared.flat_map { |case_id| candidate_score[:per_case][case_id] }
+        ]
       end
 
       def index_scores(units)
