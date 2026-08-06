@@ -36,7 +36,7 @@ module Raif::Concerns::ProviderManagedToolCalls
 private
 
   def extract_provider_managed_tool_calls
-    response_blocks = Array(response_array).select { |block| block.is_a?(Hash) }
+    response_blocks = Array(response_array).grep(Hash)
     result_blocks_by_tool_use_id = response_blocks.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |block, hash|
       next if block["tool_use_id"].blank?
 
