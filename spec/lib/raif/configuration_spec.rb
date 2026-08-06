@@ -112,6 +112,19 @@ RSpec.describe Raif::Configuration do
 
         expect { Raif.config.validate! }.not_to raise_error
       end
+
+      it "validates archive settings even when no LLMs are registered" do
+        # validate! returns early (with a console notice) when the LLM
+        # registry is empty; archive validation guards a destructive path
+        # and must run before that early return.
+        allow(Raif).to receive(:llm_registry).and_return({})
+        Raif.config.model_completion_retention_period = 1.day
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /must be at least 1 month/
+        )
+      end
     end
   end
 end

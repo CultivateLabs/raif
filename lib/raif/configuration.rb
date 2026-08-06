@@ -194,6 +194,12 @@ module Raif
     end
 
     def validate!
+      # Before the LLM-registry early return below: archive validation guards
+      # a destructive path (culling), so a node with no LLM API keys (e.g. a
+      # misconfigured cron/worker box) must still have its archive settings
+      # validated.
+      validate_archive_config!
+
       if Raif.llm_registry.blank?
         puts <<~EOS
 
@@ -280,8 +286,6 @@ module Raif
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.x_ai_api_key is required when Raif.config.x_ai_models_enabled is true. Set it via Raif.config.x_ai_api_key or ENV['XAI_API_KEY']" # rubocop:disable Layout/LineLength
       end
-
-      validate_archive_config!
     end
 
   private
