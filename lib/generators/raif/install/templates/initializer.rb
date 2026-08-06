@@ -315,8 +315,10 @@ Raif.configure do |config|
   # Raif::InferenceCostEvent survives and is stamped with the archive it was
   # culled into. Archives contain full prompts and responses, so the storage
   # target must be private, encrypted, and access-controlled at least as
-  # strictly as your application data. Preview what a run would do with
-  # Raif::ArchiveModelCompletionsJob.dry_run.
+  # strictly as your application data; apply that policy (and any lifecycle
+  # rules) to the whole bucket/prefix, since a crashed run can leave an
+  # uploaded object that no Raif::Archive row references. Preview what a run
+  # would do with Raif::ArchiveModelCompletionsJob.dry_run.
   # config.archive_enabled = false
 
   # Storage adapter used by the archive job. Any object implementing:

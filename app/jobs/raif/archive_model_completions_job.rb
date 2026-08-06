@@ -10,7 +10,12 @@ module Raif
   # batch is deleted only after this run successfully uploaded it, and a
   # re-run after any crash writes a new object under a new key (a harmless
   # duplicate in storage) rather than resuming or overwriting. There is no
-  # persisted in-flight state to repair, ever.
+  # persisted in-flight state to repair, ever. The flip side is that a crash
+  # between upload and the Raif::Archive insert leaves an object in storage
+  # with no audit row - the same accepted duplicate class (the rows were not
+  # deleted and re-archive next run). Storage-level policy (private bucket,
+  # encryption, lifecycle rules) must therefore apply to the whole
+  # bucket/prefix, not be derived from raif_archives rows.
   #
   # Inert unless the host explicitly opts in: archive_enabled must be true
   # AND an archive_storage adapter must be configured AND a retention period
@@ -149,6 +154,16 @@ module Raif
       return if Raif.config.archive_storage.nil?
       return if Raif.config.model_completion_retention_period.nil?
 
+      # Defense in depth: Raif::Configuration#validate! enforces this floor
+      # at boot, but a destructive job must not trust that validation ran
+      # (initializers can be skipped or misordered on a misconfigured node).
+      # Cost/budget consumers aggregate by billing period, so a tiny
+      # retention value must never be able to cull inside an open window.
+      if Raif.config.model_completion_retention_period < 1.month
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.model_completion_retention_period must be at least 1 month (got #{Raif.config.model_completion_retention_period.inspect})"
+      end
+
       with_advisory_lock do
         # Frozen at job start so every batch in this run shares one cutoff.
         cutoff = Raif.config.model_completion_retention_period.ago
@@ -207,16 +222,26 @@ module Raif
           checksum_sha256: serialized[:checksum_sha256]
         )
 
+        # Re-check eligibility at delete time: the upload window can be long
+        # (a large PUT), and a row mutated during it (touched, cost event
+        # removed, pulled into a live batch) must survive - its uploaded copy
+        # is stale. The survivor stays eligible and re-enters a later batch
+        # once quiescent again; its copy in this object is just the accepted
+        # harmless duplicate.
+        deletable_ids = self.class.eligible_scope(cutoff).where(id: archived_ids).pluck(:id)
+
         # Stamp the archive link on the durable cost records BEFORE deletion:
         # the FK is nullified at the DB level the moment the completion row
-        # is deleted. Idempotent update_all, so a crash-then-re-run is safe.
+        # is deleted. Only deletable rows are stamped, so the stamp always
+        # means "culled into this archive". Idempotent update_all, so a
+        # crash-then-re-run is safe.
         Raif::InferenceCostEvent
-          .where(raif_model_completion_id: archived_ids)
+          .where(raif_model_completion_id: deletable_ids)
           .update_all(raif_archive_id: archive.id)
 
         # DB-level ON DELETE SET NULL handles the cost event FK;
         # original_model_completion_id retains record identity.
-        Raif::ModelCompletion.where(id: archived_ids).in_batches(of: 5_000).delete_all
+        Raif::ModelCompletion.where(id: deletable_ids).in_batches(of: 5_000).delete_all
       ensure
         File.unlink(serialized[:path]) if File.exist?(serialized[:path])
       end

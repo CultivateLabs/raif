@@ -54,6 +54,14 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
 
       expect { perform }.not_to change { [Raif::Archive.count, Raif::ModelCompletion.count] }
     end
+
+    it "refuses to run with a retention period under the 1 month floor, even if boot validation was skipped" do
+      allow(Raif.config).to receive(:model_completion_retention_period).and_return(3.days)
+
+      expect { perform }.to raise_error(Raif::Errors::InvalidConfigError, /must be at least 1 month/)
+      expect(Raif::ModelCompletion.exists?(old_completion.id)).to be(true)
+      expect(Raif::Archive.count).to eq(0)
+    end
   end
 
   describe "happy path" do
@@ -240,6 +248,37 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       covering = Raif::Archive.covering(resource_type: "Raif::ModelCompletion", record_id: old_completions.first.id)
       expect(covering).to eq([second_archive, first_archive])
       expect(Raif::InferenceCostEvent.pluck(:raif_archive_id).uniq).to eq([second_archive.id])
+    end
+  end
+
+  describe "invariant: eligibility is re-checked at delete time" do
+    it "retains (and leaves unstamped) a completion mutated during the upload window" do
+      completions = 2.times.map { create_terminal_completion }
+      mutated, untouched = completions
+
+      # An application writer touches the row mid-upload (the PUT of a large
+      # batch can take minutes): its uploaded copy is stale, so it must
+      # survive the delete and stay unstamped.
+      allow(storage).to receive(:write).and_wrap_original do |original, **kwargs|
+        mutated.update_columns(updated_at: Time.current)
+        original.call(**kwargs)
+      end
+
+      perform
+
+      archive = Raif::Archive.sole
+      expect(Raif::ModelCompletion.exists?(mutated.id)).to be(true)
+      expect(Raif::ModelCompletion.exists?(untouched.id)).to be(false)
+
+      # The uploaded object still contains the stale copy - the accepted
+      # harmless duplicate; the row re-enters a later batch once quiescent.
+      archived_ids = read_archived_lines(archive).drop(1).map { |l| JSON.parse(l)["id"] }
+      expect(archived_ids).to match_array(completions.map(&:id))
+
+      # The stamp means "culled into this archive": only the deleted row's
+      # event carries it.
+      expect(mutated.raif_inference_cost_event.reload.raif_archive_id).to be_nil
+      expect(untouched.raif_inference_cost_event.reload.raif_archive_id).to eq(archive.id)
     end
   end
 
