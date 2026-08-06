@@ -169,6 +169,23 @@ RSpec.describe "Admin::Archives", type: :feature do
       expect(page).not_to have_content(I18n.t("raif.admin.common.model_completion_archived_notice"))
     end
 
+    it "shows archived attempt badges alongside a retained live attempt on the same conversation entry" do
+      conversation = FB.create(:raif_test_conversation, creator: creator)
+      entry = FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator)
+      live = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", source: entry)
+      live.completed!
+      culled = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", source: entry)
+      culled.completed!
+
+      archive = FB.create(:raif_archive, first_record_id: culled.id, last_record_id: culled.id, record_count: 1)
+      cull_completion!(culled, archive)
+
+      visit raif.admin_conversation_path(conversation)
+
+      expect(page).to have_link(href: raif.admin_model_completion_path(live))
+      expect(page).to have_link(href: raif.admin_archive_path(archive))
+    end
+
     it "never claims a conversation entry's completion was archived when its event carries no archive stamp" do
       conversation = FB.create(:raif_test_conversation, creator: creator)
       entry = FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator)
