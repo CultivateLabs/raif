@@ -168,11 +168,14 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
       expect(task.llm_model_key).to eq("raif_test_llm")
     end
 
+    # The description is the join key evals:compare matches on, so it stays as it was even
+    # though the score the same call records must now be named explicitly.
     it "uses 'custom' in description for a string rubric" do
       result = eval_set.expect_llm_judge_score(
         "test output",
         scoring_rubric: "Custom rubric string",
-        min_passing_score: 7
+        min_passing_score: 7,
+        score_name: "code_quality"
       )
 
       expect(result.description).to eq("LLM judge score (custom): >= 7")
@@ -249,9 +252,29 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
     end
 
     it "omits the scale for a string rubric, which has no levels to derive one from" do
-      eval_set.expect_llm_judge_score("test output", scoring_rubric: "Rate clarity 0-5", min_passing_score: 4)
+      eval_set.expect_llm_judge_score("test output", scoring_rubric: "Rate clarity 0-5", min_passing_score: 4, score_name: "clarity")
 
       expect(eval_set.current_eval_result.scores.first.to_h).not_to have_key(:scale)
+    end
+
+    # A string rubric carries no name, and "custom" as a metric identifier is not one: the
+    # summary aggregates by name and evals:compare joins on it.
+    it "raises when a string rubric is given no score_name" do
+      expect { eval_set.expect_llm_judge_score("test output", scoring_rubric: "Rate clarity 0-5", min_passing_score: 4) }
+        .to raise_error(ArgumentError, /requires score_name:/)
+    end
+
+    it "raises before running the judge, so the check costs nothing" do
+      expect do
+        expect { eval_set.expect_llm_judge_score("test output", scoring_rubric: "Rate clarity 0-5", min_passing_score: 4) }
+          .to raise_error(ArgumentError)
+      end.not_to change(Raif::Task, :count)
+    end
+
+    it "names the score for a string rubric from score_name" do
+      eval_set.expect_llm_judge_score("test output", scoring_rubric: "Rate clarity 0-5", min_passing_score: 4, score_name: "clarity")
+
+      expect(eval_set.current_eval_result.scores.map(&:name)).to eq(["clarity"])
     end
 
     it "merges user metadata with judge metadata for scoring" do

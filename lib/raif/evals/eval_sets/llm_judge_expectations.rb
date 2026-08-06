@@ -18,6 +18,8 @@ module Raif
         # @param llm_judge_model_key [Symbol, nil] Optional specific LLM model to use for judging.
         #   If nil, uses the configured default judge model or falls back to default LLM
         # @param additional_context [String, nil] Optional additional context to be provided to the judge
+        # @param result_metadata [Hash] Optional metadata recorded on the expectation result, merged
+        #   with the judge's own metadata
         # @param judge_attributes [Hash] Optional attributes merged into the judge task on top of
         #   the eval set's #judge_task_attributes
         # @param label [String, nil] Optional explicit description for the expectation, for when the
@@ -103,12 +105,17 @@ module Raif
         # @param llm_judge_model_key [Symbol, nil] Optional specific LLM model to use for judging.
         #   If nil, uses the configured default judge model or falls back to default LLM
         # @param additional_context [String, nil] Optional additional context to be provided to the judge
+        # @param result_metadata [Hash] Optional metadata recorded on the expectation result, merged
+        #   with the judge's own metadata
         # @param judge_attributes [Hash] Optional attributes merged into the judge task on top of
         #   the eval set's #judge_task_attributes
         # @param label [String, nil] Optional explicit description for the expectation
-        # @param score_name [String, Symbol, nil] Optional name for the recorded score, defaulting
-        #   to the rubric's name. Needed when one eval judges two things against the same rubric
-        #   and you want them tracked apart
+        # @param score_name [String, Symbol, nil] Name for the recorded score, defaulting to the
+        #   rubric's name. Needed when one eval judges two things against the same rubric and you
+        #   want them tracked apart, and required when scoring_rubric is a String, which has no
+        #   name to derive one from
+        #
+        # @raise [ArgumentError] When scoring_rubric is a String and no score_name is given
         #
         # @return [ExpectationResult] Result object containing pass/fail status and judge metadata
         #
@@ -133,11 +140,12 @@ module Raif
         #   )
         #   expect_llm_judge_score(output, scoring_rubric: rubric, min_passing_score: 7)
         #
-        # @example Using a simple string rubric
+        # @example Using a simple string rubric, which must name its own score
         #   expect_llm_judge_score(
         #     output,
         #     scoring_rubric: "Rate clarity from 0-5 where 5 is crystal clear",
-        #     min_passing_score: 4
+        #     min_passing_score: 4,
+        #     score_name: "clarity"
         #   )
         #
         # @note The judge result includes metadata accessible via expectation_result.metadata:
@@ -147,6 +155,16 @@ module Raif
         def expect_llm_judge_score(content, scoring_rubric:, min_passing_score:, llm_judge_model_key: nil, additional_context: nil,
           result_metadata: {}, judge_attributes: {}, label: nil, score_name: nil)
           scoring_rubric_obj = scoring_rubric
+
+          # A score name is the metric the run summary aggregates by and evals:compare joins on.
+          # A ScoringRubric carries one; a rubric passed as a string does not, and a placeholder
+          # would put an unidentifiable metric in the summary - and make two string rubrics in
+          # one eval collide, after the first judge call had already been paid for. Raised here
+          # rather than at the point of recording so it costs nothing to hit.
+          if score_name.blank? && !scoring_rubric_obj.respond_to?(:name)
+            raise ArgumentError, "expect_llm_judge_score with a #{scoring_rubric_obj.class} rubric requires score_name: to name the " \
+              "score it records. A Raif::Evals::ScoringRubric supplies that name itself; a rubric passed as a string has none."
+          end
 
           judge_task = LlmJudges::Scored.run(
             content_to_judge: content,
@@ -208,6 +226,12 @@ module Raif
         # @param llm_judge_model_key [Symbol, nil] Optional specific LLM model to use for judging.
         #   If nil, uses the configured default judge model or falls back to default LLM
         # @param additional_context [String, nil] Optional additional context to help the judge
+        # @param result_metadata [Hash] Optional metadata recorded on the expectation result, merged
+        #   with the judge's own metadata
+        # @param judge_attributes [Hash] Optional attributes merged into the judge task on top of
+        #   the eval set's #judge_task_attributes
+        # @param label [String, nil] Optional explicit description for the expectation, for when the
+        #   criteria is too long to read well as one
         #
         # @return [ExpectationResult] Result object containing pass/fail status and judge metadata
         #

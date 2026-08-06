@@ -161,14 +161,14 @@ With `raif_evals/datasets/documents.jsonl`:
 {"id": "press-release",  "input": {"file": "documents/press_release.html",  "title": "Product Launch"},        "expected": {"subject": "launch"}}
 ```
 
-Both `setup` and the `eval` block accept the case as an optional block argument. Blocks that don't declare one are called as before, so adding a dataset to an eval set never requires touching its other evals.
+`setup`, `teardown`, and the `eval` block all accept the case as an optional block argument. Blocks that don't declare one are called as before, so adding a dataset to an eval set never requires touching its other evals.
 
 A case is an input (i.e. a single row in a dataset), not a run. The `eval` block is the procedure; the case is what you feed it. Raif runs the block once per case, times the number of [repeats](#repeating-evals).
 
 Two things to know about how the pieces fit together in one file:
 
 - **Declare a dataset above the evals that use it.** `dataset:` is checked when the class body loads, so a name that has not been declared yet raises there rather than silently running zero cases.
-- **`setup` is shared by every eval in the set**, so an eval set that mixes dataset and non-dataset evals hands `setup` a `nil` case for the non-dataset ones.
+- **`setup` and `teardown` are shared by every eval in the set**, so an eval set that mixes dataset and non-dataset evals hands them a `nil` case for the non-dataset ones.
 
 ## Dataset Shape
 
@@ -500,7 +500,9 @@ And the run's `summary` gains a `score_summaries` array, with one row per score 
 }
 ```
 
-`per_case` is present only for a [dataset](#datasets) eval, since without cases there is nothing to break the mean down by. `ci95` is a 95% bootstrap confidence interval over cases, resampled from a fixed seed so the same numbers always produce the same interval. It and `stddev` are reported alongside the mean because two models a tenth of a point apart with a standard deviation of half a point have not been distinguished.
+`min` and `max` here are the lowest and highest values the run actually observed, not the gate. The identically named keys in an individual result's `scores` array are the `min:`/`max:` bounds passed to `score`, so the same two names mean the threshold in one place and the range in the other.
+
+`per_case` is present only for a [dataset](#datasets) eval, since without cases there is nothing to break the mean down by. `ci95` is a 95% bootstrap confidence interval over cases (or over the individual values, for an eval with no dataset), resampled from a fixed seed so the same numbers always produce the same interval. It and `stddev` are reported alongside the mean because two models a tenth of a point apart with a standard deviation of half a point have not been distinguished.
 
 Both are omitted when there is only one observation to compute them from - a single-case run at `--repeat 1`, for instance. A standard deviation of `0.0` and a zero-width interval are what the arithmetic returns for one value, and in a summary read to decide whether a difference is real they would claim a spread had been measured when none was.
 
@@ -625,7 +627,7 @@ expect_llm_judge_score(
 )
 ```
 
-Or you can provide the rubric as a string:
+Or you can provide the rubric as a string, in which case `score_name:` is required:
 
 ```ruby
 rubric = <<~RUBRIC
@@ -639,9 +641,12 @@ RUBRIC
 expect_llm_judge_score(
   generated_code,
   scoring_rubric: rubric,
-  min_passing_score: 7
+  min_passing_score: 7,
+  score_name: "code_quality"
 )
 ```
+
+A `ScoringRubric` object names the [score](#scores) it produces via its own `name:`. A string rubric has no name, and the score name is the metric the run summary aggregates by and [`evals:compare`](#comparing-runs) joins on, so Raif raises rather than recording an unidentifiable metric. The check happens before the judge runs, so it costs nothing to hit.
 
 
 
