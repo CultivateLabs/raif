@@ -20,11 +20,11 @@
     <%# Live attempts and archived attempts render independently: attempts
         of one entry can straddle an archive batch boundary (or one can be
         guard-blocked while another culls), so retained attempts must not
-        hide the badges for attempts already culled. Archived badges are
-        stamp-only: events without a raif_archive_id were deleted outside
-        the archive job and were never archived, so no badge may claim they
-        were. %>
-    <% archived_completion_events = Raif::InferenceCostEvent.where(source: entry, raif_model_completion_id: nil).where.not(raif_archive_id: nil).order(:id) %>
+        hide the badges for attempts already culled. Archived events arrive
+        via the archived_events_by_entry_id local (loaded once, stamp-only,
+        archives preloaded - see Raif::Admin::ConversationsController#show);
+        no database work happens in this partial. %>
+    <% archived_completion_events = archived_events_by_entry_id.fetch(entry.id, []) %>
     <% if entry.raif_model_completions.any? || archived_completion_events.any? %>
       <div class="d-flex flex-column align-items-end">
         <% if entry.raif_model_completions.length > 1 %>

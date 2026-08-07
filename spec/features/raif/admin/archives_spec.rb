@@ -154,6 +154,42 @@ RSpec.describe "Admin::Archives", type: :feature do
       expect(page).to have_link(href: raif.admin_archive_path(archive))
     end
 
+    it "renders a conversation's archived attempts with one event query and one archive query" do
+      conversation = FB.create(:raif_test_conversation, creator: creator)
+      completions = 3.times.map do
+        entry = FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator)
+        completion = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", source: entry)
+        completion.completed!
+        completion
+      end
+
+      archive = FB.create(
+        :raif_archive,
+        first_record_id: completions.map(&:id).min,
+        last_record_id: completions.map(&:id).max,
+        record_count: 3
+      )
+      completions.each { |completion| cull_completion!(completion, archive) }
+
+      event_queries = []
+      archive_queries = []
+      callback = ->(*_args, payload) do
+        sql = payload[:sql].to_s
+        next unless sql.start_with?("SELECT")
+
+        event_queries << sql if sql.include?("raif_inference_cost_events")
+        archive_queries << sql if sql.include?("raif_archives")
+      end
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        visit raif.admin_conversation_path(conversation)
+      end
+
+      expect(page).to have_link(href: raif.admin_archive_path(archive), count: 3)
+      expect(event_queries.size).to eq(1)
+      expect(archive_queries.size).to eq(1)
+    end
+
     it "never claims a task's completion was archived when its event carries no archive stamp" do
       task = FB.create(:raif_test_task, creator: creator)
       completion = FB.create(
