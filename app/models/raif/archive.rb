@@ -15,7 +15,7 @@
 #  compressed_bytes :bigint           not null
 #  cutoff_at        :datetime         not null
 #  key              :string           not null
-#  location         :string
+#  location         :string           not null
 #  record_count     :integer          not null
 #  resource_type    :string           not null
 #  created_at       :datetime         not null
@@ -37,6 +37,7 @@ class Raif::Archive < Raif::ApplicationRecord
 
   validates :resource_type, presence: true
   validates :key, presence: true, uniqueness: true
+  validates :location, presence: true
   validates :cutoff_at, presence: true
   validates :first_record_id, presence: true
   validates :last_record_id, presence: true

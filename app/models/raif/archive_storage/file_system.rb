@@ -15,12 +15,20 @@ module Raif
         @root = Pathname.new(root)
       end
 
-      # checksum_sha256 is accepted for contract parity; remote adapters use
-      # it for upload integrity verification.
+      # Verifies the written bytes against checksum_sha256 before returning,
+      # the local-disk equivalent of a remote store's server-side upload
+      # integrity verification (e.g. S3 checking checksum_sha256 on the PUT).
       def write(key:, io:, checksum_sha256:)
         path = path_for(key)
         path.dirname.mkpath
         IO.copy_stream(io, path)
+
+        written_checksum = Digest::SHA256.file(path).hexdigest
+        if written_checksum != checksum_sha256
+          raise Raif::Errors::ArchiveStorageError,
+            "checksum mismatch after writing #{key}: expected #{checksum_sha256}, wrote #{written_checksum}"
+        end
+
         path.to_s
       end
 

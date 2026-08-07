@@ -11,7 +11,7 @@ require "rails_helper"
 #  compressed_bytes :bigint           not null
 #  cutoff_at        :datetime         not null
 #  key              :string           not null
-#  location         :string
+#  location         :string           not null
 #  record_count     :integer          not null
 #  resource_type    :string           not null
 #  created_at       :datetime         not null
@@ -33,6 +33,7 @@ RSpec.describe Raif::Archive, type: :model do
       expect(archive.errors.attribute_names).to include(
         :resource_type,
         :key,
+        :location,
         :cutoff_at,
         :first_record_id,
         :last_record_id,

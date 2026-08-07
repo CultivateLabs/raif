@@ -18,6 +18,12 @@ RSpec.describe Raif::ArchiveStorage::FileSystem do
       expect(File.read(location)).to eq(content)
     end
 
+    it "raises on a checksum mismatch, the local equivalent of server-side upload verification" do
+      expect do
+        adapter.write(key: key, io: StringIO.new(content), checksum_sha256: Digest::SHA256.hexdigest("different content"))
+      end.to raise_error(Raif::Errors::ArchiveStorageError, /checksum mismatch/)
+    end
+
     it "rejects keys that escape the storage root" do
       expect do
         adapter.write(key: "../escape.txt", io: StringIO.new("nope"), checksum_sha256: "abc")
