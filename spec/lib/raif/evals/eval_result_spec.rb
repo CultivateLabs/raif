@@ -138,4 +138,23 @@ RSpec.describe Raif::Evals::EvalResult do
       expect(hash[:usage][:total_tokens]).to eq(125)
     end
   end
+
+  # An eval whose setup raised never reaches #record_model_completions, so the key's presence
+  # comes from the initial value. Hardcoded true, that one result carried an empty array under
+  # :none while every sibling omitted the key, leaving a reader to work out why.
+  describe "a result that recorded no completions" do
+    it "omits the key under :none, matching the results that did record" do
+      allow(Raif.config).to receive(:evals_capture_model_completions).and_return(:none)
+
+      expect(described_class.new(description: "setup raised").to_h).not_to have_key(:model_completions)
+    end
+
+    [:full, :summary].each do |mode|
+      it "keeps the empty array under #{mode.inspect}" do
+        allow(Raif.config).to receive(:evals_capture_model_completions).and_return(mode)
+
+        expect(described_class.new(description: "setup raised").to_h[:model_completions]).to eq([])
+      end
+    end
+  end
 end

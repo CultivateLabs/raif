@@ -50,39 +50,64 @@ module Raif
         @not_comparable ||= build_not_comparable
       end
 
+      # Every magnitude here is relative to the baseline rather than absolute, because the
+      # quantities being gated are not in the same units: a pass rate is a fraction of runs, a
+      # rubric score is a point on its own scale, and a latency is milliseconds. Comparing their
+      # absolute deltas to one threshold means --fail-on-regression 0.25 asks for a quarter of
+      # the runs in one row and a quarter of a millisecond in the next. Relative to baseline, it
+      # asks one question everywhere: did something get more than 25% worse.
+      #
+      # Rows are drawn from every comparable eval rather than from new_failures, because which
+      # section a row prints under and whether it contributes a regression are different
+      # questions. An eval that fixed one expectation and broke another can come out ahead on
+      # its overall rate and still be a trade, and the improvement would otherwise hide the loss.
       def regressions
         @regressions ||= begin
-          from_evals = new_failures.map do |row|
-            magnitude = -row[:delta]
-            # A row whose overall pass rate held steady still reached new_failures because an
-            # expectation started failing (one failure traded for another). Take the magnitude
-            # from that expectation drop so --fail-on-regression 0 doesn't silently pass it.
-            if magnitude <= 0
-              worst_expectation = row[:expectations].map { |move| move[:delta] }.min
-              magnitude = -worst_expectation if worst_expectation&.negative?
-            end
+          from_evals = eval_rows.filter_map do |row|
+            drop, baseline = worst_rate_drop(row)
+            next if drop.nil?
 
-            { kind: :pass_rate, magnitude: magnitude, label: "#{row[:description]} [#{row[:case_id] || "no case"}]" }
+            {
+              kind: :pass_rate,
+              magnitude: round(drop / baseline),
+              absolute: round(drop),
+              # Qualified by eval set, because the DSL does not enforce unique descriptions and
+              # this label is all a script reading the JSON gets to identify the row by.
+              label: "#{row[:eval_set]}  #{row[:description]} [#{row[:case_id] || "no case"}]"
+            }
           end
 
           from_scores = score_moves.select { |row| row[:gated] && row[:regression] > 0 }.map do |row|
-            { kind: :score, magnitude: row[:regression], label: row[:name] }
+            { kind: :score, magnitude: relative_score_regression(row), absolute: row[:regression], label: row[:name] }
           end
 
-          (from_evals + from_scores).select { |row| row[:magnitude] > 0 }.sort_by { |row| -row[:magnitude] }
+          # An unbounded row (nil magnitude) sorts first: it is the worst thing in the list.
+          (from_evals + from_scores).sort_by { |row| -(row[:magnitude] || Float::INFINITY) }
         end
       end
 
+      # Rows whose regression cannot be expressed as a fraction because the baseline was zero.
+      # "0 errors became 3" is a real regression with no ratio to take, so it is separated out
+      # rather than dropped, and #regressed? treats it as exceeding any threshold.
+      def unbounded_regressions
+        regressions.select { |row| row[:magnitude].nil? }
+      end
+
+      # Float::INFINITY would be the literal magnitude of an unbounded regression, but this
+      # value is exported to JSON, which cannot represent it. Ask #regressed? for the gate
+      # decision; it accounts for the unbounded rows separately.
       def max_regression
-        regressions.map { |row| row[:magnitude] }.max || 0.0
+        regressions.filter_map { |row| row[:magnitude] }.max || 0.0
       end
 
       def regressed?(threshold)
-        !threshold.nil? && max_regression > threshold.to_f
+        return false if threshold.nil?
+
+        unbounded_regressions.any? || max_regression > threshold.to_f
       end
 
       def to_h
-        {
+        @to_h ||= {
           baseline: side_summary(baseline, baseline_label, baseline_units),
           candidate: side_summary(candidate, candidate_label, candidate_units),
           judge_mismatch: judge_mismatch?,
@@ -153,45 +178,69 @@ module Raif
         units
       end
 
+      # One row per eval both runs share, whether or not anything moved. #regressions reads
+      # every row; #eval_moves classifies them into the report's sections.
+      def eval_rows
+        @eval_rows ||= shared_keys.map do |key|
+          baseline_unit = baseline_units[key]
+          candidate_unit = candidate_units[key]
+
+          baseline_rate = pass_rate(baseline_unit)
+          candidate_rate = pass_rate(candidate_unit)
+
+          {
+            eval_set: candidate_unit[:eval_set],
+            eval_index: candidate_unit[:eval_index],
+            description: candidate_unit[:description],
+            case_id: candidate_unit[:case_id],
+            baseline_rate: baseline_rate,
+            candidate_rate: candidate_rate,
+            delta: round(candidate_rate - baseline_rate),
+            expectations: expectation_moves(baseline_unit, candidate_unit)
+          }
+        end
+      end
+
       def eval_moves
         @eval_moves ||= begin
-          regressed = []
-          improved = []
-
-          shared_keys.each do |key|
-            baseline_unit = baseline_units[key]
-            candidate_unit = candidate_units[key]
-
-            baseline_rate = pass_rate(baseline_unit)
-            candidate_rate = pass_rate(candidate_unit)
-            delta = round(candidate_rate - baseline_rate)
-            expectations = expectation_moves(baseline_unit, candidate_unit)
-
-            row = {
-              eval_set: candidate_unit[:eval_set],
-              eval_index: candidate_unit[:eval_index],
-              description: candidate_unit[:description],
-              case_id: candidate_unit[:case_id],
-              baseline_rate: baseline_rate,
-              candidate_rate: candidate_rate,
-              delta: delta,
-              expectations: expectations
-            }
-
-            # An eval whose rate held steady while a different expectation started failing
-            # is still a regression - one failure traded for another is not a fix.
-            if delta < 0 || (delta.zero? && expectations.any? { |move| move[:delta] < 0 })
-              regressed << row
-            elsif delta > 0
-              improved << row
-            end
+          # An eval whose rate held steady while a different expectation started failing is
+          # reported as a new failure - one failure traded for another is not a fix. A trade
+          # the rate came out ahead on reads better under FIXED, with the expectation that
+          # dropped listed beneath it, and #regressions catches it either way.
+          regressed, rest = eval_rows.partition do |row|
+            row[:delta] < 0 || (row[:delta].zero? && row[:expectations].any? { |move| move[:delta] < 0 })
           end
 
           {
             regressed: regressed.sort_by { |row| [row[:delta], row[:eval_set].to_s, row[:case_id].to_s] },
-            improved: improved.sort_by { |row| [-row[:delta], row[:eval_set].to_s, row[:case_id].to_s] }
+            improved: rest.select { |row| row[:delta] > 0 }.sort_by { |row| [-row[:delta], row[:eval_set].to_s, row[:case_id].to_s] }
           }
         end
+      end
+
+      # The drop to gate on and the baseline it is relative to, or nil when nothing dropped.
+      # Normally that is the eval's own rate; when the rate held steady or improved because a
+      # fix absorbed a break, it is the expectation that broke, since one failure traded for
+      # another is not a fix and the rate delta can no longer say so.
+      #
+      # The baseline is always positive here: a rate that dropped cannot have started at zero,
+      # so the caller's division is always defined.
+      def worst_rate_drop(row)
+        return [-row[:delta], row[:baseline_rate]] if row[:delta] < 0
+
+        worst = row[:expectations].min_by { |move| move[:delta] }
+        return if worst.nil? || !worst[:delta].negative?
+
+        [-worst[:delta], worst[:baseline_rate]]
+      end
+
+      # nil when the baseline mean is zero, which has no fraction to take. Callers treat that as
+      # an unbounded regression rather than as no regression - see #unbounded_regressions.
+      def relative_score_regression(row)
+        baseline = row[:baseline_mean].to_f.abs
+        return if baseline.zero?
+
+        round(row[:regression] / baseline)
       end
 
       def expectation_moves(baseline_unit, candidate_unit)

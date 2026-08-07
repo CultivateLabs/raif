@@ -68,17 +68,21 @@ module Raif
           output.puts "#{eval_set_class.name}: #{passed_count}/#{total_count} evals passed"
         end
 
+        export_results
+        print_summary
+
         # --cases filters every dataset in the run, so an id matching nothing anywhere is a
         # typo rather than a selection. Checked against the case ids that actually ran rather
         # than against the result count, since the non-dataset evals in the same set run
         # regardless and would otherwise make a typo look like a suite that passed.
+        #
+        # Checked after exporting, not before: those non-dataset evals already ran and already
+        # spent inference money by this point, and discarding their results file is a second
+        # loss on top of the typo.
         if cases && dataset_evals_present? && @results.values.flatten.none? { |e| e[:case_id] }
           output.puts Raif::Utils::Colors.red("\nNo eval cases matched --cases #{cases.join(",")}")
           exit 1
         end
-
-        export_results
-        print_summary
       end
 
     private
@@ -325,7 +329,14 @@ module Raif
         value&.round(4)
       end
 
+      # Memoized because both export_results and print_summary ask for it, and score_summaries
+      # runs a 1000-resample bootstrap per score row - work worth doing once at the end of an
+      # expensive run rather than twice.
       def summary_data
+        @summary_data ||= build_summary_data
+      end
+
+      def build_summary_data
         total_eval_sets = @results.count
         total_evals = @results.values.sum(&:count)
         passed_evals = @results.values.sum { |evals| evals.count { |e| e[:passed] } }

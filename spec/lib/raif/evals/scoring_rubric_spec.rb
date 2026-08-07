@@ -182,5 +182,35 @@ RSpec.describe Raif::Evals::ScoringRubric do
     it "is nil when there are no levels to derive it from" do
       expect(described_class.new(name: :empty, description: "none", levels: []).scale).to be_nil
     end
+
+    # An unbounded end has no bound to report. `(9...)` used to raise NoMethodError on
+    # `range.end - 1`; the inclusive and beginless forms only survived because a later .compact
+    # happened to drop the nil.
+    {
+      "an inclusive endless range" => (9..),
+      "an exclusive endless range" => (9...),
+      "a beginless range" => (..5)
+    }.each do |label, range|
+      it "takes only the bound that exists from #{label}" do
+        rubric = described_class.new(
+          name: :partial,
+          description: "one-sided",
+          levels: [{ score: 3, description: "mid" }, { score_range: range, description: "edge" }]
+        )
+
+        expect { rubric.scale }.not_to raise_error
+        expect(rubric.scale).to eq(range.begin.nil? ? (3..5) : (3..9))
+      end
+    end
+
+    it "ignores a level whose score_range is not a Range" do
+      rubric = described_class.new(
+        name: :mixed,
+        description: "mixed",
+        levels: [{ score: 2, description: "low" }, { score_range: "7 to 8", description: "bogus" }]
+      )
+
+      expect(rubric.scale).to eq(2..2)
+    end
   end
 end

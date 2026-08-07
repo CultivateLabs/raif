@@ -47,10 +47,20 @@ module Raif
       # Both the text and HTML renderers describe a score move the same way, so the wording
       # of "improved" versus "regressed" cannot drift between the two.
       def score_headline(row)
-        delta = format_delta(row[:delta])
-        gating = row[:gated] ? "" : ", not gated"
+        parts = [score_relative(row), score_spread(row)].compact
+        parts << "not gated" unless row[:gated]
 
-        "#{row[:name]}  #{row[:baseline_mean]} -> #{row[:candidate_mean]}  #{delta}  (#{score_spread(row)}#{gating})"
+        "#{row[:name]}  #{row[:baseline_mean]} -> #{row[:candidate_mean]}  #{format_delta(row[:delta])}  (#{parts.join(", ")})"
+      end
+
+      # --fail-on-regression is expressed relative to the baseline, so the absolute delta alone
+      # cannot be checked against it: whether -1.0 clears a 0.25 threshold depends entirely on
+      # what it is -1.0 of. nil when the baseline mean is zero and there is no fraction to take.
+      def score_relative(row)
+        baseline = row[:baseline_mean].to_f.abs
+        return if baseline.zero?
+
+        format("%+.1f%%", (row[:delta].to_f / baseline) * 100)
       end
 
       # A single observation has no standard deviation, so one side of the transition can be
@@ -73,15 +83,16 @@ module Raif
         format("%.2f", rate.to_f)
       end
 
+      # The threshold is restated as a percentage because it is relative to the baseline, and a
+      # bare "0.25" next to a list of absolute deltas invites reading it as those deltas' units.
       def verdict
         return "no regression threshold set (--fail-on-regression)" if threshold.nil?
 
-        if comparison.regressed?(threshold)
-          count = comparison.regressions.count { |row| row[:magnitude] > threshold.to_f }
-          "#{count} regression#{"s" if count != 1} beyond --fail-on-regression #{threshold} (exit 1)"
-        else
-          "no regression beyond --fail-on-regression #{threshold}"
-        end
+        gate = "--fail-on-regression #{threshold} (#{format("%g", threshold.to_f * 100)}% worse than baseline)"
+        return "no regression beyond #{gate}" unless comparison.regressed?(threshold)
+
+        count = comparison.regressions.count { |row| row[:magnitude].nil? || row[:magnitude] > threshold.to_f }
+        "#{count} regression#{"s" if count != 1} beyond #{gate} (exit 1)"
       end
 
       def h(value)

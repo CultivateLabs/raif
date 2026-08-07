@@ -11,6 +11,14 @@ module Raif
       attr_reader :name, :value, :scale, :min, :max
 
       def initialize(name:, value:, scale: nil, higher_is_better: true, min: nil, max: nil)
+        # to_f alone would turn nil and any non-numeric into 0.0, silently. That is the worst
+        # available outcome for a measurement: it does not raise, it drags the mean and the
+        # confidence interval toward zero, and against a max: ceiling it reports a missing
+        # measurement as the best possible result and passes the gate on it.
+        unless value.is_a?(Numeric)
+          raise ArgumentError, "score #{name.to_s.inspect} was given #{value.inspect}; a score value must be numeric"
+        end
+
         @name = name.to_s
         @value = value.to_f
         @scale = scale

@@ -83,10 +83,22 @@ RSpec.describe Raif::CLI::EvalsCompare do
       expect(File.read(written)).to include("<title>Raif eval comparison</title>")
     end
 
-    it "rejects an unknown format" do
+    it "rejects an unknown format with usage rather than a backtrace" do
       result = run_raif_cli("evals:compare", baseline, candidate, "--format", "yaml")
 
-      expect(result.exit_code).not_to eq(0)
+      expect(result.exit_code).to eq(1)
+      expect(result.output).to include("invalid argument: --format yaml")
+      expect(result.output).to include("Usage: raif evals:compare")
+      expect(result.output).not_to include("OptionParser::InvalidArgument")
+    end
+
+    it "rejects an unknown switch with usage rather than a backtrace" do
+      result = run_raif_cli("evals:compare", baseline, candidate, "--nope")
+
+      expect(result.exit_code).to eq(1)
+      expect(result.output).to include("invalid option: --nope")
+      expect(result.output).to include("Usage: raif evals:compare")
+      expect(result.output).not_to include("OptionParser")
     end
   end
 
@@ -112,6 +124,30 @@ RSpec.describe Raif::CLI::EvalsCompare do
 
       expect(result.exit_code).to eq(1)
       expect(result.stdout).to include("Usage: raif evals:compare")
+    end
+
+    # Valid JSON of the wrong shape used to compare cleanly against another one and report no
+    # regressions at all - a green exit over two files that were never eval results. The most
+    # likely way to hit it is this command's own --format json output, which lands in the same
+    # directory as the results files it was built from.
+    it "refuses a JSON object that is not an eval results file" do
+      wrong = File.join(dir, "wrong.json")
+      File.write(wrong, JSON.generate({ "baseline" => {}, "candidate" => {}, "new_failures" => [] }))
+      result = run_raif_cli("evals:compare", baseline, wrong, "--fail-on-regression", "0")
+
+      expect(result.exit_code).to eq(1)
+      expect(result.stdout).to include("is not a Raif eval results file")
+      expect(result.stdout).not_to include("no regression")
+    end
+
+    it "refuses a JSON array rather than crashing on it" do
+      array = File.join(dir, "array.json")
+      File.write(array, "[1,2]")
+      result = run_raif_cli("evals:compare", array, array)
+
+      expect(result.exit_code).to eq(1)
+      expect(result.stdout).to include("is not a Raif eval results file")
+      expect(result.output).not_to include("TypeError")
     end
   end
 

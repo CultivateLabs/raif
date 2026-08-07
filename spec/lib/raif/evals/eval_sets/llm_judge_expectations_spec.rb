@@ -79,6 +79,23 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
       expect(output.string).to include("Low confidence:")
     end
 
+    # A dataset case redirects `output` to a throwaway buffer so it can print one compact line per
+    # case. A low-confidence judgment says the pass or fail on that line is not to be trusted, so
+    # it has to reach the console rather than the discarded buffer.
+    it "prints the low confidence warning to the console even when per-expectation output is discarded" do
+      stub_raif_task(Raif::Evals::LlmJudges::Binary) do |_messages, _model_completion|
+        { passes: true, reasoning: "ok", confidence: 0.3 }.to_json
+      end
+
+      discarded = StringIO.new
+      eval_set.instance_variable_set(:@output, discarded)
+
+      eval_set.expect_llm_judge_passes("test output", criteria: "Must be polite")
+
+      expect(output.string).to include("Low confidence:")
+      expect(discarded.string).not_to include("Low confidence:")
+    end
+
     it "prints reasoning when verbose output is enabled" do
       allow(Raif.config).to receive(:evals_verbose_output).and_return(true)
       eval_set.expect_llm_judge_passes("test output", criteria: "Must be polite")

@@ -16,6 +16,22 @@ RSpec.describe Raif::Evals::ScoreResult do
     )
   end
 
+  # to_f would make all of these 0.0 without complaint. Against a max: ceiling that reads as the
+  # best possible measurement and passes the gate, which is the worst way for a metric to be wrong.
+  [nil, "not a number", "4", [], :four].each do |bad|
+    it "refuses a non-numeric value (#{bad.inspect})" do
+      expect { described_class.new(name: "elapsed_ms", value: bad, max: 5000, higher_is_better: false) }
+        .to raise_error(ArgumentError, /"elapsed_ms" was given #{Regexp.escape(bad.inspect)}.*must be numeric/)
+    end
+  end
+
+  it "accepts every numeric kind, including a BigDecimal and a Rational" do
+    expect(described_class.new(name: "a", value: 4).value).to eq(4.0)
+    expect(described_class.new(name: "b", value: 4.5).value).to eq(4.5)
+    expect(described_class.new(name: "c", value: BigDecimal("4.5")).value).to eq(4.5)
+    expect(described_class.new(name: "d", value: Rational(9, 2)).value).to eq(4.5)
+  end
+
   it "omits the gate keys when there is neither a min nor a max" do
     result = described_class.new(name: "summary_word_count", value: 284)
 

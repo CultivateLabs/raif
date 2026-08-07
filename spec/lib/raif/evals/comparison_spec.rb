@@ -270,10 +270,19 @@ RSpec.describe Raif::Evals::Comparison do
       )
     end
 
-    it "reports both the pass rate drop and the gated score drop" do
-      expect(comparison.regressions.map { |row| [row[:kind], row[:magnitude]] }).to contain_exactly(
-        [:pass_rate, 0.5],
-        [:score, 0.5]
+    # Descriptions are not unique across eval sets - the DSL does not enforce it - and the label is
+    # all a script reading the JSON has to tell two rows apart by.
+    it "qualifies a pass rate regression label with its eval set" do
+      expect(comparison.regressions.map { |row| row[:label] }).to include("Set  produces expected output [a]")
+    end
+
+    # Magnitudes are fractions of the baseline, not absolute deltas: the rate halved (0.5), and
+    # clarity's absolute 0.5-point drop is a tenth of its 5.0 baseline. Both are now the same
+    # kind of number, which is what lets one threshold apply to both.
+    it "reports both the pass rate drop and the gated score drop, relative to baseline" do
+      expect(comparison.regressions.map { |row| row.slice(:kind, :magnitude, :absolute) }).to contain_exactly(
+        { kind: :pass_rate, magnitude: 0.5, absolute: 0.5 },
+        { kind: :score, magnitude: 0.1, absolute: 0.5 }
       )
       expect(comparison.max_regression).to eq(0.5)
     end
@@ -297,8 +306,49 @@ RSpec.describe Raif::Evals::Comparison do
       expect(traded.regressed?(0)).to be true
     end
 
-    # A score gated by a ceiling is gated, so a move away from that ceiling counts.
-    it "counts a max-gated score moving in the wrong direction" do
+    # The same trade, but the eval came out ahead on its overall rate: "first" is fixed across
+    # all three runs while "second" starts failing one of them. The improvement must not hide
+    # the loss - the row reads better under FIXED, and it is still a regression to gate on.
+    it "catches an expectation that dropped even when the eval's rate improved" do
+      traded = described_class.new(
+        baseline: payload({ "Set" => [
+          eval_result(case_id: "a", expectations: { "first" => false, "second" => true }),
+          eval_result(case_id: "a", expectations: { "first" => false, "second" => true }),
+          eval_result(case_id: "a", expectations: { "first" => true, "second" => true })
+        ] }),
+        candidate: payload({ "Set" => [
+          eval_result(case_id: "a", expectations: { "first" => true, "second" => false }),
+          eval_result(case_id: "a", expectations: { "first" => true, "second" => true }),
+          eval_result(case_id: "a", expectations: { "first" => true, "second" => true })
+        ] })
+      )
+
+      expect(traded.new_failures).to be_empty
+      expect(traded.fixed.first).to include(baseline_rate: 0.3333, candidate_rate: 0.6667)
+      expect(traded.fixed.first[:expectations]).to include(
+        hash_including(description: "second", baseline_rate: 1.0, candidate_rate: 0.6667, delta: -0.3333)
+      )
+
+      expect(traded.regressions.map { |row| [row[:kind], row[:magnitude]] }).to contain_exactly([:pass_rate, 0.3333])
+      expect(traded.regressed?(0)).to be true
+      expect(traded.regressed?(0.5)).to be false
+    end
+
+    it "does not invent a regression for an eval that improved across the board" do
+      improved = described_class.new(
+        baseline: payload({ "Set" => [eval_result(case_id: "a", expectations: { "first" => false, "second" => false })] }),
+        candidate: payload({ "Set" => [eval_result(case_id: "a", expectations: { "first" => true, "second" => true })] })
+      )
+
+      expect(improved.fixed.count).to eq(1)
+      expect(improved.regressions).to be_empty
+      expect(improved.regressed?(0)).to be false
+    end
+
+    # A score gated by a ceiling is gated, so a move away from that ceiling counts. The threshold
+    # is a fraction of the baseline, so 400ms -> 480ms is 0.2 (20% worse) rather than 80, and the
+    # same 0.25 that catches a quarter of an eval's runs no longer fires on 80 milliseconds.
+    it "counts a max-gated score moving in the wrong direction, as a fraction of baseline" do
       latency = described_class.new(
         baseline: payload({ "Set" => [
           eval_result(case_id: "a", expectations: { "e" => true },
@@ -311,7 +361,52 @@ RSpec.describe Raif::Evals::Comparison do
       )
 
       expect(latency.score_moves.first).to include(gated: true, delta: 80.0, regression: 80.0)
-      expect(latency.regressed?(10)).to be true
+      expect(latency.regressions.first).to include(kind: :score, magnitude: 0.2, absolute: 80.0)
+      expect(latency.regressed?(0.1)).to be true
+      expect(latency.regressed?(0.25)).to be false
+    end
+
+    # Two metrics on wildly different scales, each 10% worse, must land on the same magnitude -
+    # that equivalence is the whole point of normalizing before applying the threshold.
+    it "gives equal relative moves equal magnitudes regardless of scale" do
+      scored = lambda do |clarity, latency|
+        payload({ "Set" => [
+          eval_result(case_id: "a", expectations: { "e" => true }, scores: [
+            score(name: "clarity", value: clarity, min: 1),
+            score(name: "elapsed_ms", value: latency, max: 100_000, higher_is_better: false)
+          ])
+        ] })
+      end
+
+      comparison = described_class.new(baseline: scored.call(5.0, 1000), candidate: scored.call(4.5, 1100))
+
+      expect(comparison.regressions.map { |row| [row[:label], row[:magnitude]] }).to contain_exactly(
+        ["clarity", 0.1],
+        ["elapsed_ms", 0.1]
+      )
+    end
+
+    # A baseline of zero has no fraction to take, and 0 errors becoming 3 is exactly the kind of
+    # regression that must not be quietly dropped for want of a denominator.
+    it "treats a regression from a zero baseline as unbounded rather than absent" do
+      errors = described_class.new(
+        baseline: payload({ "Set" => [
+          eval_result(case_id: "a", expectations: { "e" => true },
+            scores: [score(name: "error_count", value: 0, max: 0, higher_is_better: false)])
+        ] }),
+        candidate: payload({ "Set" => [
+          eval_result(case_id: "a", expectations: { "e" => true },
+            scores: [score(name: "error_count", value: 3, max: 0, higher_is_better: false)])
+        ] })
+      )
+
+      expect(errors.regressions.first).to include(kind: :score, magnitude: nil, absolute: 3.0)
+      expect(errors.unbounded_regressions.count).to eq(1)
+      expect(errors.max_regression).to eq(0.0)
+      expect(errors.regressed?(100)).to be true
+      expect(errors.regressed?(nil)).to be false
+      # Float::INFINITY would round-trip as invalid JSON, so the magnitude stays null.
+      expect(JSON.generate(errors.to_h)).to include("\"magnitude\":null")
     end
 
     it "ignores an ungated score, however far it moved" do

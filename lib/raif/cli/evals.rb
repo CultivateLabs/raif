@@ -24,7 +24,7 @@ module Raif
         else true
         end
 
-        OptionParser.new do |opts|
+        parser = OptionParser.new do |opts|
           opts.banner = "Usage: raif evals [options] [FILE_PATHS]"
 
           opts.on("-e", "--environment ENV", "Rails environment (default: test)") do |env|
@@ -55,7 +55,16 @@ module Raif
             puts opts
             exit
           end
-        end.parse!(args)
+        end
+
+        parse_options!(parser)
+
+        # A sample of zero or fewer cases is a typo, not a selection: Array#take would raise on a
+        # negative count, and zero would run nothing and report an empty suite as a pass.
+        if sample && sample < 1
+          puts "Error: --sample must be 1 or greater (got #{sample})"
+          exit 1
+        end
 
         # Parse file paths with optional line numbers
         file_paths = args.map do |arg|

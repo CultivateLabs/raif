@@ -1023,11 +1023,11 @@ FIXED (1)
       0.33 -> 1.00  returns exactly the text 'Unable to generate summary'
 
 SCORE MOVES (2)
-  clarity  4.1111 -> 4.5556  +0.4445  (n=18, sd 0.5137 -> 0.4157)
+  clarity  4.1111 -> 4.5556  +0.4445  (+10.8%, n=18, sd 0.5137 -> 0.4157)
     climate-report       4.3333 -> 5.0  +0.6667
     earnings-call        4.0 -> 4.6667  +0.6667
     press-release        4.0 -> 4.0  0.0
-  summary_word_count  284.0 -> 412.0  +128.0  (n=18, sd 31.2 -> 44.7, not gated)
+  summary_word_count  284.0 -> 412.0  +128.0  (+45.1%, n=18, sd 31.2 -> 44.7, not gated)
 
 NOT COMPARABLE (1)
   DocumentSummarizationEvalSet  produces expected output
@@ -1039,14 +1039,15 @@ SUMMARY
   mean clarity          4.1111 -> 4.5556
   mean summary_word_count 284.0 -> 412.0
   total cost            $1.10 -> $1.64
-  1 regression beyond --fail-on-regression 0.25 (exit 1)
+  1 regression beyond --fail-on-regression 0.25 (25% worse than baseline) (exit 1)
 ```
 
 Options:
 
 ```bash
-# Exit non-zero when a pass rate or a gated score drops by more than this much.
-# Without it, regressions are reported and the command still exits 0.
+# Exit non-zero when a pass rate or a gated score gets more than this much worse than the
+# baseline, as a fraction of it: 0.25 means "25% worse". Without it, regressions are still
+# reported and the command exits 0.
 --fail-on-regression 0.25
 
 # text (default), json, or html. html writes a self-contained file next to the results.
@@ -1061,7 +1062,9 @@ Some specific behaviors:
 - **Cases present in only one run are reported under NOT COMPARABLE, never dropped.** A silently omitted case is indistinguishable from agreement. An expectation that exists on only one side is reported the same way, which is what a renamed description looks like.
 - **Runs judged by different models are refused.** Scores from two different judges measure two different things, so the command exits 2 without printing a comparison. `--allow-judge-mismatch` overrides this and labels the output accordingly.
 - **Score direction is honored.** A score declared `higher_is_better: false` counts a decrease as an improvement, and ungated observational scores are reported but never trip `--fail-on-regression`.
-- **A case that traded one failure for another is a new failure**, even though its pass rate did not move. The expectations that changed are listed under it.
+- **The threshold is relative to the baseline, not absolute.** A pass rate, a 1-5 rubric score, and a latency in milliseconds are not in the same units, so one absolute threshold cannot mean the same thing to all three: `0.25` would ask for a quarter of an eval's runs on one row and a quarter of a millisecond on the next, which makes the flag fire on noise until you turn it off. Each regression is divided by what it started from instead, so `--fail-on-regression 0.25` asks one question everywhere - did anything get more than 25% worse. A `clarity` mean of 4.0 dropping to 3.6 is `0.1`; an `elapsed_ms` mean of 1000 rising to 1200 is `0.2`. Score moves print their relative change next to the absolute one so you can see which rows are near the threshold. For a pass rate that started at 1.0 - an eval that used to pass every run - the relative and absolute readings are the same number, so the common case reads exactly as you would expect.
+- **A regression from a baseline of zero has no fraction to take, and trips any threshold.** A gated `error_count` going from 0 to 3 is a real regression that cannot be expressed as a percentage of zero, so it is reported with a null magnitude and always fails the gate rather than being skipped for want of a denominator.
+- **A case that traded one failure for another is a regression**, even though its pass rate did not drop. One failure traded for another is not a fix. A case whose rate held steady is reported under NEW FAILURES; a case that fixed more than it broke reads better under FIXED, but either way the expectation that dropped is listed beneath it and counts toward `--fail-on-regression`, so an improvement cannot hide the loss underneath it.
 - **No Rails boot.** The command reads two JSON files and does arithmetic, so it does not load your application, need a database, or need an API key.
 
 At `--repeat 1` a single unlucky draw is indistinguishable from a regression. The reported standard deviation indicates how much of a difference is run-to-run variation.

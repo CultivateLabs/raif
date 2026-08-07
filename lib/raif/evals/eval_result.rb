@@ -34,7 +34,10 @@ module Raif
         @model_completions = []
         @scores = []
         @usage = EMPTY_USAGE.dup
-        @model_completions_captured = true
+        # Seeded from the configured mode rather than hardcoded true, so an eval that never
+        # reached #record_model_completions - one whose setup raised - omits the key under :none
+        # like its siblings instead of being the single result carrying an empty array.
+        @model_completions_captured = capture_mode_records_completions?
       end
 
       def add_expectation_result(result)
@@ -91,6 +94,14 @@ module Raif
       end
 
     private
+
+      # Read defensively: this class is constructed in specs and by host apps that may not have
+      # gone through Raif.configure, and a missing config is not a reason to fail an eval.
+      def capture_mode_records_completions?
+        Raif.config.evals_capture_model_completions.to_s != "none"
+      rescue StandardError
+        true
+      end
 
       def compute_usage(serialized)
         {

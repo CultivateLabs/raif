@@ -20,7 +20,9 @@ module Raif
         parser = OptionParser.new do |opts|
           opts.banner = "Usage: raif evals:compare BASELINE_RESULTS.json CANDIDATE_RESULTS.json [options]"
 
-          opts.on("--fail-on-regression N", Float, "Exit non-zero when a pass rate or gated score drops by more than N") do |n|
+          opts.on("--fail-on-regression N", Float,
+            "Exit non-zero when a pass rate or gated score gets more than N worse than baseline, as a " \
+            "fraction of it (0.25 = 25% worse)") do |n|
             threshold = n
           end
 
@@ -38,7 +40,7 @@ module Raif
           end
         end
 
-        parser.parse!(args)
+        parse_options!(parser)
 
         baseline_path, candidate_path = args
         if baseline_path.nil? || candidate_path.nil?
@@ -91,10 +93,28 @@ module Raif
           exit 1
         end
 
-        JSON.parse(File.read(path))
-      rescue JSON::ParserError => e
-        puts Raif::Utils::Colors.red("Error: #{path} is not valid JSON: #{e.message}")
-        exit 1
+        payload = begin
+          JSON.parse(File.read(path))
+        rescue JSON::ParserError => e
+          puts Raif::Utils::Colors.red("Error: #{path} is not valid JSON: #{e.message}")
+          exit 1
+        end
+
+        # Shape-checked rather than trusted. Every key this command reads is looked up with a nil
+        # fallback, so an unrecognized JSON object compares cleanly against another one and
+        # reports no regressions - and this command's whole job is to exit non-zero when there is
+        # one. `--format json` writes its own report into the same results directory, with
+        # baseline/candidate keys instead of results, which makes feeding one back in an easy
+        # mistake to make and an expensive one to not notice.
+        unless payload.is_a?(Hash) && payload["results"].is_a?(Hash)
+          puts Raif::Utils::Colors.red(<<~MSG)
+            Error: #{path} is not a Raif eval results file (no top-level "results" object).
+            Pass the JSON files written to raif_evals/results by `raif evals`, baseline first.
+          MSG
+          exit 1
+        end
+
+        payload
       end
 
       # Next to the candidate results file, since that is the run being judged.

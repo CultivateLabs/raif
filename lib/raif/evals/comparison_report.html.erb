@@ -149,7 +149,7 @@
           <br><span class="muted"><%= h row[:eval_set] %> &middot; <%= h row[:description] %></span>
         </td>
         <td class="mono"><%= h row[:baseline_mean] %> &rarr; <%= h row[:candidate_mean] %></td>
-        <td class="mono <%= row[:regression] > 0 ? "bad" : "good" %>"><%= h format_delta(row[:delta]) %></td>
+        <td class="mono <%= row[:regression] > 0 ? "bad" : "good" %>"><%= h format_delta(row[:delta]) %><% if score_relative(row) -%><br><span class="muted"><%= h score_relative(row) %></span><% end -%></td>
         <td class="mono muted"><%= h score_spread(row) %></td>
       </tr>
         <% row[:per_case].each do |per_case| -%>

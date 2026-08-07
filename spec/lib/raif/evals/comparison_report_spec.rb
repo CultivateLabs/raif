@@ -63,10 +63,13 @@ RSpec.describe Raif::Evals::ComparisonReport do
       expect(text).to include("press-release        1.00 -> 0.00")
       expect(text).to include("is between 100 and 1000 words")
       expect(text).to include("SCORE MOVES (1)")
-      expect(text).to include("clarity  4.5 -> 3.5  -1.0")
+      expect(text).to include("clarity  4.5 -> 3.5  -1.0  (-22.2%")
       expect(text).to include("evals passed          2/2 -> 1/2")
       expect(text).to include("total cost            $1.10 -> $1.64")
-      expect(text).to include("2 regressions beyond --fail-on-regression 0.25 (exit 1)")
+      # One, not two: the pass rate went 1.00 -> 0.00, but clarity's 1-point drop is 22% of a
+      # 4.5 baseline and so sits under the 25% threshold. Compared absolutely it would have
+      # counted, which is the confusion a relative threshold exists to avoid.
+      expect(text).to include("1 regression beyond --fail-on-regression 0.25 (25% worse than baseline) (exit 1)")
     end
 
     it "omits sections with nothing in them" do
@@ -89,7 +92,7 @@ RSpec.describe Raif::Evals::ComparisonReport do
       )
       rendered = described_class.new(single, color: false).render("text")
 
-      expect(rendered).to include("clarity  5.0 -> 3.0  -2.0  (n=1")
+      expect(rendered).to include("clarity  5.0 -> 3.0  -2.0  (-40.0%, n=1")
       expect(rendered).not_to include("sd")
     end
 
@@ -148,7 +151,8 @@ RSpec.describe Raif::Evals::ComparisonReport do
       expect(html).to include("press-release")
       expect(html).to include("Score moves (1)")
       expect(html).to include("clarity")
-      expect(html).to include("regressions beyond --fail-on-regression 0.25")
+      expect(html).to include("1 regression beyond --fail-on-regression 0.25 (25% worse than baseline) (exit 1)")
+      expect(html).to include("-22.2%")
     end
 
     it "escapes content that came out of the results file" do

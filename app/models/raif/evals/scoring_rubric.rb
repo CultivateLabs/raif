@@ -64,18 +64,31 @@ module Raif
       # @return [Range, nil] The lowest to highest score the levels describe
       def scale
         bounds = levels.flat_map do |level|
-          if level.key?(:score)
-            [level[:score]]
-          else
-            range = level[:score_range]
-            range.is_a?(Range) ? [range.begin, range.exclude_end? ? range.end - 1 : range.end] : []
-          end
+          level.key?(:score) ? [level[:score]] : range_bounds(level[:score_range])
         end.compact
 
         return if bounds.empty?
 
         (bounds.min..bounds.max)
       end
+
+      # The lowest and highest score a level's range describes, or [] for anything that is not a
+      # bounded Range. An endless or beginless range has no bound to report, and an exclusive
+      # endless range (9...) would raise on `range.end - 1` if the nil were not caught first.
+      #
+      # @return [Array<Numeric>] Zero, one, or two bounds
+      def range_bounds(range)
+        return [] unless range.is_a?(Range)
+
+        last = if range.end.nil?
+          nil
+        else
+          range.exclude_end? ? range.end - 1 : range.end
+        end
+
+        [range.begin, last].compact
+      end
+      private :range_bounds
 
       # Converts the rubric into a formatted string suitable for LLM prompts.
       #

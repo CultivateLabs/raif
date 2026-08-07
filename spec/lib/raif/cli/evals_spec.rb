@@ -84,6 +84,28 @@ RSpec.describe Raif::CLI::Evals do
     expect(ENV.fetch("RAIF_RUNNING_EVALS", nil)).to eq("true")
   end
 
+  describe "invalid input" do
+    # --sample 0 would run nothing and report an empty suite as a pass; a negative count reached
+    # Array#take and died with "attempt to take negative size".
+    [["--sample", "0"], ["--sample", "-1"]].each do |flags|
+      it "rejects #{flags.join(" ")} before booting the app" do
+        cli = described_class.new(flags)
+        allow(cli).to receive(:load_rails_application)
+
+        expect { cli.run }.to raise_error(SystemExit).and output(/--sample must be 1 or greater/).to_stdout
+        expect(cli).not_to have_received(:load_rails_application)
+      end
+    end
+
+    it "prints usage for an unparseable option rather than a backtrace" do
+      cli = described_class.new(["--repeat", "many"])
+      allow(cli).to receive(:load_rails_application)
+
+      expect { cli.run }.to raise_error(SystemExit)
+        .and output(/invalid argument: --repeat many.*Usage: raif evals/m).to_stdout
+    end
+  end
+
   describe "verbose output" do
     it "leaves the configured value alone when neither flag is given" do
       Raif.config.evals_verbose_output = true

@@ -141,6 +141,19 @@ RSpec.describe "Running a dataset eval set" do
       expect { typo_run.execute }.to raise_error(SystemExit)
       expect(output.string).to include("No eval cases matched --cases monda")
     end
+
+    # Those same non-dataset evals already spent inference money by the time the typo is caught,
+    # so exiting must not also throw away the results file describing what they did.
+    it "still exports results and prints a summary before exiting" do
+      typo_run = Raif::Evals::Run.new(file_paths: [{ file_path: eval_set_path }], output: output, repeats: 1, cases: ["monda"])
+
+      expect { typo_run.execute }.to raise_error(SystemExit)
+
+      json_file = Rails.root.join("raif_evals", "results", "eval_run_20240101_120000_#{Raif.config.default_llm_model_key}.json")
+      expect(File).to exist(json_file)
+      expect(JSON.parse(File.read(json_file))["results"]["Raif::Evals::DatasetExampleEvalSet"]).to be_present
+      expect(output.string).to include("SUMMARY")
+    end
   end
 
   context "with --sample and --seed" do

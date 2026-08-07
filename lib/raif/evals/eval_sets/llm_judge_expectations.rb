@@ -60,13 +60,15 @@ module Raif
             **resolved_judge_attributes(judge_attributes)
           )
 
-          if judge_task.low_confidence? && output.respond_to?(:puts)
-            output.puts Raif::Utils::Colors.yellow("    ⚠ Low confidence: #{judge_task.judgment_confidence}")
+          # To console_output rather than output: a dataset run swaps output for a throwaway
+          # buffer so it can print one compact line per case, and a low-confidence judgment is
+          # the signal that the pass or fail on that line should not be trusted. It belongs in
+          # the same category as an error, which is also written straight to the console.
+          if judge_task.low_confidence?
+            console_output.puts Raif::Utils::Colors.yellow("    ⚠ Low confidence: #{judge_task.judgment_confidence}")
           end
 
-          if Raif.config.evals_verbose_output && output.respond_to?(:puts)
-            output.puts "    #{judge_task.judgment_reasoning}"
-          end
+          output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
 
           judge_metadata = {
             passes: judge_task.passes?,
@@ -278,10 +280,8 @@ module Raif
             **resolved_judge_attributes(judge_attributes)
           )
 
-          if output.respond_to?(:puts)
-            output.puts "    Winner: #{judge_task.winner}"
-            output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
-          end
+          output.puts "    Winner: #{judge_task.winner}"
+          output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
 
           judge_metadata = {
             winner: judge_task.winner,

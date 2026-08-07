@@ -42,7 +42,7 @@ module Raif
           )
           current_eval_result.add_score(score_result)
 
-          output.puts "  #{score_result.name}: #{score_result.formatted_value}"
+          output.puts "    #{score_result.name}: #{score_result.formatted_value}"
           expect(score_result.gate_description) { score_result.passed? } if score_result.gated?
 
           score_result
