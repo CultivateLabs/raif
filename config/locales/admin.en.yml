@@ -19,7 +19,7 @@ en:
           working_with_fetching_label: Fetching
           working_with_format: Gzip-compressed JSON Lines. Line 1 is a manifest (manifest version, resource type, table, columns, cutoff, id range, record count). Each following line is one record's complete raw column attributes as JSON, including its original id. Records are restorable by hand and never restored automatically.
           working_with_format_label: Format
-          working_with_inspecting: The first line is the manifest; a specific record can be located by its id. For a culled model completion, the id is preserved on its inference cost event as original_model_completion_id.
+          working_with_inspecting: The first line is the manifest; a specific record can be located by its id. A culled terminal completion's id is preserved on its inference cost event as original_model_completion_id. A nonterminal completion has no cost event, so locating it requires its original id from another source or a manual search across the candidate archive objects that cover it.
           working_with_inspecting_label: Inspecting
           working_with_title: Working With This Archive
       common:

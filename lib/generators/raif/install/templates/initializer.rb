@@ -331,9 +331,15 @@ Raif.configure do |config|
   # checksum_sha256 on the PUT so the store verifies integrity server-side).
   # config.archive_storage = Raif::ArchiveStorage::FileSystem.new(root: Rails.root.join("storage", "raif-archives"))
 
-  # How long completed/failed model completions are retained before being
-  # archived and deleted. nil (the default) disables model completion culling
-  # even when archive_enabled is true. Must be at least 1 month.
+  # How long model completions are retained before being archived and
+  # deleted. Applies to completed/failed completions (guarded by their cost
+  # events) AND to nonterminal completions older than the cutoff - pending
+  # rows orphaned by crashed or killed processes are archived and culled
+  # through the same path, and since they have no cost event, no per-record
+  # link back to their archive survives; recovery for those is a manual
+  # search across candidate archive objects. nil (the default) disables
+  # model completion culling even when archive_enabled is true. Must be at
+  # least 1 month.
   # config.model_completion_retention_period = 6.months
 
   # Timeout settings for LLM API requests (in seconds). All default to nil (use Faraday defaults).

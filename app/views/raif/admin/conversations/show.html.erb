@@ -40,13 +40,12 @@
     <h5 class="mb-0"><%= t("raif.admin.common.system_prompt") %></h5>
   </div>
   <div class="card-body">
-    <% system_prompt = @conversation.entries.last&.system_prompt %>
-    <% if system_prompt.present? %>
-      <pre><%= system_prompt %></pre>
+    <% if @system_prompt.present? %>
+      <pre><%= @system_prompt %></pre>
     <% elsif @archived_events_by_entry_id.any? %>
       <p class="text-muted mb-0"><%= t("raif.admin.common.system_prompt_archived_notice") %></p>
     <% else %>
-      <pre><%= system_prompt %></pre>
+      <pre><%= @system_prompt %></pre>
     <% end %>
   </div>
 </div>

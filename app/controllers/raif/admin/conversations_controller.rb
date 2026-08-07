@@ -9,6 +9,7 @@ module Raif
 
       def show
         @conversation = Raif::Conversation.find(params[:id])
+        @system_prompt = @conversation.entries.last&.system_prompt
 
         # Archived cost events for all of this conversation's entries, loaded
         # once with their archives and grouped by entry id: the entry partial
