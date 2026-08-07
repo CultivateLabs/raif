@@ -10,6 +10,7 @@ require "raif/evals/eval_result"
 require "raif/evals/eval_set"
 require "raif/evals/comparison"
 require "raif/evals/comparison_report"
+require "raif/evals/run_log"
 require "raif/evals/run"
 
 module Raif

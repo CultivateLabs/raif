@@ -6,15 +6,16 @@ require "json"
 module Raif
   module Evals
     class Run
-      attr_reader :eval_sets, :results, :output, :repeats, :cases, :sample, :seed
+      attr_reader :eval_sets, :results, :output, :repeats, :cases, :sample, :seed, :resume_path
 
-      def initialize(file_paths: nil, output: $stdout, repeats: 1, cases: nil, sample: nil, seed: nil)
+      def initialize(file_paths: nil, output: $stdout, repeats: 1, cases: nil, sample: nil, seed: nil, resume_path: nil)
         @output = output
         @results = {}
         @repeats = [repeats.to_i, 1].max
         @cases = cases.presence
         @sample = sample&.to_i
         @seed = seed&.to_i
+        @resume_path = resume_path.presence
 
         # Before the eval sets, not after: loading an eval set evaluates its class body,
         # so anything setup.rb defines for the sets to use (shared helper modules,
@@ -36,37 +37,17 @@ module Raif
         output.puts "Repeats per eval: #{repeats}"
         output.puts "Cases: #{cases.join(", ")}" if cases
         output.puts "Sample per dataset: #{sample}#{" (seed #{seed})" if seed}" if sample
+
+        if resume_path
+          output.puts "Resuming: #{run_log.display_path} (#{run_log.results_count} results already recorded)"
+        else
+          output.puts "Run log: #{run_log.display_path}"
+        end
+
         output.puts ""
         output.puts "=" * 50
 
-        @eval_sets.each do |eval_set_entry|
-          eval_set_class, file_path, line_number = if eval_set_entry.is_a?(Hash)
-            [eval_set_entry[:class], eval_set_entry[:file_path], eval_set_entry[:line_number]]
-          else
-            [eval_set_entry, nil, nil]
-          end
-
-          if line_number
-            # Running specific eval by line number
-            output.puts "\nRunning #{eval_set_class.name} at line #{line_number}"
-            output.puts "-" * 50
-
-            eval_results = run_eval_at_line(eval_set_class, file_path, line_number)
-          else
-            # Running all evals in the set
-            output.puts "\nRunning #{eval_set_class.name}"
-            output.puts "-" * 50
-
-            eval_results = eval_set_class.run(output: output, repeats: repeats, cases: cases, sample: sample, seed: seed)
-          end
-
-          @results[eval_set_class.name] = eval_results.map(&:to_h)
-          passed_count = eval_results.count(&:passed?)
-          total_count = eval_results.count
-
-          output.puts "-" * 50
-          output.puts "#{eval_set_class.name}: #{passed_count}/#{total_count} evals passed"
-        end
+        run_eval_sets
 
         export_results
         print_summary
@@ -83,6 +64,82 @@ module Raif
       end
 
     private
+
+      # Results reach the run log as they complete, but the final results file is only written
+      # once every set has finished - hence the resume hint, without which a user staring at a
+      # stack trace has no way to know the spend is still on disk.
+      def run_eval_sets
+        @eval_sets.each do |eval_set_entry|
+          eval_set_class, file_path, line_number = if eval_set_entry.is_a?(Hash)
+            [eval_set_entry[:class], eval_set_entry[:file_path], eval_set_entry[:line_number]]
+          else
+            [eval_set_entry, nil, nil]
+          end
+
+          if line_number
+            # Running specific eval by line number
+            output.puts "\nRunning #{eval_set_class.name} at line #{line_number}"
+            output.puts "-" * 50
+
+            run_eval_at_line(eval_set_class, file_path, line_number)
+          else
+            # Running all evals in the set
+            output.puts "\nRunning #{eval_set_class.name}"
+            output.puts "-" * 50
+
+            eval_set_class.run(output: output, repeats: repeats, cases: cases, sample: sample, seed: seed, run_log: run_log)
+          end
+
+          # From the log rather than what this invocation returned, so a resumed run reports the
+          # whole set and not just the tail of it that was left to do.
+          set_results = run_log.results_for(eval_set_class.name)
+
+          output.puts "-" * 50
+          output.puts "#{eval_set_class.name}: #{set_results.count { |result| result[:passed] }}/#{set_results.count} evals passed"
+        end
+
+        # Includes eval sets the log holds but this invocation did not visit, which is what a
+        # resume narrowed to one file leaves behind.
+        @results = run_log.results
+      rescue Interrupt
+        print_resume_hint("Run interrupted.")
+        exit 1
+      rescue StandardError
+        print_resume_hint("Run failed.")
+        raise
+      end
+
+      def print_resume_hint(reason)
+        output.puts Raif::Utils::Colors.red("\n#{reason}")
+
+        if run_log.results_count.zero?
+          run_log.discard!
+          return
+        end
+
+        output.puts "#{run_log.results_count} results were recorded before it stopped: #{run_log.display_path}"
+        output.puts "Resume with: bundle exec raif evals --resume #{run_log.display_path}"
+      end
+
+      def run_log
+        @run_log ||= build_run_log
+      end
+
+      def build_run_log
+        return RunLog.resume(path: resume_path, configuration: configuration_data) if resume_path
+
+        run_at = Time.current
+
+        RunLog.start(
+          results_dir: Rails.root.join("raif_evals", "results"),
+          basename: "eval_run_#{run_at.strftime("%Y%m%d_%H%M%S")}_#{Raif.config.default_llm_model_key}",
+          run_at: run_at.iso8601,
+          configuration: configuration_data
+        )
+      rescue RunLog::IncompatibleResumeError => e
+        output.puts Raif::Utils::Colors.red("\n#{e.message}")
+        exit 1
+      end
 
       def load_setup_file
         setup_file = Rails.root.join("raif_evals", "setup.rb")
@@ -152,7 +209,7 @@ module Raif
           return []
         end
 
-        instance = eval_set_class.new(output: output)
+        instance = eval_set_class.new(output: output, run_log: run_log)
         instance.run_eval_definition(target_eval, repeats: repeats, cases: cases, sample: sample, seed: seed)
       end
 
@@ -182,30 +239,35 @@ module Raif
 
       # The model key goes in both the filename and the payload: comparing models means
       # holding several result files side by side, and a run that only names its model in
-      # stdout cannot be attributed back to one once the terminal is gone.
+      # stdout cannot be attributed back to one once the terminal is gone. The timestamp is when
+      # the run started, so a resume completes the file its first attempt was headed for.
       def export_results
-        results_dir = Rails.root.join("raif_evals", "results")
-        FileUtils.mkdir_p(results_dir)
-
-        timestamp = Time.current.strftime("%Y%m%d_%H%M%S")
-        filename = results_dir.join("eval_run_#{timestamp}_#{Raif.config.default_llm_model_key}.json")
+        filename = run_log.results_path
+        FileUtils.mkdir_p(File.dirname(filename))
 
         File.write(filename, JSON.pretty_generate({
-          run_at: Time.current.iso8601,
+          run_at: run_log.run_at,
           configuration: configuration_data,
           results: @results,
           summary: summary_data
         }))
 
+        # Only once the durable file exists, since until then the log is the only copy.
+        run_log.discard!
+
         output.puts "\nResults exported to: #{filename}"
       end
 
+      # Also the compatibility check for --resume, which refuses when any of these differ: each
+      # either changes what a result means or which cases produce one, so letting one drift
+      # would write a single results file describing a run that never happened.
       def configuration_data
         {
           default_llm_model_key: Raif.config.default_llm_model_key,
           evals_default_llm_judge_model_key: Raif.config.evals_default_llm_judge_model_key,
           repeats: repeats,
           capture_model_completions: Raif.config.evals_capture_model_completions.to_s,
+          cases: cases,
           sample: sample,
           seed: seed
         }

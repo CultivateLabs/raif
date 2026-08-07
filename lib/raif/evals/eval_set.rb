@@ -11,9 +11,10 @@ module Raif
 
       attr_reader :current_eval_result, :current_case, :output, :results
 
-      def initialize(output: $stdout)
+      def initialize(output: $stdout, run_log: nil)
         @output = output
         @console_output = output
+        @run_log = run_log
       end
 
       class << self
@@ -79,8 +80,8 @@ module Raif
           @teardown_block = block
         end
 
-        def run(output: $stdout, repeats: 1, cases: nil, sample: nil, seed: nil)
-          new(output: output).run(repeats: repeats, cases: cases, sample: sample, seed: seed)
+        def run(output: $stdout, repeats: 1, cases: nil, sample: nil, seed: nil, run_log: nil)
+          new(output: output, run_log: run_log).run(repeats: repeats, cases: cases, sample: sample, seed: seed)
         end
       end
 
@@ -107,27 +108,42 @@ module Raif
         @results
       end
 
-      # Runs one eval definition across its cases (if any) and repeats.
+      # Runs one eval definition across its cases (if any) and repeats, skipping any execution
+      # a resumed run log already holds a result for.
       def run_eval_definition(eval_definition, eval_index: nil, repeats: 1, cases: nil, sample: nil, seed: nil)
         eval_index ||= self.class.evals.index(eval_definition)
         @selected_cases ||= resolve_datasets(cases: cases, sample: sample, seed: seed)
         eval_cases = selected_cases_for(eval_definition)
 
+        # nil rather than 1 for a single run, matching the run_index EvalResult records.
+        run_indexes = repeats.times.map { |i| (i + 1 if repeats > 1) }
+
         if eval_cases.nil?
-          return repeats.times.map do |i|
-            run_eval(eval_definition, run_index: (i + 1 if repeats > 1), eval_index: eval_index)
+          pending = run_indexes.reject { |run_index| already_recorded?(eval_index, nil, run_index) }
+
+          return pending.map do |run_index|
+            run_and_record(eval_definition, run_index: run_index, eval_index: eval_index)
           end
         end
 
         return [] if eval_cases.empty?
 
+        pending = eval_cases.flat_map do |eval_case|
+          run_indexes.filter_map do |run_index|
+            [eval_case, run_index] unless already_recorded?(eval_index, eval_case.id, run_index)
+          end
+        end
+
+        # No header for an eval a resumed run has nothing left to do for.
+        return [] if pending.empty?
+
         output.puts eval_definition[:description] unless Raif.config.evals_verbose_output
+        # Widened over every selected case, not just the pending ones, so a resumed run's lines
+        # stay aligned with the ones already printed.
         @case_id_width = eval_cases.map { |eval_case| eval_case.id.length }.max
 
-        eval_cases.flat_map do |eval_case|
-          repeats.times.map do |i|
-            run_eval(eval_definition, eval_case: eval_case, run_index: (i + 1 if repeats > 1), eval_index: eval_index)
-          end
+        pending.map do |eval_case, run_index|
+          run_and_record(eval_definition, eval_case: eval_case, run_index: run_index, eval_index: eval_index)
         end
       end
 
@@ -226,6 +242,20 @@ module Raif
     private
 
       attr_reader :console_output
+
+      # Records each result the moment it completes, so the run's spend survives an interrupt
+      # that never reaches the results file.
+      def run_and_record(eval_definition, eval_case: nil, run_index: nil, eval_index: nil)
+        eval_result = run_eval(eval_definition, eval_case: eval_case, run_index: run_index, eval_index: eval_index)
+        @run_log&.record(eval_set: self.class.name, result: eval_result)
+        eval_result
+      end
+
+      def already_recorded?(eval_index, case_id, run_index)
+        return false if @run_log.nil?
+
+        @run_log.recorded?(eval_set: self.class.name, eval_index: eval_index, case_id: case_id, run_index: run_index)
+      end
 
       def dataset_file(filename)
         path = evals_path("datasets", filename)

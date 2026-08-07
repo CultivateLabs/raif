@@ -7,7 +7,6 @@ module Raif
   module CLI
     class Evals < Base
       def run
-        # Set test environment by default for evals
         ENV["RAILS_ENV"] ||= "test"
         ENV["RAIF_RUNNING_EVALS"] = "true"
 
@@ -15,6 +14,7 @@ module Raif
         cases = ENV["RAIF_EVAL_CASES"].to_s.split(",").map(&:strip).reject(&:empty?)
         sample = ENV["RAIF_EVAL_SAMPLE"]&.to_i
         seed = ENV["RAIF_EVAL_SEED"]&.to_i
+        resume_path = ENV["RAIF_EVAL_RESUME"].to_s.empty? ? nil : ENV["RAIF_EVAL_RESUME"]
         # nil leaves Raif.config.evals_verbose_output alone. --no-verbose has to be able to
         # win, so an app whose initializer turns verbose output on can still get back to the
         # compact dataset output.
@@ -51,6 +51,10 @@ module Raif
             verbose = value
           end
 
+          opts.on("--resume PATH", "Resume an interrupted run from its .partial.jsonl log, skipping results it already holds") do |path|
+            resume_path = path
+          end
+
           opts.on("-h", "--help", "Show this help message") do
             puts opts
             exit
@@ -63,6 +67,13 @@ module Raif
         # and report an empty suite as a pass, and a negative count raises in Array#take.
         if sample && sample < 1
           puts "Error: --sample must be 1 or greater (got #{sample})"
+          exit 1
+        end
+
+        # Before Rails boots, which is the slowest thing this command does and entirely wasted
+        # on a mistyped log path.
+        if resume_path && !File.exist?(resume_path)
+          puts "Error: Resume log not found: #{resume_path}"
           exit 1
         end
 
@@ -88,7 +99,8 @@ module Raif
           repeats: repeats,
           cases: (cases if cases.any?),
           sample: sample,
-          seed: seed
+          seed: seed,
+          resume_path: resume_path
         )
         run.execute
       end

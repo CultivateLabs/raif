@@ -22,7 +22,7 @@ This will:
   - `eval_sets` - Where your actual evals will go.
   - `files` - For any files (e.g. a PDF document or HTML page) that you want to use in your evals.
   - `datasets` - For [datasets](#datasets) of eval cases.
-  - `results` - Where the results of your eval runs will be stored.
+  - `results` - Where the [results](#results) of your eval runs will be stored.
 
 # Creating an Eval Set
 
@@ -111,6 +111,207 @@ class Raif::Evals::Tasks::DocumentSummarizationEvalSet < Raif::Evals::EvalSet
 end
 ```
 
+# Running Evals
+
+To run your evals, you can run:
+
+```bash
+# Run all eval sets
+bundle exec raif evals
+
+# Run a specific eval set file
+bundle exec raif evals ./raif_evals/eval_sets/my_eval_set.rb
+
+# Run a specific eval block by line number
+bundle exec raif evals ./raif_evals/eval_sets/my_eval_set.rb:23
+
+# Run multiple files
+bundle exec raif evals ./raif_evals/eval_sets/file1.rb ./raif_evals/eval_sets/file2.rb:15
+
+# Run each eval 5 times and report a pass rate for each
+bundle exec raif evals --repeat 5
+
+# Restrict a dataset run to specific cases, or a random sample of them
+bundle exec raif evals --cases climate-report,earnings-call
+bundle exec raif evals --sample 5 --seed 42
+
+# Print every expectation for every case rather than one line per case
+bundle exec raif evals --verbose
+
+# Force the compact one-line-per-case output, even if your initializer turns verbose on
+bundle exec raif evals --no-verbose
+
+# Pick up an interrupted run where it stopped, without paying for its results again
+bundle exec raif evals --resume raif_evals/results/eval_run_20260805_094122_anthropic_claude_5_sonnet.partial.jsonl
+```
+
+`--cases`, `--sample`, and `--seed` only affect evals that have a [dataset](#datasets); see [Selecting Cases to Run](#selecting-cases-to-run).
+
+By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
+
+While Raif makes it intentionally difficult to run your normal test suite using real LLM provider API keys, the nature of evals makes it essential that actual API keys are available. When running evals, Raif will load API keys from your initializer, as described in the [setup docs](../getting_started/setup#initial-setup).
+
+## Results
+
+Once your evals have run, a JSON file will be created in `raif_evals/results` with the results of each eval. The filename and the file's `configuration` block both record the model the run used, so results from different models can be told apart:
+
+```json
+{
+  "run_at": "2026-08-02T18:14:22Z",
+  "configuration": {
+    "default_llm_model_key": "open_ai_responses_gpt_5_6_terra",
+    "evals_default_llm_judge_model_key": "anthropic_claude_5_sonnet",
+    "repeats": 5,
+    "capture_model_completions": "full",
+    "cases": null,
+    "sample": null,
+    "seed": null
+  }
+}
+```
+
+`run_at` is when the run started, which is also the timestamp in its filename.
+
+Alongside `run_at` and `configuration`, the file has two more top-level keys:
+
+- `results` - one entry per eval set, each an array with one result per execution of an eval block. A result carries its `description`, `eval_index`, `passed`, `expectation_results`, any [`scores`](#scores), its [`usage` and `model_completions`](#captured-llm-calls), plus a `run_index` for [repeats](#repeating-evals) and a `case_id` for [dataset](#dataset-results) cases.
+- `summary` - run-wide totals across every eval, plus an `eval_pass_rates` array with one row per eval and a `score_summaries` array with one row per score name per eval.
+
+This file is what [`evals:compare`](#comparing-runs) reads, so keep the runs you want to diff against.
+
+## Resuming an Interrupted Run
+
+The results file above is written once, after every eval set has finished. On its own that would mean a run killed at case 48 of 50 - by Ctrl-C, a provider outage, a rate limit cascade, the process running out of memory - loses every result it already paid for.
+
+So each result is also appended to a run log the moment it completes, at `raif_evals/results/<run name>.partial.jsonl`. It's JSON Lines: a header line identifying the run, then one line per eval result. A run that stops early tells you what it has and how to pick it up:
+
+```
+Run interrupted.
+38 results were recorded before it stopped: raif_evals/results/eval_run_20260805_094122_anthropic_claude_5_sonnet.partial.jsonl
+Resume with: bundle exec raif evals --resume raif_evals/results/eval_run_20260805_094122_anthropic_claude_5_sonnet.partial.jsonl
+```
+
+`--resume` (or `RAIF_EVAL_RESUME`) reads the log back and skips every execution it already holds, keyed on the same tuple that identifies a result in the JSON: which eval block, which dataset case, which repeat. Only the work that never finished costs anything the second time. The resumed run completes the results file its first attempt was headed for - same name, same `run_at` - rather than opening a second file describing the same run, and the log is deleted once that file exists.
+
+Some specifics worth knowing:
+
+- **The whole configuration has to match.** Every key in the results `configuration` block either changes what a result means (which model produced it, which model judged it, how much of each call was captured) or which cases produce one (`cases`, `sample`, `seed`, `repeats`). A resume that let any of them drift would write one results file describing a run that never happened, so a mismatch is refused and names the keys that moved. Re-run with the settings the log was started with, or drop `--resume` to start fresh.
+- **A truncated last line is skipped, not fatal.** A hard kill lands mid-write. Losing the one result being appended is the cost of appending; losing the run over it would defeat the purpose.
+- **Results are carried forward for eval sets the resumed invocation doesn't visit.** Resuming with a narrower set of files keeps what the log already holds for the others.
+- **A run that stopped before recording anything deletes its own log**, since there is nothing there to resume.
+
+If you keep result files in version control, add `raif_evals/results/*.partial.jsonl` to your `.gitignore` - a log is transient, and the run it belongs to either finishes and replaces it or gets resumed.
+
+## Repeating Evals
+
+LLM responses vary between runs, so a single pass/fail per eval cannot separate a real quality difference from one unlucky sample. `--repeat N` (or `RAIF_EVAL_REPEATS=N`) runs each eval N times, re-running `setup` and the eval block for each so the repeats are independent samples rather than a re-scoring of one response.
+
+Repeats sample the model, not your inputs. To vary the input as well, give the eval a [dataset](#datasets) - the two compose, and the run becomes cases &times; repeats.
+
+Each result gains a `run_index` plus an `eval_index` identifying which eval block produced it, and the run's `summary` gains an `eval_pass_rates` array with one row per distinct eval. Rows are keyed on `eval_index` rather than the description, so two eval blocks that happen to share a description still get a rate each:
+
+```json
+{
+  "eval_set": "MyEvalSet",
+  "description": "produces expected output",
+  "runs": 5,
+  "passed": 4,
+  "pass_rate": 0.8
+}
+```
+
+Pass rates are printed to the console at the end of the run. This is the number to compare when evaluating one model against another.
+
+## Setting the LLM for Evals
+
+Raif defaults to using `Raif.config.default_llm_model_key` for LLM API calls. You can override this setting via the `RAIF_DEFAULT_LLM_MODEL_KEY` environment variable.
+
+```bash
+RAIF_DEFAULT_LLM_MODEL_KEY=anthropic_claude_5_sonnet bundle exec raif evals
+```
+
+## Verbose Output
+
+When debugging failing evals or wanting to see more details about your test runs, you can enable verbose output to see metadata and LLM judge reasoning:
+
+```ruby
+# In your initializer
+Raif.configure do |config|
+  config.evals_verbose_output = true
+end
+```
+
+Or per run, with `--verbose`:
+
+```bash
+bundle exec raif evals --verbose
+```
+
+`--no-verbose` (or `RAIF_EVAL_VERBOSE=0`) turns it back off for one run, which is what an app whose initializer sets `evals_verbose_output = true` needs to read a [dataset](#datasets) run: verbose prints every expectation for every case, so a 3-case dataset at `--repeat 2` buries the result in judge reasoning. Passing neither flag leaves the configured value alone.
+
+When enabled, this will display:
+- Result metadata for each expectation
+- LLM judge reasoning and confidence scores
+- Every expectation for every [dataset](#datasets) case, rather than one line per case
+- Additional debugging information
+
+This is particularly useful when working with [LLM judges](#llm-as-judge-expectations) to understand why they made certain decisions.
+
+## Captured LLM Calls
+
+Every LLM call made during an eval is captured and included in the [results JSON](#results). Because each eval runs in a transaction that is rolled back, these records are captured before the rollback so they're preserved in the results even though the underlying `Raif::ModelCompletion` rows are not persisted.
+
+For each eval, the results include:
+- A `model_completions` array with one entry per LLM call. Each entry captures the `llm_model_key`, `model_api_name`, `system_prompt`, `messages`, the model's `response`, any `response_tool_calls`, token counts (`prompt_tokens`, `completion_tokens`, `total_tokens`, and cache token counts), and cost (`prompt_token_cost`, `output_token_cost`, `total_cost`).
+- A `usage` object summarizing the number of LLM calls, total tokens, and total cost for that eval.
+
+```json
+{
+  "description": "Raif::Tasks::DocumentSummarization produces expected output",
+  "passed": true,
+  "expectation_results": [ ... ],
+  "usage": {
+    "model_completions": 1,
+    "prompt_tokens": 1200,
+    "completion_tokens": 300,
+    "total_tokens": 1500,
+    "total_cost": 0.0075
+  },
+  "model_completions": [
+    {
+      "llm_model_key": "open_ai_gpt_4o",
+      "model_api_name": "gpt-4o",
+      "system_prompt": "...",
+      "messages": [ ... ],
+      "response": "...",
+      "prompt_tokens": 1200,
+      "completion_tokens": 300,
+      "total_tokens": 1500,
+      "total_cost": 0.0075
+    }
+  ]
+}
+```
+
+The run's top-level `summary` also aggregates totals across every eval: `total_model_completions`, `total_prompt_tokens`, `total_completion_tokens`, `total_tokens`, and `total_cost`. These totals are also printed to the console at the end of the run under an `LLM Usage` heading.
+
+> Note: LLM calls made by [LLM judges](#llm-as-judge-expectations) run within the eval and are captured and counted in these totals alongside the calls made by the code under test.
+
+### Limiting What Is Captured
+
+Full capture includes every prompt, message, and response, which for a [dataset](#datasets) run can produce a results file of tens of megabytes. Set the capture mode in your initializer:
+
+```ruby
+Raif.configure do |config|
+  # :full (default) - prompts, messages, and responses, plus tokens and cost
+  # :summary        - tokens and cost only
+  # :none           - omit the model_completions array entirely
+  config.evals_capture_model_completions = :summary
+end
+```
+
+The per-eval `usage` object and the run's `summary` totals are the same under all three modes; only the per-call prompt and response text is dropped. The effective mode is recorded in the results `configuration` block, so a later reader can tell a deliberately trimmed capture from a run that made no LLM calls at all.
+
 # Datasets
 
 An eval with one hard-coded input tells you whether your prompt works on that input. [`--repeat`](#repeating-evals) samples the model's non-determinism, but it re-runs the same input every time, so nothing in the results can distinguish "this model is worse" from "this one input happens to be hard for it".
@@ -174,7 +375,7 @@ Two things to know about how the pieces fit together in one file:
 
 A dataset is a block that returns an array of cases. The eval will be run against each case in the dataset. Each case is a Hash with up to three keys:
 
-- `id` (**required**) - identifies the case in the console, the results JSON, and [comparisons](#comparing-runs). Ids must be unique within a dataset. A missing or duplicated id raises when the dataset loads, before any LLM call is made, because a case that can't be told apart from another can't be compared against its own past results.
+- `id` (**required**) - identifies the case in the console, the [results JSON](#results), and [comparisons](#comparing-runs). Ids must be unique within a dataset. A missing or duplicated id raises when the dataset loads, before any LLM call is made, because a case that can't be told apart from another can't be compared against its own past results.
 - `input` (**required**) - whatever your `setup` and `eval` blocks need to build the case.
 - `expected` (optional) - ground truth to assert against, for cases where you have a known-correct answer.
 
@@ -235,7 +436,7 @@ Sampling without a `--seed` draws different cases each run, which makes two runs
 
 ## Dataset Results
 
-Each result in the results JSON carries the `case_id` that produced it, alongside the existing `eval_index` and `run_index`. In `summary.eval_pass_rates`, an eval with a dataset reports its overall rate across every case and repeat, plus a `per_case` breakdown:
+Each result in the [results JSON](#results) carries the `case_id` that produced it, alongside the existing `eval_index` and `run_index`. In `summary.eval_pass_rates`, an eval with a dataset reports its overall rate across every case and repeat, plus a `per_case` breakdown:
 
 ```json
 {
@@ -272,139 +473,13 @@ produces expected output
       ✗ LLM judge score (clarity): >= 4
 ```
 
-A failing expectation's description is truncated to 100 characters on these lines. An LLM judge expectation is described by its whole criteria, and the same one repeats under every case that failed it, so at full length it buries the case ids and counts the lines exist to show. Pass `label:` to the judge helpers to choose what appears here; the untruncated text is always in the results JSON, the HTML comparison report, and `--verbose` output.
+A failing expectation's description is truncated to 100 characters on these lines. An [LLM judge](#llm-as-judge-expectations) expectation is described by its whole criteria, and the same one repeats under every case that failed it, so at full length it buries the case ids and counts the lines exist to show. Pass `label:` to the judge helpers to choose what appears here; the untruncated text is always in the results JSON, the HTML comparison report, and `--verbose` output.
 
-Use `--verbose` (or `Raif.config.evals_verbose_output`) to get the full per-expectation output for every case. An app that turned verbose output on in its initializer gets the compact output back with `--no-verbose`, since a dataset at `--repeat 2` prints several hundred lines of judge reasoning under verbose.
+Use [`--verbose`](#verbose-output) (or `Raif.config.evals_verbose_output`) to get the full per-expectation output for every case. An app that turned verbose output on in its initializer gets the compact output back with `--no-verbose`, since a dataset at `--repeat 2` prints several hundred lines of judge reasoning under verbose.
 
-# Running Evals
+# Adding Result Metadata to Expectations
 
-To run your evals, you can run:
-
-```bash
-# Run all eval sets
-bundle exec raif evals
-
-# Run a specific eval set file
-bundle exec raif evals ./raif_evals/eval_sets/my_eval_set.rb
-
-# Run a specific eval block by line number
-bundle exec raif evals ./raif_evals/eval_sets/my_eval_set.rb:23
-
-# Run multiple files
-bundle exec raif evals ./raif_evals/eval_sets/file1.rb ./raif_evals/eval_sets/file2.rb:15
-
-# Run each eval 5 times and report a pass rate for each
-bundle exec raif evals --repeat 5
-
-# Restrict a dataset run to specific cases, or a random sample of them
-bundle exec raif evals --cases climate-report,earnings-call
-bundle exec raif evals --sample 5 --seed 42
-
-# Print every expectation for every case rather than one line per case
-bundle exec raif evals --verbose
-
-# Force the compact one-line-per-case output, even if your initializer turns verbose on
-bundle exec raif evals --no-verbose
-```
-
-By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
-
-While Raif makes it intentionally difficult to run your normal test suite using real LLM provider API keys, the nature of evals makes it essential that actual API keys are available. When running evals, Raif will load API keys from your initializer, as described in the [setup docs](../getting_started/setup#initial-setup).
-
-Once your evals have run, a JSON file will be created in `raif_evals/results` with the results of each eval. The filename and the file's `configuration` block both record the model the run used, so results from different models can be told apart:
-
-```json
-{
-  "run_at": "2026-08-02T18:14:22Z",
-  "configuration": {
-    "default_llm_model_key": "open_ai_responses_gpt_5_6_terra",
-    "evals_default_llm_judge_model_key": "anthropic_claude_5_sonnet",
-    "repeats": 5,
-    "capture_model_completions": "full",
-    "sample": null,
-    "seed": null
-  }
-}
-```
-
-## Repeating Evals
-
-LLM responses vary between runs, so a single pass/fail per eval cannot separate a real quality difference from one unlucky sample. `--repeat N` (or `RAIF_EVAL_REPEATS=N`) runs each eval N times, re-running `setup` and the eval block for each so the repeats are independent samples rather than a re-scoring of one response.
-
-Repeats sample the model, not your inputs. To vary the input as well, give the eval a [dataset](#datasets) - the two compose, and the run becomes cases &times; repeats.
-
-Each result gains a `run_index` plus an `eval_index` identifying which eval block produced it, and the run's `summary` gains an `eval_pass_rates` array with one row per distinct eval. Rows are keyed on `eval_index` rather than the description, so two eval blocks that happen to share a description still get a rate each:
-
-```json
-{
-  "eval_set": "MyEvalSet",
-  "description": "produces expected output",
-  "runs": 5,
-  "passed": 4,
-  "pass_rate": 0.8
-}
-```
-
-Pass rates are printed to the console at the end of the run. This is the number to compare when evaluating one model against another.
-
-## Captured LLM Calls
-
-Every LLM call made during an eval is captured and included in the results JSON. Because each eval runs in a transaction that is rolled back, these records are captured before the rollback so they're preserved in the results even though the underlying `Raif::ModelCompletion` rows are not persisted.
-
-For each eval, the results include:
-- A `model_completions` array with one entry per LLM call. Each entry captures the `llm_model_key`, `model_api_name`, `system_prompt`, `messages`, the model's `response`, any `response_tool_calls`, token counts (`prompt_tokens`, `completion_tokens`, `total_tokens`, and cache token counts), and cost (`prompt_token_cost`, `output_token_cost`, `total_cost`).
-- A `usage` object summarizing the number of LLM calls, total tokens, and total cost for that eval.
-
-```json
-{
-  "description": "Raif::Tasks::DocumentSummarization produces expected output",
-  "passed": true,
-  "expectation_results": [ ... ],
-  "usage": {
-    "model_completions": 1,
-    "prompt_tokens": 1200,
-    "completion_tokens": 300,
-    "total_tokens": 1500,
-    "total_cost": 0.0075
-  },
-  "model_completions": [
-    {
-      "llm_model_key": "open_ai_gpt_4o",
-      "model_api_name": "gpt-4o",
-      "system_prompt": "...",
-      "messages": [ ... ],
-      "response": "...",
-      "prompt_tokens": 1200,
-      "completion_tokens": 300,
-      "total_tokens": 1500,
-      "total_cost": 0.0075
-    }
-  ]
-}
-```
-
-The run's top-level `summary` also aggregates totals across every eval: `total_model_completions`, `total_prompt_tokens`, `total_completion_tokens`, `total_tokens`, and `total_cost`. These totals are also printed to the console at the end of the run under an `LLM Usage` heading.
-
-> Note: LLM calls made by [LLM judges](#llm-as-judge-expectations) run within the eval and are captured and counted in these totals alongside the calls made by the code under test.
-
-### Limiting What Is Captured
-
-Full capture includes every prompt, message, and response, which for a [dataset](#datasets) run can produce a results file of tens of megabytes. Set the capture mode in your initializer:
-
-```ruby
-Raif.configure do |config|
-  # :full (default) - prompts, messages, and responses, plus tokens and cost
-  # :summary        - tokens and cost only
-  # :none           - omit the model_completions array entirely
-  config.evals_capture_model_completions = :summary
-end
-```
-
-The per-eval `usage` object and the run's `summary` totals are the same under all three modes; only the per-call prompt and response text is dropped. The effective mode is recorded in the results `configuration` block, so a later reader can tell a deliberately trimmed capture from a run that made no LLM calls at all.
-
-## Adding Result Metadata to Expectations
-
-You can attach metadata to any `expect` block to capture additional context that will be stored in the results JSON file. This is useful for tracking scores, metrics, or other relevant information alongside pass/fail results.
+You can attach metadata to any `expect` block to capture additional context that will be stored in the [results JSON file](#results). This is useful for tracking scores, metrics, or other relevant information alongside pass/fail results.
 
 ```ruby
 result_metadata = { 
@@ -465,7 +540,7 @@ end
 - `scale:` and `higher_is_better:` (default `true`) are recorded with the value so that [`evals:compare`](#comparing-runs) can tell an improvement from a regression. They are independent of the gate: `higher_is_better` says which direction is good, `min:`/`max:` say where the eval starts failing.
 - **The name is the metric**, and recording the same one twice for a single eval raises. The summary aggregates by name, so two of them would be averaged into one row, where a regression in one can be masked by an improvement in the other. Values drawn from a single response would also be counted as independent samples, which narrows the confidence interval on correlated data. To score several things on one metric, combine the values and record one score.
 
-Each eval result gains a `scores` array:
+Each eval result in the [results JSON](#results) gains a `scores` array:
 
 ```json
 "scores": [
@@ -993,7 +1068,7 @@ end
 
 # Comparing Runs
 
-Once you have two result files, `evals:compare` diffs them:
+Once you have two [result files](#results), `evals:compare` diffs them:
 
 ```bash
 bundle exec raif evals:compare \
@@ -1060,7 +1135,7 @@ Options:
 Some specific behaviors:
 
 - **Cases present in only one run are reported under NOT COMPARABLE, never dropped.** A silently omitted case is indistinguishable from agreement. An expectation that exists on only one side is reported the same way, which is what a renamed description looks like.
-- **Runs judged by different models are refused.** Scores from two different judges measure two different things, so the command exits 2 without printing a comparison. `--allow-judge-mismatch` overrides this and labels the output accordingly.
+- **Runs judged by different models are refused.** Scores from two different [judge models](#configuring-the-judge-llm-model) measure two different things, so the command exits 2 without printing a comparison. `--allow-judge-mismatch` overrides this and labels the output accordingly.
 - **Score direction is honored.** A score declared `higher_is_better: false` counts a decrease as an improvement, and ungated observational scores are reported but never trip `--fail-on-regression`.
 - **The threshold is relative to the baseline, not absolute.** A pass rate, a 1-5 rubric score, and a latency in milliseconds are not in the same units, so one absolute threshold cannot mean the same thing to all three: `0.25` would ask for a quarter of an eval's runs on one row and a quarter of a millisecond on the next, which makes the flag fire on noise until you turn it off. Each regression is divided by what it started from instead, so `--fail-on-regression 0.25` asks one question everywhere - did anything get more than 25% worse. A `clarity` mean of 4.0 dropping to 3.6 is `0.1`; an `elapsed_ms` mean of 1000 rising to 1200 is `0.2`. Score moves print their relative change next to the absolute one so you can see which rows are near the threshold. For a pass rate that started at 1.0 - an eval that used to pass every run - the relative and absolute readings are the same number, so the common case reads exactly as you would expect.
 - **A regression from a baseline of zero has no fraction to take, and trips any threshold.** A gated `error_count` going from 0 to 3 is a real regression that cannot be expressed as a percentage of zero, so it is reported with a null magnitude and always fails the gate rather than being skipped for want of a denominator.
@@ -1068,39 +1143,4 @@ Some specific behaviors:
 - **No Rails boot.** The command reads two JSON files and does arithmetic, so it does not load your application, need a database, or need an API key.
 
 At `--repeat 1` a single unlucky draw is indistinguishable from a regression. The reported standard deviation indicates how much of a difference is run-to-run variation.
-
-# Setting the LLM for Evals
-
-Raif defaults to using `Raif.config.default_llm_model_key` for LLM API calls. You can override this setting via the `RAIF_DEFAULT_LLM_MODEL_KEY` environment variable.
-
-```bash
-RAIF_DEFAULT_LLM_MODEL_KEY=anthropic_claude_5_sonnet bundle exec raif evals
-```
-
-# Verbose Output
-
-When debugging failing evals or wanting to see more details about your test runs, you can enable verbose output to see metadata and LLM judge reasoning:
-
-```ruby
-# In your initializer
-Raif.configure do |config|
-  config.evals_verbose_output = true
-end
-```
-
-Or per run, with `--verbose`:
-
-```bash
-bundle exec raif evals --verbose
-```
-
-`--no-verbose` (or `RAIF_EVAL_VERBOSE=0`) turns it back off for one run, which is what an app whose initializer sets `evals_verbose_output = true` needs to read a [dataset](#datasets) run: verbose prints every expectation for every case, so a 3-case dataset at `--repeat 2` buries the result in judge reasoning. Passing neither flag leaves the configured value alone.
-
-When enabled, this will display:
-- Result metadata for each expectation
-- LLM judge reasoning and confidence scores
-- Every expectation for every [dataset](#datasets) case, rather than one line per case
-- Additional debugging information
-
-This is particularly useful when working with LLM judges to understand why they made certain decisions.
 

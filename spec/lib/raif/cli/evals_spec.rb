@@ -11,12 +11,13 @@ RSpec.describe Raif::CLI::Evals do
 
   around do |example|
     original_env = ENV.to_h.slice("RAIF_EVAL_REPEATS", "RAIF_EVAL_CASES", "RAIF_EVAL_SAMPLE", "RAIF_EVAL_SEED", "RAIF_EVAL_VERBOSE",
-      "RAIF_RUNNING_EVALS")
+      "RAIF_EVAL_RESUME", "RAIF_RUNNING_EVALS")
     original_verbose = Raif.config.evals_verbose_output
 
     example.run
 
-    %w[RAIF_EVAL_REPEATS RAIF_EVAL_CASES RAIF_EVAL_SAMPLE RAIF_EVAL_SEED RAIF_EVAL_VERBOSE RAIF_RUNNING_EVALS].each do |key|
+    %w[RAIF_EVAL_REPEATS RAIF_EVAL_CASES RAIF_EVAL_SAMPLE RAIF_EVAL_SEED RAIF_EVAL_VERBOSE RAIF_EVAL_RESUME
+       RAIF_RUNNING_EVALS].each do |key|
       original_env.key?(key) ? ENV[key] = original_env[key] : ENV.delete(key)
     end
     Raif.config.evals_verbose_output = original_verbose
@@ -35,7 +36,8 @@ RSpec.describe Raif::CLI::Evals do
   it "defaults to one repeat and no case selection" do
     run_cli([])
 
-    expect(Raif::Evals::Run).to have_received(:new).with(file_paths: nil, repeats: 1, cases: nil, sample: nil, seed: nil)
+    expect(Raif::Evals::Run).to have_received(:new)
+      .with(file_paths: nil, repeats: 1, cases: nil, sample: nil, seed: nil, resume_path: nil)
   end
 
   it "passes --repeat, --cases, --sample and --seed through" do
@@ -46,7 +48,8 @@ RSpec.describe Raif::CLI::Evals do
       repeats: 3,
       cases: ["climate-report", "earnings-call"],
       sample: 5,
-      seed: 42
+      seed: 42,
+      resume_path: nil
     )
   end
 
@@ -58,7 +61,41 @@ RSpec.describe Raif::CLI::Evals do
 
     run_cli([])
 
-    expect(Raif::Evals::Run).to have_received(:new).with(file_paths: nil, repeats: 4, cases: ["atom", "monad"], sample: 2, seed: 7)
+    expect(Raif::Evals::Run).to have_received(:new)
+      .with(file_paths: nil, repeats: 4, cases: ["atom", "monad"], sample: 2, seed: 7, resume_path: nil)
+  end
+
+  describe "--resume" do
+    let(:log_path) { Rails.root.join("tmp", "eval_run_resume_cli.partial.jsonl") }
+
+    before do
+      FileUtils.mkdir_p(File.dirname(log_path))
+      File.write(log_path, "{}\n")
+    end
+
+    after { FileUtils.rm_f(log_path) }
+
+    it "passes the log path through" do
+      run_cli(["--resume", log_path.to_s])
+
+      expect(Raif::Evals::Run).to have_received(:new).with(hash_including(resume_path: log_path.to_s))
+    end
+
+    it "reads RAIF_EVAL_RESUME" do
+      ENV["RAIF_EVAL_RESUME"] = log_path.to_s
+
+      run_cli([])
+
+      expect(Raif::Evals::Run).to have_received(:new).with(hash_including(resume_path: log_path.to_s))
+    end
+
+    it "rejects a missing log before booting the app" do
+      cli = described_class.new(["--resume", "/nope/eval_run.partial.jsonl"])
+      allow(cli).to receive(:load_rails_application)
+
+      expect { cli.run }.to raise_error(SystemExit).and output(/Resume log not found/).to_stdout
+      expect(cli).not_to have_received(:load_rails_application)
+    end
   end
 
   it "lets a flag win over the environment" do
