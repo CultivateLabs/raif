@@ -1,0 +1,86 @@
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1><%= t(".title", id: @archive.id) %></h1>
+  <%= link_to t(".back_to_archives"), raif.admin_archives_path, class: "btn btn-outline-secondary" %>
+</div>
+
+<div class="alert alert-secondary">
+  <%= t(".not_browsable_notice") %>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t("raif.admin.common.details") %></h5>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.id") %>:</strong></div>
+      <div class="col-md-9"><%= @archive.id %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.resource_type") %>:</strong></div>
+      <div class="col-md-9"><%= @archive.resource_type %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.record_id_range") %>:</strong></div>
+      <div class="col-md-9"><%= "#{@archive.first_record_id}-#{@archive.last_record_id}" %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.record_count") %>:</strong></div>
+      <div class="col-md-9"><%= number_with_delimiter(@archive.record_count) %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.cutoff_at") %>:</strong></div>
+      <div class="col-md-9"><%= @archive.cutoff_at.rfc822 %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.key") %>:</strong></div>
+      <div class="col-md-9"><code><%= @archive.key %></code></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.location") %>:</strong></div>
+      <div class="col-md-9"><%= @archive.location.present? ? content_tag(:code, @archive.location) : "-" %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.compressed_bytes") %>:</strong></div>
+      <div class="col-md-9"><%= number_to_human_size(@archive.compressed_bytes) %> (<%= number_with_delimiter(@archive.compressed_bytes) %>)</div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.checksum_sha256") %>:</strong></div>
+      <div class="col-md-9"><code><%= @archive.checksum_sha256 %></code></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
+      <div class="col-md-9"><%= @archive.created_at.rfc822 %></div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4" data-controller="raif--copy-to-clipboard">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t(".working_with_title") %></h5>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t(".working_with_format_label") %>:</strong></div>
+      <div class="col-md-9"><%= t(".working_with_format") %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t(".working_with_fetching_label") %>:</strong></div>
+      <div class="col-md-9">
+        <%= t(".working_with_fetching") %>
+        <pre class="mt-2 mb-0"><%= "# e.g. with S3-backed storage:\naws s3 cp #{@archive.location.presence || @archive.key} #{File.basename(@archive.key)}\nshasum -a 256 #{File.basename(@archive.key)}  # must equal #{@archive.checksum_sha256}" %></pre>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t(".working_with_inspecting_label") %>:</strong></div>
+      <div class="col-md-9">
+        <%= t(".working_with_inspecting") %>
+        <pre class="mt-2 mb-0"><%= "gunzip -c #{File.basename(@archive.key)} | head -1   # manifest\ngunzip -c #{File.basename(@archive.key)} | grep '\"id\":<record id>,'" %></pre>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t(".working_with_caveats_label") %>:</strong></div>
+      <div class="col-md-9"><%= t(".working_with_caveats") %></div>
+    </div>
+  </div>
+</div>

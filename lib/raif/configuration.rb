@@ -4,6 +4,8 @@ module Raif
   class Configuration
     attr_accessor :agent_types,
       :anthropic_api_key,
+      :archive_enabled,
+      :archive_storage,
       :anthropic_message_batches_beta_header,
       :bedrock_models_enabled,
       :anthropic_models_enabled,
@@ -34,6 +36,7 @@ module Raif
       :model_completion_authorizer,
       :model_completion_batch_max_age,
       :model_completion_batch_poll_schedule,
+      :model_completion_retention_period,
       :model_superclass,
       :open_ai_api_key,
       :open_ai_batch_completion_window,
@@ -76,6 +79,16 @@ module Raif
       @authorize_controller_action = ->{ false }
       @aws_bedrock_region = "us-east-1"
       @aws_bedrock_model_name_prefix = "us"
+      # Master switch for the archive-and-cull capability. Explicit opt-in
+      # only: with the default false (and no archive_storage adapter),
+      # upgrading the gem never deletes anything.
+      @archive_enabled = false
+      # Storage adapter instance implementing
+      # write(key:, io:, checksum_sha256:), returning a location string and
+      # raising on any failure. See Raif::ArchiveStorage::FileSystem for a
+      # reference implementation; production hosts typically supply their own
+      # (e.g. S3-backed) adapter.
+      @archive_storage = nil
       @bedrock_embedding_models_enabled = false
       @task_system_prompt_intro = "You are a helpful assistant."
       @conversation_entries_controller = "Raif::ConversationEntriesController"
@@ -136,6 +149,14 @@ module Raif
       # If the cancel fails (network, 5xx, etc.), the local force-fail still
       # happens and the provider-side batch may continue and be billed.
       @model_completion_batch_max_age = 26.hours
+      # How long completed/failed Raif::ModelCompletion rows are retained
+      # before Raif::ArchiveModelCompletionsJob archives and deletes them
+      # (e.g. 6.months). nil (the default) disables model completion culling
+      # even when archive_enabled is true. validate! rejects values below
+      # 1.month: cost and budget consumers aggregate by billing period, so an
+      # accidentally tiny retention value must never be able to eat rows out
+      # from under an open billing window.
+      @model_completion_retention_period = nil
       @model_superclass = "ApplicationRecord"
       @open_ai_api_key = default_disable_llm_api_requests? ? "placeholder-open-ai-api-key" : ENV["OPENAI_API_KEY"]
       @open_ai_api_version = nil
@@ -173,6 +194,12 @@ module Raif
     end
 
     def validate!
+      # Before the LLM-registry early return below: archive validation guards
+      # a destructive path (culling), so a node with no LLM API keys (e.g. a
+      # misconfigured cron/worker box) must still have its archive settings
+      # validated.
+      validate_archive_config!
+
       if Raif.llm_registry.blank?
         puts <<~EOS
 
@@ -262,6 +289,26 @@ module Raif
     end
 
   private
+
+    def validate_archive_config!
+      if archive_enabled && archive_storage.nil?
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.archive_storage is required when Raif.config.archive_enabled is true. Provide an adapter implementing write(key:, io:, checksum_sha256:) (see Raif::ArchiveStorage::FileSystem)" # rubocop:disable Layout/LineLength
+      end
+
+      if archive_storage.present? && !archive_storage.respond_to?(:write)
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.archive_storage must implement write(key:, io:, checksum_sha256:)"
+      end
+
+      # Billing-window floor, enforced whether or not archiving is enabled: a
+      # misconfigured retention value must never be able to reach inside an
+      # open billing period.
+      if model_completion_retention_period.present? && model_completion_retention_period < 1.month
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.model_completion_retention_period must be at least 1 month (got #{model_completion_retention_period.inspect})"
+      end
+    end
 
     # By default, evals run in the test environment, but need real API keys.
     # In normal tests, we insert placeholders to make it hard to accidentally rack up an LLM API bill.

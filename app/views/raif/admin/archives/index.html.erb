@@ -1,0 +1,37 @@
+<h1 class="my-4"><%= t("raif.admin.common.archives") %></h1>
+
+<% if Raif.config.archive_enabled && Raif.config.model_completion_retention_period.present? %>
+  <div class="alert alert-info">
+    <%= t("raif.admin.archives.index.retention_policy_notice", period: Raif.config.model_completion_retention_period.inspect) %>
+  </div>
+<% end %>
+
+<% if @archives.any? %>
+  <div class="table-responsive" data-controller="raif--copy-to-clipboard">
+    <table class="table table-striped table-hover">
+      <thead class="table-light">
+        <tr>
+          <th><%= t("raif.admin.common.id") %></th>
+          <th><%= t("raif.admin.common.resource_type") %></th>
+          <th><%= t("raif.admin.common.record_id_range") %></th>
+          <th><%= t("raif.admin.common.record_count") %></th>
+          <th><%= t("raif.admin.common.compressed_bytes") %></th>
+          <th><%= t("raif.admin.common.cutoff_at") %></th>
+          <th><%= t("raif.admin.common.key") %></th>
+          <th><%= t("raif.admin.common.created_at") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= render partial: "raif/admin/archives/archive", collection: @archives %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-4">
+    <%= raif_pagy_nav(@pagy) %>
+  </div>
+<% else %>
+  <div class="alert alert-info">
+    <%= t("raif.admin.common.no_archives") %>
+  </div>
+<% end %>

@@ -109,3 +109,9 @@
     </div>
   </div>
 </div>
+
+<% if Raif.config.archive_enabled && Raif.config.model_completion_retention_period.present? %>
+  <p class="text-muted mt-4">
+    <%= t("raif.admin.stats.index.retention_footnote", period: Raif.config.model_completion_retention_period.inspect) %>
+  </p>
+<% end %>

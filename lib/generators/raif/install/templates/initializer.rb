@@ -304,6 +304,44 @@ Raif.configure do |config|
   #   { account_id: model_completion.source.try(:account_id) }
   # }
 
+  # Archival of old Raif::ModelCompletion rows. Disabled by default: with
+  # archive_enabled false and no archive_storage adapter configured, Raif
+  # never deletes anything. When enabled, schedule
+  # Raif::ArchiveModelCompletionsJob (e.g. nightly); each run archives
+  # completions older than model_completion_retention_period to your storage
+  # adapter as gzip JSONL, records a Raif::Archive audit row after a
+  # successful upload, and only then deletes the archived completions.
+  # Durable cost reporting is unaffected: each completion's
+  # Raif::InferenceCostEvent survives and is stamped with the archive it was
+  # culled into. Archives contain full prompts and responses, so the storage
+  # target must be private, encrypted, and access-controlled at least as
+  # strictly as your application data; apply that policy (and any lifecycle
+  # rules) to the whole bucket/prefix, since a crashed run can leave an
+  # uploaded object that no Raif::Archive row references. Preview what a run
+  # would do with Raif::ArchiveModelCompletionsJob.dry_run. A terminal
+  # completion whose cost event is missing or older than the completion is
+  # never culled; schedule Raif::RepairInferenceCostEventsJob periodically
+  # (e.g. daily) so such rows self-heal instead of accumulating.
+  # config.archive_enabled = false
+
+  # Storage adapter used by the archive job. Any object implementing:
+  #   write(key:, io:, checksum_sha256:) # upload; returns a nonblank location string; must raise on any failure
+  # Raif ships Raif::ArchiveStorage::FileSystem (local disk); production
+  # hosts typically supply their own adapter (e.g. S3-backed, passing
+  # checksum_sha256 on the PUT so the store verifies integrity server-side).
+  # config.archive_storage = Raif::ArchiveStorage::FileSystem.new(root: Rails.root.join("storage", "raif-archives"))
+
+  # How long model completions are retained before being archived and
+  # deleted. Applies to completed/failed completions (guarded by their cost
+  # events) AND to nonterminal completions older than the cutoff - pending
+  # rows orphaned by crashed or killed processes are archived and culled
+  # through the same path, and since they have no cost event, no per-record
+  # link back to their archive survives; recovery for those is a manual
+  # search across candidate archive objects. nil (the default) disables
+  # model completion culling even when archive_enabled is true. Must be at
+  # least 1 month.
+  # config.model_completion_retention_period = 6.months
+
   # Timeout settings for LLM API requests (in seconds). All default to nil (use Faraday defaults).
   # config.request_open_timeout = nil  # Time to wait for a connection to be opened
   # config.request_read_timeout = nil  # Time to wait for data to be read
