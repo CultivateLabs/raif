@@ -318,11 +318,14 @@ Raif.configure do |config|
   # strictly as your application data; apply that policy (and any lifecycle
   # rules) to the whole bucket/prefix, since a crashed run can leave an
   # uploaded object that no Raif::Archive row references. Preview what a run
-  # would do with Raif::ArchiveModelCompletionsJob.dry_run.
+  # would do with Raif::ArchiveModelCompletionsJob.dry_run. A terminal
+  # completion whose cost event is missing or older than the completion is
+  # never culled; schedule Raif::RepairInferenceCostEventsJob periodically
+  # (e.g. daily) so such rows self-heal instead of accumulating.
   # config.archive_enabled = false
 
   # Storage adapter used by the archive job. Any object implementing:
-  #   write(key:, io:, checksum_sha256:) # upload; returns a location string; must raise on any failure
+  #   write(key:, io:, checksum_sha256:) # upload; returns a nonblank location string; must raise on any failure
   # Raif ships Raif::ArchiveStorage::FileSystem (local disk); production
   # hosts typically supply their own adapter (e.g. S3-backed, passing
   # checksum_sha256 on the PUT so the store verifies integrity server-side).
