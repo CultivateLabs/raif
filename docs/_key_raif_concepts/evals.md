@@ -21,6 +21,7 @@ This will:
 - Within `raif_evals`, it will also create the following directories:
   - `eval_sets` - Where your actual evals will go.
   - `files` - For any files (e.g. a PDF document or HTML page) that you want to use in your evals.
+  - `datasets` - For [datasets](#datasets) of eval cases.
   - `results` - Where the results of your eval runs will be stored.
 
 # Creating an Eval Set
@@ -110,6 +111,171 @@ class Raif::Evals::Tasks::DocumentSummarizationEvalSet < Raif::Evals::EvalSet
 end
 ```
 
+# Datasets
+
+An eval with one hard-coded input tells you whether your prompt works on that input. [`--repeat`](#repeating-evals) samples the model's non-determinism, but it re-runs the same input every time, so nothing in the results can distinguish "this model is worse" from "this one input happens to be hard for it".
+
+A dataset runs the same eval body over many inputs, and reports a pass rate and a score for each one. Declare it with the `dataset` macro and point an eval at it by name with `dataset:`:
+
+```ruby
+class Raif::Evals::Tasks::DocumentSummarizationEvalSet < Raif::Evals::EvalSet
+  dataset :documents do
+    jsonl("documents.jsonl") # raif_evals/datasets/documents.jsonl
+  end
+
+  # setup receives the case, so per-case fixtures are built where fixtures already live
+  setup do |eval_case|
+    @user = User.create!(email: "test@example.com")
+    @document = Document.create!(
+      title: eval_case.input["title"],
+      content: file(eval_case.input["file"]),
+      creator: @user
+    )
+  end
+
+  eval "produces expected output", dataset: :documents do |eval_case|
+    task = Raif::Tasks::DocumentSummarization.run(creator: @user, document: @document)
+
+    expect "task completes successfully" do
+      task.completed?
+    end
+
+    expect "mentions the document's main subject" do
+      task.parsed_response.downcase.include?(eval_case.expected["subject"])
+    end
+
+    expect_llm_judge_score(
+      task.parsed_response,
+      scoring_rubric: Raif::Evals::ScoringRubric.clarity,
+      min_passing_score: 4
+    )
+  end
+end
+```
+
+With `raif_evals/datasets/documents.jsonl`:
+
+```json
+{"id": "climate-report", "input": {"file": "documents/climate_report.html", "title": "2026 Emissions Outlook"}, "expected": {"subject": "emissions"}}
+{"id": "earnings-call",  "input": {"file": "documents/earnings_call.html",  "title": "Q2 Earnings Call"},      "expected": {"subject": "revenue"}}
+{"id": "press-release",  "input": {"file": "documents/press_release.html",  "title": "Product Launch"},        "expected": {"subject": "launch"}}
+```
+
+`setup`, `teardown`, and the `eval` block all accept the case as an optional block argument. Blocks that don't declare one are called as before, so adding a dataset to an eval set never requires touching its other evals.
+
+A case is an input (i.e. a single row in a dataset), not a run. The `eval` block is the procedure; the case is what you feed it. Raif runs the block once per case, times the number of [repeats](#repeating-evals).
+
+Two things to know about how the pieces fit together in one file:
+
+- **Declare a dataset above the evals that use it.** `dataset:` is checked when the class body loads, so a name that has not been declared yet raises there rather than silently running zero cases.
+- **`setup` and `teardown` are shared by every eval in the set**, so an eval set that mixes dataset and non-dataset evals hands them a `nil` case for the non-dataset ones.
+
+## Dataset Shape
+
+A dataset is a block that returns an array of cases. The eval will be run against each case in the dataset. Each case is a Hash with up to three keys:
+
+- `id` (**required**) - identifies the case in the console, the results JSON, and [comparisons](#comparing-runs). Ids must be unique within a dataset. A missing or duplicated id raises when the dataset loads, before any LLM call is made, because a case that can't be told apart from another can't be compared against its own past results.
+- `input` (**required**) - whatever your `setup` and `eval` blocks need to build the case.
+- `expected` (optional) - ground truth to assert against, for cases where you have a known-correct answer.
+
+Inside your blocks, the case is a `Raif::Evals::EvalCase` exposing `id`, `input`, and `expected`. `[]` reads from `input`, so `eval_case["title"]` and `eval_case.input["title"]` are the same thing.
+
+## Dataset Sources
+
+`jsonl` and `json` read from `raif_evals/datasets`:
+
+```ruby
+dataset :documents do
+  jsonl("documents.jsonl") # one JSON case object per line
+end
+
+dataset :short_documents do
+  json("short_documents.json") # a JSON array of case objects
+end
+```
+
+`files` globs `raif_evals/files` and returns matching paths, relative to that directory, so they compose with the existing `file` helper. Use it when a case is a whole file:
+
+```ruby
+dataset :corpora do
+  files("corpora/*.json").map do |path|
+    { id: File.basename(path, ".json"), input: JSON.parse(file(path)) }
+  end
+end
+```
+
+The `dataset` block just has to return an array of case hashes, so a dataset can come from anywhere - a fixture directory, a constant, a query against your own models. Raif imposes no row schema beyond `id`/`input`/`expected`.
+
+## Datasets and Repeats
+
+Datasets and `--repeat` compose: the run is cases &times; repeats independent runs. Each one re-runs `setup` with its own case, inside its own database transaction that is rolled back afterwards, so no case can leak state into another.
+
+An exception raised while running one case is recorded as an error for that case only; the remaining cases still run. That covers `setup` as well as the eval block, so a 20-case dataset does not lose 19 results to one bad fixture.
+
+## Selecting Cases to Run
+
+A full dataset run costs real money. These flags restrict which cases run:
+
+```bash
+# Run only the named cases
+bundle exec raif evals --cases climate-report,earnings-call
+
+# Run a random 5 cases from each dataset
+bundle exec raif evals --sample 5
+
+# Run the same random 5 cases as a previous --sample run
+bundle exec raif evals --sample 5 --seed 42
+```
+
+Each flag has an environment variable equivalent, alongside the existing `RAIF_EVAL_REPEATS`: `RAIF_EVAL_CASES`, `RAIF_EVAL_SAMPLE`, and `RAIF_EVAL_SEED`.
+
+Sampling without a `--seed` draws different cases each run, which makes two runs uncomparable case-for-case. The same seed and sample size draw the same cases again.
+
+`--cases` filters every dataset in the run, so an id that belongs to one eval set's dataset simply skips the others. If it matches nothing anywhere, the run exits non-zero rather than reporting a suite of zero evals that passed.
+
+## Dataset Results
+
+Each result in the results JSON carries the `case_id` that produced it, alongside the existing `eval_index` and `run_index`. In `summary.eval_pass_rates`, an eval with a dataset reports its overall rate across every case and repeat, plus a `per_case` breakdown:
+
+```json
+{
+  "eval_set": "Raif::Evals::Tasks::DocumentSummarizationEvalSet",
+  "description": "produces expected output",
+  "eval_index": 0,
+  "cases": 3,
+  "repeats": 2,
+  "runs": 6,
+  "passed": 5,
+  "pass_rate": 0.8333,
+  "per_case": [
+    { "case_id": "climate-report", "runs": 2, "passed": 2, "pass_rate": 1.0 },
+    { "case_id": "earnings-call",  "runs": 2, "passed": 2, "pass_rate": 1.0 },
+    { "case_id": "press-release",  "runs": 2, "passed": 1, "pass_rate": 0.5 }
+  ]
+}
+```
+
+`runs` is the number of executions counted in the row it appears on: `cases` &times; `repeats` at the top level, and just `repeats` within a `per_case` entry. `run_index` on an individual result identifies which repeat of its case produced it, so it never exceeds `repeats`.
+
+The console output stays compact for dataset evals - one line per case per repeat, since a 20-case dataset at `--repeat 3` would otherwise print several hundred expectation lines. Failing expectations are still printed under the case that failed them:
+
+```
+Running Raif::Evals::Tasks::DocumentSummarizationEvalSet
+--------------------------------------------------
+produces expected output
+  ✓ climate-report  run 1  3/3 expectations  clarity 5
+  ✓ climate-report  run 2  3/3 expectations  clarity 4
+  ✓ earnings-call   run 1  3/3 expectations  clarity 4
+  ✓ earnings-call   run 2  3/3 expectations  clarity 5
+  ✓ press-release   run 1  3/3 expectations  clarity 4
+  ✗ press-release   run 2  2/3 expectations  clarity 3
+      ✗ LLM judge score (clarity): >= 4
+```
+
+A failing expectation's description is truncated to 100 characters on these lines. An LLM judge expectation is described by its whole criteria, and the same one repeats under every case that failed it, so at full length it buries the case ids and counts the lines exist to show. Pass `label:` to the judge helpers to choose what appears here; the untruncated text is always in the results JSON, the HTML comparison report, and `--verbose` output.
+
+Use `--verbose` (or `Raif.config.evals_verbose_output`) to get the full per-expectation output for every case. An app that turned verbose output on in its initializer gets the compact output back with `--no-verbose`, since a dataset at `--repeat 2` prints several hundred lines of judge reasoning under verbose.
+
 # Running Evals
 
 To run your evals, you can run:
@@ -129,6 +295,16 @@ bundle exec raif evals ./raif_evals/eval_sets/file1.rb ./raif_evals/eval_sets/fi
 
 # Run each eval 5 times and report a pass rate for each
 bundle exec raif evals --repeat 5
+
+# Restrict a dataset run to specific cases, or a random sample of them
+bundle exec raif evals --cases climate-report,earnings-call
+bundle exec raif evals --sample 5 --seed 42
+
+# Print every expectation for every case rather than one line per case
+bundle exec raif evals --verbose
+
+# Force the compact one-line-per-case output, even if your initializer turns verbose on
+bundle exec raif evals --no-verbose
 ```
 
 By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
@@ -143,7 +319,10 @@ Once your evals have run, a JSON file will be created in `raif_evals/results` wi
   "configuration": {
     "default_llm_model_key": "open_ai_responses_gpt_5_6_terra",
     "evals_default_llm_judge_model_key": "anthropic_claude_5_sonnet",
-    "repeats": 5
+    "repeats": 5,
+    "capture_model_completions": "full",
+    "sample": null,
+    "seed": null
   }
 }
 ```
@@ -151,6 +330,8 @@ Once your evals have run, a JSON file will be created in `raif_evals/results` wi
 ## Repeating Evals
 
 LLM responses vary between runs, so a single pass/fail per eval cannot separate a real quality difference from one unlucky sample. `--repeat N` (or `RAIF_EVAL_REPEATS=N`) runs each eval N times, re-running `setup` and the eval block for each so the repeats are independent samples rather than a re-scoring of one response.
+
+Repeats sample the model, not your inputs. To vary the input as well, give the eval a [dataset](#datasets) - the two compose, and the run becomes cases &times; repeats.
 
 Each result gains a `run_index` plus an `eval_index` identifying which eval block produced it, and the run's `summary` gains an `eval_pass_rates` array with one row per distinct eval. Rows are keyed on `eval_index` rather than the description, so two eval blocks that happen to share a description still get a rate each:
 
@@ -206,6 +387,21 @@ The run's top-level `summary` also aggregates totals across every eval: `total_m
 
 > Note: LLM calls made by [LLM judges](#llm-as-judge-expectations) run within the eval and are captured and counted in these totals alongside the calls made by the code under test.
 
+### Limiting What Is Captured
+
+Full capture includes every prompt, message, and response, which for a [dataset](#datasets) run can produce a results file of tens of megabytes. Set the capture mode in your initializer:
+
+```ruby
+Raif.configure do |config|
+  # :full (default) - prompts, messages, and responses, plus tokens and cost
+  # :summary        - tokens and cost only
+  # :none           - omit the model_completions array entirely
+  config.evals_capture_model_completions = :summary
+end
+```
+
+The per-eval `usage` object and the run's `summary` totals are the same under all three modes; only the per-call prompt and response text is dropped. The effective mode is recorded in the results `configuration` block, so a later reader can tell a deliberately trimmed capture from a run that made no LLM calls at all.
+
 ## Adding Result Metadata to Expectations
 
 You can attach metadata to any `expect` block to capture additional context that will be stored in the results JSON file. This is useful for tracking scores, metrics, or other relevant information alongside pass/fail results.
@@ -238,9 +434,79 @@ The metadata will be included in the results JSON:
 }
 ```
 
-This is particularly useful when using [LLM judges](#llm-as-judge-expectations) to capture their scores and reasoning alongside your pass/fail criteria.
+Metadata holds context that isn't a measurement - a judge's reasoning, a case label, the model's raw response. It is stored but never aggregated or compared; [scores](#scores) are the mechanism for numbers that are.
 
+# Scores
 
+`expect` answers yes or no. `score` records a number.
+
+Once two models both clear every pass/fail bar, their results are identical. Scores keep the underlying number, so a drop from 4.6 to 4.1 is visible where "passed" to "passed" is not.
+
+```ruby
+eval "produces a usable summary" do
+  task = Raif::Tasks::DocumentSummarization.run(creator: @user, document: @document)
+
+  # Observational: recorded in the results, never affects pass/fail
+  score "summary_word_count", task.parsed_response.split.length
+
+  # Gated: recorded AND checked, exactly like an expect block
+  score "clarity", judge.judgment_score, scale: 1..5, min: 4
+
+  # For metrics where a smaller number is the better one, gated with a ceiling
+  score "elapsed_ms", elapsed_ms, max: 5000, higher_is_better: false
+
+  # Both bounds, for a metric that can be wrong in either direction
+  score "bullet_count", task.parsed_response.scan("<li>").length, min: 3, max: 7
+end
+```
+
+- **Without `min:` or `max:`**, a score is recorded and reported but never fails an eval. Word counts, compression ratios, latency, and cost per call are all scoreable this way.
+- **With `min:` and/or `max:`**, the score also emits a pass/fail expectation named after the comparison it performs (`clarity score >= 4`, `elapsed_ms score <= 5000`, `bullet_count score >= 3 and <= 7`), so gating behaves the same as an `expect` block and the eval's `passed?` still means what it always meant.
+- `scale:` and `higher_is_better:` (default `true`) are recorded with the value so that [`evals:compare`](#comparing-runs) can tell an improvement from a regression. They are independent of the gate: `higher_is_better` says which direction is good, `min:`/`max:` say where the eval starts failing.
+- **The name is the metric**, and recording the same one twice for a single eval raises. The summary aggregates by name, so two of them would be averaged into one row, where a regression in one can be masked by an improvement in the other. Values drawn from a single response would also be counted as independent samples, which narrows the confidence interval on correlated data. To score several things on one metric, combine the values and record one score.
+
+Each eval result gains a `scores` array:
+
+```json
+"scores": [
+  { "name": "clarity", "value": 4.0, "scale": "1..5", "higher_is_better": true, "min": 4, "passed": true },
+  { "name": "elapsed_ms", "value": 4210.0, "higher_is_better": false, "max": 5000, "passed": true },
+  { "name": "summary_word_count", "value": 284.0, "higher_is_better": true }
+]
+```
+
+And the run's `summary` gains a `score_summaries` array, with one row per score name per eval. This is what you compare between two models or two prompts:
+
+```json
+{
+  "eval_set": "Raif::Evals::Tasks::DocumentSummarizationEvalSet",
+  "description": "produces expected output",
+  "eval_index": 0,
+  "name": "clarity",
+  "scale": "1..5",
+  "higher_is_better": true,
+  "n": 6,
+  "mean": 4.33,
+  "median": 4.5,
+  "stddev": 0.47,
+  "min": 4.0,
+  "max": 5.0,
+  "ci95": [4.0, 4.67],
+  "per_case": [
+    { "case_id": "climate-report", "n": 2, "mean": 4.5 },
+    { "case_id": "earnings-call",  "n": 2, "mean": 4.5 },
+    { "case_id": "press-release",  "n": 2, "mean": 4.0 }
+  ]
+}
+```
+
+`min` and `max` here are the lowest and highest values the run actually observed, not the gate. The identically named keys in an individual result's `scores` array are the `min:`/`max:` bounds passed to `score`, so the same two names mean the threshold in one place and the range in the other.
+
+`per_case` is present only for a [dataset](#datasets) eval, since without cases there is nothing to break the mean down by. `ci95` is a 95% bootstrap confidence interval over cases (or over the individual values, for an eval with no dataset), resampled from a fixed seed so the same numbers always produce the same interval. It and `stddev` are reported alongside the mean because two models a tenth of a point apart with a standard deviation of half a point have not been distinguished.
+
+Both are omitted when there is only one observation to compute them from - a single-case run at `--repeat 1`, for instance. A standard deviation of `0.0` and a zero-width interval are what the arithmetic returns for one value, and in a summary read to decide whether a difference is real they would claim a spread had been measured when none was.
+
+> Note: [`expect_llm_judge_score`](#scored-evaluations) records a score named after its rubric automatically, in addition to its pass/fail expectation. You get both without writing a `score` call yourself.
 
 # LLM-as-Judge Expectations
 
@@ -285,7 +551,7 @@ expect_llm_judge_passes(
 
 ## Scored Evaluations
 
-Use `expect_llm_judge_score` to evaluate content against a numerical rubric:
+Use `expect_llm_judge_score` to evaluate content against a numerical rubric. As well as the pass/fail expectation, the judge's score is recorded as a [score](#scores) named after the rubric, so it is aggregated into the run summary and can be compared across runs:
 
 ```ruby
 eval "produces high-quality technical documentation" do
@@ -297,6 +563,13 @@ eval "produces high-quality technical documentation" do
     min_passing_score: 4
   )
 end
+```
+
+The score is named after the rubric. [Scores](#scores) are keyed by name, so two `clarity` scores in one eval raise; `score_name:` overrides the rubric-derived name when one eval judges two things against the same rubric:
+
+```ruby
+expect_llm_judge_score(bluf, scoring_rubric: rubric, min_passing_score: 4, score_name: "bluf_clarity")
+expect_llm_judge_score(findings, scoring_rubric: rubric, min_passing_score: 4, score_name: "findings_clarity")
 ```
 
 ### Built-in Scoring Rubrics
@@ -354,7 +627,7 @@ expect_llm_judge_score(
 )
 ```
 
-Or you can provide the rubric as a string:
+Or you can provide the rubric as a string, in which case `score_name:` is required:
 
 ```ruby
 rubric = <<~RUBRIC
@@ -368,9 +641,12 @@ RUBRIC
 expect_llm_judge_score(
   generated_code,
   scoring_rubric: rubric,
-  min_passing_score: 7
+  min_passing_score: 7,
+  score_name: "code_quality"
 )
 ```
+
+A `ScoringRubric` object names the [score](#scores) it produces via its own `name:`. A string rubric has no name, and the score name is the metric the run summary aggregates by and [`evals:compare`](#comparing-runs) joins on, so Raif raises rather than recording an unidentifiable metric. The check happens before the judge runs, so it costs nothing to hit.
 
 
 
@@ -476,6 +752,50 @@ expect_llm_judge_passes(
   criteria: "Appropriate for the target audience",
   additional_context: "The user is a beginner programmer with no Ruby experience",
   llm_judge_model_key: :anthropic_claude_5_sonnet
+)
+```
+
+## Naming Judge Expectations
+
+A judge expectation's description is derived from its criteria or rubric, which gets unwieldy when the criteria is a paragraph. Pass `label:` to name it explicitly:
+
+```ruby
+expect_llm_judge_prefers(
+  new_summary,
+  over: baseline_summary,
+  criteria: "Retains the specific figures, dates, and named entities from the source rather than " \
+    "paraphrasing them into generalities, while staying within the same length budget",
+  label: "beats the paraphrasing baseline"
+)
+```
+
+The label becomes the expectation's description, which is also part of how [comparisons](#comparing-runs) match a result to its counterpart in an earlier run. Editing a label reads as the old expectation disappearing and a new one arriving.
+
+## Judge Task Attributes
+
+`Raif::Evals::LlmJudge` inherits from `Raif::Task`. If your app has extended `Raif::Task` with attributes it requires - a non-nullable tenant or account column, for example - then judge tasks need them too, and without them the built-in judge helpers can't be used at all: the judge task's insert fails and takes the surrounding eval's transaction with it.
+
+Define `judge_task_attributes` on the eval set to supply them to every judge it runs:
+
+```ruby
+class MyEvalSet < Raif::Evals::EvalSet
+  setup do
+    @account = Account.create!(name: "Eval Account")
+  end
+
+  def judge_task_attributes
+    { account_id: @account.id }
+  end
+end
+```
+
+It's called per eval, after `setup`, so it can reference anything `setup` created. An individual expectation can add to or override it with `judge_attributes:`:
+
+```ruby
+expect_llm_judge_passes(
+  task.parsed_response,
+  criteria: "Response is professional and helpful",
+  judge_attributes: { account_id: other_account.id }
 )
 ```
 
@@ -671,6 +991,84 @@ end
 ```
 
 
+# Comparing Runs
+
+Once you have two result files, `evals:compare` diffs them:
+
+```bash
+bundle exec raif evals:compare \
+  raif_evals/results/eval_run_20260804_180216_open_ai_responses_gpt_5_4.json \
+  raif_evals/results/eval_run_20260805_094122_anthropic_claude_5_sonnet.json
+```
+
+The first file is the baseline and the second is the candidate. The two most common uses are comparing two models on the same prompts, and comparing the same model before and after a prompt change.
+
+Results are matched on eval set, `eval_index`, expectation description, and `case_id`. Cases are matched individually because a model can improve on average while getting materially worse on one input, which an average alone does not show.
+
+```
+Comparing eval runs
+
+  baseline   open_ai_responses_gpt_5_4   2026-08-04 18:02   2 evals x 3 repeats   4 cases   $1.10   eval_run_..._gpt_5_4.json
+  candidate  anthropic_claude_5_sonnet   2026-08-05 09:41   2 evals x 3 repeats   4 cases   $1.64   eval_run_..._claude_5_sonnet.json
+  judge      anthropic_claude_5_haiku (both runs)
+
+NEW FAILURES (1)
+  DocumentSummarizationEvalSet  produces expected output
+    press-release        1.00 -> 0.33
+      1.00 -> 0.33  summary is between 100 and 1000 words
+
+FIXED (1)
+  DocumentSummarizationEvalSet  handles documents that are too short to summarize
+    stub-document        0.33 -> 1.00
+      0.33 -> 1.00  returns exactly the text 'Unable to generate summary'
+
+SCORE MOVES (2)
+  clarity  4.1111 -> 4.5556  +0.4445  (+10.8%, n=18, sd 0.5137 -> 0.4157)
+    climate-report       4.3333 -> 5.0  +0.6667
+    earnings-call        4.0 -> 4.6667  +0.6667
+    press-release        4.0 -> 4.0  0.0
+  summary_word_count  284.0 -> 412.0  +128.0  (+45.1%, n=18, sd 31.2 -> 44.7, not gated)
+
+NOT COMPARABLE (1)
+  DocumentSummarizationEvalSet  produces expected output
+    quarterly-report     candidate only
+
+SUMMARY
+  evals passed          16/18 -> 17/18
+  expectations          70/72 -> 71/72
+  mean clarity          4.1111 -> 4.5556
+  mean summary_word_count 284.0 -> 412.0
+  total cost            $1.10 -> $1.64
+  1 regression beyond --fail-on-regression 0.25 (25% worse than baseline) (exit 1)
+```
+
+Options:
+
+```bash
+# Exit non-zero when a pass rate or a gated score gets more than this much worse than the
+# baseline, as a fraction of it: 0.25 means "25% worse". Without it, regressions are still
+# reported and the command exits 0.
+--fail-on-regression 0.25
+
+# text (default), json, or html. html writes a self-contained file next to the results.
+--format html
+
+# Compare runs that used different judge models anyway (see below)
+--allow-judge-mismatch
+```
+
+Some specific behaviors:
+
+- **Cases present in only one run are reported under NOT COMPARABLE, never dropped.** A silently omitted case is indistinguishable from agreement. An expectation that exists on only one side is reported the same way, which is what a renamed description looks like.
+- **Runs judged by different models are refused.** Scores from two different judges measure two different things, so the command exits 2 without printing a comparison. `--allow-judge-mismatch` overrides this and labels the output accordingly.
+- **Score direction is honored.** A score declared `higher_is_better: false` counts a decrease as an improvement, and ungated observational scores are reported but never trip `--fail-on-regression`.
+- **The threshold is relative to the baseline, not absolute.** A pass rate, a 1-5 rubric score, and a latency in milliseconds are not in the same units, so one absolute threshold cannot mean the same thing to all three: `0.25` would ask for a quarter of an eval's runs on one row and a quarter of a millisecond on the next, which makes the flag fire on noise until you turn it off. Each regression is divided by what it started from instead, so `--fail-on-regression 0.25` asks one question everywhere - did anything get more than 25% worse. A `clarity` mean of 4.0 dropping to 3.6 is `0.1`; an `elapsed_ms` mean of 1000 rising to 1200 is `0.2`. Score moves print their relative change next to the absolute one so you can see which rows are near the threshold. For a pass rate that started at 1.0 - an eval that used to pass every run - the relative and absolute readings are the same number, so the common case reads exactly as you would expect.
+- **A regression from a baseline of zero has no fraction to take, and trips any threshold.** A gated `error_count` going from 0 to 3 is a real regression that cannot be expressed as a percentage of zero, so it is reported with a null magnitude and always fails the gate rather than being skipped for want of a denominator.
+- **A case that traded one failure for another is a regression**, even though its pass rate did not drop. One failure traded for another is not a fix. A case whose rate held steady is reported under NEW FAILURES; a case that fixed more than it broke reads better under FIXED, but either way the expectation that dropped is listed beneath it and counts toward `--fail-on-regression`, so an improvement cannot hide the loss underneath it.
+- **No Rails boot.** The command reads two JSON files and does arithmetic, so it does not load your application, need a database, or need an API key.
+
+At `--repeat 1` a single unlucky draw is indistinguishable from a regression. The reported standard deviation indicates how much of a difference is run-to-run variation.
+
 # Setting the LLM for Evals
 
 Raif defaults to using `Raif.config.default_llm_model_key` for LLM API calls. You can override this setting via the `RAIF_DEFAULT_LLM_MODEL_KEY` environment variable.
@@ -690,9 +1088,18 @@ Raif.configure do |config|
 end
 ```
 
+Or per run, with `--verbose`:
+
+```bash
+bundle exec raif evals --verbose
+```
+
+`--no-verbose` (or `RAIF_EVAL_VERBOSE=0`) turns it back off for one run, which is what an app whose initializer sets `evals_verbose_output = true` needs to read a [dataset](#datasets) run: verbose prints every expectation for every case, so a 3-case dataset at `--repeat 2` buries the result in judge reasoning. Passing neither flag leaves the configured value alone.
+
 When enabled, this will display:
 - Result metadata for each expectation
 - LLM judge reasoning and confidence scores
+- Every expectation for every [dataset](#datasets) case, rather than one line per case
 - Additional debugging information
 
 This is particularly useful when working with LLM judges to understand why they made certain decisions.

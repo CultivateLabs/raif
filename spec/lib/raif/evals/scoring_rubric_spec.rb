@@ -160,4 +160,56 @@ RSpec.describe Raif::Evals::ScoringRubric do
       end
     end
   end
+
+  describe "#scale" do
+    it "spans the discrete scores" do
+      expect(described_class.clarity.scale).to eq(1..5)
+    end
+
+    it "spans score ranges, honoring an exclusive end" do
+      rubric = described_class.new(
+        name: :code_quality,
+        description: "Evaluates code quality",
+        levels: [
+          { score_range: (9..10), description: "high" },
+          { score_range: (0...3), description: "low" }
+        ]
+      )
+
+      expect(rubric.scale).to eq(0..10)
+    end
+
+    it "is nil when there are no levels to derive it from" do
+      expect(described_class.new(name: :empty, description: "none", levels: []).scale).to be_nil
+    end
+
+    # An unbounded end has no bound to report, and the exclusive form `(9...)` must not reach
+    # `range.end - 1` with a nil end.
+    {
+      "an inclusive endless range" => (9..),
+      "an exclusive endless range" => (9...),
+      "a beginless range" => (..5)
+    }.each do |label, range|
+      it "takes only the bound that exists from #{label}" do
+        rubric = described_class.new(
+          name: :partial,
+          description: "one-sided",
+          levels: [{ score: 3, description: "mid" }, { score_range: range, description: "edge" }]
+        )
+
+        expect { rubric.scale }.not_to raise_error
+        expect(rubric.scale).to eq(range.begin.nil? ? (3..5) : (3..9))
+      end
+    end
+
+    it "ignores a level whose score_range is not a Range" do
+      rubric = described_class.new(
+        name: :mixed,
+        description: "mixed",
+        levels: [{ score: 2, description: "low" }, { score_range: "7 to 8", description: "bogus" }]
+      )
+
+      expect(rubric.scale).to eq(2..2)
+    end
+  end
 end

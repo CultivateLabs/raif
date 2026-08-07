@@ -141,8 +141,8 @@ RSpec.describe Raif::Evals::Run do
     end
 
     it "runs all eval sets" do
-      expect(TestEvalSet).to receive(:run).with(output: output, repeats: 1).and_call_original
-      expect(AnotherEvalSet).to receive(:run).with(output: output, repeats: 1).and_call_original
+      expect(TestEvalSet).to receive(:run).with(output: output, repeats: 1, cases: nil, sample: nil, seed: nil).and_call_original
+      expect(AnotherEvalSet).to receive(:run).with(output: output, repeats: 1, cases: nil, sample: nil, seed: nil).and_call_original
 
       run.execute
     end
@@ -222,7 +222,10 @@ RSpec.describe Raif::Evals::Run do
       expect(json_content["configuration"]).to eq(
         "default_llm_model_key" => Raif.config.default_llm_model_key.to_s,
         "evals_default_llm_judge_model_key" => Raif.config.evals_default_llm_judge_model_key,
-        "repeats" => 1
+        "repeats" => 1,
+        "capture_model_completions" => "full",
+        "sample" => nil,
+        "seed" => nil
       )
       expect(json_content["summary"]).to include(
         "total_eval_sets" => 2,
@@ -332,6 +335,57 @@ RSpec.describe Raif::Evals::Run do
       expect(output_string).to include("0 LLM calls")
       expect(output_string).to include("0 total tokens")
       expect(output_string).to include("$0.000000 total cost")
+    end
+  end
+
+  describe "the --cases no-match guard" do
+    # A set can declare a dataset that no eval actually consumes. Running only its plain evals
+    # under --cases must not be mistaken for a filter that matched nothing.
+    let(:declares_unused_dataset) do
+      Class.new(Raif::Evals::EvalSet) do
+        dataset :topics do
+          [{ id: "a", input: {} }]
+        end
+
+        eval "runs without the dataset" do
+          expect("passes") { true }
+        end
+      end
+    end
+
+    it "does not fire when no eval in the run uses a dataset" do
+      run = described_class.new(file_paths: [], output: output, repeats: 1, cases: ["a"])
+      run.instance_variable_set(:@eval_sets, [{ class: declares_unused_dataset }])
+
+      expect(run.send(:dataset_evals_present?)).to be false
+    end
+
+    it "fires when an eval in the run uses a dataset" do
+      uses_dataset = Class.new(Raif::Evals::EvalSet) do
+        dataset(:topics) { [{ id: "a", input: {} }] }
+        eval("over the dataset", dataset: :topics) { expect("passes") { true } }
+      end
+
+      run = described_class.new(file_paths: [], output: output, repeats: 1, cases: ["a"])
+      run.instance_variable_set(:@eval_sets, [{ class: uses_dataset }])
+
+      expect(run.send(:dataset_evals_present?)).to be true
+    end
+  end
+
+  describe "per-case score means" do
+    # The bootstrap CI resamples per-case means, so those must stay unrounded even though
+    # score_per_case rounds the same means for display.
+    it "are unrounded, unlike the values score_per_case reports" do
+      run = described_class.new(file_paths: [], output: output, repeats: 1)
+      scores = [
+        { case_id: "a", name: "clarity", value: 1.0 },
+        { case_id: "a", name: "clarity", value: 2.0 },
+        { case_id: "a", name: "clarity", value: 2.0 }
+      ]
+
+      expect(run.send(:per_case_means, scores)).to eq([5.0 / 3])
+      expect(run.send(:score_per_case, scores).first[:mean]).to eq(1.6667)
     end
   end
 end

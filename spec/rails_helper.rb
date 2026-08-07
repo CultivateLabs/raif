@@ -69,6 +69,7 @@ RSpec.configure do |config|
   # config.filter_gems_from_backtrace("gem name")
 
   config.include Raif::RspecHelpers
+  config.include Raif::CliHelpers
   config.include ActiveJob::TestHelper
 
   config.before(:each) do

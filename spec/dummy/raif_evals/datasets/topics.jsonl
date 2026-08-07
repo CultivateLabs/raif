@@ -1,0 +1,3 @@
+{"id": "chicken", "input": {"topic": "chicken"}, "expected": {"subject": "chicken"}}
+{"id": "atom", "input": {"topic": "atoms"}, "expected": {"subject": "atom"}}
+{"id": "monad", "input": {"topic": "monadic bind"}, "expected": {"subject": "monad"}}

@@ -18,6 +18,12 @@ module Raif
         # @param llm_judge_model_key [Symbol, nil] Optional specific LLM model to use for judging.
         #   If nil, uses the configured default judge model or falls back to default LLM
         # @param additional_context [String, nil] Optional additional context to be provided to the judge
+        # @param result_metadata [Hash] Optional metadata recorded on the expectation result, merged
+        #   with the judge's own metadata
+        # @param judge_attributes [Hash] Optional attributes merged into the judge task on top of
+        #   the eval set's #judge_task_attributes
+        # @param label [String, nil] Optional explicit description for the expectation, for when the
+        #   criteria is too long to read well as one
         #
         # @return [ExpectationResult] Result object containing pass/fail status and judge metadata
         #
@@ -43,23 +49,25 @@ module Raif
         #   - :reasoning - Detailed explanation
         #   - :confidence - Confidence score (0.0-1.0)
         def expect_llm_judge_passes(content, criteria:, examples: [], strict: false, llm_judge_model_key: nil, additional_context: nil,
-          result_metadata: {})
+          result_metadata: {}, judge_attributes: {}, label: nil)
           judge_task = LlmJudges::Binary.run(
             content_to_judge: content,
             criteria: criteria,
             examples: examples,
             strict_mode: strict,
             llm_model_key: llm_judge_model_key,
-            additional_context: additional_context
+            additional_context: additional_context,
+            **resolved_judge_attributes(judge_attributes)
           )
 
-          if judge_task.low_confidence? && output.respond_to?(:puts)
-            output.puts Raif::Utils::Colors.yellow("    ⚠ Low confidence: #{judge_task.judgment_confidence}")
+          # To console_output rather than output: a dataset run discards output so it can print
+          # one compact line per case, and a low-confidence judgment - like an error - is the
+          # signal that the pass or fail on that line should not be trusted.
+          if judge_task.low_confidence?
+            console_output.puts Raif::Utils::Colors.yellow("    ⚠ Low confidence: #{judge_task.judgment_confidence}")
           end
 
-          if Raif.config.evals_verbose_output && output.respond_to?(:puts)
-            output.puts "    #{judge_task.judgment_reasoning}"
-          end
+          output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
 
           judge_metadata = {
             passes: judge_task.passes?,
@@ -70,7 +78,7 @@ module Raif
           # Merge user metadata with judge metadata
           combined_metadata = result_metadata.merge(judge_metadata)
 
-          expectation_result = expect "LLM judge: #{criteria}", result_metadata: combined_metadata do
+          expectation_result = expect label || "LLM judge: #{criteria}", result_metadata: combined_metadata do
             judge_task.passes?
           end
 
@@ -87,13 +95,28 @@ module Raif
         # providing a numerical score with detailed reasoning and determining pass/fail based on
         # the minimum passing score threshold.
         #
-        # @param output [String] The content to be evaluated by the LLM judge
+        # As well as the pass/fail expectation, the judge's score is recorded as a first-class
+        # score named after the rubric, so it lands in the run's score summaries and can be
+        # compared across runs.
+        #
+        # @param content [String] The content to be evaluated by the LLM judge
         # @param scoring_rubric [ScoringRubric, String] The rubric to use for scoring. Can be a
         #   ScoringRubric object with structured levels or a plain string description
         # @param min_passing_score [Integer] Minimum score required to pass
         # @param llm_judge_model_key [Symbol, nil] Optional specific LLM model to use for judging.
         #   If nil, uses the configured default judge model or falls back to default LLM
         # @param additional_context [String, nil] Optional additional context to be provided to the judge
+        # @param result_metadata [Hash] Optional metadata recorded on the expectation result, merged
+        #   with the judge's own metadata
+        # @param judge_attributes [Hash] Optional attributes merged into the judge task on top of
+        #   the eval set's #judge_task_attributes
+        # @param label [String, nil] Optional explicit description for the expectation
+        # @param score_name [String, Symbol, nil] Name for the recorded score, defaulting to the
+        #   rubric's name. Needed when one eval judges two things against the same rubric and you
+        #   want them tracked apart, and required when scoring_rubric is a String, which has no
+        #   name to derive one from
+        #
+        # @raise [ArgumentError] When scoring_rubric is a String and no score_name is given
         #
         # @return [ExpectationResult] Result object containing pass/fail status and judge metadata
         #
@@ -118,33 +141,42 @@ module Raif
         #   )
         #   expect_llm_judge_score(output, scoring_rubric: rubric, min_passing_score: 7)
         #
-        # @example Using a simple string rubric
+        # @example Using a simple string rubric, which must name its own score
         #   expect_llm_judge_score(
         #     output,
         #     scoring_rubric: "Rate clarity from 0-5 where 5 is crystal clear",
-        #     min_passing_score: 4
+        #     min_passing_score: 4,
+        #     score_name: "clarity"
         #   )
         #
         # @note The judge result includes metadata accessible via expectation_result.metadata:
         #   - :score - Numerical score given
         #   - :reasoning - Detailed explanation
         #   - :confidence - Confidence score (0.0-1.0)
-        def expect_llm_judge_score(output, scoring_rubric:, min_passing_score:, llm_judge_model_key: nil, additional_context: nil,
-          result_metadata: {})
+        def expect_llm_judge_score(content, scoring_rubric:, min_passing_score:, llm_judge_model_key: nil, additional_context: nil,
+          result_metadata: {}, judge_attributes: {}, label: nil, score_name: nil)
           scoring_rubric_obj = scoring_rubric
 
+          # A score name is the metric the run summary aggregates by and evals:compare joins on.
+          # A ScoringRubric carries one; a string rubric does not, and a placeholder would put an
+          # unidentifiable metric in the summary and collide with any other string rubric in the
+          # same eval. Raised before the judge call so it costs nothing to hit.
+          if score_name.blank? && !scoring_rubric_obj.respond_to?(:name)
+            raise ArgumentError, "expect_llm_judge_score with a #{scoring_rubric_obj.class} rubric requires score_name: to name the " \
+              "score it records. A Raif::Evals::ScoringRubric supplies that name itself; a rubric passed as a string has none."
+          end
+
           judge_task = LlmJudges::Scored.run(
-            content_to_judge: output,
+            content_to_judge: content,
             scoring_rubric: scoring_rubric_obj,
             llm_model_key: llm_judge_model_key,
-            additional_context: additional_context
+            additional_context: additional_context,
+            **resolved_judge_attributes(judge_attributes)
           )
 
           rubric_name = scoring_rubric_obj.respond_to?(:name) ? scoring_rubric_obj.name : "custom"
-          if output.respond_to?(:puts)
-            output.puts "    Score: #{judge_task.judgment_score}"
-            output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
-          end
+          output.puts "    Score: #{judge_task.judgment_score}"
+          output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
 
           judge_metadata = {
             score: judge_task.judgment_score,
@@ -155,7 +187,21 @@ module Raif
           # Merge user metadata with judge metadata
           combined_metadata = result_metadata.merge(judge_metadata)
 
-          expectation_result = expect "LLM judge score (#{rubric_name}): >= #{min_passing_score}", result_metadata: combined_metadata do
+          # Recorded directly rather than through #score, so the gating expectation below keeps
+          # its existing description - the key evals:compare matches results on across runs.
+          if judge_task.judgment_score
+            current_eval_result.add_score(
+              ScoreResult.new(
+                name: score_name || rubric_name,
+                value: judge_task.judgment_score,
+                scale: (scoring_rubric_obj.scale if scoring_rubric_obj.respond_to?(:scale)),
+                min: min_passing_score
+              )
+            )
+          end
+
+          expectation_result = expect label || "LLM judge score (#{rubric_name}): >= #{min_passing_score}",
+            result_metadata: combined_metadata do
             judge_task.completed? && judge_task.judgment_score && judge_task.judgment_score >= min_passing_score
           end
 
@@ -179,6 +225,12 @@ module Raif
         # @param llm_judge_model_key [Symbol, nil] Optional specific LLM model to use for judging.
         #   If nil, uses the configured default judge model or falls back to default LLM
         # @param additional_context [String, nil] Optional additional context to help the judge
+        # @param result_metadata [Hash] Optional metadata recorded on the expectation result, merged
+        #   with the judge's own metadata
+        # @param judge_attributes [Hash] Optional attributes merged into the judge task on top of
+        #   the eval set's #judge_task_attributes
+        # @param label [String, nil] Optional explicit description for the expectation, for when the
+        #   criteria is too long to read well as one
         #
         # @return [ExpectationResult] Result object containing pass/fail status and judge metadata
         #
@@ -214,20 +266,19 @@ module Raif
         #   - :reasoning - Detailed explanation of the choice
         #   - :confidence - Confidence score (0.0-1.0)
         def expect_llm_judge_prefers(content_to_judge, over:, criteria:, allow_ties: true, llm_judge_model_key: nil, additional_context: nil,
-          result_metadata: {})
+          result_metadata: {}, judge_attributes: {}, label: nil)
           judge_task = LlmJudges::Comparative.run(
             content_to_judge: content_to_judge,
             over_content: over,
             comparison_criteria: criteria,
             allow_ties: allow_ties,
             llm_model_key: llm_judge_model_key,
-            additional_context: additional_context
+            additional_context: additional_context,
+            **resolved_judge_attributes(judge_attributes)
           )
 
-          if output.respond_to?(:puts)
-            output.puts "    Winner: #{judge_task.winner}"
-            output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
-          end
+          output.puts "    Winner: #{judge_task.winner}"
+          output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
 
           judge_metadata = {
             winner: judge_task.winner,
@@ -238,7 +289,7 @@ module Raif
           # Merge user metadata with judge metadata
           combined_metadata = result_metadata.merge(judge_metadata)
 
-          expectation_result = expect "LLM judge prefers A over B: #{criteria}", result_metadata: combined_metadata do
+          expectation_result = expect label || "LLM judge prefers A over B: #{criteria}", result_metadata: combined_metadata do
             judge_task.completed? && judge_task.correct_expected_winner?
           end
 
@@ -247,6 +298,15 @@ module Raif
           end
 
           expectation_result
+        end
+
+      private
+
+        # Raif::Evals::LlmJudge inherits from Raif::Task, so an app that has added a required
+        # column to Raif::Task needs it on judge tasks too - without it the judge's insert
+        # fails and takes the eval's transaction with it.
+        def resolved_judge_attributes(judge_attributes)
+          judge_task_attributes.merge(judge_attributes || {})
         end
 
       end
