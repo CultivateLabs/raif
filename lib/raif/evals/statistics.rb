@@ -43,8 +43,8 @@ module Raif
 
         # Percentile bootstrap over whatever unit is passed in. Callers pass per-case means
         # for a dataset eval, so the interval reflects variation between inputs rather than
-        # between repeats of one input. Returns nil for a single value: resampling it can
-        # only draw that value, a zero-width "95% confidence" interval from one observation.
+        # between repeats of one input. nil for a single value, which can only resample to
+        # itself - a zero-width "95% confidence" interval.
         def bootstrap_ci95(values)
           return if values.length < 2
 

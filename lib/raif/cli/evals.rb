@@ -15,9 +15,9 @@ module Raif
         cases = ENV["RAIF_EVAL_CASES"].to_s.split(",").map(&:strip).reject(&:empty?)
         sample = ENV["RAIF_EVAL_SAMPLE"]&.to_i
         seed = ENV["RAIF_EVAL_SEED"]&.to_i
-        # nil leaves Raif.config.evals_verbose_output alone. An app that turned verbose
-        # output on in its initializer needs a way back to the compact dataset output
-        # without editing the initializer, so --no-verbose has to be able to win.
+        # nil leaves Raif.config.evals_verbose_output alone. --no-verbose has to be able to
+        # win, so an app whose initializer turns verbose output on can still get back to the
+        # compact dataset output.
         verbose = case ENV["RAIF_EVAL_VERBOSE"]
         when nil, "" then nil
         when "0", "false" then false
@@ -59,8 +59,8 @@ module Raif
 
         parse_options!(parser)
 
-        # A sample of zero or fewer cases is a typo, not a selection: Array#take would raise on a
-        # negative count, and zero would run nothing and report an empty suite as a pass.
+        # A sample of zero or fewer cases is a typo, not a selection: zero would run nothing
+        # and report an empty suite as a pass, and a negative count raises in Array#take.
         if sample && sample < 1
           puts "Error: --sample must be 1 or greater (got #{sample})"
           exit 1

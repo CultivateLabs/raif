@@ -67,8 +67,8 @@ RSpec.describe Raif::Evals::ComparisonReport do
       expect(text).to include("evals passed          2/2 -> 1/2")
       expect(text).to include("total cost            $1.10 -> $1.64")
       # One, not two: the pass rate went 1.00 -> 0.00, but clarity's 1-point drop is 22% of a
-      # 4.5 baseline and so sits under the 25% threshold. Compared absolutely it would have
-      # counted, which is the confusion a relative threshold exists to avoid.
+      # 4.5 baseline and sits under the 25% threshold. Compared absolutely it would have
+      # counted - the confusion a relative threshold exists to avoid.
       expect(text).to include("1 regression beyond --fail-on-regression 0.25 (25% worse than baseline) (exit 1)")
     end
 

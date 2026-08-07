@@ -90,10 +90,9 @@ module Raif
       @current_user_method = :current_user
       @default_embedding_model_key = "open_ai_text_embedding_3_small"
       @default_llm_model_key = default_disable_llm_api_requests? ? :raif_test_llm : (ENV["RAIF_DEFAULT_LLM_MODEL_KEY"].presence || "open_ai_gpt_4o")
-      # :full captures every prompt, message, and response, which is what you want when
-      # debugging one eval and unmanageable for a dataset run. :summary keeps tokens and
-      # cost, :none omits the per-call array entirely. Usage totals are identical in all
-      # three modes.
+      # :full captures every prompt, message, and response - what you want debugging one eval,
+      # unmanageable for a dataset run. :summary keeps tokens and cost, :none omits the
+      # per-call array. Usage totals are identical in all three modes.
       @evals_capture_model_completions = :full
       @evals_default_llm_judge_model_key = ENV["RAIF_EVALS_DEFAULT_LLM_JUDGE_MODEL_KEY"].presence
       @evals_verbose_output = false

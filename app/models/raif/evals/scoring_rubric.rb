@@ -72,9 +72,9 @@ module Raif
         (bounds.min..bounds.max)
       end
 
-      # The lowest and highest score a level's range describes, or [] for anything that is not a
-      # bounded Range. An endless or beginless range has no bound to report, and an exclusive
-      # endless range (9...) would raise on `range.end - 1` if the nil were not caught first.
+      # The lowest and highest score a level's range describes. An endless or beginless range
+      # contributes only the bound it has; the nil check also keeps an exclusive endless range
+      # (9...) from raising on `range.end - 1`.
       #
       # @return [Array<Numeric>] Zero, one, or two bounds
       def range_bounds(range)

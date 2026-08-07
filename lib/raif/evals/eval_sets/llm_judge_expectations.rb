@@ -60,10 +60,9 @@ module Raif
             **resolved_judge_attributes(judge_attributes)
           )
 
-          # To console_output rather than output: a dataset run swaps output for a throwaway
-          # buffer so it can print one compact line per case, and a low-confidence judgment is
-          # the signal that the pass or fail on that line should not be trusted. It belongs in
-          # the same category as an error, which is also written straight to the console.
+          # To console_output rather than output: a dataset run discards output so it can print
+          # one compact line per case, and a low-confidence judgment - like an error - is the
+          # signal that the pass or fail on that line should not be trusted.
           if judge_task.low_confidence?
             console_output.puts Raif::Utils::Colors.yellow("    ⚠ Low confidence: #{judge_task.judgment_confidence}")
           end
@@ -159,10 +158,9 @@ module Raif
           scoring_rubric_obj = scoring_rubric
 
           # A score name is the metric the run summary aggregates by and evals:compare joins on.
-          # A ScoringRubric carries one; a rubric passed as a string does not, and a placeholder
-          # would put an unidentifiable metric in the summary - and make two string rubrics in
-          # one eval collide, after the first judge call had already been paid for. Raised here
-          # rather than at the point of recording so it costs nothing to hit.
+          # A ScoringRubric carries one; a string rubric does not, and a placeholder would put an
+          # unidentifiable metric in the summary and collide with any other string rubric in the
+          # same eval. Raised before the judge call so it costs nothing to hit.
           if score_name.blank? && !scoring_rubric_obj.respond_to?(:name)
             raise ArgumentError, "expect_llm_judge_score with a #{scoring_rubric_obj.class} rubric requires score_name: to name the " \
               "score it records. A Raif::Evals::ScoringRubric supplies that name itself; a rubric passed as a string has none."
@@ -189,9 +187,8 @@ module Raif
           # Merge user metadata with judge metadata
           combined_metadata = result_metadata.merge(judge_metadata)
 
-          # The score is recorded directly rather than through #score, because the gating
-          # expectation below has to keep its historical description: evals:compare matches
-          # a result to its counterpart in an earlier run on that description.
+          # Recorded directly rather than through #score, so the gating expectation below keeps
+          # its existing description - the key evals:compare matches results on across runs.
           if judge_task.judgment_score
             current_eval_result.add_score(
               ScoreResult.new(
@@ -305,9 +302,9 @@ module Raif
 
       private
 
-        # Raif::Evals::LlmJudge inherits from Raif::Task, so an app that has extended
-        # Raif::Task with a required column needs those attributes on judge tasks too -
-        # without them the judge's insert fails and takes the eval's transaction with it.
+        # Raif::Evals::LlmJudge inherits from Raif::Task, so an app that has added a required
+        # column to Raif::Task needs it on judge tasks too - without it the judge's insert
+        # fails and takes the eval's transaction with it.
         def resolved_judge_attributes(judge_attributes)
           judge_task_attributes.merge(judge_attributes || {})
         end

@@ -30,7 +30,6 @@ RSpec.describe Raif::CLI::EvalsCompare do
     expect(result.stdout).to include("no regression threshold set")
   end
 
-  # The whole point of the command in CI.
   it "exits 1 when a regression exceeds --fail-on-regression" do
     result = run_raif_cli("evals:compare", baseline, candidate, "--fail-on-regression", "0.25")
 
@@ -126,10 +125,9 @@ RSpec.describe Raif::CLI::EvalsCompare do
       expect(result.stdout).to include("Usage: raif evals:compare")
     end
 
-    # Valid JSON of the wrong shape used to compare cleanly against another one and report no
-    # regressions at all - a green exit over two files that were never eval results. The most
-    # likely way to hit it is this command's own --format json output, which lands in the same
-    # directory as the results files it was built from.
+    # Valid JSON of the wrong shape compares cleanly and reports no regressions - a green exit
+    # over two files that were never eval results. The likeliest way in is this command's own
+    # --format json output, which lands in the same directory as the results files.
     it "refuses a JSON object that is not an eval results file" do
       wrong = File.join(dir, "wrong.json")
       File.write(wrong, JSON.generate({ "baseline" => {}, "candidate" => {}, "new_failures" => [] }))
@@ -151,8 +149,8 @@ RSpec.describe Raif::CLI::EvalsCompare do
     end
   end
 
-  # A missing require in this path is invisible to every other spec in the suite, because
-  # rails_helper loads the engine before they run. That is how one shipped.
+  # A missing require in this path is invisible to every other spec in the suite, since
+  # rails_helper loads the engine before they run.
   it "runs without loading Rails" do
     result = run_raif_cli_reporting_rails("evals:compare", baseline, candidate)
 

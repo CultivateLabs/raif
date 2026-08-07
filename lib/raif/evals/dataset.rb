@@ -5,10 +5,9 @@ module Raif
     # An ordered, named collection of EvalCases, built from whatever the eval set's
     # `dataset` block returned.
     #
-    # Every validation here raises rather than warning, and is performed before the run
-    # executes any eval: a dataset whose cases cannot be told apart produces results that
-    # cannot be joined against a previous run, and discovering that after paying for the
-    # inference is too late to be useful.
+    # Validation raises rather than warns, and runs before any eval executes: a dataset whose
+    # cases cannot be told apart produces results that cannot be joined against a previous
+    # run, and finding that out after paying for the inference is too late.
     class Dataset
       attr_reader :name, :cases
 
@@ -22,9 +21,9 @@ module Raif
         cases.length
       end
 
-      # ids and sample are run-wide selections (--cases / --sample), so an id that belongs
-      # to a different eval set's dataset filters this one down to nothing rather than
-      # raising. The run as a whole errors when a selection matched no case anywhere.
+      # ids and sample are run-wide (--cases / --sample), so an id belonging to another eval
+      # set's dataset filters this one to nothing rather than raising. Run#execute errors
+      # when a selection matched no case anywhere.
       def select_cases(ids: nil, sample: nil, seed: nil)
         selected = cases
 
@@ -71,8 +70,8 @@ module Raif
 
           id = row[:id] || row["id"]
           input = row.key?(:input) ? row[:input] : row["input"]
-          # Read expected by key presence, not `||`: a binary-classification case can legitimately
-          # expect `false`, which a fallback would silently turn into `nil`.
+          # Key presence, not `||`: a binary-classification case can legitimately expect
+          # `false`, which a fallback would silently turn into `nil`.
           expected = row.key?(:expected) ? row[:expected] : row["expected"]
 
           raise ArgumentError, "dataset #{name.inspect} case at index #{index} is missing an :id" if id.nil? || id.to_s.strip.empty?

@@ -85,8 +85,8 @@ RSpec.describe Raif::CLI::Evals do
   end
 
   describe "invalid input" do
-    # --sample 0 would run nothing and report an empty suite as a pass; a negative count reached
-    # Array#take and died with "attempt to take negative size".
+    # --sample 0 would run nothing and report an empty suite as a pass; a negative count
+    # raises in Array#take.
     [["--sample", "0"], ["--sample", "-1"]].each do |flags|
       it "rejects #{flags.join(" ")} before booting the app" do
         cli = described_class.new(flags)

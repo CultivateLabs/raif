@@ -44,8 +44,7 @@ module Raif
         lines.join("\n")
       end
 
-      # Both the text and HTML renderers describe a score move the same way, so the wording
-      # of "improved" versus "regressed" cannot drift between the two.
+      # Public so the HTML template shares it with #text and the two cannot drift.
       def score_headline(row)
         parts = [score_relative(row), score_spread(row)].compact
         parts << "not gated" unless row[:gated]
@@ -53,9 +52,9 @@ module Raif
         "#{row[:name]}  #{row[:baseline_mean]} -> #{row[:candidate_mean]}  #{format_delta(row[:delta])}  (#{parts.join(", ")})"
       end
 
-      # --fail-on-regression is expressed relative to the baseline, so the absolute delta alone
-      # cannot be checked against it: whether -1.0 clears a 0.25 threshold depends entirely on
-      # what it is -1.0 of. nil when the baseline mean is zero and there is no fraction to take.
+      # Printed alongside the absolute delta because --fail-on-regression is relative to the
+      # baseline: whether -1.0 clears a 0.25 threshold depends on what it is -1.0 of. nil when
+      # the baseline mean is zero and there is no fraction to take.
       def score_relative(row)
         baseline = row[:baseline_mean].to_f.abs
         return if baseline.zero?
@@ -63,9 +62,8 @@ module Raif
         format("%+.1f%%", (row[:delta].to_f / baseline) * 100)
       end
 
-      # A single observation has no standard deviation, so one side of the transition can be
-      # absent while the other is real. The sd fragment is dropped only when neither side
-      # has one; otherwise the missing side shows as "-".
+      # A single observation has no standard deviation, so one side can be absent while the
+      # other is real. The sd fragment is dropped only when neither side has one.
       def score_spread(row)
         baseline = row[:baseline_stddev]
         candidate = row[:candidate_stddev]
@@ -83,8 +81,8 @@ module Raif
         format("%.2f", rate.to_f)
       end
 
-      # The threshold is restated as a percentage because it is relative to the baseline, and a
-      # bare "0.25" next to a list of absolute deltas invites reading it as those deltas' units.
+      # The threshold is restated as a percentage: a bare "0.25" next to a list of absolute
+      # deltas invites reading it as those deltas' units rather than as a fraction of baseline.
       def verdict
         return "no regression threshold set (--fail-on-regression)" if threshold.nil?
 

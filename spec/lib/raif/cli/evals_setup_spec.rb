@@ -5,8 +5,7 @@ require "raif/cli"
 require "rails/generators"
 
 RSpec.describe Raif::CLI::EvalsSetup do
-  # The command is a delegation, and the generator name it delegates to is a string that
-  # nothing else checks.
+  # The generator name this command delegates to is a string nothing else checks.
   it "invokes the evals setup generator" do
     cli = described_class.new([])
     allow(cli).to receive(:load_rails_application)

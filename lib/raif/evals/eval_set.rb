@@ -42,15 +42,14 @@ module Raif
           datasets[name.to_sym] = block
         end
 
-        # This shadows Kernel#eval inside the class body, so a block-less call - what
-        # reaching for Kernel#eval looks like here - would otherwise register an eval
-        # that fails only once it runs, after setup has spent inference money, with
-        # instance_eval's "wrong number of arguments (given 0, expected 1..3)".
+        # This shadows Kernel#eval inside the class body. Without the block check, a
+        # block-less call - what reaching for Kernel#eval looks like here - would register an
+        # eval that fails only once it runs, after setup has spent inference money.
         def eval(description, dataset: nil, &block)
           raise ArgumentError, "eval #{description.inspect} requires a block" unless block
 
-          # A registered name and nothing else: an inline array or Proc here would be a
-          # dataset with no name, and the name is what a case id is reported against.
+          # A registered name and nothing else: an inline array or Proc would be a dataset
+          # with no name, and the name is what a case id is reported against.
           if dataset && !dataset.is_a?(Symbol) && !dataset.is_a?(String)
             raise ArgumentError, "eval #{description.inspect} passed #{dataset.class} to dataset:, which takes the name of a " \
               "dataset declared with the `dataset` macro."
@@ -144,9 +143,8 @@ module Raif
         compact = compact_output?
         if compact
           # The compact line reports counts that only exist once the case has run, so
-          # per-expectation output is discarded rather than printed. Errors still go to the
-          # console: a swallowed backtrace is the one thing that makes a dataset run
-          # undebuggable.
+          # per-expectation output is discarded rather than printed. Errors still go to
+          # console_output - a swallowed backtrace makes a dataset run undebuggable.
           @output = StringIO.new
         else
           output.puts "Running: #{eval_definition[:description]}#{" [#{eval_case.id}]" if eval_case}#{" (run #{run_index})" if run_index}"
@@ -163,9 +161,7 @@ module Raif
               run_block(self.class.setup_block, eval_case) if self.class.setup_block
 
               stage = "Eval block"
-              # Baseline id captured after setup so we only record the LLM calls the eval
-              # itself makes. Model completions are persisted during the eval but rolled back
-              # below, so they must be captured before the rollback.
+              # After setup, so we only record the LLM calls the eval itself makes.
               model_completions_start_id = Raif::ModelCompletion.maximum(:id) || 0
 
               run_block(eval_definition[:block], eval_case)
@@ -180,10 +176,9 @@ module Raif
                 )
               )
             ensure
-              # Capture completions before teardown: sources like Raif::Agent and
-              # Raif::ConversationEntry declare `has_many :raif_model_completions,
-              # dependent: :destroy`, so a teardown that destroys them would delete the
-              # rows we need before we can read them.
+              # Before teardown: sources like Raif::Agent declare `has_many
+              # :raif_model_completions, dependent: :destroy`, so a teardown that destroys
+              # them takes the rows we need with it.
               capture_model_completions(model_completions_start_id) if model_completions_start_id
 
               run_block(self.class.teardown_block, eval_case) if self.class.teardown_block
@@ -287,8 +282,8 @@ module Raif
         !@current_case.nil? && !Raif.config.evals_verbose_output
       end
 
-      # One line per case per repeat. A 20-case dataset at --repeat 3 would otherwise print
-      # several hundred expectation lines, and the failures would be lost in them.
+      # One line per case per repeat, in place of the several hundred expectation lines a
+      # 20-case dataset at --repeat 3 would otherwise bury the failures in.
       def print_case_summary
         result = @current_eval_result
         color = result.passed? ? :green : :red

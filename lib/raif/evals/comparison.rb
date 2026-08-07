@@ -2,12 +2,12 @@
 
 module Raif
   module Evals
-    # Diffs two eval run payloads. Deliberately free of Rails and of any provider call, so
-    # "did this change make the product worse" can be answered without spending money.
+    # Diffs two eval run payloads. Deliberately free of Rails and of any provider call, so it
+    # needs no database, API key, or spend.
     #
     # Results are matched on eval set, eval index, expectation description, and case id.
-    # Matching per case rather than per eval is what makes a dataset run diffable, since a
-    # model can improve on average while getting materially worse on one input.
+    # Matching per case is what makes a dataset run diffable: a model can improve on average
+    # while getting materially worse on one input.
     class Comparison
       attr_reader :baseline, :candidate, :baseline_label, :candidate_label
 
@@ -26,8 +26,8 @@ module Raif
         judge_model(candidate)
       end
 
-      # Scores from two different judges measure two different things, so this is a refusal
-      # rather than a warning: a warning printed above a ranking is too easy to scroll past.
+      # Scores from two different judges measure two different things, so callers refuse to
+      # compare rather than warn.
       def judge_mismatch?
         baseline_judge != candidate_judge
       end
@@ -50,17 +50,13 @@ module Raif
         @not_comparable ||= build_not_comparable
       end
 
-      # Every magnitude here is relative to the baseline rather than absolute, because the
-      # quantities being gated are not in the same units: a pass rate is a fraction of runs, a
-      # rubric score is a point on its own scale, and a latency is milliseconds. Comparing their
-      # absolute deltas to one threshold means --fail-on-regression 0.25 asks for a quarter of
-      # the runs in one row and a quarter of a millisecond in the next. Relative to baseline, it
-      # asks one question everywhere: did something get more than 25% worse.
+      # Magnitudes are relative to the baseline, not absolute: a pass rate, a rubric score, and
+      # a latency are not in the same units, so one absolute threshold would mean a quarter of
+      # the runs in one row and a quarter of a millisecond in the next. Relative,
+      # --fail-on-regression asks the same question everywhere: did this get more than N% worse.
       #
-      # Rows are drawn from every comparable eval rather than from new_failures, because which
-      # section a row prints under and whether it contributes a regression are different
-      # questions. An eval that fixed one expectation and broke another can come out ahead on
-      # its overall rate and still be a trade, and the improvement would otherwise hide the loss.
+      # Rows come from every comparable eval, not just new_failures: an eval that fixed one
+      # expectation and broke another can come out ahead on its rate and still be a trade.
       def regressions
         @regressions ||= begin
           from_evals = eval_rows.filter_map do |row|
@@ -71,8 +67,8 @@ module Raif
               kind: :pass_rate,
               magnitude: round(drop / baseline),
               absolute: round(drop),
-              # Qualified by eval set, because the DSL does not enforce unique descriptions and
-              # this label is all a script reading the JSON gets to identify the row by.
+              # Qualified by eval set: descriptions are not unique, and this label is all a
+              # script reading the JSON has to identify the row by.
               label: "#{row[:eval_set]}  #{row[:description]} [#{row[:case_id] || "no case"}]"
             }
           end
@@ -86,16 +82,15 @@ module Raif
         end
       end
 
-      # Rows whose regression cannot be expressed as a fraction because the baseline was zero.
-      # "0 errors became 3" is a real regression with no ratio to take, so it is separated out
-      # rather than dropped, and #regressed? treats it as exceeding any threshold.
+      # Rows with no fraction to take because the baseline was zero. "0 errors became 3" is
+      # still a regression, so it is separated out rather than dropped and #regressed? treats
+      # it as exceeding any threshold.
       def unbounded_regressions
         regressions.select { |row| row[:magnitude].nil? }
       end
 
-      # Float::INFINITY would be the literal magnitude of an unbounded regression, but this
-      # value is exported to JSON, which cannot represent it. Ask #regressed? for the gate
-      # decision; it accounts for the unbounded rows separately.
+      # Excludes unbounded regressions, whose magnitude would be Float::INFINITY and cannot be
+      # exported to JSON. Ask #regressed? for the gate decision, which accounts for both.
       def max_regression
         regressions.filter_map { |row| row[:magnitude] }.max || 0.0
       end
@@ -203,10 +198,9 @@ module Raif
 
       def eval_moves
         @eval_moves ||= begin
-          # An eval whose rate held steady while a different expectation started failing is
-          # reported as a new failure - one failure traded for another is not a fix. A trade
-          # the rate came out ahead on reads better under FIXED, with the expectation that
-          # dropped listed beneath it, and #regressions catches it either way.
+          # An eval whose rate held steady while a different expectation started failing is a
+          # new failure: one failure traded for another is not a fix. A trade the rate came out
+          # ahead on reads better under FIXED, and #regressions catches it either way.
           regressed, rest = eval_rows.partition do |row|
             row[:delta] < 0 || (row[:delta].zero? && row[:expectations].any? { |move| move[:delta] < 0 })
           end
@@ -219,12 +213,9 @@ module Raif
       end
 
       # The drop to gate on and the baseline it is relative to, or nil when nothing dropped.
-      # Normally that is the eval's own rate; when the rate held steady or improved because a
-      # fix absorbed a break, it is the expectation that broke, since one failure traded for
-      # another is not a fix and the rate delta can no longer say so.
-      #
-      # The baseline is always positive here: a rate that dropped cannot have started at zero,
-      # so the caller's division is always defined.
+      # Normally the eval's own rate; when a fix absorbed a break and the rate can no longer
+      # say so, the expectation that broke. The baseline is always positive here, since a rate
+      # that dropped cannot have started at zero, so the caller's division is defined.
       def worst_rate_drop(row)
         return [-row[:delta], row[:baseline_rate]] if row[:delta] < 0
 
@@ -298,9 +289,8 @@ module Raif
 
       # When both sides carry a per-case breakdown (a dataset score), compare only the cases
       # they share: a candidate sampled down to a subset must not look improved merely because
-      # the cases it dropped were the low-scoring ones. If the shared set is empty the means
-      # come back nil and the move is omitted. Non-dataset scores have no per-case breakdown
-      # and compare their full value lists.
+      # the cases it dropped were the low-scoring ones. An empty shared set yields nil means,
+      # and the move is omitted.
       def comparable_score_values(baseline_score, candidate_score)
         return [baseline_score[:values], candidate_score[:values]] if baseline_score[:per_case].empty? || candidate_score[:per_case].empty?
 

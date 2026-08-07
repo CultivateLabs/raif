@@ -72,13 +72,10 @@ module Raif
         print_summary
 
         # --cases filters every dataset in the run, so an id matching nothing anywhere is a
-        # typo rather than a selection. Checked against the case ids that actually ran rather
-        # than against the result count, since the non-dataset evals in the same set run
-        # regardless and would otherwise make a typo look like a suite that passed.
-        #
-        # Checked after exporting, not before: those non-dataset evals already ran and already
-        # spent inference money by this point, and discarding their results file is a second
-        # loss on top of the typo.
+        # typo. Checked on the case ids that actually ran, not the result count, since the
+        # non-dataset evals in the same set run regardless and would make a typo look like a
+        # suite that passed. Checked after exporting because those evals already spent
+        # inference money, and throwing away their results file is a second loss.
         if cases && dataset_evals_present? && @results.values.flatten.none? { |e| e[:case_id] }
           output.puts Raif::Utils::Colors.red("\nNo eval cases matched --cases #{cases.join(",")}")
           exit 1
@@ -118,10 +115,8 @@ module Raif
 
           require absolute_path
 
-          # require is a no-op for a file already loaded (auto-discovery elsewhere in the
-          # process, or the same path given twice), so the subclass diff can be empty for a
-          # perfectly valid file. Fall back to matching the class by where its evals were
-          # defined.
+          # require is a no-op for an already-loaded file (auto-discovery, or the same path
+          # given twice), so the subclass diff can be empty for a perfectly valid file.
           loaded_eval_sets = Raif::Evals::EvalSet.subclasses - subclasses_before
           eval_set_class = loaded_eval_sets.first || eval_set_class_defined_in(absolute_path)
 
@@ -134,9 +129,8 @@ module Raif
         eval_sets
       end
 
-      # Keyed off eval definitions that actually use `dataset:`, not sets that merely declare
-      # one: a set can declare a dataset that no eval consumes, and running only its plain evals
-      # under --cases must not be mistaken for a filter that matched nothing.
+      # Keyed off evals that actually use `dataset:`, not sets that merely declare one: a
+      # declared-but-unconsumed dataset must not make --cases look like it matched nothing.
       def dataset_evals_present?
         @eval_sets.any? do |eval_set_entry|
           eval_set_class = eval_set_entry.is_a?(Hash) ? eval_set_entry[:class] : eval_set_entry
@@ -219,11 +213,8 @@ module Raif
 
       # One row per distinct eval, collapsing its repeats into a pass rate - the comparable
       # number between models, since a single pass/fail cannot separate a real quality
-      # difference from one unlucky sample.
-      #
-      # Grouped by eval_index rather than description: the DSL does not enforce unique
-      # descriptions, and two same-named eval blocks would otherwise report 2N runs and one
-      # blended rate instead of a rate each.
+      # difference from one unlucky sample. Grouped by eval_index rather than description,
+      # which is not unique, or two same-named eval blocks report one blended rate.
       #
       # A dataset eval also reports a rate per case, since a model can improve on average
       # while getting worse on one input. Non-dataset rows keep their existing keys.
@@ -264,8 +255,8 @@ module Raif
           entries.group_by { |score| score[:name] }.map do |name, scores|
             values = scores.map { |score| score[:value] }
             per_case = score_per_case(scores)
-            # Bootstrap over the unrounded per-case means. per_case is rounded for display, and
-            # resampling already-rounded inputs would quantize the interval bounds.
+            # Unrounded, since resampling the rounded values per_case reports for display
+            # would quantize the interval bounds.
             ci95_sample = per_case ? per_case_means(scores) : values
 
             {
@@ -313,8 +304,6 @@ module Raif
         end
       end
 
-      # Unrounded per-case means, used as the bootstrap sample so the CI isn't computed from
-      # the rounded values score_per_case reports.
       def per_case_means(scores)
         scores.group_by { |score| score[:case_id] }.map do |_case_id, case_scores|
           Statistics.mean(case_scores.map { |score| score[:value] })
@@ -329,9 +318,8 @@ module Raif
         value&.round(4)
       end
 
-      # Memoized because both export_results and print_summary ask for it, and score_summaries
-      # runs a 1000-resample bootstrap per score row - work worth doing once at the end of an
-      # expensive run rather than twice.
+      # Memoized: both export_results and print_summary ask for it, and score_summaries runs a
+      # 1000-resample bootstrap per score row.
       def summary_data
         @summary_data ||= build_summary_data
       end

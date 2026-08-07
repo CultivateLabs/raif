@@ -2,12 +2,12 @@
 
 module Raif
   module Evals
-    # The outcome of one execution of an eval block, not the eval block itself. The block
-    # and its description live in EvalSet.evals; running it once against one EvalCase
-    # produces one of these.
+    # The outcome of one execution of an eval block, not the eval block itself. The block and
+    # its description live in EvalSet.evals; running it against one EvalCase produces one of
+    # these.
     class EvalResult
-      # The prompt and response text, which is everything :summary capture drops. Tokens
-      # and cost survive in every mode so the usage totals never depend on capture mode.
+      # The text :summary capture drops. Tokens and cost survive in every mode, so the usage
+      # totals never depend on capture mode.
       COMPLETION_TEXT_KEYS = [:system_prompt, :messages, :response, :response_array, :response_tool_calls].freeze
 
       EMPTY_USAGE = {
@@ -20,11 +20,10 @@ module Raif
 
       attr_reader :description, :expectation_results, :model_completions, :run_index, :eval_index, :case_id, :scores, :usage
 
-      # eval_index identifies which eval block produced this result. Descriptions are not
-      # unique - the DSL does not enforce it - so it is the only stable way to tell two
-      # same-named eval blocks apart when collapsing repeats into a pass rate. case_id
-      # identifies which dataset input it ran against, and is the join key evals:compare
-      # matches on.
+      # eval_index identifies which eval block produced this result; descriptions are not
+      # unique, so it is the only stable way to tell two same-named eval blocks apart when
+      # collapsing repeats into a pass rate. case_id is the dataset input it ran against, and
+      # is the join key evals:compare matches on.
       def initialize(description:, run_index: nil, eval_index: nil, case_id: nil)
         @description = description
         @run_index = run_index
@@ -34,9 +33,9 @@ module Raif
         @model_completions = []
         @scores = []
         @usage = EMPTY_USAGE.dup
-        # Seeded from the configured mode rather than hardcoded true, so an eval that never
-        # reached #record_model_completions - one whose setup raised - omits the key under :none
-        # like its siblings instead of being the single result carrying an empty array.
+        # Seeded from the configured mode, so an eval that never reached
+        # #record_model_completions - one whose setup raised - omits the key under :none like
+        # its siblings instead of being the one result carrying an empty array.
         @model_completions_captured = capture_mode_records_completions?
       end
 
@@ -44,10 +43,9 @@ module Raif
         @expectation_results << result
       end
 
-      # A score name is a metric the run summary aggregates by. Recording the same name
-      # twice for one eval would blend them into one row - masking a regression in one with
-      # an improvement in the other, and treating correlated values as independent samples,
-      # which falsely narrows the confidence interval.
+      # A score name is a metric the run summary aggregates by. Recording the same name twice
+      # for one eval would blend them into one row, hiding a regression in one behind an
+      # improvement in the other and narrowing the confidence interval on correlated values.
       def add_score(score_result)
         if @scores.any? { |score| score.name == score_result.name }
           raise ArgumentError, "score #{score_result.name.inspect} was already recorded for this eval. Give the two scores distinct " \

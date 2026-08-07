@@ -9,9 +9,9 @@ module Raif
     class EvalsCompare < Base
       FORMATS = ["text", "json", "html"].freeze
 
-      # Rails is deliberately not loaded: this reads two JSON files and does arithmetic, and
-      # booting an app to do it would make the one part of the eval tooling that needs no
-      # database or API key the slowest to run.
+      # Rails is deliberately not loaded: this reads two JSON files and does arithmetic, so
+      # booting an app would make the one part of the eval tooling that needs no database or
+      # API key the slowest to run.
       def run
         format = "text"
         threshold = nil
@@ -100,12 +100,11 @@ module Raif
           exit 1
         end
 
-        # Shape-checked rather than trusted. Every key this command reads is looked up with a nil
-        # fallback, so an unrecognized JSON object compares cleanly against another one and
-        # reports no regressions - and this command's whole job is to exit non-zero when there is
-        # one. `--format json` writes its own report into the same results directory, with
-        # baseline/candidate keys instead of results, which makes feeding one back in an easy
-        # mistake to make and an expensive one to not notice.
+        # Every key this command reads is looked up with a nil fallback, so without a shape
+        # check two unrecognized JSON objects would compare cleanly and report no regressions -
+        # from a command whose whole job is to exit non-zero when there is one. `--format json`
+        # writes its own report into the same results directory, so feeding one back in is an
+        # easy mistake to make.
         unless payload.is_a?(Hash) && payload["results"].is_a?(Hash)
           puts Raif::Utils::Colors.red(<<~MSG)
             Error: #{path} is not a Raif eval results file (no top-level "results" object).

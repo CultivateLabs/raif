@@ -270,15 +270,15 @@ RSpec.describe Raif::Evals::Comparison do
       )
     end
 
-    # Descriptions are not unique across eval sets - the DSL does not enforce it - and the label is
-    # all a script reading the JSON has to tell two rows apart by.
+    # Descriptions are not unique across eval sets, and the label is all a script reading the
+    # JSON has to tell two rows apart by.
     it "qualifies a pass rate regression label with its eval set" do
       expect(comparison.regressions.map { |row| row[:label] }).to include("Set  produces expected output [a]")
     end
 
     # Magnitudes are fractions of the baseline, not absolute deltas: the rate halved (0.5), and
-    # clarity's absolute 0.5-point drop is a tenth of its 5.0 baseline. Both are now the same
-    # kind of number, which is what lets one threshold apply to both.
+    # clarity's 0.5-point drop is a tenth of its 5.0 baseline. Being the same kind of number is
+    # what lets one threshold apply to both.
     it "reports both the pass rate drop and the gated score drop, relative to baseline" do
       expect(comparison.regressions.map { |row| row.slice(:kind, :magnitude, :absolute) }).to contain_exactly(
         { kind: :pass_rate, magnitude: 0.5, absolute: 0.5 },
@@ -345,9 +345,9 @@ RSpec.describe Raif::Evals::Comparison do
       expect(improved.regressed?(0)).to be false
     end
 
-    # A score gated by a ceiling is gated, so a move away from that ceiling counts. The threshold
-    # is a fraction of the baseline, so 400ms -> 480ms is 0.2 (20% worse) rather than 80, and the
-    # same 0.25 that catches a quarter of an eval's runs no longer fires on 80 milliseconds.
+    # A score gated by a ceiling is gated, so a move away from that ceiling counts. As a
+    # fraction of the baseline, 400ms -> 480ms is 0.2 rather than 80, so the same 0.25 that
+    # catches a quarter of an eval's runs does not fire on 80 milliseconds.
     it "counts a max-gated score moving in the wrong direction, as a fraction of baseline" do
       latency = described_class.new(
         baseline: payload({ "Set" => [

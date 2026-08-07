@@ -25,9 +25,9 @@ module Raif
           result
         end
 
-        # Records a number on the eval result. A suite of pass/fail expectations alone has
-        # a ceiling: once two models clear every bar their results are identical, and the
-        # quality difference that arrives before a bar is missed is invisible.
+        # Records a number on the eval result. Pass/fail expectations alone have a ceiling:
+        # once two models clear every bar their results are identical, and any quality
+        # difference short of missing a bar is invisible.
         #
         # Passing min: and/or max: also gates the eval on the value, so a score can replace
         # an expect block rather than sitting alongside one.

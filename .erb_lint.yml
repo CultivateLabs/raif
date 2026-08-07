@@ -3,14 +3,13 @@ EnableDefaultLinters: true
 exclude:
   - '**/vendor/**/*'
   - '**/node_modules/**/*'
-  # Not a view: the eval comparison report is a standalone HTML file written by
-  # `raif evals:compare` for the developer who ran it. It is never rendered in a request, so
-  # HardCodedString would have us translate a CLI artifact, and RequireScriptNonce has no CSP
-  # to satisfy. Its multi-line <% %> header also reads as Layout/LeadingEmptyLines.
+  # The eval comparison report is not a view - it is a standalone HTML file `raif
+  # evals:compare` writes for the developer who ran it, never rendered in a request. So
+  # HardCodedString would have us translate a CLI artifact and RequireScriptNonce has no CSP
+  # to satisfy.
   #
-  # No trailing /* on the glob: erb_lint expands these to absolute paths and matches with a
-  # flagless File.fnmatch?, where '**/*' still requires a literal slash after the directory
-  # and so misses files sitting directly in it.
+  # No trailing /* on the glob: erb_lint matches with a flagless File.fnmatch?, where '**/*'
+  # requires a literal slash after the directory and so misses files sitting directly in it.
   - 'lib/raif/evals/**'
 linters:
   RequireScriptNonce:

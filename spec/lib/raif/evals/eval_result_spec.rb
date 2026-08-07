@@ -140,8 +140,8 @@ RSpec.describe Raif::Evals::EvalResult do
   end
 
   # An eval whose setup raised never reaches #record_model_completions, so the key's presence
-  # comes from the initial value. Hardcoded true, that one result carried an empty array under
-  # :none while every sibling omitted the key, leaving a reader to work out why.
+  # comes from the initial value. It has to track the configured mode, or that one result
+  # carries an empty array under :none while every sibling omits the key.
   describe "a result that recorded no completions" do
     it "omits the key under :none, matching the results that did record" do
       allow(Raif.config).to receive(:evals_capture_model_completions).and_return(:none)

@@ -79,9 +79,9 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
       expect(output.string).to include("Low confidence:")
     end
 
-    # A dataset case redirects `output` to a throwaway buffer so it can print one compact line per
-    # case. A low-confidence judgment says the pass or fail on that line is not to be trusted, so
-    # it has to reach the console rather than the discarded buffer.
+    # A dataset case discards `output` so it can print one compact line per case. A
+    # low-confidence judgment says that line's pass or fail is not to be trusted, so it has to
+    # reach the console rather than the discarded buffer.
     it "prints the low confidence warning to the console even when per-expectation output is discarded" do
       stub_raif_task(Raif::Evals::LlmJudges::Binary) do |_messages, _model_completion|
         { passes: true, reasoning: "ok", confidence: 0.3 }.to_json
@@ -185,8 +185,8 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
       expect(task.llm_model_key).to eq("raif_test_llm")
     end
 
-    # The description is the join key evals:compare matches on, so it stays as it was even
-    # though the score the same call records must now be named explicitly.
+    # The description is the join key evals:compare matches on, so it keeps saying "custom"
+    # even though the score the same call records is named explicitly.
     it "uses 'custom' in description for a string rubric" do
       result = eval_set.expect_llm_judge_score(
         "test output",

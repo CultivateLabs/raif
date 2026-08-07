@@ -183,9 +183,8 @@ RSpec.describe Raif::Evals::ScoringRubric do
       expect(described_class.new(name: :empty, description: "none", levels: []).scale).to be_nil
     end
 
-    # An unbounded end has no bound to report. `(9...)` used to raise NoMethodError on
-    # `range.end - 1`; the inclusive and beginless forms only survived because a later .compact
-    # happened to drop the nil.
+    # An unbounded end has no bound to report, and the exclusive form `(9...)` must not reach
+    # `range.end - 1` with a nil end.
     {
       "an inclusive endless range" => (9..),
       "an exclusive endless range" => (9...),
