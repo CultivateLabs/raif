@@ -271,16 +271,29 @@ module Raif
         # records the upload, not the cull, and the uploaded object remains
         # the accepted harmless duplicate.
         Raif::ModelCompletion.transaction do
-          deletable_ids = self.class.eligible_scope(cutoff).where(id: archived_ids).order(:id).lock.pluck(:id)
+          deletable = self.class.eligible_scope(cutoff).where(id: archived_ids).order(:id).lock.pluck(:id, :completed_at, :failed_at)
+          deletable_ids = deletable.map(&:first)
+          terminal_ids = deletable.filter_map { |id, completed_at, failed_at| id if completed_at || failed_at }
 
           # Stamp the archive link on the durable cost records BEFORE
           # deletion: the FK is nullified at the DB level the moment the
-          # completion row is deleted. Only deletable rows are stamped, so
-          # the stamp always means "culled into this archive". Idempotent
-          # update_all, so a crash-then-re-run is safe.
-          Raif::InferenceCostEvent
-            .where(raif_model_completion_id: deletable_ids)
+          # completion row is deleted. Terminal rows only (nonterminal rows
+          # have no events), and only deletable ones, so the stamp always
+          # means "culled into this archive".
+          stamped_count = Raif::InferenceCostEvent
+            .where(raif_model_completion_id: terminal_ids)
             .update_all(raif_archive_id: archive.id)
+
+          # The locks above cover the completion rows, not their events: an
+          # event deleted between the selection and the stamp would let a
+          # terminal completion be culled without its durable spend record.
+          # The stamped count proves every terminal row carries its stamp
+          # into deletion; a mismatch rolls back stamps and deletes together.
+          if stamped_count != terminal_ids.size
+            raise "Raif::ArchiveModelCompletionsJob: expected to stamp #{terminal_ids.size} cost event(s) for " \
+              "archive ##{archive.id} but stamped #{stamped_count}; a cost event vanished between eligibility " \
+              "selection and stamping - rolling back this cull"
+          end
 
           # original_model_completion_id retains record identity after the
           # delete nullifies the events' completion FK.

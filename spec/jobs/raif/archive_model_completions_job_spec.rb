@@ -262,6 +262,24 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       expect(Raif::Archive.count).to eq(1)
     end
 
+    it "rolls back the cull when a cost event vanishes between selection and stamping" do
+      event = old_completions.first.raif_inference_cost_event
+
+      # The row locks cover completions, not events: simulate an external
+      # writer deleting an event in the window between the locked selection
+      # and the stamp.
+      allow_any_instance_of(ActiveRecord::Relation).to receive(:update_all).and_wrap_original do |original, *args|
+        event.delete
+        original.call(*args)
+      end
+
+      expect { perform }.to raise_error(/vanished between eligibility selection and stamping/)
+
+      expect(Raif::ModelCompletion.count).to eq(2)
+      expect(Raif::InferenceCostEvent.where.not(raif_archive_id: nil).count).to eq(0)
+      expect(Raif::Archive.count).to eq(1)
+    end
+
     it "locks the final selection so nothing can change between the re-check and the delete" do
       queries = []
       callback = ->(*_args, payload) { queries << payload[:sql] }

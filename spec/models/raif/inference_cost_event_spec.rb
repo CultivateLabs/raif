@@ -199,6 +199,32 @@ RSpec.describe Raif::InferenceCostEvent, type: :model do
       expect(event.reload.updated_at).to be >= completion.reload.updated_at
     end
 
+    it "treats a freshness-certification failure like a sync failure: accumulated into the retryable error, batch continues" do
+      failing, succeeding = without_live_sync do
+        [create_completion(completed_at: 1.day.ago), create_completion(completed_at: 1.day.ago)]
+      end
+      described_class.backfill!
+      failing_event = failing.reload.raif_inference_cost_event
+      succeeding_event = succeeding.reload.raif_inference_cost_event
+      failing_event.update_columns(updated_at: failing.updated_at - 1.day)
+      succeeding_event.update_columns(updated_at: succeeding.updated_at - 1.day)
+
+      allow_any_instance_of(Raif::InferenceCostEvent).to receive(:touch) do |instance|
+        raise ActiveRecord::ConnectionTimeoutError, "touch boom" if instance.original_model_completion_id == failing.id
+
+        instance.update_column(:updated_at, Time.current)
+      end
+
+      expect do
+        described_class.backfill!
+      end.to raise_error(Raif::Errors::InferenceCostEventsBackfillError, /#{failing.id}/)
+
+      # The failure was contained to its record: the rest of the batch was
+      # still processed, and the failing event was not falsely certified.
+      expect(succeeding_event.reload.updated_at).to be >= succeeding.reload.updated_at
+      expect(failing_event.reload.updated_at).to be < failing.reload.updated_at
+    end
+
     it "does not freshness-certify a stale event whose re-sync fails" do
       completion = without_live_sync { create_completion(completed_at: 1.day.ago) }
       described_class.backfill!

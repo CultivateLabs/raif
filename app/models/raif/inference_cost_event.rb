@@ -113,13 +113,22 @@ class Raif::InferenceCostEvent < Raif::ApplicationRecord
 
           event = model_completion.raif_inference_cost_event
           if synced && event&.persisted?
-            # A stale-but-accurate event gets no timestamp bump from the
-            # sync's save! (no attribute changed), so certify its freshness
-            # explicitly: the archive job's eligibility guard reads
-            # event.updated_at >= completion.updated_at. Only after a
-            # successful sync - certifying an event whose re-sync failed
-            # would mark stale spend data safe to cull.
-            event.touch if event.updated_at < model_completion.updated_at
+            begin
+              # A stale-but-accurate event gets no timestamp bump from the
+              # sync's save! (no attribute changed), so certify its freshness
+              # explicitly: the archive job's eligibility guard reads
+              # event.updated_at >= completion.updated_at. Only after a
+              # successful sync - certifying an event whose re-sync failed
+              # would mark stale spend data safe to cull.
+              event.touch if event.updated_at < model_completion.updated_at
+            rescue StandardError => e
+              # Certification is part of the per-record repair operation: a
+              # transient touch failure must accumulate like a sync failure
+              # (raising the retryable aggregate error below) rather than
+              # escape raw and abort the rest of the batch.
+              Rails.error.report(e, handled: true, severity: :error)
+              failed_model_completion_ids << model_completion.id
+            end
           else
             failed_model_completion_ids << model_completion.id
           end
