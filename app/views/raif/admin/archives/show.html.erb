@@ -54,3 +54,33 @@
     </div>
   </div>
 </div>
+
+<div class="card mb-4" data-controller="raif--copy-to-clipboard">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t(".working_with_title") %></h5>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t(".working_with_format_label") %>:</strong></div>
+      <div class="col-md-9"><%= t(".working_with_format") %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t(".working_with_fetching_label") %>:</strong></div>
+      <div class="col-md-9">
+        <%= t(".working_with_fetching") %>
+        <pre class="mt-2 mb-0"><%= "# e.g. with S3-backed storage:\naws s3 cp #{@archive.location.presence || @archive.key} #{File.basename(@archive.key)}\nshasum -a 256 #{File.basename(@archive.key)}  # must equal #{@archive.checksum_sha256}" %></pre>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t(".working_with_inspecting_label") %>:</strong></div>
+      <div class="col-md-9">
+        <%= t(".working_with_inspecting") %>
+        <pre class="mt-2 mb-0"><%= "gunzip -c #{File.basename(@archive.key)} | head -1   # manifest\ngunzip -c #{File.basename(@archive.key)} | grep '\"id\":<record id>,'" %></pre>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t(".working_with_caveats_label") %>:</strong></div>
+      <div class="col-md-9"><%= t(".working_with_caveats") %></div>
+    </div>
+  </div>
+</div>

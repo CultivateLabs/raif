@@ -13,6 +13,15 @@ en:
           back_to_archives: Back to Archives
           not_browsable_notice: Archive payloads are not browsable here. This record is the audit trail for an archive stored externally. Retrieval is a manual operation using the storage key below.
           title: 'Archive #%{id}'
+          working_with_title: Working With This Archive
+          working_with_format_label: Format
+          working_with_format: Gzip-compressed JSON Lines. Line 1 is a manifest (manifest version, resource type, table, columns, cutoff, id range, record count). Each following line is one record's complete raw column attributes as JSON, including its original id. Records are restorable by hand and never restored automatically.
+          working_with_fetching_label: Fetching
+          working_with_fetching: Retrieve the object from the archive storage using the key or location above, then verify integrity. The SHA-256 of the downloaded file must equal the checksum above.
+          working_with_inspecting_label: Inspecting
+          working_with_inspecting: The first line is the manifest; a specific record can be located by its id. For a culled model completion, the id is preserved on its inference cost event as original_model_completion_id.
+          working_with_caveats_label: Caveats
+          working_with_caveats: Archiving is at-least-once, so a record may also appear in a later archive if a run crashed between upload and deletion. The raif_archive_id stamped on an inference cost event is the authoritative pointer to the archive that deleted its completion; the id range above cannot prove membership on its own.
       common:
         agents: Agents
         all: All

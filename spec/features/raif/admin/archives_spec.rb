@@ -46,6 +46,9 @@ RSpec.describe "Admin::Archives", type: :feature do
       expect(page).to have_content("abc123def456")
       expect(page).to have_content("7")
       expect(page).to have_content("2 KB")
+      expect(page).to have_content(I18n.t("raif.admin.archives.show.working_with_title"))
+      expect(page).to have_content(I18n.t("raif.admin.archives.show.working_with_format"))
+      expect(page).to have_content("shasum -a 256")
     end
   end
 
