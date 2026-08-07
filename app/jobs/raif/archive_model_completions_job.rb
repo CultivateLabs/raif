@@ -54,19 +54,22 @@ module Raif
       # - it is not a member of a model completion batch that is still
       #   non-terminal (belt-and-suspenders alongside quiescence)
       # - durability guard, TERMINAL rows only: its Raif::InferenceCostEvent
-      #   exists, so no spend record is ever lost (self-healing after partial
-      #   backfills or repair-job lag; an un-evented terminal completion just
-      #   waits). Nonterminal rows are eligible without it: they never
-      #   reached a terminal state, so no cost event was ever created and
-      #   there is no spend to protect. These are orphaned pending rows from
-      #   killed processes and crashed jobs (a third of one host's table in
-      #   practice) that would otherwise be immortal. They are archived
-      #   through the same path as everything else - NOT deleted outright,
-      #   despite the temptation (no response, near-zero historical value):
-      #   "every deleted completion exists in an archive" must hold without
-      #   exception. A delete-without-archive shortcut would be a second
-      #   deletion semantics that weakens the invariant this job's safety
-      #   rests on, to save pennies of mostly-redundant prompt storage.
+      #   exists AND is at least as fresh as the completion
+      #   (event.updated_at >= completion.updated_at). A post-terminal update
+      #   whose event re-sync failed leaves a stale event that missing-only
+      #   repair would never revisit, so the repair job also re-syncs stale
+      #   events; until then the row just waits.
+      # - nonterminal rows skip the durability guard: they never reached a
+      #   terminal state, so no cost event exists and there is no spend to
+      #   protect. These are orphaned pending rows from killed processes and
+      #   crashed jobs (a third of one host's table in practice) that would
+      #   otherwise be immortal. They are archived through the same path as
+      #   everything else - NOT deleted outright, despite the temptation (no
+      #   response, near-zero historical value): "every deleted completion
+      #   exists in an archive" must hold without exception, and a
+      #   delete-without-archive shortcut would be a second deletion
+      #   semantics that weakens the invariant this job's safety rests on,
+      #   to save pennies of mostly-redundant prompt storage.
       # - durable-citations guard: its citations, if any, have been copied to
       #   its Raif::ConversationEntry source (protects hosts that haven't run
       #   the conversation entry backfill)
@@ -74,7 +77,7 @@ module Raif
         base_scope(cutoff)
           .where(completions_table[:updated_at].lt(QUIESCENCE_PERIOD.ago))
           .where.not(id: active_batch_members)
-          .where.not(id: terminal_without_cost_event(cutoff))
+          .where.not(id: terminal_without_fresh_cost_event(cutoff))
           .where.not(id: completions_with_uncopied_citations)
       end
 
@@ -95,7 +98,10 @@ module Raif
           eligible_nonterminal: eligible.where(completed_at: nil, failed_at: nil).count,
           excluded_by_quiescence: base_scope(cutoff).where(completions_table[:updated_at].gteq(QUIESCENCE_PERIOD.ago)).count,
           excluded_by_active_batch: base_scope(cutoff).where(id: active_batch_members).count,
-          excluded_missing_cost_event: base_scope(cutoff).where(id: terminal_without_cost_event(cutoff)).count,
+          excluded_missing_cost_event: terminal_scope(cutoff).where.not(id: completions_with_cost_event).count,
+          excluded_stale_cost_event: terminal_scope(cutoff)
+            .where(id: completions_with_cost_event)
+            .where.not(id: completions_with_fresh_cost_event).count,
           excluded_uncopied_citations: base_scope(cutoff).where(id: completions_with_uncopied_citations).count
         }
       end
@@ -126,8 +132,19 @@ module Raif
         Raif::InferenceCostEvent.where.not(raif_model_completion_id: nil).select(:raif_model_completion_id)
       end
 
-      def terminal_without_cost_event(cutoff)
-        terminal_scope(cutoff).where.not(id: completions_with_cost_event)
+      # Events at least as fresh as their completion. An older event means a
+      # post-terminal completion update committed but its event re-sync
+      # failed: the durable spend data may be stale, so the row is not safe
+      # to cull until the repair job re-syncs (or freshness-certifies) it.
+      def completions_with_fresh_cost_event
+        Raif::InferenceCostEvent
+          .joins("INNER JOIN raif_model_completions ON raif_model_completions.id = raif_inference_cost_events.raif_model_completion_id")
+          .where("raif_inference_cost_events.updated_at >= raif_model_completions.updated_at")
+          .select(:raif_model_completion_id)
+      end
+
+      def terminal_without_fresh_cost_event(cutoff)
+        terminal_scope(cutoff).where.not(id: completions_with_fresh_cost_event)
       end
 
       # Completions with citations whose Raif::ConversationEntry source has
@@ -218,6 +235,17 @@ module Raif
           Raif.config.archive_storage.write(key: key, io: io, checksum_sha256: serialized[:checksum_sha256])
         end
 
+        # The write contract's proof of upload is "returned a location
+        # string without raising". A blank or non-string return means the
+        # adapter did not honor the contract (an easy mistake in a custom
+        # adapter - an accidental implicit nil return), so nothing below may
+        # trust that an object exists.
+        unless location.is_a?(String) && location.present?
+          raise Raif::Errors::ArchiveStorageError,
+            "Raif.config.archive_storage.write must return a nonblank location string (got #{location.inspect}); " \
+              "refusing to record the archive or delete any rows"
+        end
+
         # Row exists = object uploaded; created in the same run that deletes.
         archive = Raif::Archive.create!(
           resource_type: "Raif::ModelCompletion",
@@ -231,26 +259,33 @@ module Raif
           checksum_sha256: serialized[:checksum_sha256]
         )
 
-        # Re-check eligibility at delete time: the upload window can be long
-        # (a large PUT), and a row mutated during it (touched, cost event
-        # removed, pulled into a live batch) must survive - its uploaded copy
-        # is stale. The survivor stays eligible and re-enters a later batch
-        # once quiescent again; its copy in this object is just the accepted
-        # harmless duplicate.
-        deletable_ids = self.class.eligible_scope(cutoff).where(id: archived_ids).pluck(:id)
+        # Final cull, atomic: re-select the serialized ids through the full
+        # eligibility scope with row locks, stamp, and delete in one
+        # transaction. The re-check exists because the upload window can be
+        # long: a row mutated during it must survive (its uploaded copy is
+        # stale) and re-enters a later batch once quiescent again. The locks
+        # close the residual race between this selection and the delete
+        # (e.g. a row terminalizing in that gap would be deleted with an
+        # unstamped cost event). On failure, stamps and deletes roll back
+        # together; the Archive row stays outside the transaction because it
+        # records the upload, not the cull, and the uploaded object remains
+        # the accepted harmless duplicate.
+        Raif::ModelCompletion.transaction do
+          deletable_ids = self.class.eligible_scope(cutoff).where(id: archived_ids).order(:id).lock.pluck(:id)
 
-        # Stamp the archive link on the durable cost records BEFORE deletion:
-        # the FK is nullified at the DB level the moment the completion row
-        # is deleted. Only deletable rows are stamped, so the stamp always
-        # means "culled into this archive". Idempotent update_all, so a
-        # crash-then-re-run is safe.
-        Raif::InferenceCostEvent
-          .where(raif_model_completion_id: deletable_ids)
-          .update_all(raif_archive_id: archive.id)
+          # Stamp the archive link on the durable cost records BEFORE
+          # deletion: the FK is nullified at the DB level the moment the
+          # completion row is deleted. Only deletable rows are stamped, so
+          # the stamp always means "culled into this archive". Idempotent
+          # update_all, so a crash-then-re-run is safe.
+          Raif::InferenceCostEvent
+            .where(raif_model_completion_id: deletable_ids)
+            .update_all(raif_archive_id: archive.id)
 
-        # DB-level ON DELETE SET NULL handles the cost event FK;
-        # original_model_completion_id retains record identity.
-        Raif::ModelCompletion.where(id: deletable_ids).in_batches(of: 5_000).delete_all
+          # original_model_completion_id retains record identity after the
+          # delete nullifies the events' completion FK.
+          Raif::ModelCompletion.where(id: deletable_ids).in_batches(of: 5_000).delete_all
+        end
       ensure
         File.unlink(serialized[:path]) if File.exist?(serialized[:path])
       end

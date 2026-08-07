@@ -150,6 +150,27 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       expect(archived_ids).not_to include(protected_completion.id)
     end
 
+    it "never culls a terminal completion whose cost event is stale, until repair re-syncs it" do
+      completion = create_terminal_completion
+      event = completion.raif_inference_cost_event
+      event.update_columns(updated_at: completion.updated_at - 1.day)
+
+      perform
+
+      expect(Raif::ModelCompletion.exists?(completion.id)).to be(true)
+      expect(Raif::Archive.count).to eq(0)
+
+      # The widened repair scope re-syncs (or freshness-certifies) the stale
+      # event, making the row eligible again.
+      Raif::InferenceCostEvent.backfill!
+      expect(event.reload.updated_at).to be >= completion.reload.updated_at
+
+      perform
+
+      expect(Raif::ModelCompletion.exists?(completion.id)).to be(false)
+      expect(event.reload.raif_archive_id).to eq(Raif::Archive.sole.id)
+    end
+
     it "never culls a completion with citations its conversation entry has not copied" do
       creator = FB.create(:raif_test_user)
       conversation = FB.create(:raif_test_conversation, creator: creator)
@@ -208,6 +229,47 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       expect(Raif::ModelCompletion.count).to eq(2)
       expect(Raif::Archive.count).to eq(0)
       expect(Raif::InferenceCostEvent.where.not(raif_archive_id: nil).count).to eq(0)
+    end
+
+    it "deletes zero rows and records zero archives when the adapter returns a blank location instead of raising" do
+      allow(storage).to receive(:write).and_return(nil)
+
+      expect { perform }.to raise_error(Raif::Errors::ArchiveStorageError, /nonblank location string/)
+
+      expect(Raif::ModelCompletion.count).to eq(2)
+      expect(Raif::Archive.count).to eq(0)
+      expect(Raif::InferenceCostEvent.where.not(raif_archive_id: nil).count).to eq(0)
+    end
+  end
+
+  describe "atomic cull transaction" do
+    let!(:old_completions) { 2.times.map { create_terminal_completion } }
+
+    it "rolls back the event stamps when deletion fails, leaving the upload as an accounted-for duplicate" do
+      allow_any_instance_of(ActiveRecord::Batches::BatchEnumerator)
+        .to receive(:delete_all)
+        .and_raise(ActiveRecord::StatementInvalid, "delete exploded")
+
+      expect { perform }.to raise_error(ActiveRecord::StatementInvalid)
+
+      # Stamps and deletes roll back together: no event may claim its
+      # completion was culled into an archive while the row still exists.
+      expect(Raif::ModelCompletion.count).to eq(2)
+      expect(Raif::InferenceCostEvent.where.not(raif_archive_id: nil).count).to eq(0)
+
+      # The Archive row records the upload and stays; the next run archives
+      # the rows again under a new key (harmless duplicate).
+      expect(Raif::Archive.count).to eq(1)
+    end
+
+    it "locks the final selection so nothing can change between the re-check and the delete" do
+      queries = []
+      callback = ->(*_args, payload) { queries << payload[:sql] }
+
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { perform }
+
+      expect(queries).to include(match(/raif_model_completions.*FOR UPDATE/m))
+      expect(Raif::ModelCompletion.count).to eq(0)
     end
   end
 
@@ -369,6 +431,9 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       missing_event = create_terminal_completion
       missing_event.raif_inference_cost_event.destroy!
 
+      stale_event = create_terminal_completion
+      stale_event.raif_inference_cost_event.update_columns(updated_at: stale_event.updated_at - 1.day)
+
       creator = FB.create(:raif_test_user)
       conversation = FB.create(:raif_test_conversation, creator: creator)
       entry = FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator)
@@ -386,6 +451,7 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       expect(result[:excluded_by_quiescence]).to eq(1)
       expect(result[:excluded_by_active_batch]).to eq(1)
       expect(result[:excluded_missing_cost_event]).to eq(1)
+      expect(result[:excluded_stale_cost_event]).to eq(1)
       expect(result[:excluded_uncopied_citations]).to eq(1)
       expect(Raif::ModelCompletion.exists?(eligible.id)).to be(true)
     end
