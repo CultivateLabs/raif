@@ -8,6 +8,15 @@ module Raif
       class SetupGenerator < Rails::Generators::Base
         source_root File.expand_path("templates", __dir__)
 
+        RESULTS_GITIGNORE_PATH = "raif_evals/results/.gitignore"
+
+        RUN_LOG_IGNORE = <<~EOS
+          # Eval run logs are transient: the run each belongs to either finishes and replaces it
+          # with a results file, or gets resumed. Keep this even if you delete the `*` above to
+          # put result files in version control.
+          *.partial.jsonl
+        EOS
+
         def create_directories
           empty_directory "raif_evals"
           empty_directory "raif_evals/eval_sets"
@@ -26,11 +35,18 @@ module Raif
           EOS
         end
 
+        # Appends to an existing file rather than raising a conflict prompt, so an install made
+        # before the run log pattern existed picks it up on a re-run.
         def create_gitignore
-          create_file "raif_evals/results/.gitignore", <<~EOS
-            *
-            !.gitignore
-          EOS
+          existing_gitignore = File.join(destination_root, RESULTS_GITIGNORE_PATH)
+
+          unless File.exist?(existing_gitignore)
+            return create_file RESULTS_GITIGNORE_PATH, "*\n!.gitignore\n\n#{RUN_LOG_IGNORE}"
+          end
+
+          return if File.read(existing_gitignore).match?(/^\s*\*\.partial\.jsonl\s*$/)
+
+          append_to_file RESULTS_GITIGNORE_PATH, "\n#{RUN_LOG_IGNORE}"
         end
 
         def show_instructions

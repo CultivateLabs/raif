@@ -163,6 +163,11 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   # repairable instead of silently losing the spend record.
   before_destroy :ensure_durable_inference_cost_event!
 
+  # On create rather than a later save so a subscriber gets the record itself, which Raif::Llm
+  # then mutates in place as the request progresses - no re-query needed to see the finished
+  # completion.
+  after_create -> { ActiveSupport::Notifications.instrument("create.raif_model_completion", model_completion: self) }
+
   after_initialize -> { self.messages ||= [] }
   after_initialize -> { self.available_model_tools ||= [] }
   after_initialize -> { self.response_array ||= [] }

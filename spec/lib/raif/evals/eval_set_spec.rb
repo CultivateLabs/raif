@@ -334,6 +334,54 @@ RSpec.describe Raif::Evals::EvalSet do
       expect(eval_result.usage[:total_tokens]).to eq(20)
     end
 
+    it "does not capture model completions created in teardown" do
+      eval_set_with_teardown_llm_call = Class.new(described_class) do
+        teardown do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 99)
+        end
+
+        eval "makes its own LLM call" do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 7)
+
+          expect("ran") { true }
+        end
+      end
+
+      eval_result = eval_set_with_teardown_llm_call.run.first
+
+      expect(eval_result.model_completions.size).to eq(1)
+      expect(eval_result.usage[:total_tokens]).to eq(7)
+    end
+
+    it "runs each eval on its own instance, so instance state does not leak between evals" do
+      eval_set_class = Class.new(described_class) do
+        eval "leaves an instance variable behind" do
+          @leaked = "from the first eval"
+          expect("ran") { true }
+        end
+
+        eval "does not see the previous eval's instance variable" do
+          expect("no leaked state") { @leaked.nil? }
+        end
+      end
+
+      expect(eval_set_class.run(output: StringIO.new)).to all(be_passed)
+    end
+
+    # A sink left open keeps collecting - and keeps the records alive - for the rest of the
+    # process, including whatever the host app does after the run.
+    it "closes the completion sink even when the eval raises" do
+      eval_set_class = Class.new(described_class) do
+        eval "blows up" do
+          raise "boom"
+        end
+      end
+
+      eval_set_class.run(output: StringIO.new)
+
+      expect(ActiveSupport::IsolatedExecutionState[Raif::Evals::ModelCompletionSink::STATE_KEY]).to be_nil
+    end
+
     it "does not capture model completions created before the eval ran (setup)" do
       completion_before = FB.create(
         :raif_model_completion,

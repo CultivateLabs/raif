@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "raif/evals/model_completion_sink"
 require "raif/evals/statistics"
 require "raif/evals/console_line"
 require "raif/evals/expectation_result"
@@ -25,4 +26,16 @@ module Raif
     module Agents
     end
   end
+end
+
+# Subscribed on load rather than per run: requiring this file is what makes an eval run possible,
+# and the sink is inert until an eval opens it. The subscription is global while collection is
+# per-thread, so concurrent evals keep their own completions.
+#
+# The block closes over the sink instead of naming it: app/models/raif/evals makes Raif::Evals a
+# Zeitwerk-managed namespace, so a reload drops the constants this file requires into it, and
+# resolving one per event would raise on a host app's own LLM calls.
+sink = Raif::Evals::ModelCompletionSink
+ActiveSupport::Notifications.subscribe("create.raif_model_completion") do |event|
+  sink.record(event.payload[:model_completion])
 end

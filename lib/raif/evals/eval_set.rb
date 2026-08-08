@@ -147,8 +147,11 @@ module Raif
         end
       end
 
-      def run_eval(eval_definition, eval_case: nil, run_index: nil, eval_index: nil)
+      # Runs one execution - one eval block, against one case, on one repeat. Writes the current
+      # case and result onto this instance, which is why each execution gets its own.
+      def run_eval(eval_definition, eval_case: nil, run_index: nil, eval_index: nil, case_id_width: nil)
         @current_case = eval_case
+        @case_id_width = case_id_width
         @current_eval_result = EvalResult.new(
           description: eval_definition[:description],
           run_index: run_index,
@@ -171,14 +174,14 @@ module Raif
             # setup runs inside the same rescue as the eval block so that one case built
             # from a bad fixture costs one result rather than the whole dataset.
             stage = "Setup"
-            model_completions_start_id = nil
+            captured_completions = nil
 
             begin
               run_block(self.class.setup_block, eval_case) if self.class.setup_block
 
               stage = "Eval block"
-              # After setup, so we only record the LLM calls the eval itself makes.
-              model_completions_start_id = Raif::ModelCompletion.maximum(:id) || 0
+              # Opened after setup, so we only record the LLM calls the eval itself makes.
+              captured_completions = ModelCompletionSink.open
 
               run_block(eval_definition[:block], eval_case)
             rescue => e
@@ -192,10 +195,10 @@ module Raif
                 )
               )
             ensure
-              # Before teardown: sources like Raif::Agent declare `has_many
-              # :raif_model_completions, dependent: :destroy`, so a teardown that destroys
-              # them takes the rows we need with it.
-              capture_model_completions(model_completions_start_id) if model_completions_start_id
+              # Closed before teardown, so an LLM call a teardown makes is not billed to the
+              # eval. Closing first also means a capture failure cannot leave the sink open.
+              ModelCompletionSink.close
+              capture_model_completions(captured_completions) if captured_completions
 
               run_block(self.class.teardown_block, eval_case) if self.class.teardown_block
             end
@@ -243,10 +246,20 @@ module Raif
 
       attr_reader :console_output
 
+      # A fresh instance per execution, so nothing an eval's setup leaves behind is visible to the
+      # next eval or to this instance, which coordinates the run and never runs an eval block.
+      #
       # Records each result the moment it completes, so the run's spend survives an interrupt
       # that never reaches the results file.
       def run_and_record(eval_definition, eval_case: nil, run_index: nil, eval_index: nil)
-        eval_result = run_eval(eval_definition, eval_case: eval_case, run_index: run_index, eval_index: eval_index)
+        eval_result = self.class.new(output: console_output).run_eval(
+          eval_definition,
+          eval_case: eval_case,
+          run_index: run_index,
+          eval_index: eval_index,
+          case_id_width: @case_id_width
+        )
+
         @run_log&.record(eval_set: self.class.name, result: eval_result)
         eval_result
       end
@@ -331,11 +344,9 @@ module Raif
         end
       end
 
-      # Records the model completions created during the eval (those with an id greater
-      # than the baseline captured before the eval ran) onto the current eval so they can
-      # be exported. Wrapped defensively so a capture failure never fails the eval itself.
-      def capture_model_completions(start_id)
-        completions = Raif::ModelCompletion.where("id > ?", start_id).order(:id).to_a
+      # Records what the sink collected onto the current eval, for export. Wrapped defensively so
+      # a capture failure never fails the eval itself.
+      def capture_model_completions(completions)
         @current_eval_result.record_model_completions(completions, capture_mode: Raif.config.evals_capture_model_completions)
       rescue => e
         console_output.puts Raif::Utils::Colors.red("  Error capturing model completions: #{e.message}")

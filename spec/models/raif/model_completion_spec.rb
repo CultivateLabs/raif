@@ -84,6 +84,35 @@ RSpec.describe Raif::ModelCompletion, type: :model do
   end
 
   describe "callbacks" do
+    describe "create.raif_model_completion instrumentation" do
+      it "publishes the record itself, so a subscriber sees later mutations" do
+        published = []
+        subscriber = ActiveSupport::Notifications.subscribe("create.raif_model_completion") do |event|
+          published << event.payload[:model_completion]
+        end
+
+        model_completion = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm")
+        model_completion.total_tokens = 42
+
+        expect(published.size).to eq(1)
+        expect(published.first.total_tokens).to eq(42)
+      ensure
+        ActiveSupport::Notifications.unsubscribe(subscriber)
+      end
+
+      it "is not published for an update" do
+        model_completion = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm")
+
+        published = []
+        subscriber = ActiveSupport::Notifications.subscribe("create.raif_model_completion") { published << :published }
+        model_completion.update!(total_tokens: 7)
+
+        expect(published).to be_empty
+      ensure
+        ActiveSupport::Notifications.unsubscribe(subscriber)
+      end
+    end
+
     describe "#set_total_tokens" do
       it "sets total_tokens based on completion_tokens and prompt_tokens" do
         model_completion = described_class.new(
