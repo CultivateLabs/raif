@@ -21,11 +21,23 @@
 # including crash-orphaned uploads, without enumerating resource types.
 class Raif::ArchivePartition
   PREFIX_ROOT = "raif-archives/partitions"
-  # Reserved segment for explicitly ungrouped records
-  # (Raif.config.archive_partition_fallback = Raif::Archive::UNGROUPED).
-  # Cannot collide with a real value: real values always hash to a hex
-  # token, so a host value normalizing to the string "_ungrouped" never
-  # lands in this segment.
+
+  # Sentinel for Raif.config.archive_partition_fallback: hosts with
+  # intentionally global/unowned records opt in to archiving NULL-partition
+  # records under the reserved "_ungrouped" storage segment. A unique object
+  # rather than a string or symbol so no real partition column value can
+  # ever equal it. Defined here, in an eagerly required lib file, because
+  # host initializers reference it before the engine's app/ autoload paths
+  # exist (Raif::Archive::UNGROUPED aliases it for post-boot callers).
+  UNGROUPED = Object.new.tap do |sentinel|
+    def sentinel.inspect
+      "Raif::ArchivePartition::UNGROUPED"
+    end
+  end.freeze
+
+  # Reserved segment for explicitly ungrouped records. Cannot collide with
+  # a real value: real values always hash to a hex token, so a host value
+  # normalizing to the string "_ungrouped" never lands in this segment.
   UNGROUPED_SEGMENT = "_ungrouped"
 
   # value.to_s normalized string for a real partition; nil for the reserved
@@ -33,7 +45,7 @@ class Raif::ArchivePartition
   attr_reader :value
 
   def self.for(value)
-    return ungrouped if value.equal?(Raif::Archive::UNGROUPED)
+    return ungrouped if value.equal?(UNGROUPED)
 
     normalized = value.to_s
     if normalized.blank?

@@ -99,7 +99,8 @@ module Raif
       # (the default) fails closed: the record is never archived, so a later
       # partition purge cannot miss records that lost their attribution.
       # Hosts with intentionally global/unowned records may explicitly set
-      # Raif::Archive::UNGROUPED to archive them under the reserved
+      # Raif::ArchivePartition::UNGROUPED (aliased as Raif::Archive::UNGROUPED
+      # for post-boot callers) to archive them under the reserved
       # "_ungrouped" storage segment, which purge_partition! never touches.
       @archive_partition_fallback = nil
       # Storage adapter instance implementing
@@ -328,9 +329,9 @@ module Raif
       # Deliberately no database access here (table/column existence is
       # checked lazily by the archive job and dry_run): boot validation must
       # work on a blank database (db:create, db:migrate, asset precompile).
-      unless archive_partition_fallback.nil? || archive_partition_fallback.equal?(Raif::Archive::UNGROUPED)
+      unless archive_partition_fallback.nil? || archive_partition_fallback.equal?(Raif::ArchivePartition::UNGROUPED)
         raise Raif::Errors::InvalidConfigError,
-          "Raif.config.archive_partition_fallback must be nil (fail closed) or Raif::Archive::UNGROUPED (got #{archive_partition_fallback.inspect})"
+          "Raif.config.archive_partition_fallback must be nil (fail closed) or Raif::ArchivePartition::UNGROUPED (got #{archive_partition_fallback.inspect})" # rubocop:disable Layout/LineLength
       end
 
       # Billing-window floor, enforced whether or not archiving is enabled: a

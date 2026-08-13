@@ -42,7 +42,8 @@ module Raif
   # small partitions drain within a run while one large-backlog partition
   # cannot monopolize it. Records whose partition value is NULL (or
   # normalizes to blank) fail closed, ineligible until the host either
-  # attributes them or opts into the Raif::Archive::UNGROUPED fallback.
+  # attributes them or opts into the Raif::ArchivePartition::UNGROUPED
+  # fallback.
   #
   # Deliberately NOT handled: raif_model_completion_batches rows remain; they
   # carry their own aggregated cost columns and nothing recomputes them from
@@ -148,7 +149,7 @@ module Raif
       end
 
       def ungrouped_fallback?
-        Raif.config.archive_partition_fallback.equal?(Raif::Archive::UNGROUPED)
+        Raif.config.archive_partition_fallback.equal?(Raif::ArchivePartition::UNGROUPED)
       end
 
       # Column existence is validated here, at job/dry_run execution time,

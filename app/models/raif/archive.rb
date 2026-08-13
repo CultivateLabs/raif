@@ -34,17 +34,12 @@
 #  index_raif_archives_on_resource_type_and_record_id_range  (resource_type,first_record_id,last_record_id)
 #
 class Raif::Archive < Raif::ApplicationRecord
-  # Sentinel for Raif.config.archive_partition_fallback: hosts with
-  # intentionally global/unowned records opt in to archiving NULL-partition
-  # records under the reserved "_ungrouped" storage segment. A unique object
-  # rather than a string or symbol so no real partition column value can
-  # ever equal it (a host value that normalizes to the string "_ungrouped"
-  # is hashed like any other value).
-  UNGROUPED = Object.new.tap do |sentinel|
-    def sentinel.inspect
-      "Raif::Archive::UNGROUPED"
-    end
-  end.freeze
+  # Convenience alias for the ungrouped-fallback sentinel. The canonical
+  # constant lives on Raif::ArchivePartition (an eagerly required lib file)
+  # because host initializers must be able to reference it before the
+  # engine's app/ autoload paths exist; in an initializer, use
+  # Raif::ArchivePartition::UNGROUPED.
+  UNGROUPED = Raif::ArchivePartition::UNGROUPED
 
   has_many :raif_inference_cost_events,
     class_name: "Raif::InferenceCostEvent",

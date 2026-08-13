@@ -366,8 +366,8 @@ Raif.configure do |config|
   # (reported by dry_run as excluded_by_missing_partition), so a later
   # tenant purge cannot miss records that lost their attribution. Hosts
   # with intentionally global/unowned records may explicitly set
-  # Raif::Archive::UNGROUPED to archive them under a reserved "_ungrouped"
-  # storage segment that purge_partition! never touches.
+  # Raif::ArchivePartition::UNGROUPED to archive them under a reserved
+  # "_ungrouped" storage segment that purge_partition! never touches.
   # config.archive_partition_fallback = nil
 
   # How long model completions are retained before being archived and

@@ -54,6 +54,15 @@ RSpec.describe Raif::Archive, type: :model do
     end
   end
 
+  describe "UNGROUPED" do
+    it "aliases the canonical lib sentinel, so both names share one identity" do
+      # The definition lives on Raif::ArchivePartition (eagerly required)
+      # because host initializers reference it before app/ autoload paths
+      # exist; equal? comparisons must hold whichever name callers use.
+      expect(described_class::UNGROUPED).to equal(Raif::ArchivePartition::UNGROUPED)
+    end
+  end
+
   describe "partition_value" do
     it "is nullable and round-trips the stored normalized value" do
       unpartitioned = FB.create(:raif_archive)

@@ -5,6 +5,10 @@ require "raif/languages"
 require "raif/engine"
 require "raif/configuration"
 require "raif/errors"
+# Initializer-facing: hosts reference these while config/initializers run,
+# before the engine's app/ autoload paths are available.
+require "raif/archive_partition"
+require "raif/archive_storage/file_system"
 require "raif/utils"
 require "raif/llm_registry"
 require "raif/embedding_model_registry"

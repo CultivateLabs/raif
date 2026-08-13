@@ -50,7 +50,7 @@ RSpec.describe Raif::ArchivePartition do
     end
 
     it "returns the reserved ungrouped partition for the UNGROUPED sentinel" do
-      expect(described_class.for(Raif::Archive::UNGROUPED).ungrouped?).to be(true)
+      expect(described_class.for(described_class::UNGROUPED).ungrouped?).to be(true)
     end
   end
 

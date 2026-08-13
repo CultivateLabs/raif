@@ -171,18 +171,25 @@ RSpec.describe Raif::Configuration do
 
       it "allows the UNGROUPED sentinel as the partition fallback" do
         Raif.config.archive_partition_column = :account_id
+        Raif.config.archive_partition_fallback = Raif::ArchivePartition::UNGROUPED
+
+        expect { Raif.config.validate! }.not_to raise_error
+      end
+
+      it "accepts the sentinel via its Raif::Archive::UNGROUPED alias" do
+        Raif.config.archive_partition_column = :account_id
         Raif.config.archive_partition_fallback = Raif::Archive::UNGROUPED
 
         expect { Raif.config.validate! }.not_to raise_error
       end
 
-      it "rejects any fallback other than nil or Raif::Archive::UNGROUPED" do
+      it "rejects any fallback other than nil or the UNGROUPED sentinel" do
         Raif.config.archive_partition_column = :account_id
         Raif.config.archive_partition_fallback = "_ungrouped"
 
         expect { Raif.config.validate! }.to raise_error(
           Raif::Errors::InvalidConfigError,
-          /archive_partition_fallback must be nil \(fail closed\) or Raif::Archive::UNGROUPED/
+          /archive_partition_fallback must be nil \(fail closed\) or Raif::ArchivePartition::UNGROUPED/
         )
       end
     end
