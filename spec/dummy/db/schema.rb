@@ -85,10 +85,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_000001) do
     t.string "key", null: false
     t.bigint "last_record_id", null: false
     t.string "location", null: false
+    t.string "partition_value"
     t.integer "record_count", null: false
     t.string "resource_type", null: false
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_raif_archives_on_key", unique: true
+    t.index ["partition_value"], name: "index_raif_archives_on_partition_value"
     t.index ["resource_type", "first_record_id", "last_record_id"], name: "index_raif_archives_on_resource_type_and_record_id_range"
   end
 
