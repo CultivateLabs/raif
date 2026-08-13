@@ -556,6 +556,23 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       expect(Raif::ModelCompletion.where(id: completions.map(&:id))).to be_empty
     end
 
+    it "pages passes through all eligible partitions before revisiting deep backlogs" do
+      stub_const("Raif::ArchiveModelCompletionsJob::PARTITIONS_PER_PASS", 2)
+      stub_const("Raif::ArchiveModelCompletionsJob::BATCH_RECORD_LIMIT", 1)
+
+      # Two deep-backlog partitions hold all the oldest rows; a third sits
+      # beyond the per-pass cap. Relisting the cap-sized oldest cohort every
+      # pass would starve it for the whole run.
+      3.times { |i| create_partitioned_completion(1, created_at: (12 - i).months.ago) }
+      3.times { |i| create_partitioned_completion(2, created_at: (12 - i).months.ago) }
+      small = create_partitioned_completion(3, created_at: 8.months.ago)
+
+      perform(max_objects: 4)
+
+      expect(Raif::ModelCompletion.exists?(small.id)).to be(false)
+      expect(Raif::Archive.count).to eq(4)
+    end
+
     it "drains many small partitions within a single run" do
       completions = [1, 2, 3].map { |value| create_partitioned_completion(value) }
 
@@ -581,20 +598,19 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
 
       expect { perform }.not_to raise_error
 
-      # The whole cull rolled back: the row survives with no stamp, and the
-      # tainted object and its audit row were both removed.
-      expect(Raif::ModelCompletion.exists?(completion.id)).to be(true)
-      expect(completion.raif_inference_cost_event.reload.raif_archive_id).to be_nil
-      expect(Raif::Archive.count).to eq(0)
-      expect(Dir.glob(File.join(storage_root, "**", "*")).select { |f| File.file?(f) }).to be_empty
-
-      # The record now archives cleanly under its new partition on a later run.
-      perform
-
+      # The tainted upload (under partition 7's prefix) rolled back its cull
+      # and was removed with its audit row; the round then moved on and
+      # archived the record cleanly under its new partition in a later pass
+      # of the same run.
       archive = Raif::Archive.sole
       expect(archive.partition_value).to eq("8")
       expect(archive.key).to start_with(partition_prefix(8))
       expect(Raif::ModelCompletion.exists?(completion.id)).to be(false)
+      expect(completion.raif_inference_cost_event.reload.raif_archive_id).to eq(archive.id)
+
+      # Only the partition-8 object remains in storage.
+      files = Dir.glob(File.join(storage_root, "**", "*")).select { |f| File.file?(f) }
+      expect(files).to eq([File.join(storage_root, archive.key)])
     end
 
     it "leaves the tainted object and its audit row in place when the adapter does not implement delete" do
@@ -622,13 +638,16 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
 
       expect { perform }.not_to raise_error
 
-      # The cull still aborted, but without delete(key:) the object cannot
-      # be removed, so the Raif::Archive row deliberately stays too (row
-      # exists = object uploaded).
-      expect(Raif::ModelCompletion.exists?(completion.id)).to be(true)
-      expect(completion.raif_inference_cost_event.reload.raif_archive_id).to be_nil
-      archive = Raif::Archive.sole
-      expect(File.exist?(File.join(storage_root, archive.key))).to be(true)
+      # The cull still aborted, but without delete(key:) the tainted object
+      # cannot be removed, so its Raif::Archive row deliberately stays too
+      # (row exists = object uploaded). The record still archives under its
+      # new partition in a later pass of the same run.
+      tainted, clean = Raif::Archive.order(:id).to_a
+      expect(tainted.partition_value).to eq("7")
+      expect(File.exist?(File.join(storage_root, tainted.key))).to be(true)
+      expect(clean.partition_value).to eq("8")
+      expect(Raif::ModelCompletion.exists?(completion.id)).to be(false)
+      expect(completion.raif_inference_cost_event.reload.raif_archive_id).to eq(clean.id)
     end
 
     it "keeps the audit row when deleting the tainted object fails, preserving row exists = object uploaded" do
@@ -646,10 +665,12 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
 
       expect { perform }.not_to raise_error
 
-      expect(Raif::ModelCompletion.exists?(completion.id)).to be(true)
-      expect(completion.raif_inference_cost_event.reload.raif_archive_id).to be_nil
-      archive = Raif::Archive.sole
-      expect(File.exist?(File.join(storage_root, archive.key))).to be(true)
+      tainted, clean = Raif::Archive.order(:id).to_a
+      expect(tainted.partition_value).to eq("7")
+      expect(File.exist?(File.join(storage_root, tainted.key))).to be(true)
+      expect(clean.partition_value).to eq("8")
+      expect(Raif::ModelCompletion.exists?(completion.id)).to be(false)
+      expect(completion.raif_inference_cost_event.reload.raif_archive_id).to eq(clean.id)
     end
 
     it "logs and retains rows whose SQL partition match diverges from their normalized value" do

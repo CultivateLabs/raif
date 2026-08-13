@@ -66,9 +66,10 @@ module Raif
     RESOURCE_KEY_SEGMENT = "model-completions"
     # Distinct partitions fetched per round-robin pass. The listing query is
     # a GROUP BY over the full multi-guard eligibility scope, the one
-    # potentially expensive query in the fairness design, so it is capped.
-    # Partitions beyond the cap are reached in later passes: archiving a
-    # partition's oldest records pushes it down the oldest-first ordering.
+    # potentially expensive query in the fairness design, so it is capped;
+    # each pass excludes the partitions already visited this round, so
+    # successive passes page through every eligible partition before any is
+    # revisited.
     PARTITIONS_PER_PASS = 100
 
     # Internal control-flow signal: a serialized record's partition value
@@ -300,16 +301,37 @@ module Raif
 
         # Round-robin passes: at most one object per partition per pass, so
         # many small partitions all drain within a run while one
-        # large-backlog partition cannot monopolize it. With partitioning
-        # unset there is exactly one pseudo-partition and this reduces to
-        # sequential batching. The runtime budget is only checked between
-        # objects: a started object always finishes, so a run always stops
-        # in a safe state.
-        loop do
-          culled_any = false
+        # large-backlog partition cannot monopolize it. Each pass excludes
+        # the partitions already visited this round, paging through EVERY
+        # eligible partition before any is revisited (the listing cap alone
+        # would relist the same oldest cohort while it still holds the
+        # oldest rows, starving partitions beyond the cap). A pass that
+        # lists nothing ends the round; a new round starts only if the
+        # finished round culled something. With partitioning unset there is
+        # exactly one pseudo-partition and this reduces to sequential
+        # batching. The runtime budget is only checked between objects: a
+        # started object always finishes, so a run always stops in a safe
+        # state.
+        visited = []
+        round_culled = false
 
-          partition_selections(cutoff).each do |partition, predicate|
+        loop do
+          selections = partition_selections(cutoff, visited)
+
+          if selections.empty?
+            break unless round_culled
+
+            visited = []
+            round_culled = false
+            next
+          end
+
+          selections.each do |partition, predicate, raws|
             break if records_remaining <= 0 || objects_remaining <= 0 || monotonic_now >= deadline
+
+            # Marked visited even when nothing archives, or an emptied
+            # partition would relist in every pass for the rest of the round.
+            visited.concat(raws)
 
             ids = eligible_batch_ids(cutoff, partition, predicate, limit: [BATCH_RECORD_LIMIT, records_remaining].min)
             next if ids.empty?
@@ -320,13 +342,11 @@ module Raif
             records_remaining -= outcome[:records]
             objects_remaining -= 1
             # A tainted batch (partition mutated during upload, object
-            # cleaned up) spends budget but is not progress: without a
-            # successful cull somewhere, another pass could only repeat the
-            # same work.
-            culled_any ||= outcome[:culled]
+            # cleaned up) spends budget but is not progress; the round
+            # moves on to other partitions.
+            round_culled ||= outcome[:culled]
           end
 
-          break unless culled_any
           break if records_remaining <= 0 || objects_remaining <= 0 || monotonic_now >= deadline
         end
       end
@@ -335,18 +355,35 @@ module Raif
   private
 
     # Eligible partitions for one pass, ordered by each partition's oldest
-    # eligible completion and capped at PARTITIONS_PER_PASS. Returns
-    # [partition, predicate] pairs, where the predicate re-selects the
-    # partition's records; [[nil, nil]] when partitioning is unset. Group
-    # values that normalize to blank fail closed (skipped) unless the host
-    # explicitly opted into the ungrouped fallback, in which case they merge
-    # into one reserved ungrouped partition at the position of its oldest
-    # member.
-    def partition_selections(cutoff)
+    # eligible completion, capped at PARTITIONS_PER_PASS, and excluding the
+    # partitions already visited this round so successive passes page
+    # through every eligible partition. Returns [partition, predicate, raws]
+    # triples: the predicate re-selects the partition's records and raws are
+    # the group values the caller marks visited. [[nil, nil, [:unpartitioned]]]
+    # when partitioning is unset (a single pseudo-partition). Group values
+    # that normalize to blank fail closed (NULLs excluded in SQL, other
+    # blank-normalizing values skipped) unless the host explicitly opted
+    # into the ungrouped fallback, in which case they merge into one
+    # reserved ungrouped partition at the position of its oldest member.
+    def partition_selections(cutoff, visited)
       col = self.class.partition_column
-      return [[nil, nil]] if col.nil?
+      return visited.empty? ? [[nil, nil, [:unpartitioned]]] : [] if col.nil?
 
-      raws = self.class.eligible_scope(cutoff)
+      table = Raif::ModelCompletion.arel_table
+      scope = self.class.eligible_scope(cutoff)
+      # Fail-closed NULLs never archive; keeping them out of the listing
+      # stops them occupying a slot in every pass.
+      scope = scope.where(table[col].not_eq(nil)) unless self.class.ungrouped_fallback?
+
+      visited_values = visited.compact
+      if visited_values.any?
+        # NOT IN alone would also drop the NULL group (NULL never matches
+        # NOT IN), so NULLs are kept explicitly.
+        scope = scope.where(table[col].not_in(visited_values).or(table[col].eq(nil)))
+      end
+      scope = scope.where(table[col].not_eq(nil)) if visited.include?(nil)
+
+      raws = scope
         .group(col)
         .order(Arel.sql("MIN(#{Raif::ModelCompletion.table_name}.created_at) ASC"))
         .limit(PARTITIONS_PER_PASS)
@@ -360,12 +397,16 @@ module Raif
           selections << :ungrouped if ungrouped_values.empty? && self.class.ungrouped_fallback?
           ungrouped_values << raw
         else
-          selections << [Raif::ArchivePartition.for(raw), { col => raw }]
+          selections << [Raif::ArchivePartition.for(raw), { col => raw }, [raw]]
         end
       end
 
       selections.map do |selection|
-        selection == :ungrouped ? [Raif::ArchivePartition.ungrouped, { col => ungrouped_values }] : selection
+        if selection == :ungrouped
+          [Raif::ArchivePartition.ungrouped, { col => ungrouped_values }, ungrouped_values]
+        else
+          selection
+        end
       end
     end
 

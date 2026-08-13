@@ -15,7 +15,11 @@ module Raif::ArchiveAdvisoryLock
   # anyway.
   def self.acquire
     connection = Raif::ModelCompletion.connection
-    unless connection.respond_to?(:get_advisory_lock)
+    # supports_advisory_locks?, never respond_to?(:get_advisory_lock):
+    # AbstractAdapter defines get_advisory_lock as a nil-returning stub on
+    # every adapter, so a respond_to? check passes on SQLite too and the nil
+    # return would read as "lock busy", silently skipping the work forever.
+    unless connection.respond_to?(:supports_advisory_locks?) && connection.supports_advisory_locks?
       Rails.logger.warn(
         "Raif::ArchiveAdvisoryLock: this database adapter does not support advisory locks; running unguarded " \
           "(concurrent archive runs and partition purges cannot be excluded from each other)"

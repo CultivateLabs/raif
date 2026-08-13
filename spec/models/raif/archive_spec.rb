@@ -188,6 +188,32 @@ RSpec.describe Raif::Archive, type: :model do
       expect(described_class.exists?(ungrouped.id)).to be(true)
     end
 
+    it "deletes only rows whose stored value matches the normalized value exactly, even under loose SQL matching" do
+      exact = plant_archive("foo", key: "#{prefix_for("foo")}model-completions/1-100-a.jsonl.gz")
+      variant = plant_archive("Foo", key: "#{prefix_for("Foo")}model-completions/1-100-b.jsonl.gz")
+      exact_event = FB.create(:raif_inference_cost_event, raif_archive_id: exact.id)
+      variant_event = FB.create(:raif_inference_cost_event, raif_archive_id: variant.id)
+
+      # Simulate MySQL-style case-insensitive matching, where
+      # partition_value = 'foo' also matches 'Foo' (Postgres compares
+      # exactly, so the loose match is injected). The case variant is a
+      # DIFFERENT partition whose objects live under a different prefix:
+      # deleting its rows and stamps would orphan those objects.
+      allow(described_class).to receive(:where).and_call_original
+      allow(described_class).to receive(:where).with(partition_value: "foo")
+        .and_return(described_class.where(id: [exact.id, variant.id]))
+
+      result = described_class.purge_partition!(partition_value: "foo")
+
+      expect(result[:archive_rows_deleted]).to eq(1)
+      expect(result[:stamps_nullified]).to eq(1)
+      expect(described_class.exists?(exact.id)).to be(false)
+      expect(described_class.exists?(variant.id)).to be(true)
+      expect(exact_event.reload.raif_archive_id).to be_nil
+      expect(variant_event.reload.raif_archive_id).to eq(variant.id)
+      expect(File.exist?(File.join(storage_root, variant.key))).to be(true)
+    end
+
     it "never matches ungrouped archives with a real value that normalizes to the string _ungrouped" do
       ungrouped = plant_archive(nil, key: "raif-archives/partitions/_ungrouped/model-completions/1-10-d.jsonl.gz")
 

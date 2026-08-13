@@ -44,9 +44,19 @@ RSpec.describe Raif::ArchiveAdvisoryLock do
     end
 
     it "runs unguarded with a warning on adapters without advisory lock support" do
-      # A bare double responds to nothing, standing in for an adapter (e.g.
-      # SQLite) that does not implement get_advisory_lock.
-      stub_connection(double("adapter without advisory locks"))
+      # Shaped like a real non-supporting adapter (e.g. SQLite):
+      # AbstractAdapter defines get_advisory_lock as a nil-returning stub on
+      # EVERY adapter, so support must be detected via
+      # supports_advisory_locks?, never respond_to? (a nil return would
+      # otherwise read as "lock busy" and silently skip the work forever).
+      stub_connection(
+        double(
+          "adapter without advisory lock support",
+          supports_advisory_locks?: false,
+          get_advisory_lock: nil,
+          release_advisory_lock: nil
+        )
+      )
       allow(Rails.logger).to receive(:warn).and_call_original
 
       ran = false

@@ -135,12 +135,23 @@ class Raif::Archive < Raif::ApplicationRecord
       stamps_nullified = nil
       transaction do
         # Ungrouped and unpartitioned archives store partition_value as
-        # NULL, so this non-blank match can never touch them.
-        purged_archives = where(partition_value: partition.value)
+        # NULL, so this non-blank match can never touch them. SQL equality
+        # can also be LOOSER than the normalized value (MySQL's
+        # case-insensitive collations match case variants), and an
+        # over-matched row belongs to a different partition whose objects
+        # live under a different prefix; deleting it would orphan them. So
+        # only rows whose stored value matches exactly are purged, the same
+        # re-check the archive job applies at selection. The advisory lock
+        # keeps the id list stable: nothing else inserts archive rows.
+        purged_ids = where(partition_value: partition.value)
+          .pluck(:id, :partition_value)
+          .select { |_id, value| value == partition.value }
+          .map(&:first)
+
         stamps_nullified = Raif::InferenceCostEvent
-          .where(raif_archive_id: purged_archives.select(:id))
+          .where(raif_archive_id: purged_ids)
           .update_all(raif_archive_id: nil)
-        archive_rows_deleted = purged_archives.delete_all
+        archive_rows_deleted = where(id: purged_ids).delete_all
       end
 
       result = {
