@@ -107,6 +107,7 @@ en:
         none: None
         output: Output
         output_token_cost: Output Token Cost
+        partition_value: Partition Value
         pending: Pending
         period_all: All time
         period_day: Past 24 hours

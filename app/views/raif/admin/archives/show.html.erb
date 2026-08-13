@@ -29,6 +29,10 @@
       <div class="col-md-9"><%= number_with_delimiter(@archive.record_count) %></div>
     </div>
     <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.partition_value") %>:</strong></div>
+      <div class="col-md-9"><%= @archive.partition_value.present? ? content_tag(:code, @archive.partition_value) : "-" %></div>
+    </div>
+    <div class="row mb-3">
       <div class="col-md-3"><strong><%= t("raif.admin.common.cutoff_at") %>:</strong></div>
       <div class="col-md-9"><%= @archive.cutoff_at.rfc822 %></div>
     </div>

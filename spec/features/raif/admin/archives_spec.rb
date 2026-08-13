@@ -32,6 +32,17 @@ RSpec.describe "Admin::Archives", type: :feature do
 
       expect(page).to have_content(I18n.t("raif.admin.common.no_archives"))
     end
+
+    it "shows each archive's partition value, with a placeholder for unpartitioned archives" do
+      FB.create(:raif_archive, partition_value: "acct-42")
+      FB.create(:raif_archive)
+
+      visit raif.admin_archives_path
+
+      expect(page).to have_content(I18n.t("raif.admin.common.partition_value"))
+      expect(page).to have_content("acct-42")
+      expect(page).to have_css("td", exact_text: "-")
+    end
   end
 
   describe "show page" do
@@ -49,6 +60,15 @@ RSpec.describe "Admin::Archives", type: :feature do
       expect(page).to have_content(I18n.t("raif.admin.archives.show.working_with_title"))
       expect(page).to have_content(I18n.t("raif.admin.archives.show.working_with_format"))
       expect(page).to have_content("shasum -a 256")
+    end
+
+    it "displays the partition value when the archive is partitioned" do
+      archive = FB.create(:raif_archive, partition_value: "acct-42")
+
+      visit raif.admin_archive_path(archive)
+
+      expect(page).to have_content(I18n.t("raif.admin.common.partition_value"))
+      expect(page).to have_content("acct-42")
     end
   end
 
