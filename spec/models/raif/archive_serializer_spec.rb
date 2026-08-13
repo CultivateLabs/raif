@@ -45,6 +45,45 @@ RSpec.describe Raif::ArchiveSerializer do
     expect(manifest["generated_at"]).to be_present
   end
 
+  it "omits the partition fields entirely when partitioning is not in play" do
+    result = serialize
+    manifest = JSON.parse(read_lines(result[:path]).first)
+
+    expect(manifest).not_to have_key("partition_column")
+    expect(manifest).not_to have_key("partition_value")
+  end
+
+  describe "partitioned batches" do
+    def serialize_partitioned(partition_value:)
+      result = described_class.new(
+        relation: Raif::ModelCompletion.where(id: completions.map(&:id)),
+        cutoff_at: cutoff_at,
+        byte_limit: byte_limit,
+        partition_column: :source_id,
+        partition_value: partition_value
+      ).serialize
+      @result_path = result[:path]
+      result
+    end
+
+    it "records the partition column and normalized partition value in the manifest" do
+      result = serialize_partitioned(partition_value: "42")
+      manifest = JSON.parse(read_lines(result[:path]).first)
+
+      expect(manifest["partition_column"]).to eq("source_id")
+      expect(manifest["partition_value"]).to eq("42")
+    end
+
+    it "records a null partition value for explicitly ungrouped batches" do
+      result = serialize_partitioned(partition_value: nil)
+      manifest = JSON.parse(read_lines(result[:path]).first)
+
+      expect(manifest["partition_column"]).to eq("source_id")
+      expect(manifest).to have_key("partition_value")
+      expect(manifest["partition_value"]).to be_nil
+    end
+  end
+
   it "round-trips every attribute, including jsonb columns" do
     result = serialize
     lines = read_lines(result[:path])

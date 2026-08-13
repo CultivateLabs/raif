@@ -29,11 +29,19 @@ class Raif::ArchiveSerializer
 
   # relation: the exact records to serialize (callers pass a frozen id set,
   # never a bare range), streamed in primary key order via find_each.
-  def initialize(relation:, cutoff_at:, byte_limit:, tmp_dir: Rails.root.join("tmp"))
+  #
+  # partition_column/partition_value describe the partition every record in
+  # this batch belongs to (see Raif.config.archive_partition_column) and are
+  # recorded in the manifest. Both fields are omitted entirely when
+  # partitioning is unset; a present partition_column with a nil
+  # partition_value marks an explicitly ungrouped batch.
+  def initialize(relation:, cutoff_at:, byte_limit:, tmp_dir: Rails.root.join("tmp"), partition_column: nil, partition_value: nil)
     @relation = relation
     @cutoff_at = cutoff_at
     @byte_limit = byte_limit
     @tmp_dir = tmp_dir.to_s
+    @partition_column = partition_column
+    @partition_value = partition_value
   end
 
   # => { path:, checksum_sha256:, compressed_bytes:, record_ids: }
@@ -94,7 +102,7 @@ private
   end
 
   def manifest(record_ids)
-    {
+    manifest = {
       manifest_version: MANIFEST_VERSION,
       resource_type: @relation.klass.base_class.name,
       table: @relation.klass.table_name,
@@ -105,5 +113,12 @@ private
       record_count: record_ids.size,
       generated_at: Time.current
     }
+
+    if @partition_column
+      manifest[:partition_column] = @partition_column.to_s
+      manifest[:partition_value] = @partition_value
+    end
+
+    manifest
   end
 end

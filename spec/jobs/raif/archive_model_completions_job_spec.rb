@@ -82,6 +82,7 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
 
       archive = Raif::Archive.sole
       expect(archive.resource_type).to eq("Raif::ModelCompletion")
+      expect(archive.partition_value).to be_nil
       expect(archive.record_count).to eq(3)
       expect(archive.first_record_id).to eq(old_completions.map(&:id).min)
       expect(archive.last_record_id).to eq(old_completions.map(&:id).max)
@@ -366,7 +367,7 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
 
       completions = 2.times.map { create_terminal_completion }
 
-      perform(max_batches: 4)
+      perform
 
       archives = Raif::Archive.order(:id).to_a
       expect(archives.size).to eq(2)
@@ -383,19 +384,297 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       end
     end
 
-    it "respects max_batches, processing oldest completions first" do
+    it "respects max_objects, processing oldest completions first" do
       stub_const("Raif::ArchiveModelCompletionsJob::BATCH_RECORD_LIMIT", 1)
 
       oldest = create_terminal_completion(created_at: 10.months.ago)
       middle = create_terminal_completion(created_at: 9.months.ago)
       newest = create_terminal_completion(created_at: 8.months.ago)
 
-      perform(max_batches: 2)
+      perform(max_objects: 2)
 
       expect(Raif::Archive.count).to eq(2)
       expect(Raif::ModelCompletion.exists?(oldest.id)).to be(false)
       expect(Raif::ModelCompletion.exists?(middle.id)).to be(false)
       expect(Raif::ModelCompletion.exists?(newest.id)).to be(true)
+    end
+
+    it "treats max_records as a hard ceiling, capping the final object short" do
+      3.times.map { create_terminal_completion }
+
+      perform(max_records: 2)
+
+      archive = Raif::Archive.sole
+      expect(archive.record_count).to eq(2)
+      expect(Raif::ModelCompletion.count).to eq(1)
+    end
+
+    it "stops safely between objects once max_runtime has elapsed" do
+      create_terminal_completion
+
+      perform(max_runtime: 0.seconds)
+
+      expect(Raif::Archive.count).to eq(0)
+      expect(Raif::ModelCompletion.count).to eq(1)
+    end
+
+    it "stops between objects when max_runtime elapses mid-run, finishing the object it started" do
+      stub_const("Raif::ArchiveModelCompletionsJob::BATCH_RECORD_LIMIT", 1)
+
+      first = create_terminal_completion(created_at: 10.months.ago)
+      second = create_terminal_completion(created_at: 9.months.ago)
+
+      # Deadline is monotonic_now + 10 at job start (0); the pre-object
+      # check sees 1 (under deadline, first object proceeds), every check
+      # after that sees 11 (past deadline, run stops).
+      allow_any_instance_of(described_class).to receive(:monotonic_now).and_return(0, 1, 11)
+
+      perform(max_runtime: 10.seconds)
+
+      expect(Raif::Archive.count).to eq(1)
+      expect(Raif::ModelCompletion.exists?(first.id)).to be(false)
+      expect(Raif::ModelCompletion.exists?(second.id)).to be(true)
+      expect(second.raif_inference_cost_event.reload.raif_archive_id).to be_nil
+    end
+
+    it "pins the per-object safety caps: a silent change must be deliberate" do
+      expect(described_class::BATCH_RECORD_LIMIT).to eq(25_000)
+      expect(described_class::BATCH_UNCOMPRESSED_BYTE_LIMIT).to eq(512.megabytes)
+    end
+  end
+
+  describe "partitioning" do
+    before do
+      allow(Raif.config).to receive_messages(archive_partition_column: :source_id, archive_partition_fallback: nil)
+    end
+
+    # source_id stands in for a host partition column (e.g. account_id):
+    # a plain nullable bigint on raif_model_completions.
+    def create_partitioned_completion(partition_value, **attrs)
+      completion = create_terminal_completion(**attrs)
+      completion.update_columns(source_id: partition_value)
+      completion
+    end
+
+    def partition_prefix(value)
+      "raif-archives/partitions/#{Digest::SHA256.hexdigest(value.to_s)}/model-completions/"
+    end
+
+    it "archives each partition into its own object, manifest, and audit row" do
+      a1 = create_partitioned_completion(7)
+      a2 = create_partitioned_completion(7)
+      b1 = create_partitioned_completion(9)
+
+      perform
+
+      expect(Raif::ModelCompletion.count).to eq(0)
+      archives = Raif::Archive.order(:id).to_a
+      expect(archives.size).to eq(2)
+
+      archive_a = archives.find { |archive| archive.partition_value == "7" }
+      archive_b = archives.find { |archive| archive.partition_value == "9" }
+
+      expect(archive_a.key).to start_with(partition_prefix(7))
+      expect(archive_a.record_count).to eq(2)
+      lines_a = read_archived_lines(archive_a)
+      manifest_a = JSON.parse(lines_a.first)
+      expect(manifest_a["partition_column"]).to eq("source_id")
+      expect(manifest_a["partition_value"]).to eq("7")
+      expect(lines_a.drop(1).map { |l| JSON.parse(l)["id"] }).to match_array([a1.id, a2.id])
+
+      expect(archive_b.key).to start_with(partition_prefix(9))
+      expect(archive_b.record_count).to eq(1)
+      lines_b = read_archived_lines(archive_b)
+      expect(JSON.parse(lines_b.first)["partition_value"]).to eq("9")
+      expect(lines_b.drop(1).map { |l| JSON.parse(l)["id"] }).to eq([b1.id])
+
+      # Every cost event stamp points at the archive of its own partition.
+      expect(a1.raif_inference_cost_event.reload.raif_archive_id).to eq(archive_a.id)
+      expect(a2.raif_inference_cost_event.reload.raif_archive_id).to eq(archive_a.id)
+      expect(b1.raif_inference_cost_event.reload.raif_archive_id).to eq(archive_b.id)
+    end
+
+    it "fails closed on records with a NULL partition value: retained, never archived" do
+      orphan = create_partitioned_completion(nil)
+      partitioned = create_partitioned_completion(7)
+
+      perform
+
+      expect(Raif::ModelCompletion.exists?(orphan.id)).to be(true)
+      expect(Raif::ModelCompletion.exists?(partitioned.id)).to be(false)
+
+      archive = Raif::Archive.sole
+      expect(archive.partition_value).to eq("7")
+      archived_ids = read_archived_lines(archive).drop(1).map { |l| JSON.parse(l)["id"] }
+      expect(archived_ids).to eq([partitioned.id])
+    end
+
+    it "archives NULL-partition records under the reserved _ungrouped segment when the fallback is UNGROUPED" do
+      allow(Raif.config).to receive(:archive_partition_fallback).and_return(Raif::Archive::UNGROUPED)
+      orphan = create_partitioned_completion(nil)
+
+      perform
+
+      expect(Raif::ModelCompletion.exists?(orphan.id)).to be(false)
+
+      archive = Raif::Archive.sole
+      expect(archive.partition_value).to be_nil
+      expect(archive.key).to start_with("raif-archives/partitions/_ungrouped/model-completions/")
+
+      manifest = JSON.parse(read_archived_lines(archive).first)
+      expect(manifest["partition_column"]).to eq("source_id")
+      expect(manifest["partition_value"]).to be_nil
+    end
+
+    it "round-robins passes so a large-backlog partition cannot monopolize a bounded run" do
+      stub_const("Raif::ArchiveModelCompletionsJob::BATCH_RECORD_LIMIT", 1)
+
+      backlog_oldest = create_partitioned_completion(7, created_at: 10.months.ago)
+      backlog_next = create_partitioned_completion(7, created_at: 9.months.ago)
+      small_partition = create_partitioned_completion(9, created_at: 8.months.ago)
+
+      perform(max_objects: 2)
+
+      # Strict global oldest-first would spend both objects on partition 7.
+      expect(Raif::ModelCompletion.exists?(backlog_oldest.id)).to be(false)
+      expect(Raif::ModelCompletion.exists?(small_partition.id)).to be(false)
+      expect(Raif::ModelCompletion.exists?(backlog_next.id)).to be(true)
+    end
+
+    it "closes partitioned objects early at the byte cap; leftovers re-enter on a later pass" do
+      stub_const("Raif::ArchiveModelCompletionsJob::BATCH_UNCOMPRESSED_BYTE_LIMIT", 1)
+
+      completions = 2.times.map { create_partitioned_completion(7) }
+
+      perform
+
+      archives = Raif::Archive.order(:id).to_a
+      expect(archives.size).to eq(2)
+      expect(archives.map(&:record_count)).to eq([1, 1])
+      expect(archives.map(&:partition_value).uniq).to eq(["7"])
+      archives.each { |archive| expect(archive.key).to start_with(partition_prefix(7)) }
+      expect(Raif::ModelCompletion.where(id: completions.map(&:id))).to be_empty
+    end
+
+    it "drains many small partitions within a single run" do
+      completions = [1, 2, 3].map { |value| create_partitioned_completion(value) }
+
+      perform
+
+      expect(Raif::ModelCompletion.count).to eq(0)
+      expect(Raif::Archive.count).to eq(3)
+      expect(Raif::Archive.pluck(:partition_value)).to match_array(["1", "2", "3"])
+      expect(completions.map { |c| c.raif_inference_cost_event.reload.raif_archive_id }.uniq.size).to eq(3)
+    end
+
+    it "aborts the cull and cleans up the tainted object when a record's partition changes during upload" do
+      completion = create_partitioned_completion(7)
+
+      mutated = false
+      allow(storage).to receive(:write).and_wrap_original do |original, **kwargs|
+        unless mutated
+          mutated = true
+          completion.update_columns(source_id: 8)
+        end
+        original.call(**kwargs)
+      end
+
+      expect { perform }.not_to raise_error
+
+      # The whole cull rolled back: the row survives with no stamp, and the
+      # tainted object and its audit row were both removed.
+      expect(Raif::ModelCompletion.exists?(completion.id)).to be(true)
+      expect(completion.raif_inference_cost_event.reload.raif_archive_id).to be_nil
+      expect(Raif::Archive.count).to eq(0)
+      expect(Dir.glob(File.join(storage_root, "**", "*")).select { |f| File.file?(f) }).to be_empty
+
+      # The record now archives cleanly under its new partition on a later run.
+      perform
+
+      archive = Raif::Archive.sole
+      expect(archive.partition_value).to eq("8")
+      expect(archive.key).to start_with(partition_prefix(8))
+      expect(Raif::ModelCompletion.exists?(completion.id)).to be(false)
+    end
+
+    it "leaves the tainted object and its audit row in place when the adapter does not implement delete" do
+      completion = create_partitioned_completion(7)
+
+      write_only_adapter = Class.new do
+        def initialize(inner)
+          @inner = inner
+        end
+
+        def write(**kwargs)
+          @inner.write(**kwargs)
+        end
+      end.new(storage)
+      allow(Raif.config).to receive(:archive_storage).and_return(write_only_adapter)
+
+      mutated = false
+      allow(storage).to receive(:write).and_wrap_original do |original, **kwargs|
+        unless mutated
+          mutated = true
+          completion.update_columns(source_id: 8)
+        end
+        original.call(**kwargs)
+      end
+
+      expect { perform }.not_to raise_error
+
+      # The cull still aborted, but without delete(key:) the object cannot
+      # be removed, so the Raif::Archive row deliberately stays too (row
+      # exists = object uploaded).
+      expect(Raif::ModelCompletion.exists?(completion.id)).to be(true)
+      expect(completion.raif_inference_cost_event.reload.raif_archive_id).to be_nil
+      archive = Raif::Archive.sole
+      expect(File.exist?(File.join(storage_root, archive.key))).to be(true)
+    end
+
+    it "keeps the audit row when deleting the tainted object fails, preserving row exists = object uploaded" do
+      completion = create_partitioned_completion(7)
+
+      mutated = false
+      allow(storage).to receive(:write).and_wrap_original do |original, **kwargs|
+        unless mutated
+          mutated = true
+          completion.update_columns(source_id: 8)
+        end
+        original.call(**kwargs)
+      end
+      allow(storage).to receive(:delete).and_raise(Raif::Errors::ArchiveStorageError, "delete exploded")
+
+      expect { perform }.not_to raise_error
+
+      expect(Raif::ModelCompletion.exists?(completion.id)).to be(true)
+      expect(completion.raif_inference_cost_event.reload.raif_archive_id).to be_nil
+      archive = Raif::Archive.sole
+      expect(File.exist?(File.join(storage_root, archive.key))).to be(true)
+    end
+
+    it "logs and retains rows whose SQL partition match diverges from their normalized value" do
+      completion = create_partitioned_completion(7)
+
+      # Only possible in production under loose SQL equality (e.g. a
+      # case-insensitive collation matching a mixed-case variant); simulated
+      # here by forcing the normalized re-check to disagree.
+      allow_any_instance_of(described_class).to receive(:partition_matches?).and_return(false)
+      allow(Rails.logger).to receive(:warn).and_call_original
+
+      perform
+
+      expect(Raif::ModelCompletion.exists?(completion.id)).to be(true)
+      expect(Raif::Archive.count).to eq(0)
+      expect(Rails.logger).to have_received(:warn).with(/normalized/)
+    end
+
+    it "validates the partition column against the resource lazily, at job time" do
+      allow(Raif.config).to receive(:archive_partition_column).and_return(:column_that_does_not_exist)
+      create_terminal_completion
+
+      expect { perform }.to raise_error(Raif::Errors::InvalidConfigError, /column_that_does_not_exist/)
+      expect(Raif::Archive.count).to eq(0)
+      expect(Raif::ModelCompletion.count).to eq(1)
     end
   end
 
@@ -472,6 +751,10 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       expect(result[:excluded_stale_cost_event]).to eq(1)
       expect(result[:excluded_uncopied_citations]).to eq(1)
       expect(Raif::ModelCompletion.exists?(eligible.id)).to be(true)
+
+      # Partitioning unset: the report shape is unchanged.
+      expect(result).not_to have_key(:partitions)
+      expect(result).not_to have_key(:excluded_by_missing_partition)
     end
 
     it "requires a cutoff when no retention period is configured" do
@@ -479,6 +762,63 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
 
       expect { described_class.dry_run }.to raise_error(ArgumentError, /cutoff/)
       expect { described_class.dry_run(cutoff: 6.months.ago) }.not_to raise_error
+    end
+
+    context "with partitioning configured" do
+      before do
+        allow(Raif.config).to receive_messages(archive_partition_column: :source_id, archive_partition_fallback: nil)
+      end
+
+      def create_partitioned_completion(partition_value, **attrs)
+        completion = create_terminal_completion(**attrs)
+        completion.update_columns(source_id: partition_value)
+        completion
+      end
+
+      it "reports per-partition eligible counts and fail-closed missing-partition exclusions" do
+        2.times { create_partitioned_completion(7) }
+
+        zombie = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm")
+        zombie.update_columns(created_at: 8.months.ago, updated_at: 8.months.ago, source_id: 9)
+
+        create_partitioned_completion(nil)
+
+        result = described_class.dry_run
+
+        expect(result[:partitions]).to eq(
+          "7" => { eligible_terminal: 2, eligible_nonterminal: 0 },
+          "9" => { eligible_terminal: 0, eligible_nonterminal: 1 }
+        )
+        expect(result[:excluded_by_missing_partition]).to eq(1)
+
+        # The missing-partition record is retained, so the headline eligible
+        # counts exclude it.
+        expect(result[:eligible]).to eq(3)
+        expect(result[:eligible_terminal]).to eq(2)
+        expect(result[:eligible_nonterminal]).to eq(1)
+      end
+
+      it "counts NULL-partition records as an eligible ungrouped partition when the fallback is UNGROUPED" do
+        allow(Raif.config).to receive(:archive_partition_fallback).and_return(Raif::Archive::UNGROUPED)
+
+        create_partitioned_completion(nil)
+        create_partitioned_completion(7)
+
+        result = described_class.dry_run
+
+        expect(result[:partitions]).to eq(
+          "7" => { eligible_terminal: 1, eligible_nonterminal: 0 },
+          nil => { eligible_terminal: 1, eligible_nonterminal: 0 }
+        )
+        expect(result[:excluded_by_missing_partition]).to eq(0)
+        expect(result[:eligible]).to eq(2)
+      end
+
+      it "validates the partition column lazily, at dry_run time" do
+        allow(Raif.config).to receive(:archive_partition_column).and_return(:column_that_does_not_exist)
+
+        expect { described_class.dry_run }.to raise_error(Raif::Errors::InvalidConfigError, /column_that_does_not_exist/)
+      end
     end
   end
 end
