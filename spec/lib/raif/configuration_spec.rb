@@ -126,5 +126,65 @@ RSpec.describe Raif::Configuration do
         )
       end
     end
+
+    describe "archive partitioning settings" do
+      around do |example|
+        originals = {
+          archive_partition_column: Raif.config.archive_partition_column,
+          archive_partition_fallback: Raif.config.archive_partition_fallback
+        }
+        example.run
+      ensure
+        originals.each { |key, value| Raif.config.public_send("#{key}=", value) }
+      end
+
+      it "defaults both partitioning options to nil" do
+        config = Raif::Configuration.new
+
+        expect(config.archive_partition_column).to be_nil
+        expect(config.archive_partition_fallback).to be_nil
+      end
+
+      it "allows a symbol partition column" do
+        Raif.config.archive_partition_column = :account_id
+
+        expect { Raif.config.validate! }.not_to raise_error
+      end
+
+      it "does not check the partition column against the database at boot" do
+        # Column existence is validated lazily when the archive job or
+        # dry_run executes; boot validation must stay usable on a blank
+        # database (db:create, db:migrate, asset precompilation).
+        Raif.config.archive_partition_column = :column_that_does_not_exist
+
+        expect { Raif.config.validate! }.not_to raise_error
+      end
+
+      it "rejects a non-symbol partition column" do
+        Raif.config.archive_partition_column = "account_id"
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /archive_partition_column must be a Symbol/
+        )
+      end
+
+      it "allows the UNGROUPED sentinel as the partition fallback" do
+        Raif.config.archive_partition_column = :account_id
+        Raif.config.archive_partition_fallback = Raif::Archive::UNGROUPED
+
+        expect { Raif.config.validate! }.not_to raise_error
+      end
+
+      it "rejects any fallback other than nil or Raif::Archive::UNGROUPED" do
+        Raif.config.archive_partition_column = :account_id
+        Raif.config.archive_partition_fallback = "_ungrouped"
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /archive_partition_fallback must be nil \(fail closed\) or Raif::Archive::UNGROUPED/
+        )
+      end
+    end
   end
 end

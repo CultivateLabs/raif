@@ -5,6 +5,8 @@ module Raif
     attr_accessor :agent_types,
       :anthropic_api_key,
       :archive_enabled,
+      :archive_partition_column,
+      :archive_partition_fallback,
       :archive_storage,
       :anthropic_message_batches_beta_header,
       :bedrock_models_enabled,
@@ -83,6 +85,23 @@ module Raif
       # only: with the default false (and no archive_storage adapter),
       # upgrading the gem never deletes anything.
       @archive_enabled = false
+      # Column on the archived resource (e.g. :account_id) whose value
+      # partitions archive objects: every object then holds records from
+      # exactly one partition and is stored under a per-partition key
+      # prefix, so Raif::Archive.purge_partition! can completely erase one
+      # partition's archives. nil (the default) preserves unpartitioned
+      # behavior. The column's value must be immutable for the record's
+      # lifetime. Column existence is validated when the archive job or
+      # dry_run executes, not at boot.
+      @archive_partition_column = nil
+      # Applies only when archive_partition_column is set: what to do with a
+      # record whose partition value is NULL or normalizes to blank. nil
+      # (the default) fails closed: the record is never archived, so a later
+      # partition purge cannot miss records that lost their attribution.
+      # Hosts with intentionally global/unowned records may explicitly set
+      # Raif::Archive::UNGROUPED to archive them under the reserved
+      # "_ungrouped" storage segment, which purge_partition! never touches.
+      @archive_partition_fallback = nil
       # Storage adapter instance implementing
       # write(key:, io:, checksum_sha256:), returning a location string and
       # raising on any failure. See Raif::ArchiveStorage::FileSystem for a
@@ -299,6 +318,19 @@ module Raif
       if archive_storage.present? && !archive_storage.respond_to?(:write)
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.archive_storage must implement write(key:, io:, checksum_sha256:)"
+      end
+
+      unless archive_partition_column.nil? || archive_partition_column.is_a?(Symbol)
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.archive_partition_column must be a Symbol naming a column on the archived resource (got #{archive_partition_column.inspect})"
+      end
+
+      # Deliberately no database access here (table/column existence is
+      # checked lazily by the archive job and dry_run): boot validation must
+      # work on a blank database (db:create, db:migrate, asset precompile).
+      unless archive_partition_fallback.nil? || archive_partition_fallback.equal?(Raif::Archive::UNGROUPED)
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.archive_partition_fallback must be nil (fail closed) or Raif::Archive::UNGROUPED (got #{archive_partition_fallback.inspect})"
       end
 
       # Billing-window floor, enforced whether or not archiving is enabled: a
