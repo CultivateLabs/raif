@@ -17,6 +17,8 @@ module Raif
           { key: "anthropic_api_key", value: mask_sensitive_value(@config.anthropic_api_key) },
           { key: "anthropic_models_enabled", value: @config.anthropic_models_enabled },
           { key: "archive_enabled", value: @config.archive_enabled },
+          { key: "archive_partition_column", value: @config.archive_partition_column&.inspect },
+          { key: "archive_partition_fallback", value: @config.archive_partition_fallback&.inspect },
           { key: "archive_storage", value: @config.archive_storage.present? ? @config.archive_storage.class.name : "Not set" },
           { key: "authorize_admin_controller_action", value: format_proc(@config.authorize_admin_controller_action) },
           { key: "authorize_controller_action", value: format_proc(@config.authorize_controller_action) },
