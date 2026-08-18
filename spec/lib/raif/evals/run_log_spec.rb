@@ -12,8 +12,9 @@ RSpec.describe Raif::Evals::RunLog do
       configuration: configuration)
   end
 
-  def eval_result(description:, eval_index:, case_id: nil, run_index: nil, passed: true)
-    result = Raif::Evals::EvalResult.new(description: description, eval_index: eval_index, case_id: case_id, run_index: run_index)
+  def eval_result(description:, eval_id:, eval_index: 0, case_id: nil, run_index: nil, passed: true)
+    result = Raif::Evals::EvalResult.new(description: description, eval_id: eval_id, eval_index: eval_index, case_id: case_id,
+      run_index: run_index)
     result.add_expectation_result(Raif::Evals::ExpectationResult.new(description: "an expectation", status: passed ? :passed : :failed))
     result
   end
@@ -47,31 +48,34 @@ RSpec.describe Raif::Evals::RunLog do
 
   describe "#record" do
     it "appends one line per result and remembers what it holds" do
-      log.record(eval_set: "MyEvalSet", result: eval_result(description: "first", eval_index: 0))
-      log.record(eval_set: "MyEvalSet", result: eval_result(description: "second", eval_index: 1, case_id: "atom", run_index: 2))
+      log.record(eval_set: "MyEvalSet", result: eval_result(description: "first", eval_id: "MyEvalSet#first-abc123"))
+      log.record(eval_set: "MyEvalSet",
+        result: eval_result(description: "second", eval_id: "MyEvalSet#second-def456", eval_index: 1, case_id: "atom", run_index: 2))
 
       lines = File.readlines(log.path)
       expect(lines.count).to eq(3) # header plus two results
 
       expect(log.results_count).to eq(2)
       expect(log.results_for("MyEvalSet").map { |result| result[:description] }).to eq(["first", "second"])
-      expect(log.recorded?(eval_set: "MyEvalSet", eval_index: 0)).to be true
-      expect(log.recorded?(eval_set: "MyEvalSet", eval_index: 1, case_id: "atom", run_index: 2)).to be true
+      expect(log.recorded?(eval_id: "MyEvalSet#first-abc123")).to be true
+      expect(log.recorded?(eval_id: "MyEvalSet#second-def456", case_id: "atom", run_index: 2)).to be true
     end
 
     it "does not consider a different case or repeat recorded" do
-      log.record(eval_set: "MyEvalSet", result: eval_result(description: "first", eval_index: 0, case_id: "atom", run_index: 1))
+      log.record(eval_set: "MyEvalSet",
+        result: eval_result(description: "first", eval_id: "MyEvalSet#first-abc123", case_id: "atom", run_index: 1))
 
-      expect(log.recorded?(eval_set: "MyEvalSet", eval_index: 0, case_id: "monad", run_index: 1)).to be false
-      expect(log.recorded?(eval_set: "MyEvalSet", eval_index: 0, case_id: "atom", run_index: 2)).to be false
-      expect(log.recorded?(eval_set: "OtherEvalSet", eval_index: 0, case_id: "atom", run_index: 1)).to be false
+      expect(log.recorded?(eval_id: "MyEvalSet#first-abc123", case_id: "monad", run_index: 1)).to be false
+      expect(log.recorded?(eval_id: "MyEvalSet#first-abc123", case_id: "atom", run_index: 2)).to be false
+      expect(log.recorded?(eval_id: "OtherEvalSet#first-abc123", case_id: "atom", run_index: 1)).to be false
     end
   end
 
   describe ".resume" do
     before do
-      log.record(eval_set: "MyEvalSet", result: eval_result(description: "first", eval_index: 0))
-      log.record(eval_set: "MyEvalSet", result: eval_result(description: "second", eval_index: 1, passed: false))
+      log.record(eval_set: "MyEvalSet", result: eval_result(description: "first", eval_id: "MyEvalSet#first-abc123"))
+      log.record(eval_set: "MyEvalSet",
+        result: eval_result(description: "second", eval_id: "MyEvalSet#second-def456", eval_index: 1, passed: false))
     end
 
     it "reads the recorded results back" do
@@ -80,8 +84,8 @@ RSpec.describe Raif::Evals::RunLog do
       expect(resumed.run_at).to eq("2024-01-01T12:00:00Z")
       expect(resumed.results_count).to eq(2)
       expect(resumed.results_for("MyEvalSet").map { |result| result[:description] }).to eq(["first", "second"])
-      expect(resumed.recorded?(eval_set: "MyEvalSet", eval_index: 0)).to be true
-      expect(resumed.recorded?(eval_set: "MyEvalSet", eval_index: 2)).to be false
+      expect(resumed.recorded?(eval_id: "MyEvalSet#first-abc123")).to be true
+      expect(resumed.recorded?(eval_id: "MyEvalSet#third-ghi789")).to be false
     end
 
     # Run's summary compares statuses against :passed.
@@ -94,7 +98,7 @@ RSpec.describe Raif::Evals::RunLog do
 
     it "keeps appending to the same file" do
       resumed = described_class.resume(path: log.path, configuration: configuration)
-      resumed.record(eval_set: "MyEvalSet", result: eval_result(description: "third", eval_index: 2))
+      resumed.record(eval_set: "MyEvalSet", result: eval_result(description: "third", eval_id: "MyEvalSet#third-ghi789", eval_index: 2))
 
       expect(File.readlines(log.path).count).to eq(4)
       expect(described_class.resume(path: log.path, configuration: configuration).results_count).to eq(3)
@@ -108,6 +112,15 @@ RSpec.describe Raif::Evals::RunLog do
 
     it "does not treat a symbol and its serialized string as a difference" do
       expect { described_class.resume(path: log.path, configuration: configuration) }.not_to raise_error
+    end
+
+    # Keyed on nil, every pending execution would look already-recorded and the run would be
+    # skipped and reported as complete.
+    it "refuses a log whose results predate eval ids" do
+      File.write(log.path, %({"type":"result","eval_set":"MyEvalSet","result":{"description":"first","passed":true}}\n), mode: "a")
+
+      expect { described_class.resume(path: log.path, configuration: configuration) }
+        .to raise_error(described_class::IncompatibleResumeError, /before evals had ids/)
     end
 
     it "refuses a file with no run header" do

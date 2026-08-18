@@ -53,14 +53,14 @@ module Raif
       # The pending executions of one eval definition, in dataset order then repeat order.
       def executions_for(eval_definition, repeats: 1)
         eval_cases = selected_cases_for(eval_definition)
-        eval_index = eval_definition.index
+        eval_id = eval_definition.id
 
         # nil rather than 1 for a single run, matching the run_index EvalResult records.
         run_indexes = repeats.times.map { |i| (i + 1 if repeats > 1) }
 
         if eval_cases.nil?
           return run_indexes.filter_map do |run_index|
-            next if already_recorded?(eval_index, nil, run_index)
+            next if already_recorded?(eval_id, nil, run_index)
 
             Execution.new(eval_definition: eval_definition, run_index: run_index)
           end
@@ -72,7 +72,7 @@ module Raif
 
         eval_cases.flat_map do |eval_case|
           run_indexes.filter_map do |run_index|
-            next if already_recorded?(eval_index, eval_case.id, run_index)
+            next if already_recorded?(eval_id, eval_case.id, run_index)
 
             Execution.new(
               eval_definition: eval_definition,
@@ -132,16 +132,16 @@ module Raif
       # and verbose output both name the eval on every line they print.
       def headers_for(execution)
         eval_header = if execution.eval_case && !Raif.config.evals_verbose_output
-          ["eval:#{eval_set_class.name}:#{execution.eval_index}", execution.eval_definition.description]
+          ["eval:#{execution.eval_id}", execution.eval_definition.description]
         end
 
         [header, eval_header]
       end
 
-      def already_recorded?(eval_index, case_id, run_index)
+      def already_recorded?(eval_id, case_id, run_index)
         return false if run_log.nil?
 
-        run_log.recorded?(eval_set: eval_set_class.name, eval_index: eval_index, case_id: case_id, run_index: run_index)
+        run_log.recorded?(eval_id: eval_id, case_id: case_id, run_index: run_index)
       end
 
       # Resolved and validated before the first eval executes, so a missing fixture or a duplicated

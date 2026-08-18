@@ -50,7 +50,11 @@ module Raif
         # This shadows Kernel#eval inside the class body. Without the block check, a
         # block-less call - what reaching for Kernel#eval looks like here - would register an
         # eval that fails only once it runs, after setup has spent inference money.
-        def eval(description, dataset: nil, &block)
+        #
+        # @param id [String, Symbol, nil] Overrides the description-derived half of the eval's
+        #   id - see Raif::Evals::EvalDefinition#id. Pass one when you expect to reword the
+        #   description without wanting the reworded eval treated as a new one.
+        def eval(description, dataset: nil, id: nil, &block)
           raise ArgumentError, "eval #{description.inspect} requires a block" unless block
 
           # A registered name and nothing else: an inline array or Proc would be a dataset
@@ -65,6 +69,9 @@ module Raif
               "Declare it above the evals that use it#{" (declared: #{datasets.keys.inspect})" if datasets.any?}."
           end
 
+          declared_id = validated_eval_id(id, description)
+          check_eval_identity!(description, declared_id)
+
           definition_location = caller_locations(1, 1).first
 
           # Position assigned here rather than derived later: evals is append-only, so the
@@ -74,6 +81,8 @@ module Raif
             block: block,
             dataset: dataset&.to_sym,
             index: evals.length,
+            eval_set_class: self,
+            declared_id: declared_id,
             file: definition_location.path,
             line_number: definition_location.lineno
           )
@@ -94,6 +103,44 @@ module Raif
           EvalSetCoordinator
             .new(eval_set_class: self, output: output, run_log: run_log, cases: cases, sample: sample, seed: seed)
             .run(repeats: repeats)
+        end
+
+      private
+
+        # An id ends up in the results JSON, in the run log, and on a command line, so it is held to
+        # what is safe in all three rather than to anything Ruby accepts as a string.
+        def validated_eval_id(id, description)
+          return if id.nil?
+
+          id = id.to_s
+
+          unless id.match?(/\A[A-Za-z0-9_.:-]+\z/)
+            raise ArgumentError, "eval #{description.inspect} was given id #{id.inspect}, which is not a valid eval id. Use " \
+              "letters, numbers, and any of _ . : -"
+          end
+
+          id
+        end
+
+        # Checked here rather than when an id is first derived, so a mistake costs a load error
+        # instead of a run's worth of inference. On descriptions rather than ids because a derived id
+        # is a digest of one, so two evals collide exactly when their descriptions do.
+        def check_eval_identity!(description, declared_id)
+          if declared_id && evals.any? { |definition| definition.declared_id == declared_id }
+            raise ArgumentError, "eval #{description.inspect} declares id #{declared_id.inspect}, which another eval in " \
+              "#{name || "this eval set"} already declares. An id identifies one eval across runs, so it has to be unique " \
+              "within the set."
+          end
+
+          duplicate = evals.find { |definition| definition.description == description }
+          return if duplicate.nil?
+
+          # Two evals with one description derive one id, so their results would be joined as
+          # though they came from the same eval.
+          if declared_id.nil? && duplicate.declared_id.nil?
+            raise ArgumentError, "#{name || "this eval set"} already has an eval described as #{description.inspect}, and an " \
+              "eval's identity is derived from its description. Reword one of them, or give one an explicit id:."
+          end
         end
       end
 
@@ -118,6 +165,7 @@ module Raif
         @case_id_width = case_id_width
         @current_eval_result = EvalResult.new(
           description: eval_definition.description,
+          eval_id: eval_definition.id,
           run_index: run_index,
           eval_index: eval_definition.index,
           case_id: eval_case&.id

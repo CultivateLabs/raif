@@ -310,7 +310,9 @@ Raif.configure do |config|
   # config.request_write_timeout = nil # Time to wait for data to be written
 
   # The default LLM model to use for LLM-as-judge evaluations.
-  # If not set, falls back to the default_llm_model_key.
+  # If not set, falls back to default_llm_model_key, so the model being evaluated grades its own
+  # output and comparing two models switches the judge along with the subject. Set this to hold the
+  # judge fixed, ideally to a model from outside the family under test.
   # config.evals_default_llm_judge_model_key = ENV["RAIF_EVALS_DEFAULT_LLM_JUDGE_MODEL_KEY"].presence
 
   # Whether to output verbose information during evaluation runs. Defaults to false.

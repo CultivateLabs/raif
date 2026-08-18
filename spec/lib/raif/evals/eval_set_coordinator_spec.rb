@@ -10,7 +10,7 @@ RSpec.describe Raif::Evals::EvalSetCoordinator do
   let(:eval_set_class) do
     instances = runners
 
-    Class.new(Raif::Evals::EvalSet) do
+    named_eval_set("CoordinatorEvalSet") do
       dataset :numbers do
         [{ id: "alpha", input: { "n" => 1 } }, { id: "beta", input: { "n" => 2 } }]
       end

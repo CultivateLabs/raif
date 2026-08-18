@@ -5,9 +5,9 @@ module Raif
     # Diffs two eval run payloads. Deliberately free of Rails and of any provider call, so it
     # needs no database, API key, or spend.
     #
-    # Results are matched on eval set, eval index, expectation description, and case id.
-    # Matching per case is what makes a dataset run diffable: a model can improve on average
-    # while getting materially worse on one input.
+    # Results are matched on eval id, case id, and expectation description. Matching per case is
+    # what makes a dataset run diffable: a model can improve on average while getting materially
+    # worse on one input.
     class Comparison
       attr_reader :baseline, :candidate, :baseline_label, :candidate_label
 
@@ -128,17 +128,18 @@ module Raif
         @shared_keys ||= candidate_units.keys.select { |key| baseline_units.key?(key) }
       end
 
-      # eval_index is the join key when present; older payloads predate it and fall back to
-      # the description, which is the best available substitute.
+      # Keyed on the eval's id, which survives edits to the file that declares it and already
+      # carries its eval set, so an eval that moved still matches its counterpart.
       def index_units(payload)
         units = {}
 
         (payload["results"] || {}).each do |eval_set, results|
           Array(results).each do |result|
-            key = [eval_set, result["eval_index"] || result["description"], result["case_id"]]
+            key = [result["eval_id"], result["case_id"]]
 
             unit = units[key] ||= {
               eval_set: eval_set,
+              eval_id: result["eval_id"],
               eval_index: result["eval_index"],
               description: result["description"],
               case_id: result["case_id"],
@@ -185,6 +186,7 @@ module Raif
 
           {
             eval_set: candidate_unit[:eval_set],
+            eval_id: candidate_unit[:eval_id],
             eval_index: candidate_unit[:eval_index],
             description: candidate_unit[:description],
             case_id: candidate_unit[:case_id],
@@ -268,6 +270,7 @@ module Raif
 
           {
             eval_set: candidate_score[:eval_set],
+            eval_id: candidate_score[:eval_id],
             eval_index: candidate_score[:eval_index],
             description: candidate_score[:description],
             name: candidate_score[:name],
@@ -306,10 +309,11 @@ module Raif
 
         units.each_value do |unit|
           unit[:scores].each do |name, entry|
-            key = [unit[:eval_set], unit[:eval_index] || unit[:description], name]
+            key = [unit[:eval_id], name]
 
             aggregate = index[key] ||= {
               eval_set: unit[:eval_set],
+              eval_id: unit[:eval_id],
               eval_index: unit[:eval_index],
               description: unit[:description],
               name: name,
@@ -366,9 +370,12 @@ module Raif
         rows
       end
 
+      # The description travels with the id: a NOT COMPARABLE row carrying only a digest tells a
+      # reader nothing, where the description usually shows them the eval they reworded.
       def unmatched_row(unit, present_in)
         {
           eval_set: unit[:eval_set],
+          eval_id: unit[:eval_id],
           eval_index: unit[:eval_index],
           description: unit[:description],
           case_id: unit[:case_id],
@@ -383,10 +390,10 @@ module Raif
         {
           label: label,
           model: configuration["default_llm_model_key"],
-          judge: configuration["evals_default_llm_judge_model_key"],
+          judge: judge_model(payload),
           repeats: configuration["repeats"],
           run_at: payload["run_at"],
-          evals: units.map { |key, _unit| key[0, 2] }.uniq.count,
+          evals: units.map { |key, _unit| key.first }.uniq.count,
           cases: units.filter_map { |_key, unit| unit[:case_id] }.uniq.count,
           runs: units.sum { |_key, unit| unit[:runs] },
           passed_evals: summary["passed_evals"],
@@ -397,8 +404,11 @@ module Raif
         }
       end
 
+      # The judge a run resolved, not the one it configured: a run that configured nothing was
+      # graded by its own model under test, so reading the setting made two runs graded by two
+      # different models look like they shared one ruler.
       def judge_model(payload)
-        (payload["configuration"] || {})["evals_default_llm_judge_model_key"]
+        (payload["configuration"] || {})["judge_model_key"]
       end
 
       def pass_rate(unit)

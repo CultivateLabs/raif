@@ -10,6 +10,10 @@ module Raif
     # cases, so the compact console lines align. It travels with the execution because the
     # instance that runs it never resolved the datasets it would be measured from.
     Execution = Struct.new(:eval_definition, :eval_case, :run_index, :case_id_width, keyword_init: true) do
+      def eval_id
+        eval_definition.id
+      end
+
       def eval_index
         eval_definition.index
       end

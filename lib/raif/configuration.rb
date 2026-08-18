@@ -99,6 +99,9 @@ module Raif
       # responses, so this is the wall clock. Serial by default: raising it needs a database
       # connection pool larger than the concurrency, and enough provider rate limit to absorb it.
       @evals_concurrency = 1
+      # Unset means judging falls back to default_llm_model_key, so the model under test grades its
+      # own output and a run against a second model changes the judge with it, which
+      # Raif::Evals::Run warns about.
       @evals_default_llm_judge_model_key = ENV["RAIF_EVALS_DEFAULT_LLM_JUDGE_MODEL_KEY"].presence
       @evals_verbose_output = false
       google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]

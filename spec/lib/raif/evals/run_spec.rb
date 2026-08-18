@@ -147,6 +147,48 @@ RSpec.describe Raif::Evals::Run do
       expect(run.results["AnotherEvalSet"].map { |e| e[:description] }).to eq(["another test"])
     end
 
+    describe "the judge the run will use" do
+      # The default configuration is the model under test grading its own output.
+      context "when no judge is configured" do
+        before { allow(Raif.config).to receive(:evals_default_llm_judge_model_key).and_return(nil) }
+
+        it "names the model that will judge, and warns that it is the model under test" do
+          run.execute
+
+          expect(output.string).to include("(not set - judged by #{Raif.config.default_llm_model_key}, the model under test)")
+          expect(output.string).to include("will be graded by #{Raif.config.default_llm_model_key}, the model under test")
+          expect(output.string).to include("self-preference bias")
+          expect(output.string).to include("Raif.config.evals_default_llm_judge_model_key")
+          expect(output.string).to include("Judge: #{Raif.config.default_llm_model_key} (the model under test)")
+        end
+      end
+
+      context "when a different judge is configured" do
+        before { allow(Raif.config).to receive(:evals_default_llm_judge_model_key).and_return(:raif_test_llm_2) }
+
+        it "reports the judge and says nothing about bias" do
+          run.execute
+
+          expect(output.string).to include("Raif.config.evals_default_llm_judge_model_key: raif_test_llm_2")
+          expect(output.string).to include("Judge: raif_test_llm_2")
+          expect(output.string).not_to include("self-preference bias")
+        end
+      end
+
+      # Configuring the judge to the model under test is the same problem, arrived at deliberately.
+      context "when the configured judge is the model under test" do
+        before do
+          allow(Raif.config).to receive(:evals_default_llm_judge_model_key).and_return(Raif.config.default_llm_model_key)
+        end
+
+        it "still warns" do
+          run.execute
+
+          expect(output.string).to include("self-preference bias")
+        end
+      end
+    end
+
     context "when running specific eval sets from files" do
       let(:temp_eval_file) { Rails.root.join("tmp", "test_eval_for_execute.rb") }
       let(:another_temp_eval_file) { Rails.root.join("tmp", "another_eval_for_execute.rb") }
@@ -240,6 +282,7 @@ RSpec.describe Raif::Evals::Run do
       expect(json_content["configuration"]).to eq(
         "default_llm_model_key" => Raif.config.default_llm_model_key.to_s,
         "evals_default_llm_judge_model_key" => Raif.config.evals_default_llm_judge_model_key,
+        "judge_model_key" => Raif.config.default_llm_model_key.to_s,
         "repeats" => 1,
         "capture_model_completions" => "full",
         "cases" => nil,
@@ -279,22 +322,22 @@ RSpec.describe Raif::Evals::Run do
         rates = run.send(:summary_data)[:eval_pass_rates]
 
         expect(rates).to include(
-          { eval_set: "TestEvalSet", description: "passes", runs: 3, passed: 3, pass_rate: 1.0 },
-          { eval_set: "TestEvalSet", description: "fails", runs: 3, passed: 0, pass_rate: 0.0 },
-          { eval_set: "AnotherEvalSet", description: "another test", runs: 3, passed: 3, pass_rate: 1.0 }
+          include(eval_set: "TestEvalSet", description: "passes", runs: 3, passed: 3, pass_rate: 1.0),
+          include(eval_set: "TestEvalSet", description: "fails", runs: 3, passed: 0, pass_rate: 0.0),
+          include(eval_set: "AnotherEvalSet", description: "another test", runs: 3, passed: 3, pass_rate: 1.0)
         )
       end
 
-      # The DSL does not enforce unique descriptions, and grouping by description would
-      # report one blended row of 6 runs instead of one row per eval block.
-      context "when two eval blocks share a description" do
+      # Two evals with one description derive one id, so an explicit id on one of them is what
+      # keeps their rates from blending into one row.
+      context "when two eval blocks share a description and one declares an id" do
         let(:test_eval_set) do
           Class.new(Raif::Evals::EvalSet) do
             eval "same name" do
               expect("always true") { true }
             end
 
-            eval "same name" do
+            eval "same name", id: "same-name-failing" do
               expect("always false") { false }
             end
           end
@@ -307,8 +350,8 @@ RSpec.describe Raif::Evals::Run do
 
           expect(rates.size).to eq(2)
           expect(rates).to contain_exactly(
-            { eval_set: "TestEvalSet", description: "same name", runs: 3, passed: 3, pass_rate: 1.0 },
-            { eval_set: "TestEvalSet", description: "same name", runs: 3, passed: 0, pass_rate: 0.0 }
+            include(description: "same name", pass_rate: 1.0, runs: 3, passed: 3),
+            include(description: "same name", eval_id: "TestEvalSet#same-name-failing", pass_rate: 0.0, runs: 3, passed: 0)
           )
         end
       end

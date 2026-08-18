@@ -3,9 +3,12 @@
 require "rails_helper"
 
 RSpec.describe Raif::Evals::Comparison do
-  def eval_result(description: "produces expected output", eval_index: 0, case_id: nil, expectations: {}, scores: [])
+  # eval_id defaults off eval_index only so a fixture wanting two eval blocks gets two ids. A real
+  # id is derived from the eval set and description, not position - see "keyed on eval id" below.
+  def eval_result(description: "produces expected output", eval_id: nil, eval_index: 0, case_id: nil, expectations: {}, scores: [])
     {
       "description" => description,
+      "eval_id" => eval_id || "Set#eval-#{eval_index}",
       "eval_index" => eval_index,
       "case_id" => case_id,
       "passed" => expectations.values.all?,
@@ -26,6 +29,7 @@ RSpec.describe Raif::Evals::Comparison do
       "configuration" => {
         "default_llm_model_key" => model,
         "evals_default_llm_judge_model_key" => judge,
+        "judge_model_key" => judge,
         "repeats" => 2
       },
       "results" => results,
@@ -37,6 +41,53 @@ RSpec.describe Raif::Evals::Comparison do
         "total_cost" => cost
       }
     }
+  end
+
+  describe "keyed on eval id" do
+    # The bug the id exists to remove: keyed on position, adding an eval above this one joined it
+    # against whatever then sat at its old index.
+    it "matches an eval whose position in its file moved between the two runs" do
+      comparison = described_class.new(
+        baseline: payload({ "Set" => [eval_result(eval_id: "Set#summarizes-abc123", eval_index: 0, case_id: "a",
+          expectations: { "e" => true })] }),
+        candidate: payload({ "Set" => [eval_result(eval_id: "Set#summarizes-abc123", eval_index: 3, case_id: "a",
+          expectations: { "e" => false })] })
+      )
+
+      expect(comparison.not_comparable).to be_empty
+      expect(comparison.new_failures.map { |row| row[:eval_id] }).to eq(["Set#summarizes-abc123"])
+    end
+
+    it "keeps two evals that ran the same case apart" do
+      comparison = described_class.new(
+        baseline: payload({ "Set" => [
+          eval_result(eval_id: "Set#first-abc123", case_id: "a", expectations: { "e" => true }),
+          eval_result(eval_id: "Set#second-def456", case_id: "a", expectations: { "e" => true })
+        ] }),
+        candidate: payload({ "Set" => [
+          eval_result(eval_id: "Set#first-abc123", case_id: "a", expectations: { "e" => false }),
+          eval_result(eval_id: "Set#second-def456", case_id: "a", expectations: { "e" => true })
+        ] })
+      )
+
+      expect(comparison.new_failures.map { |row| row[:eval_id] }).to eq(["Set#first-abc123"])
+      expect(comparison.to_h[:candidate][:evals]).to eq(2)
+    end
+
+    # A digest on its own tells a reader nothing about which eval stopped matching.
+    it "reports the description alongside an id present in only one run" do
+      comparison = described_class.new(
+        baseline: payload({ "Set" => [eval_result(description: "old wording", eval_id: "Set#old-wording-abc123",
+          expectations: { "e" => true })] }),
+        candidate: payload({ "Set" => [eval_result(description: "new wording", eval_id: "Set#new-wording-def456",
+          expectations: { "e" => true })] })
+      )
+
+      expect(comparison.not_comparable).to contain_exactly(
+        hash_including(eval_id: "Set#old-wording-abc123", description: "old wording", present_in: "baseline only"),
+        hash_including(eval_id: "Set#new-wording-def456", description: "new wording", present_in: "candidate only")
+      )
+    end
   end
 
   describe "pass rate classification" do
@@ -250,6 +301,32 @@ RSpec.describe Raif::Evals::Comparison do
       comparison = described_class.new(
         baseline: payload({ "Set" => [eval_result(expectations: { "e" => true })] }),
         candidate: payload({ "Set" => [eval_result(expectations: { "e" => true })] })
+      )
+
+      expect(comparison.judge_mismatch?).to be false
+    end
+
+    # Each was graded by its own model under test. Read off the configured setting both sides say
+    # "null", so the mismatch goes unnoticed in the one case the check exists for.
+    it "is detected when neither run configured a judge and the models under test differ" do
+      comparison = described_class.new(
+        baseline: payload({ "Set" => [eval_result(expectations: { "e" => true })] }, model: "gpt_a", judge: "gpt_a")
+          .tap { |p| p["configuration"]["evals_default_llm_judge_model_key"] = nil },
+        candidate: payload({ "Set" => [eval_result(expectations: { "e" => true })] }, model: "gpt_b", judge: "gpt_b")
+          .tap { |p| p["configuration"]["evals_default_llm_judge_model_key"] = nil }
+      )
+
+      expect(comparison.judge_mismatch?).to be true
+      expect(comparison.baseline_judge).to eq("gpt_a")
+      expect(comparison.candidate_judge).to eq("gpt_b")
+    end
+
+    it "is not flagged when neither run configured a judge and the model under test is the same" do
+      comparison = described_class.new(
+        baseline: payload({ "Set" => [eval_result(expectations: { "e" => true })] }, model: "gpt_a", judge: "gpt_a")
+          .tap { |p| p["configuration"]["evals_default_llm_judge_model_key"] = nil },
+        candidate: payload({ "Set" => [eval_result(expectations: { "e" => true })] }, model: "gpt_a", judge: "gpt_a")
+          .tap { |p| p["configuration"]["evals_default_llm_judge_model_key"] = nil }
       )
 
       expect(comparison.judge_mismatch?).to be false

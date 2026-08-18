@@ -6,6 +6,7 @@ RSpec.describe Raif::Evals::ComparisonReport do
   def eval_result(case_id:, passed:, score_value:)
     {
       "description" => "produces expected output",
+      "eval_id" => "SummarizationEvalSet#produces-expected-output-9c1de4a70b2f",
       "eval_index" => 0,
       "case_id" => case_id,
       "passed" => passed,
@@ -20,6 +21,7 @@ RSpec.describe Raif::Evals::ComparisonReport do
       "configuration" => {
         "default_llm_model_key" => model,
         "evals_default_llm_judge_model_key" => "anthropic_claude_5_sonnet",
+        "judge_model_key" => "anthropic_claude_5_sonnet",
         "repeats" => 1
       },
       "results" => { "SummarizationEvalSet" => results },
@@ -119,7 +121,7 @@ RSpec.describe Raif::Evals::ComparisonReport do
       mismatched = Raif::Evals::Comparison.new(
         baseline: comparison.baseline,
         candidate: comparison.candidate.merge(
-          "configuration" => comparison.candidate["configuration"].merge("evals_default_llm_judge_model_key" => "other_judge")
+          "configuration" => comparison.candidate["configuration"].merge("judge_model_key" => "other_judge")
         )
       )
 

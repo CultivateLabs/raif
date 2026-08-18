@@ -18,15 +18,15 @@ module Raif
         total_cost: 0.0
       }.freeze
 
-      attr_reader :description, :expectation_results, :model_completions, :run_index, :eval_index, :case_id, :scores, :usage,
+      attr_reader :description, :eval_id, :expectation_results, :model_completions, :run_index, :eval_index, :case_id, :scores, :usage,
         :overhead_usage
 
-      # eval_index identifies which eval block produced this result; descriptions are not
-      # unique, so it is the only stable way to tell two same-named eval blocks apart when
-      # collapsing repeats into a pass rate. case_id is the dataset input it ran against, and
-      # is the join key evals:compare matches on.
-      def initialize(description:, run_index: nil, eval_index: nil, case_id: nil)
+      # eval_id identifies the eval block that produced this result and survives the file being
+      # edited around it; with case_id, the dataset input, it is the key evals:compare and --resume
+      # match on. eval_index is that eval's position, which orders results within one run.
+      def initialize(description:, eval_id: nil, run_index: nil, eval_index: nil, case_id: nil)
         @description = description
+        @eval_id = eval_id
         @run_index = run_index
         @eval_index = eval_index
         @case_id = case_id
@@ -93,6 +93,7 @@ module Raif
       def to_h
         {
           description: description,
+          eval_id: eval_id,
           eval_index: eval_index,
           run_index: run_index,
           case_id: case_id,

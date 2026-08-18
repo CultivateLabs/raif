@@ -46,7 +46,7 @@ module Raif
         output.puts "\nStarting Raif Eval Run"
         output.puts ""
         output.puts "Raif.config.default_llm_model_key: #{Raif.config.default_llm_model_key}"
-        output.puts "Raif.config.evals_default_llm_judge_model_key: #{Raif.config.evals_default_llm_judge_model_key}"
+        output.puts "Raif.config.evals_default_llm_judge_model_key: #{configured_judge_description}"
         output.puts "Repeats per eval: #{repeats}"
         output.puts "Concurrency: #{concurrency}" if concurrency > 1
         output.puts "Cases: #{cases.join(", ")}" if cases
@@ -57,6 +57,8 @@ module Raif
         else
           output.puts "Run log: #{run_log.display_path}"
         end
+
+        print_self_judging_warning if judge_is_model_under_test?
 
         output.puts ""
         output.puts "=" * 50
@@ -376,6 +378,38 @@ module Raif
         end
       end
 
+      def judge_model_key
+        Raif::Evals::LlmJudge.resolved_llm_model_key
+      end
+
+      # Named rather than left blank in the header: an unset judge key does not mean nothing judged,
+      # it means the model under test did.
+      def configured_judge_description
+        return Raif.config.evals_default_llm_judge_model_key if Raif.config.evals_default_llm_judge_model_key.present?
+
+        "(not set - judged by #{judge_model_key}, the model under test)"
+      end
+
+      def judge_is_model_under_test?
+        judge_model_key.to_s == Raif.config.default_llm_model_key.to_s
+      end
+
+      # Before the first eval rather than in the summary, so it is read before the run is paid for.
+      # Not conditional on the run actually judging anything: whether an eval reaches a judge helper
+      # is only known once its block has run.
+      def print_self_judging_warning
+        output.puts ""
+        output.puts Raif::Utils::Colors.yellow(
+          "Warning: any LLM judge expectation in this run will be graded by #{judge_model_key}, the model under test."
+        )
+        output.puts Raif::Utils::Colors.yellow(
+          "  A model grading its own output is subject to self-preference bias, and running this again against a " \
+          "different model\n  moves the ruler along with the thing being measured. Set " \
+          "Raif.config.evals_default_llm_judge_model_key (or\n  RAIF_EVALS_DEFAULT_LLM_JUDGE_MODEL_KEY) to hold the " \
+          "judge fixed across runs, ideally to a model from outside\n  the family under test."
+        )
+      end
+
       # sqlite3 is capped rather than rejected: an eval runs inside a transaction, and concurrent
       # write transactions against one file serialize on SQLITE_BUSY instead of going faster.
       #
@@ -438,6 +472,10 @@ module Raif
         {
           default_llm_model_key: Raif.config.default_llm_model_key,
           evals_default_llm_judge_model_key: Raif.config.evals_default_llm_judge_model_key,
+          # The model that actually graded, which is what has to match for two runs to be
+          # comparable. The setting above is null for every run that configured no judge, so two
+          # models judged by themselves would compare as though one ruler had graded both.
+          judge_model_key: judge_model_key,
           repeats: repeats,
           capture_model_completions: Raif.config.evals_capture_model_completions.to_s,
           cases: cases,
@@ -448,8 +486,8 @@ module Raif
 
       # One row per distinct eval, collapsing its repeats into a pass rate - the comparable
       # number between models, since a single pass/fail cannot separate a real quality
-      # difference from one unlucky sample. Grouped by eval_index rather than description,
-      # which is not unique, or two same-named eval blocks report one blended rate.
+      # difference from one unlucky sample. Grouped by eval id rather than description, which two
+      # eval blocks can share, or they would report one blended rate.
       #
       # A dataset eval also reports a rate per case, since a model can improve on average
       # while getting worse on one input. Non-dataset rows keep their existing keys.
@@ -467,6 +505,7 @@ module Raif
           {
             eval_set: eval_set_name,
             description: runs.first[:description],
+            eval_id: runs.first[:eval_id],
             eval_index: runs.first[:eval_index],
             cases: per_case.count,
             repeats: repeats,
@@ -497,6 +536,7 @@ module Raif
             {
               eval_set: eval_set_name,
               description: runs.first[:description],
+              eval_id: runs.first[:eval_id],
               eval_index: runs.first[:eval_index],
               name: name,
               scale: scores.first[:scale],
@@ -516,7 +556,7 @@ module Raif
 
       def grouped_evals
         @results.flat_map do |eval_set_name, evals|
-          evals.group_by { |e| e[:eval_index] || e[:description] }.map { |_key, runs| [eval_set_name, runs] }
+          evals.group_by { |e| e[:eval_id] }.map { |_key, runs| [eval_set_name, runs] }
         end
       end
 
@@ -524,6 +564,7 @@ module Raif
         {
           eval_set: eval_set_name,
           description: runs.first[:description],
+          eval_id: runs.first[:eval_id],
           runs: runs.count,
           passed: passed,
           pass_rate: rate(passed, runs.count)
@@ -613,7 +654,7 @@ module Raif
         output.puts "SUMMARY"
         output.puts "=" * 50
         output.puts "Model: #{Raif.config.default_llm_model_key}"
-        output.puts "Judge: #{Raif.config.evals_default_llm_judge_model_key}"
+        output.puts "Judge: #{judge_model_key}#{" (the model under test)" if judge_is_model_under_test?}"
         output.puts "Eval Sets: #{data[:total_eval_sets]}"
         output.puts ""
         output.puts "Evals:"

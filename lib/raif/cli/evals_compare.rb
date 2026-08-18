@@ -68,6 +68,9 @@ module Raif
 
             Scores from two judges measure two different things. Re-run one arm with the other's
             judge, or pass --allow-judge-mismatch if you know the difference does not matter here.
+
+            A run with no Raif.config.evals_default_llm_judge_model_key set is graded by the model
+            under test, so comparing two models changes the judge unless one is configured.
           MSG
           exit 2
         end
@@ -109,6 +112,17 @@ module Raif
           puts Raif::Utils::Colors.red(<<~MSG)
             Error: #{path} is not a Raif eval results file (no top-level "results" object).
             Pass the JSON files written to raif_evals/results by `raif evals`, baseline first.
+          MSG
+          exit 1
+        end
+
+        # Results are joined on eval_id. Without one, every result keys on nil, collapses into a
+        # single unit per case, and diffs against the wrong eval - what the id exists to prevent.
+        results = payload["results"].values.flatten.compact
+        if results.any? { |result| !result.is_a?(Hash) || result["eval_id"].to_s.empty? }
+          puts Raif::Utils::Colors.red(<<~MSG)
+            Error: #{path} was written before evals had ids, so its results cannot be matched to another run's.
+            Re-run the evals to produce a comparable results file.
           MSG
           exit 1
         end

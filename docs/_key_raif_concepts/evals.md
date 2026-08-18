@@ -164,6 +164,7 @@ Once your evals have run, a JSON file will be created in `raif_evals/results` wi
   "configuration": {
     "default_llm_model_key": "open_ai_responses_gpt_5_6_terra",
     "evals_default_llm_judge_model_key": "anthropic_claude_5_sonnet",
+    "judge_model_key": "anthropic_claude_5_sonnet",
     "repeats": 5,
     "capture_model_completions": "full",
     "cases": null,
@@ -173,14 +174,39 @@ Once your evals have run, a JSON file will be created in `raif_evals/results` wi
 }
 ```
 
-`run_at` is when the run started, which is also the timestamp in its filename.
+`run_at` is when the run started, which is also the timestamp in its filename. `evals_default_llm_judge_model_key` is the judge that was configured and `judge_model_key` is the one the run actually used, which are the same thing unless no judge was configured - in which case the setting is `null` and `judge_model_key` is [the model under test](#configuring-the-judge-llm-model).
 
 Alongside `run_at` and `configuration`, the file has two more top-level keys:
 
-- `results` - one entry per eval set, each an array with one result per execution of an eval block. A result carries its `description`, `eval_index`, `passed`, `expectation_results`, any [`scores`](#scores), its [`usage` and `model_completions`](#captured-llm-calls), plus a `run_index` for [repeats](#repeating-evals) and a `case_id` for [dataset](#dataset-results) cases.
+- `results` - one entry per eval set, each an array with one result per execution of an eval block. A result carries its `description`, [`eval_id`](#eval-ids), `eval_index`, `passed`, `expectation_results`, any [`scores`](#scores), its [`usage` and `model_completions`](#captured-llm-calls), plus a `run_index` for [repeats](#repeating-evals) and a `case_id` for [dataset](#dataset-results) cases.
 - `summary` - run-wide totals across every eval, plus an `eval_pass_rates` array with one row per eval and a `score_summaries` array with one row per score name per eval.
 
 This file is what [`evals:compare`](#comparing-runs) reads, so keep the runs you want to diff against.
+
+### Eval Ids
+
+Each result carries an `eval_id`, which is what identifies that eval across runs - the key [`evals:compare`](#comparing-runs) matches a baseline result to its candidate on, and the key `--resume` skips already-recorded work by. It looks like this:
+
+```
+SummarizationEvalSet#summarizes-the-article-7f3a91c0b4e2
+```
+
+Three parts: the eval set's class name, a slug of the eval's description, and the first 12 hex characters of `SHA256("<eval set class name>\n<description>")`. The digest is what actually identifies the eval - it's taken over the description verbatim, so `"handles > 100 items"` and `"handles < 100 items"` stay distinct even though they slug identically - and the slug in front of it is there so a result row or a NOT COMPARABLE line is recognizable at a glance. The slug is capped at 60 characters; the digest is not affected by that.
+
+Nothing to declare, but two consequences worth knowing:
+
+- **Two evals in one eval set can't share a description.** Their ids would be identical, so their results would be joined as though they came from the same eval. Raif refuses at load time rather than blending them, and names the description to reword.
+- **Rewording a description produces a new id.** A comparison then reports the old eval as disappearing and the new one as arriving, rather than diffing the two as the same eval. That's usually right - a reworded eval is usually a changed eval. When it isn't, pass `id:` to keep the old identity across the rewording:
+
+```ruby
+eval "counts words, ignoring markdown syntax", id: "word-count" do
+  # ...
+end
+```
+
+A declared `id:` replaces the slug-and-digest half, so the example above is `SummarizationEvalSet#word-count`. It has to be unique within the eval set, and may contain letters, numbers, and any of `_ . : -`.
+
+`eval_index`, also on every result, is the eval block's position in its set. It's what puts results back into definition order within one run, and is not an identity: inserting an eval block shifts every index below it.
 
 ## Resuming an Interrupted Run
 
@@ -194,7 +220,7 @@ Run interrupted.
 Resume with: bundle exec raif evals --resume raif_evals/results/eval_run_20260805_094122_anthropic_claude_5_sonnet.partial.jsonl
 ```
 
-`--resume` (or `RAIF_EVAL_RESUME`) reads the log back and skips every execution it already holds, keyed on the same tuple that identifies a result in the JSON: which eval block, which dataset case, which repeat. Only the work that never finished costs anything the second time. The resumed run completes the results file its first attempt was headed for - same name, same `run_at` - rather than opening a second file describing the same run, and the log is deleted once that file exists.
+`--resume` (or `RAIF_EVAL_RESUME`) reads the log back and skips every execution it already holds, keyed on the same tuple that identifies a result in the JSON: [which eval block](#eval-ids), which dataset case, which repeat. Because that key is the eval's id rather than its position, editing the file around an eval - adding one above it, reordering - doesn't confuse a resume about which results it already has. Only the work that never finished costs anything the second time. The resumed run completes the results file its first attempt was headed for - same name, same `run_at` - rather than opening a second file describing the same run, and the log is deleted once that file exists.
 
 Some specifics worth knowing:
 
@@ -237,12 +263,13 @@ LLM responses vary between runs, so a single pass/fail per eval cannot separate 
 
 Repeats sample the model, not your inputs. To vary the input as well, give the eval a [dataset](#datasets) - the two compose, and the run becomes cases &times; repeats.
 
-Each result gains a `run_index` plus an `eval_index` identifying which eval block produced it, and the run's `summary` gains an `eval_pass_rates` array with one row per distinct eval. Rows are keyed on `eval_index` rather than the description, so two eval blocks that happen to share a description still get a rate each:
+Each result gains a `run_index`, and the run's `summary` gains an `eval_pass_rates` array with one row per distinct eval, keyed on [`eval_id`](#eval-ids):
 
 ```json
 {
   "eval_set": "MyEvalSet",
   "description": "produces expected output",
+  "eval_id": "MyEvalSet#produces-expected-output-9c1de4a70b2f",
   "runs": 5,
   "passed": 4,
   "pass_rate": 0.8
@@ -469,12 +496,13 @@ A sampled run always ends up with a seed even if you did not pass one: Raif draw
 
 ## Dataset Results
 
-Each result in the [results JSON](#results) carries the `case_id` that produced it, alongside the existing `eval_index` and `run_index`. In `summary.eval_pass_rates`, an eval with a dataset reports its overall rate across every case and repeat, plus a `per_case` breakdown:
+Each result in the [results JSON](#results) carries the `case_id` that produced it, alongside the existing [`eval_id`](#eval-ids), `eval_index`, and `run_index`. In `summary.eval_pass_rates`, an eval with a dataset reports its overall rate across every case and repeat, plus a `per_case` breakdown:
 
 ```json
 {
   "eval_set": "Raif::Evals::Tasks::DocumentSummarizationEvalSet",
   "description": "produces expected output",
+  "eval_id": "Raif::Evals::Tasks::DocumentSummarizationEvalSet#produces-expected-output-9c1de4a70b2f",
   "eval_index": 0,
   "cases": 3,
   "repeats": 2,
@@ -589,6 +617,7 @@ And the run's `summary` gains a `score_summaries` array, with one row per score 
 {
   "eval_set": "Raif::Evals::Tasks::DocumentSummarizationEvalSet",
   "description": "produces expected output",
+  "eval_id": "Raif::Evals::Tasks::DocumentSummarizationEvalSet#produces-expected-output-9c1de4a70b2f",
   "eval_index": 0,
   "name": "clarity",
   "scale": "1..5",
@@ -852,6 +881,21 @@ Raif.configure do |config|
 end
 ```
 
+**Configure this before you rely on judge scores.** With no judge configured, judging falls back to `Raif.config.default_llm_model_key` - the model being evaluated grades its own output. A model asked to score its own work tends to score it generously (self-preference bias), and it makes the headline use case for these evals actively misleading: running the same suite against a second model with `RAIF_DEFAULT_LLM_MODEL_KEY` switches the judge along with the subject, so the two runs are scored by two different rulers. A run whose judge is the model under test says so in its header and warns before spending anything:
+
+```
+Raif.config.evals_default_llm_judge_model_key: (not set - judged by open_ai_gpt_5_6_terra, the model under test)
+
+Warning: any LLM judge expectation in this run will be graded by open_ai_gpt_5_6_terra, the model under test.
+```
+
+Two rules of thumb when picking one:
+
+- **Hold the judge fixed across everything you intend to compare.** [`evals:compare`](#comparing-runs) refuses to diff two runs judged by different models for this reason. Each run records the judge it actually used, so two unconfigured runs of two different models are caught as the mismatch they are rather than passing as a comparison.
+- **Prefer a model from outside the family under test**, since self-preference extends to a model's siblings. Judging is short, structured, and cheap relative to the task being judged, so a capable judge from another provider is usually worth it.
+
+Judge calls are LLM calls: they are captured in the results and counted in the run's cost totals, so a fixed judge also keeps that overhead comparable between runs.
+
 Or you can override the model for a specific judge expectation:
 
 ```ruby
@@ -1111,7 +1155,7 @@ bundle exec raif evals:compare \
 
 The first file is the baseline and the second is the candidate. The two most common uses are comparing two models on the same prompts, and comparing the same model before and after a prompt change.
 
-Results are matched on eval set, `eval_index`, expectation description, and `case_id`. Cases are matched individually because a model can improve on average while getting materially worse on one input, which an average alone does not show.
+Results are matched on [`eval_id`](#eval-ids), `case_id`, and expectation description. Cases are matched individually because a model can improve on average while getting materially worse on one input, which an average alone does not show.
 
 ```
 Comparing eval runs
@@ -1168,7 +1212,7 @@ Options:
 Some specific behaviors:
 
 - **Cases present in only one run are reported under NOT COMPARABLE, never dropped.** A silently omitted case is indistinguishable from agreement. An expectation that exists on only one side is reported the same way, which is what a renamed description looks like.
-- **Runs judged by different models are refused.** Scores from two different [judge models](#configuring-the-judge-llm-model) measure two different things, so the command exits 2 without printing a comparison. `--allow-judge-mismatch` overrides this and labels the output accordingly.
+- **Runs judged by different models are refused.** Scores from two different [judge models](#configuring-the-judge-llm-model) measure two different things, so the command exits 2 without printing a comparison. This compares the judge each run actually used, so it also catches the case where neither run configured a judge and each was therefore graded by its own model under test. `--allow-judge-mismatch` overrides this and labels the output accordingly.
 - **Score direction is honored.** A score declared `higher_is_better: false` counts a decrease as an improvement, and ungated observational scores are reported but never trip `--fail-on-regression`.
 - **The threshold is relative to the baseline, not absolute.** A pass rate, a 1-5 rubric score, and a latency in milliseconds are not in the same units, so one absolute threshold cannot mean the same thing to all three: `0.25` would ask for a quarter of an eval's runs on one row and a quarter of a millisecond on the next, which makes the flag fire on noise until you turn it off. Each regression is divided by what it started from instead, so `--fail-on-regression 0.25` asks one question everywhere - did anything get more than 25% worse. A `clarity` mean of 4.0 dropping to 3.6 is `0.1`; an `elapsed_ms` mean of 1000 rising to 1200 is `0.2`. Score moves print their relative change next to the absolute one so you can see which rows are near the threshold. For a pass rate that started at 1.0 - an eval that used to pass every run - the relative and absolute readings are the same number, so the common case reads exactly as you would expect.
 - **A regression from a baseline of zero has no fraction to take, and trips any threshold.** A gated `error_count` going from 0 to 3 is a real regression that cannot be expressed as a percentage of zero, so it is reported with a null magnitude and always fails the gate rather than being skipped for want of a denominator.

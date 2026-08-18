@@ -52,10 +52,15 @@ module Raif
         # Reopens an interrupted run's log. The whole configuration has to match - see
         # Run#configuration_data.
         def resume(path:, configuration:)
-          header, results, recorded_keys = read(path)
+          header, results, recorded_keys, unidentified_results = read(path)
 
           if header.nil?
             raise IncompatibleResumeError, "#{path} has no run header line, so it is not a Raif eval run log."
+          end
+
+          if unidentified_results.positive?
+            raise IncompatibleResumeError, "Refusing to resume #{path}: #{unidentified_results} of its results were written " \
+              "before evals had ids, so there is no way to tell which of this run's executions they cover. Start a new run."
           end
 
           differences = configuration_differences(header[:configuration], configuration)
@@ -95,6 +100,7 @@ module Raif
           header = nil
           results = {}
           recorded_keys = Set.new
+          unidentified_results = 0
 
           File.foreach(path) do |line|
             line = line.strip
@@ -118,16 +124,24 @@ module Raif
               next if result.nil?
 
               (results[record[:eval_set]] ||= []) << result
+
+              # A result from before evals carried an id has nothing to match a pending execution
+              # against. Counted rather than keyed on nil, which would make every execution look
+              # already-recorded and skip the whole run.
+              if result[:eval_id].to_s.empty?
+                unidentified_results += 1
+                next
+              end
+
               recorded_keys << RunLog.key(
-                eval_set: record[:eval_set],
-                eval_index: result[:eval_index],
+                eval_id: result[:eval_id],
                 case_id: result[:case_id],
                 run_index: result[:run_index]
               )
             end
           end
 
-          [header, results, recorded_keys]
+          [header, results, recorded_keys, unidentified_results]
         end
 
         # JSON has no symbols, so an expectation's status comes back as a string where the run
@@ -162,15 +176,14 @@ module Raif
       end
 
       # The tuple that identifies one execution in the results JSON: which eval block, against
-      # which case, on which repeat.
-      def self.key(eval_set:, eval_index:, case_id:, run_index:)
-        [eval_set.to_s, eval_index, case_id&.to_s, run_index]
+      # which case, on which repeat. The eval id already carries the eval set it belongs to, so
+      # this key is unique across every set in the run.
+      def self.key(eval_id:, case_id:, run_index:)
+        [eval_id.to_s, case_id&.to_s, run_index]
       end
 
-      def recorded?(eval_set:, eval_index:, case_id: nil, run_index: nil)
-        @recorded_keys.include?(
-          self.class.key(eval_set: eval_set, eval_index: eval_index, case_id: case_id, run_index: run_index)
-        )
+      def recorded?(eval_id:, case_id: nil, run_index: nil)
+        @recorded_keys.include?(self.class.key(eval_id: eval_id, case_id: case_id, run_index: run_index))
       end
 
       # Appends one result and returns the hash that was written.
@@ -182,8 +195,7 @@ module Raif
 
           (@results[eval_set] ||= []) << payload
           @recorded_keys << self.class.key(
-            eval_set: eval_set,
-            eval_index: payload[:eval_index],
+            eval_id: payload[:eval_id],
             case_id: payload[:case_id],
             run_index: payload[:run_index]
           )

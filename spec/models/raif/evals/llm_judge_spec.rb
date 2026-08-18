@@ -77,6 +77,20 @@ RSpec.describe Raif::Evals::LlmJudge do
     end
   end
 
+  describe ".resolved_llm_model_key" do
+    it "is the configured judge when there is one" do
+      allow(Raif.config).to receive(:evals_default_llm_judge_model_key).and_return(:claude_3_5_sonnet)
+
+      expect(described_class.resolved_llm_model_key).to eq(:claude_3_5_sonnet)
+    end
+
+    it "is the model under test when no judge is configured" do
+      allow(Raif.config).to receive(:evals_default_llm_judge_model_key).and_return(nil)
+
+      expect(described_class.resolved_llm_model_key).to eq(Raif.config.default_llm_model_key)
+    end
+  end
+
   describe "#judgment_reasoning" do
     let(:judge) { described_class.new }
 

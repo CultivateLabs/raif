@@ -50,11 +50,13 @@ module Raif
         "configuration" => {
           "default_llm_model_key" => model,
           "evals_default_llm_judge_model_key" => judge,
+          "judge_model_key" => judge,
           "repeats" => 1
         },
         "results" => {
           "SummarizationEvalSet" => [{
             "description" => "produces expected output",
+            "eval_id" => "SummarizationEvalSet#produces-expected-output-9c1de4a70b2f",
             "eval_index" => 0,
             "case_id" => "press-release",
             "passed" => passed,

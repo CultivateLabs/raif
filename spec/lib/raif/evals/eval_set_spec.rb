@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Raif::Evals::EvalSet do
   let(:test_eval_set_class) do
-    Class.new(described_class) do
+    named_eval_set("TestEvalSet") do
       setup do
         @setup_called = true
       end
@@ -120,7 +120,7 @@ RSpec.describe Raif::Evals::EvalSet do
 
   describe ".run with a dataset" do
     let(:dataset_eval_set) do
-      Class.new(described_class) do
+      named_eval_set("DatasetEvalSet") do
         dataset :topics do
           [
             { id: "alpha", input: { "n" => 1 }, expected: { "double" => 2 } },
@@ -169,7 +169,7 @@ RSpec.describe Raif::Evals::EvalSet do
 
     # One bad fixture in a 20-case dataset must not cost the other 19 results.
     it "records an error for a case that raises and keeps running the rest" do
-      eval_set = Class.new(described_class) do
+      eval_set = named_eval_set("TestEvalSet") do
         dataset :topics do
           [{ id: "alpha", input: { "n" => 1 } }, { id: "beta", input: { "n" => 2 } }]
         end
@@ -189,7 +189,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "records an error for a case whose setup raises and keeps running the rest" do
-      eval_set = Class.new(described_class) do
+      eval_set = named_eval_set("TestEvalSet") do
         dataset :topics do
           [{ id: "alpha", input: { "n" => 1 } }, { id: "beta", input: { "n" => 2 } }]
         end
@@ -212,7 +212,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "records an error for a case whose teardown raises and keeps running the rest" do
-      eval_set = Class.new(described_class) do
+      eval_set = named_eval_set("TestEvalSet") do
         dataset :topics do
           [{ id: "alpha", input: { "n" => 1 } }, { id: "beta", input: { "n" => 2 } }]
         end
@@ -237,7 +237,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "raises before running anything when the dataset has duplicate ids" do
-      eval_set = Class.new(described_class) do
+      eval_set = named_eval_set("TestEvalSet") do
         dataset :topics do
           [{ id: "alpha", input: {} }, { id: "alpha", input: {} }]
         end
@@ -268,7 +268,7 @@ RSpec.describe Raif::Evals::EvalSet do
     # The backwards-compatibility guarantee: adding datasets to the DSL must not require
     # touching an eval set that does not use them.
     it "leaves zero-arity setup, teardown, and eval blocks running exactly as before" do
-      eval_set = Class.new(described_class) do
+      eval_set = named_eval_set("TestEvalSet") do
         setup do
           @calls = ["setup"]
         end
@@ -290,7 +290,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "runs within a transaction that is rolled back" do
-      eval_set_with_db = Class.new(described_class) do
+      eval_set_with_db = named_eval_set("EvalSetWithDb") do
         eval "creates a record" do
           initial_count = Raif::Conversation.count
           user = FB.create(:raif_test_user)
@@ -308,7 +308,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "captures model completions created during the eval before the transaction rolls back" do
-      eval_set_with_llm_call = Class.new(described_class) do
+      eval_set_with_llm_call = named_eval_set("EvalSetWithLlmCall") do
         eval "makes an LLM call" do
           FB.create(
             :raif_model_completion,
@@ -339,7 +339,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "captures model completions before a teardown that destroys their source" do
-      eval_set_with_destructive_teardown = Class.new(described_class) do
+      eval_set_with_destructive_teardown = named_eval_set("EvalSetWithDestructiveTeardown") do
         teardown do
           @entry&.destroy
         end
@@ -372,7 +372,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "does not capture model completions created in teardown" do
-      eval_set_with_teardown_llm_call = Class.new(described_class) do
+      eval_set_with_teardown_llm_call = named_eval_set("EvalSetWithTeardownLlmCall") do
         teardown do
           FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 99)
         end
@@ -393,7 +393,7 @@ RSpec.describe Raif::Evals::EvalSet do
     # Not the eval's own measurement, but real money: a run summary that dropped it would
     # understate the bill for a suite whose fixtures are built by an LLM.
     it "counts setup and teardown calls as overhead rather than dropping them" do
-      eval_set_with_surrounding_llm_calls = Class.new(described_class) do
+      eval_set_with_surrounding_llm_calls = named_eval_set("EvalSetWithSurroundingLlmCalls") do
         setup do
           FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 11)
         end
@@ -424,7 +424,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "still counts what a setup spent when that setup goes on to raise" do
-      eval_set_with_failing_setup = Class.new(described_class) do
+      eval_set_with_failing_setup = named_eval_set("EvalSetWithFailingSetup") do
         setup do
           FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 11)
           raise "bad fixture"
@@ -443,7 +443,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "runs each eval on its own instance, so instance state does not leak between evals" do
-      eval_set_class = Class.new(described_class) do
+      eval_set_class = named_eval_set("TestEvalSet") do
         eval "leaves an instance variable behind" do
           @leaked = "from the first eval"
           expect("ran") { true }
@@ -460,7 +460,7 @@ RSpec.describe Raif::Evals::EvalSet do
     # A sink left open keeps collecting - and keeps the records alive - for the rest of the
     # process, including whatever the host app does after the run.
     it "closes the completion sink even when the eval raises" do
-      eval_set_class = Class.new(described_class) do
+      eval_set_class = named_eval_set("TestEvalSet") do
         eval "blows up" do
           raise "boom"
         end
@@ -478,7 +478,7 @@ RSpec.describe Raif::Evals::EvalSet do
         model_api_name: "raif-test-llm"
       )
 
-      eval_set_class = Class.new(described_class) do
+      eval_set_class = named_eval_set("TestEvalSet") do
         eval "no LLM calls of its own" do
           expect "ran" do
             true

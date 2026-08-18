@@ -129,6 +129,47 @@ RSpec.describe "Resuming an interrupted eval run" do
     expect(resumed.results.keys).to contain_exactly("ResumeFirstEvalSet", "ResumeSecondEvalSet")
   end
 
+  # Logged results are matched to pending executions by eval id, which does not move when the file
+  # is edited. Keyed on position, the inserted eval would inherit index 0's recorded result and be
+  # skipped, while the two evals that did run would be paid for again.
+  it "skips the results it already holds even when an eval was inserted above them" do
+    interrupt_after_first_set
+    executions.clear
+
+    counter = executions
+    edited_first_eval_set = Class.new(Raif::Evals::EvalSet) do
+      define_method(:executions) { counter }
+
+      eval "an eval added at the top" do
+        executions << "added"
+        expect("passes") { true }
+      end
+
+      eval "first eval" do
+        executions << "first"
+        expect("passes") { true }
+      end
+
+      eval "second eval" do
+        executions << "second"
+        expect("passes") { true }
+      end
+    end
+
+    stub_const("ResumeFirstEvalSet", edited_first_eval_set)
+
+    resumed = Raif::Evals::Run.new(output: StringIO.new, resume_path: log_path.to_s)
+    allow(resumed).to receive(:discover_eval_sets).and_return([edited_first_eval_set, ResumeSecondEvalSet])
+    resumed.instance_variable_set(:@eval_sets, [edited_first_eval_set, ResumeSecondEvalSet])
+    resumed.execute
+
+    expect(executions).to eq(["added", "third"])
+
+    payload = JSON.parse(File.read(results_path))
+    expect(payload["results"]["ResumeFirstEvalSet"].map { |r| r["description"] })
+      .to contain_exactly("an eval added at the top", "first eval", "second eval")
+  end
+
   it "refuses to resume into a run configured differently" do
     interrupt_after_first_set
 
