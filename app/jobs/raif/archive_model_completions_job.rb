@@ -4,46 +4,29 @@ module Raif
   # Archives Raif::ModelCompletion rows older than
   # Raif.config.model_completion_retention_period to
   # Raif.config.archive_storage as gzip JSONL (see Raif::ArchiveSerializer),
-  # then deletes them, one Raif::Archive batch at a time.
+  # then deletes them, one Raif::Archive batch at a time. Enabling,
+  # scheduling, storage requirements and partitioning are documented for
+  # operators at https://docs.raif.ai/learn_more/archiving.
   #
-  # The guarantees are at-least-once archiving + never-delete-unarchived: a
-  # batch is deleted only after this run successfully uploaded it, and a
-  # re-run after any crash writes a new object under a new key (a harmless
-  # duplicate in storage) rather than resuming or overwriting. There is no
-  # persisted in-flight state to repair, ever. The flip side is that a crash
-  # between upload and the Raif::Archive insert leaves an object in storage
-  # with no audit row - the same accepted duplicate class (the rows were not
-  # deleted and re-archive next run). Storage-level policy (private bucket,
-  # encryption, lifecycle rules) must therefore apply to whole prefixes
-  # (the unpartitioned KEY_PREFIX and, with partitioning, every prefix
-  # under raif-archives/partitions/), never be derived from raif_archives
-  # rows. Prefix-wide coverage is also what makes
-  # Raif::Archive.purge_partition! complete: it erases a partition's whole
-  # prefix, crash-orphaned objects included.
+  # The invariants this job exists to hold:
   #
-  # Inert unless the host explicitly opts in: archive_enabled must be true
-  # AND an archive_storage adapter must be configured AND a retention period
-  # must be set, otherwise perform returns without touching anything.
-  #
-  # Hosts own scheduling (raif's usual convention, like
-  # Raif::ExpireStuckModelCompletionBatchesJob): run it e.g. nightly. Three
-  # budgets bound the work per run (max_records, max_objects, max_runtime);
-  # the same code drains a multi-year backlog gradually and handles steady
-  # state. Concurrent runs are excluded via an advisory lock. Before
-  # enabling, operators can preview with
-  # Raif::ArchiveModelCompletionsJob.dry_run.
-  #
-  # With Raif.config.archive_partition_column set, every archive object
-  # holds records from exactly one partition and is stored under that
-  # partition's key prefix (see Raif::ArchivePartition), the layout that
-  # makes complete per-partition erasure possible. Work is scheduled in
-  # round-robin passes, at most one object per partition per pass, visiting
-  # eligible partitions ordered by their oldest eligible completion: many
-  # small partitions drain within a run while one large-backlog partition
-  # cannot monopolize it. Records whose partition value is NULL (or
-  # normalizes to blank) fail closed, ineligible until the host either
-  # attributes them or opts into the Raif::ArchivePartition::UNGROUPED
-  # fallback.
+  # - At-least-once archiving + never-delete-unarchived. A batch is deleted
+  #   only after this run uploaded it, and a re-run after any crash writes a
+  #   new object under a new key rather than resuming or overwriting. There
+  #   is no persisted in-flight state to repair, ever.
+  # - The accepted cost of that is duplicate objects: a crash between the
+  #   upload and the Raif::Archive insert leaves an object that no row references
+  #   (those rows were not deleted, so they re-archive next run). Storage
+  #   policy must therefore apply to whole prefixes and never be derived
+  #   from raif_archives rows, which is also what makes
+  #   Raif::Archive.purge_partition! complete.
+  # - Inert unless the host opts in: archive_enabled, an archive_storage
+  #   adapter and a retention period must all be set, or perform returns
+  #   without touching anything.
+  # - With partitioning, every object holds records from exactly one
+  #   partition (see Raif::ArchivePartition). Per-partition erasure rests on
+  #   that, so a record whose partition changes mid-upload taints the object
+  #   and aborts the cull.
   #
   # Deliberately NOT handled: raif_model_completion_batches rows remain; they
   # carry their own aggregated cost columns and nothing recomputes them from
@@ -67,10 +50,7 @@ module Raif
     RESOURCE_KEY_SEGMENT = "model-completions"
     # Distinct partitions fetched per round-robin pass. The listing query is
     # a GROUP BY over the full multi-guard eligibility scope, the one
-    # potentially expensive query in the fairness design, so it is capped;
-    # each pass excludes the partitions already visited this round, so
-    # successive passes page through every eligible partition before any is
-    # revisited.
+    # potentially expensive query in the fairness design, so it is capped.
     PARTITIONS_PER_PASS = 100
 
     # Internal control-flow signal: a serialized record's partition value
@@ -357,8 +337,7 @@ module Raif
 
     # Eligible partitions for one pass, ordered by each partition's oldest
     # eligible completion, capped at PARTITIONS_PER_PASS, and excluding the
-    # partitions already visited this round so successive passes page
-    # through every eligible partition. Returns [partition, predicate, raws]
+    # partitions already visited this round. Returns [partition, predicate, raws]
     # triples: the predicate re-selects the partition's records and raws are
     # the group values the caller marks visited. [[nil, nil, [:unpartitioned]]]
     # when partitioning is unset (a single pseudo-partition). Group values
