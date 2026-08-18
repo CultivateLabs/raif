@@ -169,12 +169,26 @@ Once your evals have run, a JSON file will be created in `raif_evals/results` wi
     "capture_model_completions": "full",
     "cases": null,
     "sample": null,
-    "seed": null
+    "seed": null,
+    "datasets": [
+      { "eval_set": "SummarizationEvalSet", "name": "documents", "cases": 24, "digest": "sha256:9f2c..." }
+    ],
+    "code": { "git_sha": "4a91c0b7e2d3f8a6c5b4e3d2a1908f7e6d5c4b3a", "dirty": false }
   }
 }
 ```
 
 `run_at` is when the run started, which is also the timestamp in its filename. `evals_default_llm_judge_model_key` is the judge that was configured and `judge_model_key` is the one the run actually used, which are the same thing unless no judge was configured - in which case the setting is `null` and `judge_model_key` is [the model under test](#configuring-the-judge-llm-model).
+
+### What Was Measured
+
+Two keys in the block record the inputs rather than the settings, so a later reader can tell a model that changed from a dataset that did.
+
+`datasets` has one entry per [dataset](#datasets) the run used: the eval set that declared it, its name, how many cases it holds, and a SHA-256 `digest` over those cases. The digest is taken over the cases sorted by id, with the keys inside each case sorted too, so reordering rows or reformatting the file leaves it alone while editing an input, an `expected`, or the set of cases changes it. A run that used no dataset records an empty list, which is how a reader tells it from a run written before this was recorded. When [`--cases` or `--sample`](#selecting-cases-to-run) narrowed a dataset, the entry also carries `selected`; `cases` is always the whole dataset, since the selection itself is already recorded above.
+
+This matters because [`evals:compare`](#comparing-runs) joins the two runs on case id. Edit one line of `documents.jsonl`, re-run, and without the digest the difference is reported as the model behaving differently on the same input. With it, the comparison warns that the datasets are not the same before you read anything else. `--resume` is stricter: a dataset whose contents changed while the run was interrupted is refused outright, since the two halves of the results file would describe different inputs under one case id. Only the datasets both the log and the resuming invocation resolved are compared, so a resume narrowed to one eval set file still works.
+
+`code` is the host app's git HEAD and whether the working tree was dirty, or `null` when the app is not a git checkout. Comparing one model before and after a prompt change is one of the two workflows `evals:compare` exists for, and nothing else in the results says which side of the change a run was on. Unlike everything else in the block, it does not constrain `--resume`: the commit that landed while a run was interrupted is often the one that fixed whatever interrupted it, so a resume across a commit warns and carries on rather than refusing.
 
 Alongside `run_at` and `configuration`, the file has two more top-level keys:
 
@@ -255,6 +269,7 @@ Some specifics worth knowing:
 
 - **A sampled run resumes on the seed it recorded.** `--sample` without `--seed` still writes the seed it drew into the log header, and the resumed invocation samples on that rather than drawing again, so it continues the same subset of cases. Passing an explicit `--seed` that differs from the logged one is a configuration mismatch and is refused, per the next point.
 - **The whole configuration has to match.** Every key in the results `configuration` block either changes what a result means (which model produced it, which model judged it, how much of each call was captured) or which cases produce one (`cases`, `sample`, `seed`, `repeats`). A resume that let any of them drift would write one results file describing a run that never happened, so a mismatch is refused and names the keys that moved. Re-run with the settings the log was started with, or drop `--resume` to start fresh.
+- **An edited dataset is refused; edited code is only reported.** A [dataset whose fingerprint moved](#what-was-measured) is a configuration mismatch like any other, since the two halves of the results file would describe different inputs under one case id. The `code` key is deliberately not held to that standard - the commit that landed while a run was interrupted is often the one that fixed whatever interrupted it - so a resume across a commit prints a warning and carries on. The results file then names one commit for work produced under two, which is why it says so.
 - **A truncated last line is skipped, not fatal.** A hard kill lands mid-write. Losing the one result being appended is the cost of appending; losing the run over it would defeat the purpose.
 - **Results are carried forward for eval sets the resumed invocation doesn't visit.** Resuming with a narrower set of files keeps what the log already holds for the others.
 - **A run that stopped before recording anything deletes its own log**, since there is nothing there to resume.
@@ -383,7 +398,21 @@ For each eval, the results include:
 
 The run's top-level `summary` also aggregates totals across every eval: `total_model_completions`, `total_prompt_tokens`, `total_completion_tokens`, `total_tokens`, and `total_cost`. These totals are also printed to the console at the end of the run under an `LLM Usage` heading.
 
-> Note: LLM calls made by [LLM judges](#llm-as-judge-expectations) run within the eval and are captured and counted in these totals alongside the calls made by the code under test.
+### Judge Spend Is Reported Apart
+
+LLM calls made by [LLM judges](#llm-as-judge-expectations) run inside the eval, so they are captured and counted in the totals above alongside the calls made by the code under test. They are also counted again on their own: a result whose eval called a judge gains a `judge_usage` object of the same shape as `usage`, and the run's `summary` gains `total_judge_model_completions`, `total_judge_tokens`, and `total_judge_cost`. These are a *subset* of the `usage` and `total_*` figures, not spend beside them.
+
+The split exists for comparisons. The judge is meant to be the same model on both sides - `evals:compare` [refuses two different judges](#configuring-the-judge-llm-model) - so its spend is not part of what separates two models under test. It does not cancel out either, because a wordier model gives the judge more to read. A single `total cost $1.10 -> $1.64` row therefore blends "this model is more expensive" with "this model made the judge work harder". Both the run summary and `evals:compare` print the two lines instead:
+
+```
+LLM Usage:
+  48 LLM calls
+  $1.104200 total cost
+    $0.903100 model under test
+    $0.201100 judge (24 calls)
+```
+
+A result whose eval called no judge has no `judge_usage` key at all, and a results file written before this was recorded has none either - which is why `evals:compare` prints `-` rather than `$0.00` for a run whose judge spend is unknown.
 
 Calls your `setup` or `teardown` blocks make are treated differently. They are not the eval's own measurement - a fixture built by an LLM is not what the eval is testing - so they stay out of `usage` and out of the `total_*` figures above. But they are real spend, so they are reported rather than dropped: a result whose setup or teardown made any gains an `overhead_usage` object of the same shape as `usage`, the run's `summary` gains `total_overhead_model_completions`, `total_overhead_tokens`, and `total_overhead_cost`, and the console prints an extra line under `LLM Usage`. A result whose setup and teardown made no calls - the normal case - has no `overhead_usage` key at all.
 
@@ -734,9 +763,18 @@ And the run's `summary` gains a `score_summaries` array, with one row per score 
 
 `stddev` is the sample standard deviation (dividing by n-1). These values are draws from the model's output distribution rather than the whole of it - that is what `--repeat` exists to sample - and dividing by n instead understates the spread by 0.71x at 2 values and 0.89x at 5, which is exactly the range these runs live in. Understating it would defeat the only reason it is printed. (This is a partial correction, not a complete one: the square root of an unbiased variance is still biased low. `ci95` is the figure to lean on when the difference matters, since it does not depend on that assumption.)
 
-`ci95` is a 95% bootstrap confidence interval, resampled from a fixed seed so the same numbers always produce the same interval.
+`ci95` is a 95% percentile bootstrap confidence interval, resampled from a fixed seed so the same numbers always produce the same interval.
 
-Both are omitted when there is only one observation to compute them from - a single-case run at `--repeat 1`, for instance. A standard deviation of `0.0` and a zero-width interval are what the arithmetic returns for one value, and in a summary read to decide whether a difference is real they would claim a spread had been measured when none was.
+**`ci95` needs at least 5 values and says so when it does not have them.** A bootstrap can only be as informative as the number of values it resamples: 3 values have 10 distinct resamples between them, so the interval restates those three rather than inferring from them, and its real coverage is neither 95% nor stable. Printing one anyway invites exactly the over-reading it was added to prevent. Below 5 the key is replaced with `ci95_omitted`, naming what it was short of:
+
+```json
+"spread_n": 3,
+"ci95_omitted": "3 cases; a 95% interval needs 5"
+```
+
+The count is in the unit the spread was measured in - cases for a dataset eval, runs otherwise - since that is what you would have to add more of. The console prints the same fragment beside the mean. Note that this is the same floor the [regression gate](#what-the-gate-requires) runs into from the other direction: a handful of cases genuinely cannot support an inference, whichever test is asked for one.
+
+`stddev` is omitted below 2 values, where the arithmetic returns `0.0` - which in a summary read to decide whether a difference is real would claim a spread had been measured when none was.
 
 > Note: [`expect_llm_judge_score`](#scored-evaluations) records a score named after its rubric automatically, in addition to its pass/fail expectation. You get both without writing a `score` call yourself.
 
@@ -1252,12 +1290,24 @@ The first file is the baseline and the second is the candidate. The two most com
 
 Results are matched on [`eval_id`](#eval-ids), `case_id`, and expectation description. Cases are matched individually because a model can improve on average while getting materially worse on one input, which an average alone does not show.
 
+That matching is only as good as the inputs behind it, so the command also checks [what each run measured](#what-was-measured). If the two runs' dataset fingerprints differ, it warns loudly and continues - comparing a widened dataset against its predecessor is a legitimate thing to do, as long as you know that is what you are looking at:
+
+```
+Warning: these two runs did not measure the same datasets:
+  documents (SummarizationEvalSet): 24 cases sha256:9f2c... -> 25 cases sha256:1b7e...
+  Cases are joined by id, so a difference the dataset caused reads as a difference the model caused.
+  Re-run the baseline against the current dataset to compare the two models alone.
+```
+
+The `total cost` row is split into the model under test and [the judge](#judge-spend-is-reported-apart), since the judge is held fixed across the comparison and its spend is not part of what separates the two models.
+
 ```
 Comparing eval runs
 
   baseline   open_ai_responses_gpt_5_4   2026-08-04 18:02   2 evals x 3 repeats   4 cases   $1.10   eval_run_..._gpt_5_4.json
   candidate  anthropic_claude_5_sonnet   2026-08-05 09:41   2 evals x 3 repeats   4 cases   $1.64   eval_run_..._claude_5_sonnet.json
   judge      anthropic_claude_5_haiku (both runs)
+  code       4a91c0b7e2d3 -> 4a91c0b7e2d3
 
 NEW FAILURES (1)
   DocumentSummarizationEvalSet  produces expected output
@@ -1290,6 +1340,8 @@ SUMMARY
   mean clarity          4.1111 -> 4.5556
   mean summary_word_count 284.0 -> 412.0
   total cost            $1.10 -> $1.64
+    model under test    $0.90 -> $1.40
+    judge               $0.20 -> $0.24
   1 regression beyond --fail-on-regression 0.25 (25% worse than baseline), none distinguishable from run-to-run variation at a family-wise 0.05 over 1 candidate row
 ```
 

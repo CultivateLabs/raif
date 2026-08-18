@@ -78,6 +78,20 @@ RSpec.describe Raif::Evals::Statistics do
     it "returns nil for no values" do
       expect(described_class.bootstrap_ci95([])).to be_nil
     end
+
+    # A percentile bootstrap over 3 values has 10 distinct resamples to draw on, so the interval it
+    # returns restates those three rather than inferring from them - and it would be labelled 95%.
+    it "returns nil below the minimum sample" do
+      values = Array.new(described_class::MIN_BOOTSTRAP_SAMPLE - 1) { |i| 4.0 + i }
+
+      expect(described_class.bootstrap_ci95(values)).to be_nil
+    end
+
+    it "returns an interval at exactly the minimum sample" do
+      values = Array.new(described_class::MIN_BOOTSTRAP_SAMPLE) { |i| 4.0 + i }
+
+      expect(described_class.bootstrap_ci95(values)).to be_an(Array)
+    end
   end
 
   # Exact rather than resampled: the gate divides its level by the number of rows it tests, so it

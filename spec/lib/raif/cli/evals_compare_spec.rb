@@ -236,6 +236,23 @@ RSpec.describe Raif::CLI::EvalsCompare do
       expect(File.read(written)).to include("<title>Raif eval comparison</title>")
     end
 
+    # The report is in the file rather than on screen, and a dataset that changed under the
+    # comparison is the one thing in it a reader has to see before reading the rest.
+    it "warns on stdout about a changed dataset when the report went to a file" do
+      dataset = ->(digest, cases) { [{ "eval_set" => "SummarizationEvalSet", "name" => "documents", "cases" => cases, "digest" => digest }] }
+      original = write_payload(dir, "orig.json",
+        cli_results_payload(model: "gpt_a", passed: true, score_value: 5.0, datasets: dataset.call("sha256:aaa", 1)))
+      edited = write_payload(dir, "edited.json",
+        cli_results_payload(model: "gpt_a", passed: false, score_value: 3.0, datasets: dataset.call("sha256:bbb", 2)))
+
+      result = run_raif_cli("evals:compare", original, edited, "--format", "html")
+
+      expect(result.exit_code).to eq(0)
+      expect(result.stdout).to include("Warning: these two runs did not measure the same datasets:")
+      expect(result.stdout).to include("documents (SummarizationEvalSet): 1 cases sha256:aaa -> 2 cases sha256:bbb")
+      expect(result.stdout).to include("Comparison report written to:")
+    end
+
     it "rejects an unknown format with usage rather than a backtrace" do
       result = run_raif_cli("evals:compare", baseline, candidate, "--format", "yaml")
 

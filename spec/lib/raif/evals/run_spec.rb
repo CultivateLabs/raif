@@ -279,7 +279,7 @@ RSpec.describe Raif::Evals::Run do
       json_content = JSON.parse(File.read(json_file))
       expect(Time.parse(json_content["run_at"])).to eq(Time.new(2024, 1, 1, 12, 0, 0))
       expect(json_content["results"]).to be_a(Hash)
-      expect(json_content["configuration"]).to eq(
+      expect(json_content["configuration"]).to include(
         "default_llm_model_key" => Raif.config.default_llm_model_key.to_s,
         "evals_default_llm_judge_model_key" => Raif.config.evals_default_llm_judge_model_key,
         "judge_model_key" => Raif.config.default_llm_model_key.to_s,
@@ -287,8 +287,12 @@ RSpec.describe Raif::Evals::Run do
         "capture_model_completions" => "full",
         "cases" => nil,
         "sample" => nil,
-        "seed" => nil
+        "seed" => nil,
+        # These eval sets declare no dataset, which is recorded as an empty list rather than left
+        # out: a reader can then tell it from a run written before datasets were fingerprinted.
+        "datasets" => []
       )
+      expect(json_content["configuration"]).to have_key("code")
       expect(json_content["summary"]).to include(
         "total_eval_sets" => 2,
         "total_evals" => 3,

@@ -130,6 +130,54 @@ RSpec.describe Raif::Evals::Dataset do
     end
   end
 
+  describe "#digest" do
+    it "is stable across two datasets holding the same cases" do
+      expect(described_class.new(name: :topics, cases: rows).digest).to eq(described_class.new(name: :topics, cases: rows).digest)
+    end
+
+    # The digest tracks what the cases are, not how the file is arranged, so reformatting a dataset
+    # must not read as a changed dataset.
+    it "ignores the order of the rows and of the keys within them" do
+      reordered = [
+        { input: { "topic" => "c" }, id: "gamma" },
+        { id: "alpha", expected: { "subject" => "a" }, input: { "topic" => "a" } },
+        { id: "beta", input: { "topic" => "b" } }
+      ]
+
+      expect(described_class.new(name: :topics, cases: reordered).digest).to eq(described_class.new(name: :topics, cases: rows).digest)
+    end
+
+    it "is the same for symbol keys and the string keys a JSONL file produces" do
+      symbol_keyed = described_class.new(name: :topics, cases: [{ id: "alpha", input: { topic: "a" } }])
+      string_keyed = described_class.new(name: :topics, cases: [{ "id" => "alpha", "input" => { "topic" => "a" } }])
+
+      expect(symbol_keyed.digest).to eq(string_keyed.digest)
+    end
+
+    # The whole point: an edited case has to be visible to a later reader of the results file.
+    it "changes when an input changes" do
+      edited = rows.map { |row| row[:id] == "beta" ? row.merge(input: { "topic" => "edited" }) : row }
+
+      expect(described_class.new(name: :topics, cases: edited).digest).not_to eq(described_class.new(name: :topics, cases: rows).digest)
+    end
+
+    it "changes when an expected value changes" do
+      edited = rows.map { |row| row[:id] == "alpha" ? row.merge(expected: { "subject" => "z" }) : row }
+
+      expect(described_class.new(name: :topics, cases: edited).digest).not_to eq(described_class.new(name: :topics, cases: rows).digest)
+    end
+
+    it "changes when a case is added" do
+      widened = rows + [{ id: "delta", input: { "topic" => "d" } }]
+
+      expect(described_class.new(name: :topics, cases: widened).digest).not_to eq(described_class.new(name: :topics, cases: rows).digest)
+    end
+
+    it "is prefixed with the hash it used" do
+      expect(described_class.new(name: :topics, cases: rows).digest).to match(/\Asha256:[0-9a-f]{64}\z/)
+    end
+  end
+
   describe Raif::Evals::EvalCase do
     it "reads through to input" do
       eval_case = described_class.new(id: "alpha", input: { "topic" => "a" })

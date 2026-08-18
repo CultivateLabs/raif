@@ -17,6 +17,15 @@ module Raif
       # Raised when a resume would mix results that do not belong in one file together.
       class IncompatibleResumeError < StandardError; end
 
+      # Configuration keys the log records to describe the run rather than to constrain a resume.
+      # The code the run started against is one: insisting on it would strand the results of any run
+      # interrupted across a commit, including the commit made to fix what interrupted it.
+      # Raif::Evals::Run warns when it moved instead.
+      PROVENANCE_KEYS = ["code"].freeze
+
+      # Compared specially - see .dataset_differences.
+      DATASETS_KEY = "datasets"
+
       attr_reader :path, :run_at, :configuration, :results
 
       def initialize(path:, run_at:, configuration:, results: {}, recorded_keys: nil)
@@ -163,11 +172,42 @@ module Raif
           logged = json_normalized(logged)
           current = json_normalized(current)
 
-          (logged.keys | current.keys).filter_map do |key|
-            next if logged[key] == current[key]
+          (logged.keys | current.keys).flat_map do |key|
+            next [] if PROVENANCE_KEYS.include?(key)
+            next dataset_differences(logged[key], current[key]) if key == DATASETS_KEY
+            next [] if logged[key] == current[key]
 
-            "  #{key}: log has #{logged[key].inspect}, this run has #{current[key].inspect}"
+            ["  #{key}: log has #{logged[key].inspect}, this run has #{current[key].inspect}"]
           end
+        end
+
+        # Entry by entry, over the datasets both sides resolved. A resume narrowed to one eval set
+        # file resolves only that file's datasets, and refusing over the ones this invocation never
+        # looked at would make --resume unusable with a file argument. A dataset both sides did
+        # resolve has to fingerprint the same: an edited case means the results either side of the
+        # interruption measured different inputs under one case id.
+        def dataset_differences(logged, current)
+          logged_by_key = dataset_index(logged)
+          current_by_key = dataset_index(current)
+
+          (logged_by_key.keys & current_by_key.keys).filter_map do |key|
+            logged_entry = logged_by_key[key]
+            current_entry = current_by_key[key]
+            next if logged_entry["digest"] == current_entry["digest"]
+
+            "  dataset #{key.compact.join(" in ")}: log has #{describe_dataset(logged_entry)}, " \
+              "this run has #{describe_dataset(current_entry)}"
+          end
+        end
+
+        def dataset_index(entries)
+          entries = Array(entries).grep(Hash)
+
+          entries.to_h { |entry| [[entry["name"], entry["eval_set"]], entry] }
+        end
+
+        def describe_dataset(entry)
+          "#{entry["cases"]} cases (#{entry["digest"]})"
         end
 
         def json_normalized(configuration)

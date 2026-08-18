@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "digest"
+require "json"
+
 module Raif
   module Evals
     # An ordered, named collection of EvalCases, built from whatever the eval set's
@@ -19,6 +22,17 @@ module Raif
 
       def size
         cases.length
+      end
+
+      # A fingerprint of what this dataset holds, recorded in the run's configuration so two runs
+      # can tell whether they measured the same inputs. Without it an edited case reads as a model
+      # regression: evals:compare joins on case id, so the same id carrying a different input is
+      # reported as the model behaving differently on the same one.
+      #
+      # Over the whole dataset rather than the selected cases, since --cases, --sample and --seed
+      # are recorded beside it and already say which of these ran.
+      def digest
+        @digest ||= "sha256:#{Digest::SHA256.hexdigest(canonical_cases)}"
       end
 
       # ids and sample are run-wide (--cases / --sample), so an id belonging to another eval
@@ -46,6 +60,26 @@ module Raif
       end
 
     private
+
+      # Sorted by id and with every hash key sorted, so a fingerprint tracks what the cases are
+      # rather than how the file is arranged: reordering rows or reformatting them leaves it alone,
+      # editing an input changes it.
+      def canonical_cases
+        cases.sort_by(&:id).map { |eval_case| JSON.generate(canonicalize(eval_case.to_h)) }.join("\n")
+      end
+
+      # Keys stringified as well as sorted, so a case written with symbol keys in a Ruby dataset
+      # block fingerprints the same as the same case read out of a JSONL file. Anything that is not
+      # JSON-native goes through to_s rather than to JSON's rendering of an arbitrary object, which
+      # can carry a memory address and so differ between two runs of identical cases.
+      def canonicalize(value)
+        case value
+        when Hash then value.keys.sort_by(&:to_s).to_h { |key| [key.to_s, canonicalize(value[key])] }
+        when Array then value.map { |element| canonicalize(element) }
+        when String, Numeric, true, false, nil then value
+        else value.to_s
+        end
+      end
 
       # Sampled cases keep their dataset order so the console and the results read the same
       # way whether or not a sample was taken.

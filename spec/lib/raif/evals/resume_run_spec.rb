@@ -209,6 +209,59 @@ RSpec.describe "Resuming an interrupted eval run" do
       allow_any_instance_of(Raif::Evals::Run).to receive(:discover_eval_sets).and_return([ResumeDatasetEvalSet])
     end
 
+    # The results either side of the interruption would describe different inputs under one case id,
+    # which is the one thing the results file cannot express - unlike a changed model or judge, it
+    # would not even show up as a mismatch to a later reader.
+    it "refuses to resume when a dataset case was edited while the run was interrupted" do
+      begin
+        Raif::Evals::Run.new(output: StringIO.new).execute
+      rescue SystemExit
+        nil
+      end
+
+      counter = executions
+      edited_dataset_eval_set = Class.new(Raif::Evals::EvalSet) do
+        define_method(:executions) { counter }
+
+        dataset :topics do
+          [{ id: "chicken", input: { "asked" => "why" } }, { id: "atom", input: {} }, { id: "monad", input: {} }]
+        end
+
+        eval "over the dataset", dataset: :topics do |eval_case|
+          executions << eval_case.id
+          expect("passes") { true }
+        end
+      end
+
+      stub_const("ResumeDatasetEvalSet", edited_dataset_eval_set)
+
+      resumed = Raif::Evals::Run.new(output: output, resume_path: log_path.to_s)
+      allow(resumed).to receive(:discover_eval_sets).and_return([edited_dataset_eval_set])
+      resumed.instance_variable_set(:@eval_sets, [edited_dataset_eval_set])
+
+      expect { resumed.execute }.to raise_error(SystemExit)
+      expect(output.string).to include("dataset topics in ResumeDatasetEvalSet")
+      expect(output.string).to include("Refusing to resume")
+    end
+
+    # A resume narrowed to one eval set file resolves only that file's datasets. Refusing over the
+    # ones this invocation never looked at would make --resume unusable with a file argument.
+    it "resumes an invocation that never resolves the dataset at all" do
+      begin
+        Raif::Evals::Run.new(output: StringIO.new).execute
+      rescue SystemExit
+        nil
+      end
+
+      resumed = Raif::Evals::Run.new(output: output, resume_path: log_path.to_s)
+      allow(resumed).to receive(:discover_eval_sets).and_return([ResumeFirstEvalSet])
+      resumed.instance_variable_set(:@eval_sets, [ResumeFirstEvalSet])
+      resumed.execute
+
+      expect(output.string).not_to include("Refusing to resume")
+      expect(resumed.results.keys).to include("ResumeDatasetEvalSet")
+    end
+
     it "resumes at the case it died on, keeping the ones already bought" do
       begin
         Raif::Evals::Run.new(output: output).execute
@@ -230,6 +283,33 @@ RSpec.describe "Resuming an interrupted eval run" do
       expect(payload["summary"]["eval_pass_rates"].first["per_case"].map { |c| c["case_id"] })
         .to eq(["chicken", "atom", "monad"])
     end
+  end
+
+  # A warning rather than a refusal: the commit that landed while a run was interrupted is often the
+  # one that fixed whatever interrupted it, and refusing would throw away results already paid for.
+  it "warns but resumes when the code changed while the run was interrupted" do
+    interrupt_after_first_set
+
+    resumed = Raif::Evals::Run.new(output: output, resume_path: log_path.to_s)
+    allow(Raif::Evals::RunLog).to receive(:logged_configuration)
+      .and_return({ code: { git_sha: "a" * 40, dirty: false } })
+    allow(resumed).to receive(:code_provenance).and_return({ git_sha: "b" * 40, dirty: true })
+    resumed.execute
+
+    expect(output.string).to include("Warning: the code has changed since this run started: aaaaaaaaaaaa -> bbbbbbbbbbbb (dirty)")
+    expect(File.exist?(results_path)).to be true
+  end
+
+  it "does not warn about code when the run resumed against the same commit" do
+    interrupt_after_first_set
+
+    resumed = Raif::Evals::Run.new(output: output, resume_path: log_path.to_s)
+    allow(Raif::Evals::RunLog).to receive(:logged_configuration)
+      .and_return({ code: { git_sha: "a" * 40, dirty: false } })
+    allow(resumed).to receive(:code_provenance).and_return({ git_sha: "a" * 40, dirty: false })
+    resumed.execute
+
+    expect(output.string).not_to include("the code has changed")
   end
 
   it "discards a log holding no results" do

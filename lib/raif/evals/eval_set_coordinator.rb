@@ -9,7 +9,12 @@ module Raif
     # the case and result onto it so #expect and #score can reach them. One of these is long-lived
     # per eval set, and holds the collaborators shared across the whole run.
     class EvalSetCoordinator
-      attr_reader :eval_set_class, :output, :run_log, :writer, :header, :cases, :sample, :seed
+      attr_reader :eval_set_class, :output, :writer, :header, :cases, :sample, :seed
+
+      # Assignable because Raif::Evals::Run builds its coordinators before its run log: the log's
+      # header records the dataset fingerprints only a resolved coordinator can produce, so the log
+      # cannot exist yet when the coordinator is constructed.
+      attr_accessor :run_log
 
       # @param eval_set_class [Class] the Raif::Evals::EvalSet subclass being run.
       # @param writer [Raif::Evals::ConsoleWriter, nil] serializes this set's output with
@@ -84,6 +89,25 @@ module Raif
         end
       end
 
+      # What this eval set's datasets held, for the run's configuration block. One entry per
+      # dataset, naming it, how many cases it has, and a digest of their contents - see
+      # Raif::Evals::Dataset#digest.
+      def dataset_fingerprints
+        datasets.map do |name, dataset|
+          selected = selected_cases[name].count
+
+          {
+            eval_set: eval_set_class.name,
+            name: name.to_s,
+            cases: dataset.size,
+            digest: dataset.digest,
+            # Only when a selection narrowed the dataset, so a full run does not repeat `cases` in
+            # every entry.
+            selected: (selected unless selected == dataset.size)
+          }.compact
+        end
+      end
+
       # Where each [eval_index, case_id] pair sits in this set's definition order, for putting
       # results that completed in another order back into it. Keyed on every selected case rather
       # than the pending ones, so a resumed run orders the results it inherited too. A position
@@ -155,17 +179,21 @@ module Raif
 
         dataset_context = eval_set_class.new(output: output)
 
-        names.to_h do |name|
-          dataset = Dataset.new(name: name, cases: dataset_context.resolve_dataset(name))
-          [name, dataset.select_cases(ids: cases, sample: sample, seed: seed)]
-        end
+        names.to_h { |name| [name, Dataset.new(name: name, cases: dataset_context.resolve_dataset(name))] }
       end
 
-      # Memoized: every public method reads it, and resolving is where a dataset block runs, a
-      # fixture is read, and a sample is drawn - none of which may happen twice for one eval set,
+      # The whole of each dataset, which is what #dataset_fingerprints is taken over. Memoized
+      # because resolving is where a dataset block runs and a fixture is read.
+      def datasets
+        @datasets ||= resolve_datasets
+      end
+
+      # Memoized separately from #datasets: drawing a sample must not happen twice for one eval set,
       # since an unseeded --sample would draw differently the second time.
       def selected_cases
-        @selected_cases ||= resolve_datasets
+        @selected_cases ||= datasets.transform_values do |dataset|
+          dataset.select_cases(ids: cases, sample: sample, seed: seed)
+        end
       end
 
       def selected_cases_for(eval_definition)

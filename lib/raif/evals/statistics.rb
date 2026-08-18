@@ -7,6 +7,14 @@ module Raif
     module Statistics
       BOOTSTRAP_RESAMPLES = 1000
 
+      # The fewest values a percentile bootstrap is reported from. Resampling can only be as
+      # informative as the number of values it draws from: 3 values have 10 distinct resamples
+      # between them, so the interval is a restatement of those three rather than an inference from
+      # them, and its actual coverage is neither 95% nor stable. Printing one next to a mean invites
+      # exactly the over-reading it was added to prevent. 5 is the conventional floor for the
+      # percentile method; below it callers report why the interval is absent rather than nothing.
+      MIN_BOOTSTRAP_SAMPLE = 5
+
       # Fixed seed so the interval is stable: two comparisons of the same numbers must not
       # disagree just because the resampling drew differently.
       BOOTSTRAP_SEED = 20260804
@@ -55,10 +63,10 @@ module Raif
 
         # Percentile bootstrap over whatever unit is passed in. Callers pass per-case means
         # for a dataset eval, so the interval reflects variation between inputs rather than
-        # between repeats of one input. nil for a single value, which can only resample to
-        # itself - a zero-width "95% confidence" interval.
+        # between repeats of one input. nil below MIN_BOOTSTRAP_SAMPLE values, where the method
+        # cannot support the 95% it would be labelled with.
         def bootstrap_ci95(values)
-          return if values.length < 2
+          return if values.length < MIN_BOOTSTRAP_SAMPLE
 
           random = Random.new(BOOTSTRAP_SEED)
           size = values.length

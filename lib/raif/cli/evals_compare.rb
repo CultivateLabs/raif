@@ -116,6 +116,13 @@ module Raif
         if format == "html"
           output_path = html_output_path(candidate_path, baseline_path)
           File.write(output_path, report.render("html"))
+
+          # The report went to a file rather than the screen, and a dataset that changed under the
+          # comparison is the one thing in it a reader has to see before reading the rest. The other
+          # two formats carry it themselves - text in its header, json in dataset_differences.
+          dataset_warning = report.dataset_warning
+          puts Raif::Utils::Colors.yellow(dataset_warning) if dataset_warning
+
           puts "Comparison report written to: #{output_path}"
         else
           puts report.render(format)

@@ -416,6 +416,37 @@ RSpec.describe Raif::Evals::EvalSet do
       expect(eval_result.to_h[:overhead_usage]).to eq(eval_result.overhead_usage)
     end
 
+    # The judge is held fixed across a comparison by design, so its share of the bill has to be
+    # separable from the model under test's - otherwise a wordier model, which gives the judge more
+    # to read, reads as a more expensive model.
+    it "tags what a judge spent as a subset of the eval's own usage" do
+      stub_raif_task(Raif::Evals::LlmJudges::Binary) do |_messages, _model_completion|
+        { passes: true, reasoning: "fine", confidence: 0.9 }.to_json
+      end
+
+      eval_set_with_judge = named_eval_set("EvalSetWithJudge") do
+        eval "makes its own LLM call and then judges the output" do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 7)
+
+          expect_llm_judge_passes("some output", criteria: "is polite")
+        end
+      end
+
+      eval_result = eval_set_with_judge.run(output: StringIO.new).first
+
+      expect(eval_result.usage[:model_completions]).to eq(2)
+      expect(eval_result.judge_usage[:model_completions]).to eq(1)
+      expect(eval_result.to_h[:judge_usage]).to eq(eval_result.judge_usage)
+      expect(eval_result.model_completions.count { |mc| mc[:judge] }).to eq(1)
+    end
+
+    it "omits judge usage entirely when no judge ran" do
+      eval_result = test_eval_set_class.run(output: StringIO.new).first
+
+      expect(eval_result.judge_usage[:model_completions]).to eq(0)
+      expect(eval_result.to_h).not_to have_key(:judge_usage)
+    end
+
     it "omits overhead usage entirely when setup and teardown make no LLM calls" do
       eval_result = test_eval_set_class.run(output: StringIO.new).first
 

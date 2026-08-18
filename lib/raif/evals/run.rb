@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "json"
+require "open3"
 
 module Raif
   module Evals
@@ -112,39 +113,19 @@ module Raif
       end
 
       # One flat list of executions across every eval set, each paired with the instance that
-      # coordinates its set - a pool of threads can be handed a flat list, and building it resolves
-      # every dataset, so a bad fixture fails before the first eval is paid for. Order is definition
+      # coordinates its set - a pool of threads can be handed a flat list. Order is definition
       # order, which is what a serial run executes in and what the eval set summaries follow.
       def build_units
-        @eval_set_headers = {}
         @pending_by_eval_set = Hash.new(0)
         @result_order = {}
 
-        coordinators = {}
+        # Now rather than at construction: the log's header records the dataset fingerprints these
+        # coordinators resolve, so the log cannot exist until they do.
+        coordinators.each_value { |coordinator| coordinator.run_log = run_log }
 
         @eval_sets.flat_map do |eval_set_entry|
-          eval_set_class, _file_path, line_number = if eval_set_entry.is_a?(Hash)
-            [eval_set_entry[:class], eval_set_entry[:file_path], eval_set_entry[:line_number]]
-          else
-            [eval_set_entry, nil, nil]
-          end
-
-          header = eval_set_header(eval_set_class, line_number)
-          @eval_set_headers[eval_set_class] ||= header
-
-          # One per eval set, not one per entry: the same file can appear twice on a command line
-          # (two line numbers in it, or the same path given twice), and a second coordinator would
-          # resolve the set's datasets again.
-          coordinator = coordinators[eval_set_class] ||= EvalSetCoordinator.new(
-            eval_set_class: eval_set_class,
-            output: output,
-            run_log: run_log,
-            writer: writer,
-            header: header,
-            cases: cases,
-            sample: sample,
-            seed: seed
-          )
+          eval_set_class, line_number = entry_parts(eval_set_entry)
+          coordinator = coordinators.fetch(eval_set_class)
 
           executions = if line_number
             executions_at_line(coordinator, line_number)
@@ -159,6 +140,44 @@ module Raif
 
           executions.map { |execution| Unit.new(coordinator: coordinator, execution: execution) }
         end
+      end
+
+      # One coordinator per eval set, not one per entry: the same file can appear twice on a command
+      # line (two line numbers in it, or the same path given twice), and a second coordinator would
+      # resolve the set's datasets again.
+      #
+      # Memoized because building these resolves every dataset in the run, which is both where a bad
+      # fixture fails - before the first eval is paid for - and where #dataset_fingerprints comes
+      # from, and #configuration_data asks for those before the run log exists.
+      def coordinators
+        @coordinators ||= build_coordinators
+      end
+
+      def build_coordinators
+        @eval_set_headers = {}
+
+        @eval_sets.each_with_object({}) do |eval_set_entry, built|
+          eval_set_class, line_number = entry_parts(eval_set_entry)
+          @eval_set_headers[eval_set_class] ||= eval_set_header(eval_set_class, line_number)
+
+          built[eval_set_class] ||= EvalSetCoordinator.new(
+            eval_set_class: eval_set_class,
+            output: output,
+            writer: writer,
+            header: @eval_set_headers[eval_set_class],
+            cases: cases,
+            sample: sample,
+            seed: seed
+          )
+        end
+      end
+
+      # An entry is a hash when the eval sets came from file paths on the command line, and a bare
+      # class when they were discovered.
+      def entry_parts(eval_set_entry)
+        return [eval_set_entry, nil] unless eval_set_entry.is_a?(Hash)
+
+        [eval_set_entry[:class], eval_set_entry[:line_number]]
       end
 
       # Printed once, when the eval set's first line is ready - or, for a set with nothing to
@@ -223,7 +242,10 @@ module Raif
       end
 
       def build_run_log
-        return RunLog.resume(path: resume_path, configuration: configuration_data) if resume_path
+        if resume_path
+          warn_on_code_change
+          return RunLog.resume(path: resume_path, configuration: configuration_data)
+        end
 
         run_at = Time.current
 
@@ -236,6 +258,28 @@ module Raif
       rescue RunLog::IncompatibleResumeError => e
         output.puts Raif::Utils::Colors.red("\n#{e.message}")
         exit 1
+      end
+
+      # A warning rather than a refusal, unlike everything else the resume check compares: the
+      # commit that landed while a run was interrupted is often the one that fixed whatever
+      # interrupted it, and refusing would throw away results already paid for. But the results
+      # file will name one commit for work produced under two, so it is said out loud.
+      def warn_on_code_change
+        logged = RunLog.logged_configuration(resume_path)&.dig(:code)
+        current = code_provenance
+        return if logged.nil? || current.nil?
+        return if logged[:git_sha] == current[:git_sha] && logged[:dirty] == current[:dirty]
+
+        output.puts Raif::Utils::Colors.yellow(
+          "\nWarning: the code has changed since this run started: #{describe_code(logged)} -> #{describe_code(current)}."
+        )
+        output.puts Raif::Utils::Colors.yellow(
+          "  The results file will record the current one for results produced under both."
+        )
+      end
+
+      def describe_code(code)
+        "#{code[:git_sha].to_s[0, 12]}#{" (dirty)" if code[:dirty]}"
       end
 
       def load_setup_file
@@ -477,8 +521,47 @@ module Raif
           capture_model_completions: Raif.config.evals_capture_model_completions.to_s,
           cases: cases,
           sample: sample,
-          seed: seed
+          seed: seed,
+          # What was actually measured, so an edited case cannot read as a model regression - see
+          # Raif::Evals::Dataset#digest. Compared entry by entry on resume, over the datasets both
+          # sides resolved, since a resume narrowed to one eval set file knows only about that
+          # file's datasets.
+          datasets: dataset_fingerprints,
+          # Provenance rather than compatibility, which is why Raif::Evals::RunLog leaves it out of
+          # the resume check - see #warn_on_code_change. Null rather than absent when there is no
+          # git checkout to read, like the keys above it: a reader can then tell a run that recorded
+          # nothing from one written before there was anything to record.
+          code: code_provenance
         }
+      end
+
+      # Sorted, so two runs of the same suite record their datasets in the same order however the
+      # eval set files were discovered or listed.
+      def dataset_fingerprints
+        @dataset_fingerprints ||= coordinators
+          .each_value
+          .flat_map(&:dataset_fingerprints)
+          .sort_by { |fingerprint| [fingerprint[:eval_set].to_s, fingerprint[:name]] }
+      end
+
+      # The host app's HEAD, so a reader can tell which side of a prompt change a run was on -
+      # comparing one model before and after a code change is one of the two workflows
+      # evals:compare exists for, and nothing else in the results records that.
+      #
+      # nil when the host app is not a git checkout, or git is not installed: a results file
+      # without this is still worth having, and no eval run should die over `git`.
+      def code_provenance
+        return @code_provenance if defined?(@code_provenance)
+
+        sha = git("rev-parse", "HEAD")
+        @code_provenance = sha && { git_sha: sha, dirty: git("status", "--porcelain").present? }
+      end
+
+      def git(*args)
+        stdout, _stderr, status = Open3.capture3("git", "-C", Rails.root.to_s, *args)
+        stdout.strip.presence if status.success?
+      rescue StandardError
+        nil
       end
 
       # One row per distinct eval, collapsing its repeats into a pass rate - the comparable
@@ -525,6 +608,7 @@ module Raif
             # and on a dataset of any breadth the first dominates - so it measures how varied the
             # dataset is, where a reader beside a mean needs how uncertain the mean is.
             spread_sample = per_case ? per_case_means(scores) : values
+            ci95 = Statistics.bootstrap_ci95(spread_sample)&.map { |bound| round(bound) }
 
             {
               eval_set: eval_set_name,
@@ -544,11 +628,23 @@ module Raif
               stddev: round(Statistics.stddev(spread_sample)),
               min: values.min,
               max: values.max,
-              ci95: Statistics.bootstrap_ci95(spread_sample)&.map { |bound| round(bound) },
+              ci95: ci95,
+              # Said rather than left out. An absent interval and an interval too small a sample
+              # to compute read identically in a summary, and only the second tells a reader what
+              # to do about it.
+              ci95_omitted: (ci95_omission(spread_sample, per_case) if ci95.nil?),
               per_case: per_case
             }.compact
           end
         end
+      end
+
+      # In the unit the spread was measured in - cases for a dataset eval, runs otherwise - since
+      # that is what a reader would have to add more of to get an interval.
+      def ci95_omission(spread_sample, per_case)
+        unit = per_case ? "case" : "run"
+
+        "#{spread_sample.count} #{unit.pluralize(spread_sample.count)}; a 95% interval needs #{Statistics::MIN_BOOTSTRAP_SAMPLE}"
       end
 
       def grouped_evals
@@ -648,6 +744,14 @@ module Raif
         overhead_tokens = all_evals.sum { |e| e.dig(:overhead_usage, :total_tokens).to_i }
         overhead_cost = all_evals.sum { |e| e.dig(:overhead_usage, :total_cost).to_f }.round(6)
 
+        # The judge's share of the totals above, not spend beside them. Reported apart because the
+        # judge is held fixed across a comparison, so a cost delta that is really the judge reading
+        # a wordier model tells a reader nothing about the model's own price - see
+        # Raif::Evals::EvalResult#judge_completion?.
+        judge_model_completions = all_evals.sum { |e| e.dig(:judge_usage, :model_completions).to_i }
+        judge_tokens = all_evals.sum { |e| e.dig(:judge_usage, :total_tokens).to_i }
+        judge_cost = all_evals.sum { |e| e.dig(:judge_usage, :total_cost).to_f }.round(6)
+
         {
           total_eval_sets: total_eval_sets,
           total_evals: total_evals,
@@ -664,6 +768,9 @@ module Raif
           total_overhead_model_completions: overhead_model_completions,
           total_overhead_tokens: overhead_tokens,
           total_overhead_cost: overhead_cost,
+          total_judge_model_completions: judge_model_completions,
+          total_judge_tokens: judge_tokens,
+          total_judge_cost: judge_cost,
           eval_pass_rates: eval_pass_rates,
           score_summaries: score_summaries
         }
@@ -692,6 +799,7 @@ module Raif
         output.puts "  #{data[:total_completion_tokens]} completion tokens"
         output.puts "  #{data[:total_tokens]} total tokens"
         output.puts "  $#{format("%.6f", data[:total_cost])} total cost"
+        print_judge_cost(data)
 
         if data[:total_overhead_model_completions].positive?
           calls = data[:total_overhead_model_completions]
@@ -724,6 +832,7 @@ module Raif
             spread << "over #{row[:spread_n]} cases" if row[:spread_n] && row[:spread_n] != row[:n]
             spread << "sd #{row[:stddev]}" if row[:stddev]
             spread << "ci95 [#{row[:ci95].join(", ")}]" if row[:ci95]
+            spread << "ci95 omitted: #{row[:ci95_omitted]}" if row[:ci95_omitted]
 
             output.puts "  #{row[:name]}: mean #{row[:mean]} (#{spread.join(", ")}) #{row[:eval_set]}: #{row[:description]}"
 
@@ -733,6 +842,18 @@ module Raif
           end
           output.puts ""
         end
+      end
+
+      # Indented under the total rather than added to it: these two are that total split, and the
+      # split is the number to read when comparing two models, since the judge is meant to be the
+      # same on both sides. Printed only when a judge ran.
+      def print_judge_cost(data)
+        calls = data[:total_judge_model_completions].to_i
+        return unless calls.positive?
+
+        subject_cost = (data[:total_cost] - data[:total_judge_cost]).round(6)
+        output.puts "    $#{format("%.6f", subject_cost)} model under test"
+        output.puts "    $#{format("%.6f", data[:total_judge_cost])} judge (#{calls} #{"call".pluralize(calls)})"
       end
 
       # Errored is its own line rather than folded into failed, and printed only when there is

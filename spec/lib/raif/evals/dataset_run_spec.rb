@@ -123,6 +123,57 @@ RSpec.describe "Running a dataset eval set" do
     expect(clarity).not_to have_key(:ci95)
   end
 
+  # A percentile bootstrap over 3 case means restates those three rather than inferring from them,
+  # and would carry a "95%" label while doing it. Naming the reason is what tells a reader the fix
+  # is more cases rather than a missing feature.
+  it "omits ci95 below the minimum sample and says why" do
+    run.execute
+
+    topic_length = run.send(:summary_data)[:score_summaries].find { |s| s[:name] == "topic_length" }
+
+    expect(topic_length).to include(spread_n: 3, ci95_omitted: "3 cases; a 95% interval needs 5")
+    expect(topic_length).not_to have_key(:ci95)
+    expect(output.string).to include("ci95 omitted: 3 cases; a 95% interval needs 5")
+  end
+
+  # Without this an edited case reads as a model regression: evals:compare joins on case id, so the
+  # same id carrying a different input is reported as the model behaving differently on one input.
+  it "records what each dataset held in the results configuration" do
+    run.execute
+
+    json_file = Rails.root.join("raif_evals", "results", "eval_run_20240101_120000_#{Raif.config.default_llm_model_key}.json")
+    payload = JSON.parse(File.read(json_file))
+    rows = File.readlines(Rails.root.join("raif_evals", "datasets", "topics.jsonl")).map { |line| JSON.parse(line) }
+
+    expect(payload["configuration"]["datasets"]).to eq([{
+      "eval_set" => "Raif::Evals::DatasetExampleEvalSet",
+      "name" => "topics",
+      "cases" => 3,
+      "digest" => Raif::Evals::Dataset.new(name: :topics, cases: rows).digest
+    }])
+  end
+
+  it "records how many cases a selection narrowed each dataset to" do
+    narrowed = Raif::Evals::Run.new(file_paths: [{ file_path: eval_set_path }], output: StringIO.new, repeats: 1, cases: ["monad"])
+    narrowed.execute
+
+    expect(narrowed.send(:configuration_data)[:datasets].first).to include(cases: 3, selected: 1)
+  end
+
+  # The judge is the same on both sides of a comparison by design, so a cost row that is really the
+  # judge reading a wordier model must not read as the model costing more.
+  it "reports the judge's share of the run's LLM usage apart from the model under test's" do
+    run.execute
+
+    summary = run.send(:summary_data)
+
+    expect(summary[:total_model_completions]).to eq(12)
+    expect(summary[:total_judge_model_completions]).to eq(6)
+    expect(summary).to include(:total_judge_tokens, :total_judge_cost)
+    expect(output.string).to include("model under test")
+    expect(output.string).to include("judge (6 calls)")
+  end
+
   it "prints one compact line per case per repeat, with the failing expectations beneath" do
     run.execute
 

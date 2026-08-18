@@ -94,6 +94,44 @@ module Raif
         end
       end
 
+      # Loud and not a refusal - see Comparison#dataset_differences. Public so evals:compare can
+      # print it when --format html sent the report to a file instead of the screen.
+      def dataset_warning
+        return if comparison.dataset_differences.empty?
+
+        lines = ["Warning: these two runs did not measure the same datasets:"]
+
+        comparison.dataset_differences.each do |row|
+          lines << "  #{row[:name]} (#{row[:eval_set]}): #{row[:baseline]} -> #{row[:candidate]}"
+        end
+
+        lines << "  Cases are joined by id, so a difference the dataset caused reads as a difference the model caused."
+        lines << "  Re-run the baseline against the current dataset to compare the two models alone."
+        lines.join("\n")
+      end
+
+      # "unknown" rather than blank for a run recorded before the git sha was: what code produced it
+      # was not recorded, which is different from having been produced by no code.
+      def describe_code(code)
+        return "unknown" if code.nil?
+
+        "#{code["git_sha"].to_s[0, 12]}#{" (dirty)" if code["dirty"]}"
+      end
+
+      # "-" rather than $0.00 for a run recorded before judge spend was tagged: it is not known to
+      # be zero, and a zero would read as "this run used no judge".
+      def format_cost(cost)
+        return "-" if cost.nil?
+
+        "$#{format("%.2f", cost.to_f)}"
+      end
+
+      # Only when a judge actually spent something on one side or the other: a run that used no
+      # judge would otherwise gain two rows saying so twice.
+      def cost_split?
+        [comparison.to_h[:baseline], comparison.to_h[:candidate]].any? { |side| side[:judge_cost].to_f.positive? }
+      end
+
       def gated_rows
         @gated_rows ||= comparison.significant_regressions(threshold, alpha: alpha)
       end
@@ -188,12 +226,23 @@ module Raif
           "#{candidate[:judge]} (both runs)"
         end
 
-        [
+        lines = [
           "  baseline   #{side_line(baseline)}",
           "  candidate  #{side_line(candidate)}",
-          "  judge      #{judge}",
-          ""
+          "  judge      #{judge}"
         ]
+
+        if [baseline[:code], candidate[:code]].any?
+          lines << "  code       #{describe_code(baseline[:code])} -> #{describe_code(candidate[:code])}"
+        end
+
+        if dataset_warning
+          lines << ""
+          lines << colorize(dataset_warning, :yellow)
+        end
+
+        lines << ""
+        lines
       end
 
       def side_line(side)
@@ -292,6 +341,14 @@ module Raif
 
         lines << "  total cost            $#{format("%.2f", baseline[:total_cost].to_f)} -> " \
           "$#{format("%.2f", candidate[:total_cost].to_f)}"
+
+        # Indented under the total, which they split rather than add to. The subject line is the one
+        # that answers "is this model more expensive": the judge is the same on both sides by
+        # design, so its share is not part of the difference between the models.
+        if cost_split?
+          lines << "    model under test    #{format_cost(baseline[:subject_cost])} -> #{format_cost(candidate[:subject_cost])}"
+          lines << "    judge               #{format_cost(baseline[:judge_cost])} -> #{format_cost(candidate[:judge_cost])}"
+        end
         lines << "  #{verdict}"
         lines << ""
         lines

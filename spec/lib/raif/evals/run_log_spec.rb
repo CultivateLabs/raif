@@ -110,6 +110,55 @@ RSpec.describe Raif::Evals::RunLog do
       end.to raise_error(described_class::IncompatibleResumeError, /repeats: log has 2, this run has 5.*seed: log has nil, this run has 42/m)
     end
 
+    describe "dataset and provenance keys" do
+      let(:configuration) do
+        {
+          repeats: 2,
+          datasets: [
+            { eval_set: "SetA", name: "topics", cases: 3, digest: "sha256:aaa" },
+            { eval_set: "SetB", name: "documents", cases: 4, digest: "sha256:bbb" }
+          ],
+          code: { git_sha: "a" * 40, dirty: false }
+        }
+      end
+
+      it "refuses when a dataset both sides resolved fingerprints differently" do
+        edited = configuration.merge(datasets: [
+          { eval_set: "SetA", name: "topics", cases: 3, digest: "sha256:ccc" },
+          { eval_set: "SetB", name: "documents", cases: 4, digest: "sha256:bbb" }
+        ])
+
+        expect { described_class.resume(path: log.path, configuration: edited) }.to raise_error(
+          described_class::IncompatibleResumeError,
+          /dataset topics in SetA: log has 3 cases \(sha256:aaa\), this run has 3 cases \(sha256:ccc\)/
+        )
+      end
+
+      # What a resume narrowed to one eval set file looks like: it only resolved that file's
+      # datasets, and the ones it never looked at are not evidence of anything.
+      it "allows a resume that resolved only some of the logged datasets" do
+        narrowed = configuration.merge(datasets: [{ eval_set: "SetB", name: "documents", cases: 4, digest: "sha256:bbb" }])
+
+        expect { described_class.resume(path: log.path, configuration: narrowed) }.not_to raise_error
+      end
+
+      it "allows a resume that resolved a dataset the log does not hold" do
+        widened = configuration.merge(datasets: configuration[:datasets] + [
+          { eval_set: "SetC", name: "extra", cases: 1, digest: "sha256:ddd" }
+        ])
+
+        expect { described_class.resume(path: log.path, configuration: widened) }.not_to raise_error
+      end
+
+      # Insisting on the commit would strand the results of any run interrupted across one,
+      # including the commit made to fix what interrupted it. Raif::Evals::Run warns instead.
+      it "ignores the code the run was started against" do
+        moved = configuration.merge(code: { git_sha: "b" * 40, dirty: true })
+
+        expect { described_class.resume(path: log.path, configuration: moved) }.not_to raise_error
+      end
+    end
+
     it "does not treat a symbol and its serialized string as a difference" do
       expect { described_class.resume(path: log.path, configuration: configuration) }.not_to raise_error
     end

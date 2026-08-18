@@ -42,6 +42,36 @@ module Raif
         baseline_judge != candidate_judge
       end
 
+      # Whether both runs recorded what their datasets held. A run written before provenance existed
+      # has no datasets key at all, which is not the same as a run that used no dataset - so the
+      # fingerprint check says nothing rather than reporting a match it cannot support.
+      def dataset_provenance?
+        [baseline, candidate].all? { |payload| (payload["configuration"] || {}).key?("datasets") }
+      end
+
+      # Datasets whose contents are not identical across the two runs. Cases are joined on case id,
+      # so an edited case reads as the model behaving differently on the same input - which is the
+      # conclusion this report exists to support, drawn from a changed input.
+      #
+      # Reported rather than refused, unlike a judge mismatch: comparing a widened dataset against
+      # its predecessor is a legitimate thing to do, as long as the reader knows that is what they
+      # are looking at.
+      def dataset_differences
+        @dataset_differences ||= build_dataset_differences
+      end
+
+      def dataset_mismatch?
+        dataset_differences.any?
+      end
+
+      def baseline_code
+        code(baseline)
+      end
+
+      def candidate_code
+        code(candidate)
+      end
+
       def new_failures
         eval_moves[:regressed]
       end
@@ -178,6 +208,8 @@ module Raif
           baseline: side_summary(baseline, baseline_label, baseline_units),
           candidate: side_summary(candidate, candidate_label, candidate_units),
           judge_mismatch: judge_mismatch?,
+          dataset_mismatch: dataset_mismatch?,
+          dataset_differences: dataset_differences,
           new_failures: new_failures,
           fixed: fixed,
           score_moves: score_moves,
@@ -733,8 +765,63 @@ module Raif
           # written before that key existed do not have. The expectation statuses they do have.
           errored_evals: units.sum { |_key, unit| unit[:errored] },
           error_rate: overall_error_rate(units),
-          total_cost: summary["total_cost"]
+          total_cost: summary["total_cost"],
+          # The judge is held fixed across a comparison by design - see #judge_mismatch? - so its
+          # spend is not part of what separates the two models under test, except that a wordier
+          # model gives the judge more to read. Reported apart so a cost row that is really the
+          # judge working harder is not read as the model costing more.
+          #
+          # nil, not zero, for a run recorded before judge spend was tagged: the split is unknown
+          # there rather than known to be all subject.
+          judge_cost: summary["total_judge_cost"],
+          subject_cost: subject_cost(summary),
+          code: code(payload)
         }
+      end
+
+      def subject_cost(summary)
+        judge = summary["total_judge_cost"]
+        return if judge.nil?
+
+        (summary["total_cost"].to_f - judge.to_f).round(6)
+      end
+
+      def build_dataset_differences
+        return [] unless dataset_provenance?
+
+        baseline_datasets = dataset_index(baseline)
+        candidate_datasets = dataset_index(candidate)
+
+        (baseline_datasets.keys | candidate_datasets.keys).sort.filter_map do |key|
+          baseline_entry = baseline_datasets[key]
+          candidate_entry = candidate_datasets[key]
+          next if baseline_entry && candidate_entry && baseline_entry["digest"] == candidate_entry["digest"]
+
+          {
+            name: key.first,
+            eval_set: key.last,
+            baseline: describe_dataset(baseline_entry),
+            candidate: describe_dataset(candidate_entry)
+          }
+        end
+      end
+
+      def dataset_index(payload)
+        entries = Array((payload["configuration"] || {})["datasets"]).grep(Hash)
+
+        entries.to_h { |entry| [[entry["name"].to_s, entry["eval_set"].to_s], entry] }
+      end
+
+      # "not run" rather than nothing for a dataset only one side has: a dataset that arrived or
+      # disappeared between two runs is a difference in what was measured, the same as an edited one.
+      def describe_dataset(entry)
+        return "not run" if entry.nil?
+
+        "#{entry["cases"]} cases #{entry["digest"]}"
+      end
+
+      def code(payload)
+        (payload["configuration"] || {})["code"]
       end
 
       # The judge a run resolved, not the one it configured: a run that configured nothing was

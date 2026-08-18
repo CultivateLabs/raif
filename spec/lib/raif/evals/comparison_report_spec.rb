@@ -18,23 +18,28 @@ RSpec.describe Raif::Evals::ComparisonReport do
     }
   end
 
-  def payload(results, model:, cost:)
+  def payload(results, model:, cost:, datasets: nil, judge_cost: nil, code: nil)
+    configuration = {
+      "default_llm_model_key" => model,
+      "evals_default_llm_judge_model_key" => "anthropic_claude_5_sonnet",
+      "judge_model_key" => "anthropic_claude_5_sonnet",
+      "repeats" => 1
+    }
+    configuration["datasets"] = datasets unless datasets.nil?
+    configuration["code"] = code unless code.nil?
+
     {
       "run_at" => "2026-08-04T18:02:16Z",
-      "configuration" => {
-        "default_llm_model_key" => model,
-        "evals_default_llm_judge_model_key" => "anthropic_claude_5_sonnet",
-        "judge_model_key" => "anthropic_claude_5_sonnet",
-        "repeats" => 1
-      },
+      "configuration" => configuration,
       "results" => { "SummarizationEvalSet" => results },
       "summary" => {
         "passed_evals" => results.count { |r| r["passed"] },
         "total_evals" => results.count,
         "passed_expectations" => results.count { |r| r["passed"] },
         "total_expectations" => results.count,
-        "total_cost" => cost
-      }
+        "total_cost" => cost,
+        "total_judge_cost" => judge_cost
+      }.compact
     }
   end
 
@@ -233,6 +238,109 @@ RSpec.describe Raif::Evals::ComparisonReport do
       expect(html).to include("Error rates (1)")
       expect(html).to include("Evals errored")
       expect(html).to include("all 1 run errored")
+    end
+  end
+
+  describe "a dataset that changed between the runs" do
+    let(:edited) do
+      Raif::Evals::Comparison.new(
+        baseline: payload(
+          [eval_result(case_id: "press-release", passed: true, score_value: 5.0)],
+          model: "gpt_a",
+          cost: 1.10,
+          datasets: [{ "eval_set" => "SummarizationEvalSet", "name" => "documents", "cases" => 2, "digest" => "sha256:aaa" }],
+          code: { "git_sha" => "abc123def456789", "dirty" => false }
+        ),
+        candidate: payload(
+          [eval_result(case_id: "press-release", passed: false, score_value: 3.0)],
+          model: "gpt_b",
+          cost: 1.64,
+          datasets: [{ "eval_set" => "SummarizationEvalSet", "name" => "documents", "cases" => 3, "digest" => "sha256:bbb" }],
+          code: { "git_sha" => "def456abc123789", "dirty" => true }
+        )
+      )
+    end
+
+    it "warns in the text report, above the findings the reader is about to act on" do
+      text = described_class.new(edited, threshold: 0.25, color: false).render("text")
+
+      expect(text).to include("Warning: these two runs did not measure the same datasets:")
+      expect(text).to include("documents (SummarizationEvalSet): 2 cases sha256:aaa -> 3 cases sha256:bbb")
+      expect(text.index("did not measure the same datasets")).to be < text.index("NEW FAILURES")
+    end
+
+    it "reports each run's commit" do
+      text = described_class.new(edited, color: false).render("text")
+
+      expect(text).to include("code       abc123def456 -> def456abc123 (dirty)")
+    end
+
+    it "warns in the HTML report" do
+      html = described_class.new(edited, threshold: 0.25, color: false).render("html")
+
+      expect(html).to include("changed")
+      expect(html).to include("2 cases sha256:aaa")
+      expect(html).to include("abc123def456")
+    end
+
+    it "has nothing to warn about when both runs measured the same dataset" do
+      expect(described_class.new(edited, color: false).dataset_warning).to be_present
+      expect(described_class.new(comparison, color: false).dataset_warning).to be_nil
+    end
+  end
+
+  describe "judge cost" do
+    let(:split) do
+      Raif::Evals::Comparison.new(
+        baseline: payload([eval_result(case_id: "press-release", passed: true, score_value: 5.0)],
+          model: "gpt_a", cost: 1.10, judge_cost: 0.20),
+        candidate: payload([eval_result(case_id: "press-release", passed: false, score_value: 3.0)],
+          model: "gpt_b", cost: 1.64, judge_cost: 0.24)
+      )
+    end
+
+    it "splits the total cost row into the model under test and the judge" do
+      text = described_class.new(split, color: false).render("text")
+
+      expect(text).to include("total cost            $1.10 -> $1.64")
+      expect(text).to include("model under test    $0.90 -> $1.40")
+      expect(text).to include("judge               $0.20 -> $0.24")
+    end
+
+    it "splits the total cost row in the HTML report" do
+      html = described_class.new(split, color: false).render("html")
+
+      expect(html).to include("Model under test")
+      expect(html).to include("$0.90")
+    end
+
+    # Unknown rather than zero for a run recorded before the split existed: printing $0.00 would
+    # read as a run that used no judge.
+    it "prints a dash for a run that did not record judge spend" do
+      partial = Raif::Evals::Comparison.new(
+        baseline: payload([eval_result(case_id: "press-release", passed: true, score_value: 5.0)], model: "gpt_a", cost: 1.10),
+        candidate: payload([eval_result(case_id: "press-release", passed: false, score_value: 3.0)],
+          model: "gpt_b", cost: 1.64, judge_cost: 0.24)
+      )
+
+      expect(described_class.new(partial, color: false).render("text")).to include("judge               - -> $0.24")
+    end
+
+    it "leaves the total cost row alone when neither run recorded judge spend" do
+      expect(described_class.new(comparison, color: false).render("text")).not_to include("model under test")
+    end
+
+    # A run that used no judge records a judge cost of zero. Splitting the row there would say the
+    # same thing twice.
+    it "leaves the total cost row alone when both runs recorded no judge spend at all" do
+      judgeless = Raif::Evals::Comparison.new(
+        baseline: payload([eval_result(case_id: "press-release", passed: true, score_value: 5.0)],
+          model: "gpt_a", cost: 1.10, judge_cost: 0.0),
+        candidate: payload([eval_result(case_id: "press-release", passed: false, score_value: 3.0)],
+          model: "gpt_b", cost: 1.64, judge_cost: 0.0)
+      )
+
+      expect(described_class.new(judgeless, color: false).render("text")).not_to include("model under test")
     end
   end
 

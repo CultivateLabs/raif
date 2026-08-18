@@ -19,7 +19,7 @@ module Raif
       }.freeze
 
       attr_reader :description, :eval_id, :expectation_results, :model_completions, :run_index, :eval_index, :case_id, :scores, :usage,
-        :overhead_usage
+        :overhead_usage, :judge_usage
 
       # eval_id identifies the eval block that produced this result and survives the file being
       # edited around it; with case_id, the dataset input, it is the key evals:compare and --resume
@@ -35,6 +35,7 @@ module Raif
         @scores = []
         @usage = EMPTY_USAGE.dup
         @overhead_usage = EMPTY_USAGE.dup
+        @judge_usage = EMPTY_USAGE.dup
         # Seeded from the configured mode, so a result that never reaches
         # #record_model_completions - one built directly by a spec or a host app's own helper -
         # omits the key under :none like its siblings instead of carrying an empty array.
@@ -74,6 +75,10 @@ module Raif
         serialized = Array(completions).map { |mc| serialize_model_completion(mc) }
         @usage = compute_usage(serialized)
         @overhead_usage = compute_usage(Array(overhead).map { |mc| serialize_model_completion(mc) })
+        # A subset of #usage rather than a slice taken out of it: the eval did spend this, so the
+        # run's cost total must keep counting it. What the split is for is the comparison, where a
+        # fixed judge's spend is not part of what separates two models under test.
+        @judge_usage = compute_usage(serialized.select { |mc| mc[:judge] })
         @model_completions_captured = capture_mode.to_sym != :none
 
         @model_completions = case capture_mode.to_sym
@@ -113,6 +118,9 @@ module Raif
           # Omitted rather than zeroed: setup making no LLM calls is the normal case, and the key
           # would be noise in every result those runs wrote.
           overhead_usage: (overhead_usage if overhead_usage[:model_completions].positive?),
+          # Omitted for the same reason, and for the same reason an absent key is not a zero: a
+          # result written before the judge was tagged has unknown judge spend, not none.
+          judge_usage: (judge_usage if judge_usage[:model_completions].positive?),
           model_completions: (model_completions if @model_completions_captured)
         }.compact
       end
@@ -145,11 +153,26 @@ module Raif
         serialized.sum { |mc| mc[key].to_f }.round(6)
       end
 
+      # An LLM judge grades on the same terms across a comparison by design - evals:compare
+      # refuses two different judges - so its spend is a near-constant that should not be read as
+      # part of the difference between two models. It is not quite constant, since a wordier model
+      # gives the judge more to read, which is the other reason for telling the two apart.
+      #
+      # Read off the in-memory source rather than source_type, which holds "Raif::Task" for every
+      # task: source_type is the polymorphic base class and a judge is an STI subclass of it.
+      # Defensive, since a source that cannot be resolved is not a reason to fail an eval.
+      def judge_completion?(mc)
+        mc.source.is_a?(Raif::Evals::LlmJudge)
+      rescue StandardError
+        false
+      end
+
       def serialize_model_completion(mc)
         {
           llm_model_key: mc.llm_model_key,
           model_api_name: mc.model_api_name,
           source_type: mc.source_type,
+          judge: (true if judge_completion?(mc)),
           temperature: mc.temperature&.to_f,
           response_format: mc.response_format,
           system_prompt: mc.system_prompt,

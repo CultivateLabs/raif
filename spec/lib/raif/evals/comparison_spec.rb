@@ -34,24 +34,35 @@ RSpec.describe Raif::Evals::Comparison do
     { "name" => name, "value" => value, "higher_is_better" => higher_is_better, "min" => min, "max" => max }.compact
   end
 
-  def payload(results, judge: "anthropic_claude_5_sonnet", model: "gpt_a", cost: 1.10)
+  # datasets and judge_cost are absent unless a spec asks for them, which is how a results file
+  # written before either was recorded reads.
+  def payload(results, judge: "anthropic_claude_5_sonnet", model: "gpt_a", cost: 1.10, datasets: nil, judge_cost: nil, code: nil)
+    configuration = {
+      "default_llm_model_key" => model,
+      "evals_default_llm_judge_model_key" => judge,
+      "judge_model_key" => judge,
+      "repeats" => 2
+    }
+    configuration["datasets"] = datasets unless datasets.nil?
+    configuration["code"] = code unless code.nil?
+
     {
       "run_at" => "2026-08-04T18:02:16Z",
-      "configuration" => {
-        "default_llm_model_key" => model,
-        "evals_default_llm_judge_model_key" => judge,
-        "judge_model_key" => judge,
-        "repeats" => 2
-      },
+      "configuration" => configuration,
       "results" => results,
       "summary" => {
         "passed_evals" => results.values.flatten.count { |r| r["passed"] },
         "total_evals" => results.values.flatten.count,
         "passed_expectations" => results.values.flatten.sum { |r| r["expectation_results"].count { |e| e["status"] == "passed" } },
         "total_expectations" => results.values.flatten.sum { |r| r["expectation_results"].count },
-        "total_cost" => cost
-      }
+        "total_cost" => cost,
+        "total_judge_cost" => judge_cost
+      }.compact
     }
+  end
+
+  def dataset_fingerprint(name: "topics", eval_set: "Set", cases: 3, digest: "sha256:aaa")
+    { "eval_set" => eval_set, "name" => name, "cases" => cases, "digest" => digest }
   end
 
   describe "keyed on eval id" do
@@ -341,6 +352,109 @@ RSpec.describe Raif::Evals::Comparison do
       )
 
       expect(comparison.judge_mismatch?).to be false
+    end
+  end
+
+  describe "dataset provenance" do
+    def one_result
+      { "Set" => [eval_result(case_id: "a", expectations: { "e" => true })] }
+    end
+
+    it "is not flagged when both runs measured the same dataset" do
+      comparison = described_class.new(
+        baseline: payload(one_result, datasets: [dataset_fingerprint]),
+        candidate: payload(one_result, datasets: [dataset_fingerprint])
+      )
+
+      expect(comparison.dataset_provenance?).to be true
+      expect(comparison.dataset_mismatch?).to be false
+      expect(comparison.dataset_differences).to be_empty
+    end
+
+    # The failure this exists for: the case ids still match, so without the fingerprint the edit is
+    # attributed to the model.
+    it "is flagged when a case was edited between the two runs" do
+      comparison = described_class.new(
+        baseline: payload(one_result, datasets: [dataset_fingerprint(digest: "sha256:aaa")]),
+        candidate: payload(one_result, datasets: [dataset_fingerprint(digest: "sha256:bbb")])
+      )
+
+      expect(comparison.dataset_mismatch?).to be true
+      expect(comparison.dataset_differences).to eq([{
+        name: "topics",
+        eval_set: "Set",
+        baseline: "3 cases sha256:aaa",
+        candidate: "3 cases sha256:bbb"
+      }])
+    end
+
+    it "is flagged when the dataset grew" do
+      comparison = described_class.new(
+        baseline: payload(one_result, datasets: [dataset_fingerprint(cases: 3, digest: "sha256:aaa")]),
+        candidate: payload(one_result, datasets: [dataset_fingerprint(cases: 4, digest: "sha256:bbb")])
+      )
+
+      expect(comparison.dataset_differences.first).to include(baseline: "3 cases sha256:aaa", candidate: "4 cases sha256:bbb")
+    end
+
+    it "is flagged when a dataset only one run has" do
+      comparison = described_class.new(
+        baseline: payload(one_result, datasets: []),
+        candidate: payload(one_result, datasets: [dataset_fingerprint])
+      )
+
+      expect(comparison.dataset_differences.first).to include(name: "topics", baseline: "not run", candidate: "3 cases sha256:aaa")
+    end
+
+    # A run recorded before fingerprints existed has no datasets key. Reporting a match from that
+    # would be a claim the file cannot support.
+    it "says nothing when either run recorded no dataset provenance" do
+      comparison = described_class.new(
+        baseline: payload(one_result),
+        candidate: payload(one_result, datasets: [dataset_fingerprint])
+      )
+
+      expect(comparison.dataset_provenance?).to be false
+      expect(comparison.dataset_mismatch?).to be false
+    end
+
+    it "exposes each run's code provenance" do
+      comparison = described_class.new(
+        baseline: payload(one_result, code: { "git_sha" => "abc123", "dirty" => false }),
+        candidate: payload(one_result, code: { "git_sha" => "def456", "dirty" => true })
+      )
+
+      expect(comparison.baseline_code).to eq({ "git_sha" => "abc123", "dirty" => false })
+      expect(comparison.candidate_code).to eq({ "git_sha" => "def456", "dirty" => true })
+    end
+  end
+
+  describe "judge cost" do
+    def one_result
+      { "Set" => [eval_result(expectations: { "e" => true })] }
+    end
+
+    # The judge is held fixed across a comparison, so its share of the bill is not part of what
+    # separates the two models under test.
+    it "splits each side's total into subject and judge spend" do
+      comparison = described_class.new(
+        baseline: payload(one_result, cost: 1.10, judge_cost: 0.20),
+        candidate: payload(one_result, cost: 1.64, judge_cost: 0.24)
+      )
+
+      expect(comparison.to_h[:baseline]).to include(total_cost: 1.10, judge_cost: 0.20, subject_cost: 0.90)
+      expect(comparison.to_h[:candidate]).to include(total_cost: 1.64, judge_cost: 0.24, subject_cost: 1.40)
+    end
+
+    # Unknown rather than all-subject: a run written before the split existed did not record it.
+    it "leaves the split nil for a run that did not record judge spend" do
+      comparison = described_class.new(
+        baseline: payload(one_result, cost: 1.10),
+        candidate: payload(one_result, cost: 1.64, judge_cost: 0.24)
+      )
+
+      expect(comparison.to_h[:baseline]).to include(judge_cost: nil, subject_cost: nil)
+      expect(comparison.to_h[:candidate]).to include(judge_cost: 0.24, subject_cost: 1.40)
     end
   end
 

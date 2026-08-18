@@ -34,6 +34,41 @@ RSpec.describe Raif::Evals::EvalSetCoordinator do
     expect(coordinator.eval_set_class).to eq(eval_set_class)
   end
 
+  describe "#dataset_fingerprints" do
+    it "records each dataset's name, size, and digest" do
+      expect(coordinator.dataset_fingerprints).to eq([{
+        eval_set: "CoordinatorEvalSet",
+        name: "numbers",
+        cases: 2,
+        digest: Raif::Evals::Dataset.new(name: :numbers, cases: [
+          { id: "alpha", input: { "n" => 1 } },
+          { id: "beta", input: { "n" => 2 } }
+        ]).digest
+      }])
+    end
+
+    # cases is the whole dataset either way, since --cases and --sample are recorded beside the
+    # fingerprint. selected is what this run narrowed it to.
+    it "records how many cases a selection left when it narrowed the dataset" do
+      narrowed = described_class.new(eval_set_class: eval_set_class, output: StringIO.new, cases: ["alpha"])
+
+      expect(narrowed.dataset_fingerprints.first).to include(cases: 2, selected: 1)
+    end
+
+    it "omits selected on a full run" do
+      expect(coordinator.dataset_fingerprints.first).not_to have_key(:selected)
+    end
+
+    it "is empty for an eval set with no datasets" do
+      no_datasets = described_class.new(
+        eval_set_class: named_eval_set("NoDatasetEvalSet") { eval("runs") { expect("always") { true } } },
+        output: StringIO.new
+      )
+
+      expect(no_datasets.dataset_fingerprints).to eq([])
+    end
+  end
+
   describe "#pending_executions" do
     it "lists one execution per eval, per case, per repeat" do
       executions = coordinator.pending_executions(repeats: 2)

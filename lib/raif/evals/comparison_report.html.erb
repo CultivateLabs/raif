@@ -89,6 +89,24 @@
           <% end -%>
         </td>
       </tr>
+      <% if [baseline[:code], candidate[:code]].any? -%>
+      <tr>
+        <td>code</td>
+        <td colspan="5" class="mono"><%= h describe_code(baseline[:code]) %> &rarr; <%= h describe_code(candidate[:code]) %></td>
+      </tr>
+      <% end -%>
+      <% if comparison.dataset_mismatch? -%>
+      <tr>
+        <td>datasets</td>
+        <td colspan="5">
+          <span class="pill warn">changed</span>
+          <% comparison.dataset_differences.each do |row| -%>
+            <div class="mono"><%= h row[:name] %> (<%= h row[:eval_set] %>): <%= h row[:baseline] %> &rarr; <%= h row[:candidate] %></div>
+          <% end -%>
+          <div class="muted">Cases are joined by id, so a difference the dataset caused reads as a difference the model caused.</div>
+        </td>
+      </tr>
+      <% end -%>
     </table>
   </div>
 
@@ -263,6 +281,18 @@
         <td class="mono">$<%= format("%.2f", baseline[:total_cost].to_f) %></td>
         <td class="mono">$<%= format("%.2f", candidate[:total_cost].to_f) %></td>
       </tr>
+      <% if cost_split? -%>
+      <tr class="sub">
+        <td>Model under test</td>
+        <td class="mono"><%= h format_cost(baseline[:subject_cost]) %></td>
+        <td class="mono"><%= h format_cost(candidate[:subject_cost]) %></td>
+      </tr>
+      <tr class="sub">
+        <td>Judge</td>
+        <td class="mono"><%= h format_cost(baseline[:judge_cost]) %></td>
+        <td class="mono"><%= h format_cost(candidate[:judge_cost]) %></td>
+      </tr>
+      <% end -%>
     </table>
     <p class="verdict <%= comparison.regressed?(threshold, alpha: alpha) ? "bad" : "" %>"><%= h verdict %></p>
   </div>

@@ -52,7 +52,7 @@ module Raif
     # errored_case_ids are cases that raised: no score, and an expectation whose status is
     # "error". Written without an "errored" key, as a results file from before that key would be.
     def cli_results_payload(model:, passed:, score_value:, judge: "judge_model", cost: 0.1,
-      expectation_description: "is under 1000 words", case_ids: ["press-release"], errored_case_ids: [])
+      expectation_description: "is under 1000 words", case_ids: ["press-release"], errored_case_ids: [], datasets: nil)
       results = case_ids.map do |case_id|
         errored = errored_case_ids.include?(case_id)
         status = errored ? "error" : (passed ? "passed" : "failed")
@@ -69,14 +69,19 @@ module Raif
         }
       end
 
+      configuration = {
+        "default_llm_model_key" => model,
+        "evals_default_llm_judge_model_key" => judge,
+        "judge_model_key" => judge,
+        "repeats" => 1
+      }
+      # Absent unless a spec asks for it, which is how a results file written before datasets were
+      # fingerprinted reads.
+      configuration["datasets"] = datasets unless datasets.nil?
+
       {
         "run_at" => "2026-08-04T18:02:16Z",
-        "configuration" => {
-          "default_llm_model_key" => model,
-          "evals_default_llm_judge_model_key" => judge,
-          "judge_model_key" => judge,
-          "repeats" => 1
-        },
+        "configuration" => configuration,
         "results" => { "SummarizationEvalSet" => results },
         "summary" => {
           "passed_evals" => results.count { |result| result["passed"] },
