@@ -140,13 +140,11 @@ RSpec.describe Raif::Evals::Run do
       allow_any_instance_of(described_class).to receive(:discover_eval_sets).and_return([TestEvalSet, AnotherEvalSet])
     end
 
-    it "runs all eval sets" do
-      expect(TestEvalSet).to receive(:run)
-        .with(hash_including(output: output, repeats: 1, cases: nil, sample: nil, seed: nil)).and_call_original
-      expect(AnotherEvalSet).to receive(:run)
-        .with(hash_including(output: output, repeats: 1, cases: nil, sample: nil, seed: nil)).and_call_original
-
+    it "runs every eval in every set" do
       run.execute
+
+      expect(run.results["TestEvalSet"].map { |e| e[:description] }).to eq(["passes", "fails"])
+      expect(run.results["AnotherEvalSet"].map { |e| e[:description] }).to eq(["another test"])
     end
 
     context "when running specific eval sets from files" do
@@ -199,6 +197,24 @@ RSpec.describe Raif::Evals::Run do
         expect do
           described_class.new(file_paths: [{ file_path: "/non/existent/file.rb" }], output: output)
         end.to raise_error(SystemExit)
+      end
+
+      context "when given a line number" do
+        it "runs only the eval block defined at that line" do
+          run = described_class.new(file_paths: [{ file_path: temp_eval_file.to_s, line_number: 8 }], output: output)
+          run.execute
+
+          expect(run.results["TestEvalForExecute"].map { |result| result[:description] }).to eq(["second test"])
+          expect(output.string).to include("Running TestEvalForExecute at line 8")
+        end
+
+        it "reports a line with no eval block rather than running the whole set" do
+          run = described_class.new(file_paths: [{ file_path: temp_eval_file.to_s, line_number: 3 }], output: output)
+          run.execute
+
+          expect(run.results).to be_empty
+          expect(output.string).to include("No eval block found at line 3")
+        end
       end
     end
 
@@ -315,6 +331,42 @@ RSpec.describe Raif::Evals::Run do
         total_cost: 0.0
       )
       expect(eval_result[:model_completions]).to eq([])
+    end
+
+    # Setup and teardown spend is kept out of every eval's own usage, so without a line of its
+    # own it would vanish from the only place the run states what it cost.
+    context "when setup spends on an LLM call of its own" do
+      let(:test_eval_set) do
+        Class.new(Raif::Evals::EvalSet) do
+          setup do
+            FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 12)
+          end
+
+          eval "passes" do
+            expect("always true") { true }
+          end
+        end
+      end
+
+      it "reports it separately from the eval totals" do
+        run.execute
+
+        summary = run.send(:summary_data)
+
+        expect(summary).to include(total_overhead_model_completions: 1, total_overhead_tokens: 12)
+        # Unchanged: evals:compare reads total_cost across runs recorded by earlier versions, so
+        # what it means cannot drift.
+        expect(summary[:total_cost]).to eq(0.0)
+        expect(summary[:total_model_completions]).to eq(0)
+        expect(output.string).to include("plus 1 call / $0.000000 in setup and teardown")
+      end
+    end
+
+    it "leaves the overhead line off a run whose setup made no LLM calls" do
+      run.execute
+
+      expect(run.send(:summary_data)[:total_overhead_cost]).to eq(0.0)
+      expect(output.string).not_to include("setup and teardown")
     end
 
     it "prints summary to output" do

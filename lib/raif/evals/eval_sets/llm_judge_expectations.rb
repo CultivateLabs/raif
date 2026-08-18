@@ -166,6 +166,14 @@ module Raif
               "score it records. A Raif::Evals::ScoringRubric supplies that name itself; a rubric passed as a string has none."
           end
 
+          rubric_name = scoring_rubric_obj.respond_to?(:name) ? scoring_rubric_obj.name : "custom"
+          resolved_score_name = score_name.presence || rubric_name
+
+          # Also before the judge runs, and for the same reason: a name already taken by an
+          # earlier score in this eval raises, and finding that out on the way back would cost a
+          # judge request and take every expectation that already passed down with it.
+          current_eval_result.ensure_score_name_available!(resolved_score_name)
+
           judge_task = LlmJudges::Scored.run(
             content_to_judge: content,
             scoring_rubric: scoring_rubric_obj,
@@ -174,7 +182,6 @@ module Raif
             **resolved_judge_attributes(judge_attributes)
           )
 
-          rubric_name = scoring_rubric_obj.respond_to?(:name) ? scoring_rubric_obj.name : "custom"
           output.puts "    Score: #{judge_task.judgment_score}"
           output.puts "    #{judge_task.judgment_reasoning}" if Raif.config.evals_verbose_output
 
@@ -192,7 +199,7 @@ module Raif
           if judge_task.judgment_score
             current_eval_result.add_score(
               ScoreResult.new(
-                name: score_name || rubric_name,
+                name: resolved_score_name,
                 value: judge_task.judgment_score,
                 scale: (scoring_rubric_obj.scale if scoring_rubric_obj.respond_to?(:scale)),
                 min: min_passing_score
@@ -308,7 +315,6 @@ module Raif
         def resolved_judge_attributes(judge_attributes)
           judge_task_attributes.merge(judge_attributes || {})
         end
-
       end
     end
   end

@@ -30,12 +30,22 @@ RSpec.describe "Resuming an interrupted eval run" do
     end
   end
 
+  # Raised once, so the resume that follows reaches the eval for real.
+  let(:interrupted) { [] }
+
   let(:second_eval_set) do
     counter = executions
+    raised = interrupted
+
     Class.new(Raif::Evals::EvalSet) do
       define_method(:executions) { counter }
 
       eval "third eval" do
+        if raised.empty?
+          raised << true
+          raise Interrupt
+        end
+
         executions << "third"
         expect("passes") { true }
       end
@@ -60,16 +70,11 @@ RSpec.describe "Resuming an interrupted eval run" do
   end
 
   # Interrupt, not StandardError: an eval block raising one of those is caught and recorded as
-  # an errored expectation, so what kills a run is what happens around the blocks.
+  # an errored expectation, so what kills a run is an Interrupt escaping one.
   def interrupt_after_first_set
-    allow(ResumeSecondEvalSet).to receive(:run).and_raise(Interrupt)
-
     Raif::Evals::Run.new(output: output).execute
   rescue SystemExit
     nil
-  ensure
-    # Only the first run is interrupted; the resume that follows has to reach the set for real.
-    allow(ResumeSecondEvalSet).to receive(:run).and_call_original
   end
 
   it "keeps the results of the sets that finished, and tells the user how to resume" do
@@ -134,8 +139,6 @@ RSpec.describe "Resuming an interrupted eval run" do
   end
 
   describe "part way through a dataset" do
-    let(:interrupted) { [] }
-
     let(:dataset_eval_set) do
       counter = executions
       raised = interrupted
@@ -189,7 +192,7 @@ RSpec.describe "Resuming an interrupted eval run" do
   end
 
   it "discards a log holding no results" do
-    allow(ResumeFirstEvalSet).to receive(:run).and_raise(Interrupt)
+    allow_any_instance_of(Raif::Evals::Run).to receive(:discover_eval_sets).and_return([ResumeSecondEvalSet])
 
     begin
       Raif::Evals::Run.new(output: output).execute

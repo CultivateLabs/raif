@@ -15,6 +15,9 @@ module Raif
         sample = ENV["RAIF_EVAL_SAMPLE"]&.to_i
         seed = ENV["RAIF_EVAL_SEED"]&.to_i
         resume_path = ENV["RAIF_EVAL_RESUME"].to_s.empty? ? nil : ENV["RAIF_EVAL_RESUME"]
+        # nil leaves Raif.config.evals_concurrency alone, so an app that sets it in its
+        # initializer does not have to pass the flag on every run.
+        concurrency = ENV["RAIF_EVAL_CONCURRENCY"].to_s.empty? ? nil : ENV["RAIF_EVAL_CONCURRENCY"].to_i
         # nil leaves Raif.config.evals_verbose_output alone. --no-verbose has to be able to
         # win, so an app whose initializer turns verbose output on can still get back to the
         # compact dataset output.
@@ -33,6 +36,10 @@ module Raif
 
           opts.on("-r", "--repeat N", Integer, "Run each eval N times and report a pass rate (default: 1)") do |n|
             repeats = n
+          end
+
+          opts.on("--concurrency N", Integer, "Run N evals at once (default: Raif.config.evals_concurrency)") do |n|
+            concurrency = n
           end
 
           opts.on("--cases a,b,c", Array, "Run only these dataset cases") do |ids|
@@ -70,6 +77,11 @@ module Raif
           exit 1
         end
 
+        if concurrency && concurrency < 1
+          puts "Error: --concurrency must be 1 or greater (got #{concurrency})"
+          exit 1
+        end
+
         # Before Rails boots, which is the slowest thing this command does and entirely wasted
         # on a mistyped log path.
         if resume_path && !File.exist?(resume_path)
@@ -100,7 +112,8 @@ module Raif
           cases: (cases if cases.any?),
           sample: sample,
           seed: seed,
-          resume_path: resume_path
+          resume_path: resume_path,
+          concurrency: concurrency
         )
         run.execute
       end

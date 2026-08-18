@@ -6,16 +6,29 @@ require "json"
 module Raif
   module Evals
     class Run
-      attr_reader :eval_sets, :results, :output, :repeats, :cases, :sample, :seed, :resume_path
+      # One eval set's pending execution, paired with the coordinator that dispatches it. The set
+      # is read off the coordinator rather than carried alongside, where the two could disagree.
+      Unit = Struct.new(:coordinator, :execution, keyword_init: true) do
+        def eval_set_class
+          coordinator.eval_set_class
+        end
+      end
 
-      def initialize(file_paths: nil, output: $stdout, repeats: 1, cases: nil, sample: nil, seed: nil, resume_path: nil)
+      attr_reader :eval_sets, :results, :output, :repeats, :cases, :sample, :seed, :resume_path, :concurrency
+
+      def initialize(file_paths: nil, output: $stdout, repeats: 1, cases: nil, sample: nil, seed: nil, resume_path: nil,
+        concurrency: nil)
         @output = output
         @results = {}
         @repeats = [repeats.to_i, 1].max
         @cases = cases.presence
-        @sample = sample&.to_i
-        @seed = seed&.to_i
         @resume_path = resume_path.presence
+        @sample = sample&.to_i
+        @seed = resolve_seed(seed)
+        @concurrency = resolve_concurrency(concurrency)
+        @reported_eval_sets = Set.new
+        @result_order = {}
+        @summary_mutex = Mutex.new
 
         # Before the eval sets, not after: loading an eval set evaluates its class body,
         # so anything setup.rb defines for the sets to use (shared helper modules,
@@ -35,6 +48,7 @@ module Raif
         output.puts "Raif.config.default_llm_model_key: #{Raif.config.default_llm_model_key}"
         output.puts "Raif.config.evals_default_llm_judge_model_key: #{Raif.config.evals_default_llm_judge_model_key}"
         output.puts "Repeats per eval: #{repeats}"
+        output.puts "Concurrency: #{concurrency}" if concurrency > 1
         output.puts "Cases: #{cases.join(", ")}" if cases
         output.puts "Sample per dataset: #{sample}#{" (seed #{seed})" if seed}" if sample
 
@@ -65,48 +79,129 @@ module Raif
 
     private
 
-      # Results reach the run log as they complete, but the final results file is only written
-      # once every set has finished - hence the resume hint, without which a user staring at a
-      # stack trace has no way to know the spend is still on disk.
+      # Results reach the run log as they complete, but the final results file is only written once
+      # every set has finished - hence the resume hint, without which a user staring at a stack
+      # trace has no way to know the spend is still on disk.
       def run_eval_sets
-        @eval_sets.each do |eval_set_entry|
-          eval_set_class, file_path, line_number = if eval_set_entry.is_a?(Hash)
-            [eval_set_entry[:class], eval_set_entry[:file_path], eval_set_entry[:line_number]]
-          else
-            [eval_set_entry, nil, nil]
-          end
+        units = build_units
 
-          if line_number
-            # Running specific eval by line number
-            output.puts "\nRunning #{eval_set_class.name} at line #{line_number}"
-            output.puts "-" * 50
+        # The CLI defaults to the test environment, where eager_load is off, and concurrent
+        # Zeitwerk autoloads are a flake source. Nothing to gain from it on the serial path.
+        Rails.application.eager_load! if concurrency > 1
 
-            run_eval_at_line(eval_set_class, file_path, line_number)
-          else
-            # Running all evals in the set
-            output.puts "\nRunning #{eval_set_class.name}"
-            output.puts "-" * 50
-
-            eval_set_class.run(output: output, repeats: repeats, cases: cases, sample: sample, seed: seed, run_log: run_log)
-          end
-
-          # From the log rather than what this invocation returned, so a resumed run reports the
-          # whole set and not just the tail of it that was left to do.
-          set_results = run_log.results_for(eval_set_class.name)
-
-          output.puts "-" * 50
-          output.puts "#{eval_set_class.name}: #{set_results.count { |result| result[:passed] }}/#{set_results.count} evals passed"
+        WorkerPool.new(concurrency: concurrency).run(units) do |unit|
+          result = unit.coordinator.run_and_record(unit.execution)
+          report_eval_set_progress(unit.eval_set_class)
+          result
         end
+
+        # Sets a resumed run had nothing left to do for, which reach no completion callback.
+        @eval_set_headers.each_key { |eval_set_class| print_eval_set_summary(eval_set_class) }
 
         # Includes eval sets the log holds but this invocation did not visit, which is what a
         # resume narrowed to one file leaves behind.
-        @results = run_log.results
+        @results = sorted(run_log.results)
       rescue Interrupt
         print_resume_hint("Run interrupted.")
         exit 1
       rescue StandardError
         print_resume_hint("Run failed.")
         raise
+      end
+
+      # One flat list of executions across every eval set, each paired with the instance that
+      # coordinates its set - a pool of threads can be handed a flat list, and building it resolves
+      # every dataset, so a bad fixture fails before the first eval is paid for. Order is definition
+      # order, which is what a serial run executes in and what the eval set summaries follow.
+      def build_units
+        @eval_set_headers = {}
+        @pending_by_eval_set = Hash.new(0)
+        @result_order = {}
+
+        coordinators = {}
+
+        @eval_sets.flat_map do |eval_set_entry|
+          eval_set_class, _file_path, line_number = if eval_set_entry.is_a?(Hash)
+            [eval_set_entry[:class], eval_set_entry[:file_path], eval_set_entry[:line_number]]
+          else
+            [eval_set_entry, nil, nil]
+          end
+
+          header = eval_set_header(eval_set_class, line_number)
+          @eval_set_headers[eval_set_class] ||= header
+
+          # One per eval set, not one per entry: the same file can appear twice on a command line
+          # (two line numbers in it, or the same path given twice), and a second coordinator would
+          # resolve the set's datasets again.
+          coordinator = coordinators[eval_set_class] ||= EvalSetCoordinator.new(
+            eval_set_class: eval_set_class,
+            output: output,
+            run_log: run_log,
+            writer: writer,
+            header: header,
+            cases: cases,
+            sample: sample,
+            seed: seed
+          )
+
+          executions = if line_number
+            executions_at_line(coordinator, line_number)
+          else
+            coordinator.pending_executions(repeats: repeats)
+          end
+
+          @pending_by_eval_set[eval_set_class] += executions.count
+          # After the executions, so the datasets the ordering is read off have been resolved, and
+          # once per eval set rather than once per entry.
+          @result_order[eval_set_class.name] ||= coordinator.result_order
+
+          executions.map { |execution| Unit.new(coordinator: coordinator, execution: execution) }
+        end
+      end
+
+      # Printed once, when the eval set's first line is ready - or, for a set with nothing to
+      # run, when its summary is. Keyed on the set rather than the line, so the two callers
+      # cannot print it twice.
+      def eval_set_header(eval_set_class, line_number = nil)
+        [
+          "eval_set:#{eval_set_class.name}",
+          "\nRunning #{eval_set_class.name}#{" at line #{line_number}" if line_number}\n#{"-" * 50}"
+        ]
+      end
+
+      # Called from a worker thread once an execution has been recorded: an eval set is reported
+      # as its last execution lands rather than at the end of the run, so a serial run still
+      # reports each set as it finishes.
+      def report_eval_set_progress(eval_set_class)
+        finished = @summary_mutex.synchronize do
+          @pending_by_eval_set[eval_set_class] -= 1
+          @pending_by_eval_set[eval_set_class].zero?
+        end
+
+        print_eval_set_summary(eval_set_class) if finished
+      end
+
+      def print_eval_set_summary(eval_set_class)
+        return unless @summary_mutex.synchronize { @reported_eval_sets.add?(eval_set_class) }
+
+        # From the log rather than what this invocation returned, so a resumed run reports the
+        # whole set and not just the tail of it that was left to do.
+        set_results = run_log.results_for(eval_set_class.name)
+
+        # An eval set that produced no output of its own still gets its banner, so the summary
+        # line beneath it is attributable. Banner and summary in one call, so another execution
+        # finishing at the same moment cannot land between them.
+        writer.print_with_headers(
+          [@eval_set_headers[eval_set_class] || eval_set_header(eval_set_class)],
+          "-" * 50,
+          "#{eval_set_class.name}: #{set_results.count { |result| result[:passed] }}/#{set_results.count} evals passed"
+        )
+      end
+
+      # Buffered only when there is something to interleave with: a serial run's lines appear as
+      # they are produced, rather than one execution at a time.
+      def writer
+        @writer ||= ConsoleWriter.new(output, buffered: concurrency > 1)
       end
 
       def print_resume_hint(reason)
@@ -191,26 +286,25 @@ module Raif
       def dataset_evals_present?
         @eval_sets.any? do |eval_set_entry|
           eval_set_class = eval_set_entry.is_a?(Hash) ? eval_set_entry[:class] : eval_set_entry
-          eval_set_class.evals.any? { |eval_definition| eval_definition[:dataset] }
+          eval_set_class.evals.any?(&:dataset?)
         end
       end
 
       def eval_set_class_defined_in(absolute_path)
         Raif::Evals::EvalSet.subclasses.find do |klass|
-          klass.evals.any? { |eval_definition| eval_definition[:definition_file] == absolute_path }
+          klass.evals.any? { |eval_definition| eval_definition.file == absolute_path }
         end
       end
 
-      def run_eval_at_line(eval_set_class, file_path, line_number)
-        target_eval = eval_set_class.evals.find{|e| e[:definition_line_number] == line_number }
+      def executions_at_line(coordinator, line_number)
+        target_eval = coordinator.eval_set_class.evals.find{|e| e.line_number == line_number }
 
         if target_eval.nil?
           output.puts Raif::Utils::Colors.red("Error: No eval block found at line #{line_number}")
           return []
         end
 
-        instance = eval_set_class.new(output: output, run_log: run_log)
-        instance.run_eval_definition(target_eval, repeats: repeats, cases: cases, sample: sample, seed: seed)
+        coordinator.executions_for(target_eval, repeats: repeats)
       end
 
       def discover_eval_sets
@@ -258,9 +352,88 @@ module Raif
         output.puts "\nResults exported to: #{filename}"
       end
 
+      # Results reach the log in completion order, which under concurrency is neither definition
+      # order nor stable between runs. Put back into definition order once, here, rather than
+      # only on the way to the file: the summary groups results as it finds them, so the per-case
+      # rows of two runs of the same work would otherwise be ordered differently too.
+      #
+      # Results whose eval set this invocation never visited - what a resume narrowed to one file
+      # carries forward - have no known position, so they keep the order the log holds them in.
+      def sorted(results)
+        results.to_h do |eval_set_name, eval_results|
+          order = @result_order[eval_set_name] || {}
+
+          ordered = eval_results.each_with_index.sort_by do |result, index|
+            [
+              result[:eval_index].to_i,
+              order.fetch([result[:eval_index], result[:case_id]], Float::INFINITY),
+              result[:run_index].to_i,
+              index
+            ]
+          end
+
+          [eval_set_name, ordered.map(&:first)]
+        end
+      end
+
+      # sqlite3 is capped rather than rejected: an eval runs inside a transaction, and concurrent
+      # write transactions against one file serialize on SQLITE_BUSY instead of going faster.
+      #
+      # The pool check is a hard failure because the alternative is worse than a slow run: with
+      # fewer connections than workers, each execution waits out the checkout timeout and dies
+      # with ConnectionTimeoutError, which reads like a database problem rather than a setting.
+      def resolve_concurrency(concurrency)
+        requested = [(concurrency || Raif.config.evals_concurrency).to_i, 1].max
+        return 1 if requested == 1
+
+        adapter = ActiveRecord::Base.connection_db_config.adapter.to_s
+
+        if adapter.start_with?("sqlite")
+          output.puts Raif::Utils::Colors.yellow(
+            "Ignoring concurrency #{requested}: the #{adapter} adapter serializes the transaction each eval runs in. Running serially."
+          )
+          return 1
+        end
+
+        pool_size = ActiveRecord::Base.connection_pool.size
+
+        if pool_size <= requested
+          output.puts Raif::Utils::Colors.red(
+            "Concurrency #{requested} needs a database connection pool larger than #{requested}, but this environment's pool holds " \
+            "#{pool_size}. Raise `pool:` for the #{Rails.env} environment in config/database.yml, or lower --concurrency."
+          )
+          exit 1
+        end
+
+        requested
+      end
+
+      # A sampled run always ends up with a seed, drawing one when the caller did not supply it.
+      # Without one the draw is fresh entropy every invocation, so --resume would sample a
+      # different subset and finish the results file with two unrelated samples in it - which
+      # #configuration_data cannot catch, since both invocations record `seed: nil` and compare
+      # equal. A resume therefore adopts the seed the log holds rather than drawing again, which
+      # would be refused as a mismatch the user has no way to satisfy. Small enough to retype
+      # from the console banner.
+      def resolve_seed(seed)
+        return seed&.to_i if seed || @sample.nil?
+
+        resumed_seed || Random.new.rand(2**31)
+      end
+
+      def resumed_seed
+        return unless resume_path
+
+        RunLog.logged_configuration(resume_path)&.dig(:seed)
+      end
+
       # Also the compatibility check for --resume, which refuses when any of these differ: each
       # either changes what a result means or which cases produce one, so letting one drift
       # would write a single results file describing a run that never happened.
+      #
+      # Concurrency is deliberately absent: it changes neither, and including it would refuse to
+      # resume a run at a different concurrency, which is exactly what someone whose run just
+      # died to rate limits wants to do.
       def configuration_data
         {
           default_llm_model_key: Raif.config.default_llm_model_key,
@@ -406,6 +579,13 @@ module Raif
         total_tokens = all_evals.sum { |e| e.dig(:usage, :total_tokens).to_i }
         total_cost = all_evals.sum { |e| e.dig(:usage, :total_cost).to_f }.round(6)
 
+        # What setup and teardown spent. Beside the eval totals rather than folded into them,
+        # since evals:compare reads total_cost across runs recorded by earlier versions - but
+        # real money, so a summary that dropped it would understate the bill.
+        overhead_model_completions = all_evals.sum { |e| e.dig(:overhead_usage, :model_completions).to_i }
+        overhead_tokens = all_evals.sum { |e| e.dig(:overhead_usage, :total_tokens).to_i }
+        overhead_cost = all_evals.sum { |e| e.dig(:overhead_usage, :total_cost).to_f }.round(6)
+
         {
           total_eval_sets: total_eval_sets,
           total_evals: total_evals,
@@ -417,6 +597,9 @@ module Raif
           total_completion_tokens: total_completion_tokens,
           total_tokens: total_tokens,
           total_cost: total_cost,
+          total_overhead_model_completions: overhead_model_completions,
+          total_overhead_tokens: overhead_tokens,
+          total_overhead_cost: overhead_cost,
           eval_pass_rates: eval_pass_rates,
           score_summaries: score_summaries
         }
@@ -449,6 +632,13 @@ module Raif
         output.puts "  #{data[:total_completion_tokens]} completion tokens"
         output.puts "  #{data[:total_tokens]} total tokens"
         output.puts "  $#{format("%.6f", data[:total_cost])} total cost"
+
+        if data[:total_overhead_model_completions].positive?
+          calls = data[:total_overhead_model_completions]
+          output.puts "  plus #{calls} #{"call".pluralize(calls)} / " \
+            "$#{format("%.6f", data[:total_overhead_cost])} in setup and teardown, not attributed to any eval"
+        end
+
         output.puts ""
 
         # A dataset eval has a rate worth printing even at --repeat 1, because the rate is

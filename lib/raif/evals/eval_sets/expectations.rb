@@ -25,12 +25,10 @@ module Raif
           result
         end
 
-        # Records a number on the eval result. Pass/fail expectations alone have a ceiling:
-        # once two models clear every bar their results are identical, and any quality
-        # difference short of missing a bar is invisible.
-        #
-        # Passing min: and/or max: also gates the eval on the value, so a score can replace
-        # an expect block rather than sitting alongside one.
+        # Records a number on the eval result, for the quality differences a pass/fail
+        # expectation cannot see - once two models clear every bar, their results are identical.
+        # Passing min: and/or max: also gates the eval on the value, so a score can replace an
+        # expect block rather than sitting alongside one.
         def score(name, value, scale: nil, min: nil, max: nil, higher_is_better: true)
           score_result = ScoreResult.new(
             name: name,

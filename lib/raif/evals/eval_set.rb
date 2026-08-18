@@ -5,16 +5,20 @@ require "raif/evals/eval_sets/llm_judge_expectations"
 
 module Raif
   module Evals
+    # A host app's eval sets subclass this: the class body is the DSL (eval, dataset, setup,
+    # teardown) and an instance is the context those blocks are evaluated against.
+    #
+    # An instance is single-use: #run_eval writes the case and result onto self so #expect and
+    # #score can reach them. Deciding what to run and dispatching it is EvalSetCoordinator's.
     class EvalSet
       include Raif::Evals::EvalSets::Expectations
       include Raif::Evals::EvalSets::LlmJudgeExpectations
 
-      attr_reader :current_eval_result, :current_case, :output, :results
+      attr_reader :current_eval_result, :current_case, :output
 
-      def initialize(output: $stdout, run_log: nil)
+      def initialize(output: $stdout)
         @output = output
         @console_output = output
-        @run_log = run_log
       end
 
       class << self
@@ -63,13 +67,16 @@ module Raif
 
           definition_location = caller_locations(1, 1).first
 
-          evals << {
+          # Position assigned here rather than derived later: evals is append-only, so the
+          # index a definition registers at is the one it keeps.
+          evals << EvalDefinition.new(
             description: description,
             block: block,
             dataset: dataset&.to_sym,
-            definition_file: definition_location.path,
-            definition_line_number: definition_location.lineno
-          }
+            index: evals.length,
+            file: definition_location.path,
+            line_number: definition_location.lineno
+          )
         end
 
         def setup(&block)
@@ -80,8 +87,13 @@ module Raif
           @teardown_block = block
         end
 
+        # Runs the whole set and returns one EvalResult per execution. The entry point for a
+        # host app running an eval set on its own; Raif::Evals::Run drives the coordinator
+        # directly so it can interleave several sets.
         def run(output: $stdout, repeats: 1, cases: nil, sample: nil, seed: nil, run_log: nil)
-          new(output: output, run_log: run_log).run(repeats: repeats, cases: cases, sample: sample, seed: seed)
+          EvalSetCoordinator
+            .new(eval_set_class: self, output: output, run_log: run_log, cases: cases, sample: sample, seed: seed)
+            .run(repeats: repeats)
         end
       end
 
@@ -92,70 +104,22 @@ module Raif
         {}
       end
 
-      # Each repeat re-runs setup and the eval block from scratch, so the repeats are
-      # independent samples of a non-deterministic model rather than a re-scoring of one
-      # response. Comparing models needs the pass rate across them, not a single draw.
-      #
-      # An eval with a dataset runs once per case per repeat, each in its own transaction.
-      def run(repeats: 1, cases: nil, sample: nil, seed: nil)
-        @results = []
-        @selected_cases = resolve_datasets(cases: cases, sample: sample, seed: seed)
-
-        self.class.evals.each_with_index do |eval_definition, eval_index|
-          @results.concat(run_eval_definition(eval_definition, eval_index: eval_index, repeats: repeats))
-        end
-
-        @results
-      end
-
-      # Runs one eval definition across its cases (if any) and repeats, skipping any execution
-      # a resumed run log already holds a result for.
-      def run_eval_definition(eval_definition, eval_index: nil, repeats: 1, cases: nil, sample: nil, seed: nil)
-        eval_index ||= self.class.evals.index(eval_definition)
-        @selected_cases ||= resolve_datasets(cases: cases, sample: sample, seed: seed)
-        eval_cases = selected_cases_for(eval_definition)
-
-        # nil rather than 1 for a single run, matching the run_index EvalResult records.
-        run_indexes = repeats.times.map { |i| (i + 1 if repeats > 1) }
-
-        if eval_cases.nil?
-          pending = run_indexes.reject { |run_index| already_recorded?(eval_index, nil, run_index) }
-
-          return pending.map do |run_index|
-            run_and_record(eval_definition, run_index: run_index, eval_index: eval_index)
-          end
-        end
-
-        return [] if eval_cases.empty?
-
-        pending = eval_cases.flat_map do |eval_case|
-          run_indexes.filter_map do |run_index|
-            [eval_case, run_index] unless already_recorded?(eval_index, eval_case.id, run_index)
-          end
-        end
-
-        # No header for an eval a resumed run has nothing left to do for.
-        return [] if pending.empty?
-
-        output.puts eval_definition[:description] unless Raif.config.evals_verbose_output
-        # Widened over every selected case, not just the pending ones, so a resumed run's lines
-        # stay aligned with the ones already printed.
-        @case_id_width = eval_cases.map { |eval_case| eval_case.id.length }.max
-
-        pending.map do |eval_case, run_index|
-          run_and_record(eval_definition, eval_case: eval_case, run_index: run_index, eval_index: eval_index)
-        end
+      # Evaluates one of the set's dataset blocks. Here rather than on the coordinator because
+      # a dataset block is user DSL - it can call file/files/json/jsonl, which only exist on an
+      # eval set instance.
+      def resolve_dataset(name)
+        instance_eval(&self.class.datasets.fetch(name))
       end
 
       # Runs one execution - one eval block, against one case, on one repeat. Writes the current
       # case and result onto this instance, which is why each execution gets its own.
-      def run_eval(eval_definition, eval_case: nil, run_index: nil, eval_index: nil, case_id_width: nil)
+      def run_eval(eval_definition, eval_case: nil, run_index: nil, case_id_width: nil)
         @current_case = eval_case
         @case_id_width = case_id_width
         @current_eval_result = EvalResult.new(
-          description: eval_definition[:description],
+          description: eval_definition.description,
           run_index: run_index,
-          eval_index: eval_index || self.class.evals.index(eval_definition),
+          eval_index: eval_definition.index,
           case_id: eval_case&.id
         )
 
@@ -166,41 +130,33 @@ module Raif
           # console_output - a swallowed backtrace makes a dataset run undebuggable.
           @output = StringIO.new
         else
-          output.puts "Running: #{eval_definition[:description]}#{" [#{eval_case.id}]" if eval_case}#{" (run #{run_index})" if run_index}"
+          output.puts "Running: #{eval_definition.description}#{" [#{eval_case.id}]" if eval_case}#{" (run #{run_index})" if run_index}"
         end
 
         begin
           ActiveRecord::Base.transaction do
-            # setup runs inside the same rescue as the eval block so that one case built
-            # from a bad fixture costs one result rather than the whole dataset.
-            stage = "Setup"
-            captured_completions = nil
+            # Opened before setup and closed after teardown, so nothing an execution spends
+            # escapes the run's cost total. Which of those calls the eval itself made is
+            # decided by the offsets taken around the eval block, not by the sink's lifetime.
+            completions = ModelCompletionSink.open
+            eval_completions_range = nil
 
             begin
-              run_block(self.class.setup_block, eval_case) if self.class.setup_block
-
-              stage = "Eval block"
-              # Opened after setup, so we only record the LLM calls the eval itself makes.
-              captured_completions = ModelCompletionSink.open
-
-              run_block(eval_definition[:block], eval_case)
-            rescue => e
-              console_output.puts Raif::Utils::Colors.red("  Error in #{stage.downcase}: #{e.message}")
-              console_output.puts Raif::Utils::Colors.red("  #{e.backtrace.join("\n  ")}")
-              @current_eval_result.add_expectation_result(
-                ExpectationResult.new(
-                  description: "#{stage} execution",
-                  status: :error,
-                  error: e
-                )
-              )
+              # A setup that raised leaves the eval block nothing to run against, so it is
+              # skipped rather than run against a half-built fixture and billed for it.
+              if setup_succeeded?(eval_case)
+                eval_completions_start = completions.length
+                run_stage("Eval block") { run_block(eval_definition.block, eval_case) }
+                eval_completions_range = eval_completions_start...completions.length
+              end
             ensure
-              # Closed before teardown, so an LLM call a teardown makes is not billed to the
-              # eval. Closing first also means a capture failure cannot leave the sink open.
-              ModelCompletionSink.close
-              capture_model_completions(captured_completions) if captured_completions
+              run_stage("Teardown") { run_block(self.class.teardown_block, eval_case) } if self.class.teardown_block
 
-              run_block(self.class.teardown_block, eval_case) if self.class.teardown_block
+              # Closed first, so a capture failure cannot leave the sink open. Capturing after
+              # teardown is safe because the sink holds the records rather than re-querying them,
+              # so a teardown that destroys them cannot take them with it.
+              ModelCompletionSink.close
+              capture_model_completions(completions, eval_completions_range)
             end
 
             raise ActiveRecord::Rollback
@@ -246,30 +202,6 @@ module Raif
 
       attr_reader :console_output
 
-      # A fresh instance per execution, so nothing an eval's setup leaves behind is visible to the
-      # next eval or to this instance, which coordinates the run and never runs an eval block.
-      #
-      # Records each result the moment it completes, so the run's spend survives an interrupt
-      # that never reaches the results file.
-      def run_and_record(eval_definition, eval_case: nil, run_index: nil, eval_index: nil)
-        eval_result = self.class.new(output: console_output).run_eval(
-          eval_definition,
-          eval_case: eval_case,
-          run_index: run_index,
-          eval_index: eval_index,
-          case_id_width: @case_id_width
-        )
-
-        @run_log&.record(eval_set: self.class.name, result: eval_result)
-        eval_result
-      end
-
-      def already_recorded?(eval_index, case_id, run_index)
-        return false if @run_log.nil?
-
-        @run_log.recorded?(eval_set: self.class.name, eval_index: eval_index, case_id: case_id, run_index: run_index)
-      end
-
       def dataset_file(filename)
         path = evals_path("datasets", filename)
 
@@ -289,30 +221,11 @@ module Raif
         base_path = evals_dir(dir)
         full_path = base_path.join(filename)
 
-        # Verify the resolved path is within the expected directory
         unless full_path.to_s.start_with?(base_path.to_s)
           raise ArgumentError, "Invalid filename: path traversal detected"
         end
 
         full_path
-      end
-
-      # Every dataset the run will touch is resolved and validated before the first eval
-      # executes, so a missing or duplicated case id fails before any inference is paid for.
-      def resolve_datasets(cases: nil, sample: nil, seed: nil)
-        names = self.class.evals.filter_map { |eval_definition| eval_definition[:dataset] }.uniq
-
-        names.to_h do |name|
-          dataset = Dataset.new(name: name, cases: instance_eval(&self.class.datasets[name]))
-          [name, dataset.select_cases(ids: cases, sample: sample, seed: seed)]
-        end
-      end
-
-      def selected_cases_for(eval_definition)
-        name = eval_definition[:dataset]
-        return if name.nil?
-
-        @selected_cases[name] || []
       end
 
       # Existing 0-arity setup and eval blocks keep going through instance_eval untouched;
@@ -344,14 +257,44 @@ module Raif
         end
       end
 
-      # Records what the sink collected onto the current eval, for export. Wrapped defensively so
-      # a capture failure never fails the eval itself.
-      def capture_model_completions(completions)
-        @current_eval_result.record_model_completions(completions, capture_mode: Raif.config.evals_capture_model_completions)
+      # Runs one stage of an execution inside its own rescue, returning whether it got through. An
+      # escaping raise would abort the run - under concurrency, every execution in flight with it -
+      # and the result this one already paid for would never reach the run log.
+      def run_stage(stage)
+        yield
+        true
+      rescue => e
+        console_output.puts Raif::Utils::Colors.red("  Error in #{stage.downcase}: #{e.message}")
+        console_output.puts Raif::Utils::Colors.red("  #{e.backtrace.join("\n  ")}")
+        @current_eval_result.add_expectation_result(
+          ExpectationResult.new(description: "#{stage} execution", status: :error, error: e)
+        )
+        false
+      end
+
+      def setup_succeeded?(eval_case)
+        return true if self.class.setup_block.nil?
+
+        run_stage("Setup") { run_block(self.class.setup_block, eval_case) }
+      end
+
+      # Splits what the sink collected into the eval block's own calls and the ones setup and
+      # teardown made around it - only the former is the eval's usage, but both are real spend.
+      # Wrapped defensively so a capture failure never fails the eval itself.
+      def capture_model_completions(completions, eval_completions_range)
+        eval_completions = eval_completions_range ? completions[eval_completions_range] : []
+        # By position rather than by set difference: Array#- compares model completions by id,
+        # which two unsaved records would collide on.
+        overhead = completions.reject.with_index { |_completion, index| eval_completions_range&.cover?(index) }
+
+        @current_eval_result.record_model_completions(
+          eval_completions,
+          overhead: overhead,
+          capture_mode: Raif.config.evals_capture_model_completions
+        )
       rescue => e
         console_output.puts Raif::Utils::Colors.red("  Error capturing model completions: #{e.message}")
       end
-
     end
   end
 end

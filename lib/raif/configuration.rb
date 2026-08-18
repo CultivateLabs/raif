@@ -24,6 +24,7 @@ module Raif
       :default_embedding_model_key,
       :default_llm_model_key,
       :evals_capture_model_completions,
+      :evals_concurrency,
       :evals_default_llm_judge_model_key,
       :evals_verbose_output,
       :google_api_key,
@@ -94,6 +95,10 @@ module Raif
       # unmanageable for a dataset run. :summary keeps tokens and cost, :none omits the
       # per-call array. Usage totals are identical in all three modes.
       @evals_capture_model_completions = :full
+      # How many eval executions run at once. An eval run is almost entirely waiting on provider
+      # responses, so this is the wall clock. Serial by default: raising it needs a database
+      # connection pool larger than the concurrency, and enough provider rate limit to absorb it.
+      @evals_concurrency = 1
       @evals_default_llm_judge_model_key = ENV["RAIF_EVALS_DEFAULT_LLM_JUDGE_MODEL_KEY"].presence
       @evals_verbose_output = false
       google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
@@ -114,6 +119,10 @@ module Raif
         Faraday::ConnectionFailed,
         Faraday::TimeoutError,
         Faraday::ServerError,
+        # 429. A ClientError rather than a ServerError, so it is not covered above, and the one
+        # transient failure that gets more likely the more requests you have in flight - which
+        # is what an eval run at --concurrency does.
+        Faraday::TooManyRequestsError,
         Net::ReadTimeout,
         Net::OpenTimeout,
         Raif::Errors::BlankResponseError,

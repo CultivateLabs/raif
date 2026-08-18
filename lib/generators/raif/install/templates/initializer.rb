@@ -316,4 +316,11 @@ Raif.configure do |config|
   # Whether to output verbose information during evaluation runs. Defaults to false.
   # When true, provides more detailed output including individual test results.
   # config.evals_verbose_output = false
+
+  # How many eval executions run at once. An eval run is almost entirely spent waiting on
+  # provider responses, so this is the wall clock. Defaults to 1 (serial); `raif evals
+  # --concurrency N` overrides it per run. Raising it requires a database connection pool
+  # larger than the concurrency (see `pool:` in config/database.yml) and enough provider rate
+  # limit to absorb the requests.
+  # config.evals_concurrency = 1
 end

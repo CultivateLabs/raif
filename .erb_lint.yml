@@ -6,11 +6,11 @@ exclude:
   # The eval comparison report is not a view - it is a standalone HTML file `raif
   # evals:compare` writes for the developer who ran it, never rendered in a request. So
   # HardCodedString would have us translate a CLI artifact and RequireScriptNonce has no CSP
-  # to satisfy.
-  #
-  # No trailing /* on the glob: erb_lint matches with a flagless File.fnmatch?, where '**/*'
-  # requires a literal slash after the directory and so misses files sitting directly in it.
-  - 'lib/raif/evals/**'
+  # to satisfy. Named rather than globbed by directory, so an ERB added next to it later is
+  # still linted. (Were a glob ever wanted here, note that erb_lint matches with a flagless
+  # File.fnmatch?, where '**/*' requires a literal slash and so misses files sitting directly
+  # in the directory.)
+  - 'lib/raif/evals/comparison_report.html.erb'
 linters:
   RequireScriptNonce:
     enabled: true

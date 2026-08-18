@@ -11,13 +11,13 @@ RSpec.describe Raif::CLI::Evals do
 
   around do |example|
     original_env = ENV.to_h.slice("RAIF_EVAL_REPEATS", "RAIF_EVAL_CASES", "RAIF_EVAL_SAMPLE", "RAIF_EVAL_SEED", "RAIF_EVAL_VERBOSE",
-      "RAIF_EVAL_RESUME", "RAIF_RUNNING_EVALS")
+      "RAIF_EVAL_RESUME", "RAIF_EVAL_CONCURRENCY", "RAIF_RUNNING_EVALS")
     original_verbose = Raif.config.evals_verbose_output
 
     example.run
 
     %w[RAIF_EVAL_REPEATS RAIF_EVAL_CASES RAIF_EVAL_SAMPLE RAIF_EVAL_SEED RAIF_EVAL_VERBOSE RAIF_EVAL_RESUME
-       RAIF_RUNNING_EVALS].each do |key|
+       RAIF_EVAL_CONCURRENCY RAIF_RUNNING_EVALS].each do |key|
       original_env.key?(key) ? ENV[key] = original_env[key] : ENV.delete(key)
     end
     Raif.config.evals_verbose_output = original_verbose
@@ -37,11 +37,11 @@ RSpec.describe Raif::CLI::Evals do
     run_cli([])
 
     expect(Raif::Evals::Run).to have_received(:new)
-      .with(file_paths: nil, repeats: 1, cases: nil, sample: nil, seed: nil, resume_path: nil)
+      .with(file_paths: nil, repeats: 1, cases: nil, sample: nil, seed: nil, resume_path: nil, concurrency: nil)
   end
 
-  it "passes --repeat, --cases, --sample and --seed through" do
-    run_cli(["--repeat", "3", "--cases", "climate-report, earnings-call", "--sample", "5", "--seed", "42"])
+  it "passes --repeat, --cases, --sample, --seed and --concurrency through" do
+    run_cli(["--repeat", "3", "--cases", "climate-report, earnings-call", "--sample", "5", "--seed", "42", "--concurrency", "8"])
 
     expect(Raif::Evals::Run).to have_received(:new).with(
       file_paths: nil,
@@ -49,8 +49,24 @@ RSpec.describe Raif::CLI::Evals do
       cases: ["climate-report", "earnings-call"],
       sample: 5,
       seed: 42,
-      resume_path: nil
+      resume_path: nil,
+      concurrency: 8
     )
+  end
+
+  # nil rather than 1, so Raif.config.evals_concurrency still decides when the flag is absent.
+  it "leaves concurrency unset when neither the flag nor the environment names one" do
+    run_cli([])
+
+    expect(Raif::Evals::Run).to have_received(:new).with(hash_including(concurrency: nil))
+  end
+
+  it "lets --concurrency win over RAIF_EVAL_CONCURRENCY" do
+    ENV["RAIF_EVAL_CONCURRENCY"] = "2"
+
+    run_cli(["--concurrency", "6"])
+
+    expect(Raif::Evals::Run).to have_received(:new).with(hash_including(concurrency: 6))
   end
 
   it "reads the environment equivalents of those flags" do
@@ -58,11 +74,12 @@ RSpec.describe Raif::CLI::Evals do
     ENV["RAIF_EVAL_CASES"] = "atom,monad"
     ENV["RAIF_EVAL_SAMPLE"] = "2"
     ENV["RAIF_EVAL_SEED"] = "7"
+    ENV["RAIF_EVAL_CONCURRENCY"] = "3"
 
     run_cli([])
 
     expect(Raif::Evals::Run).to have_received(:new)
-      .with(file_paths: nil, repeats: 4, cases: ["atom", "monad"], sample: 2, seed: 7, resume_path: nil)
+      .with(file_paths: nil, repeats: 4, cases: ["atom", "monad"], sample: 2, seed: 7, resume_path: nil, concurrency: 3)
   end
 
   describe "--resume" do
@@ -132,6 +149,14 @@ RSpec.describe Raif::CLI::Evals do
         expect { cli.run }.to raise_error(SystemExit).and output(/--sample must be 1 or greater/).to_stdout
         expect(cli).not_to have_received(:load_rails_application)
       end
+    end
+
+    it "rejects --concurrency 0 before booting the app" do
+      cli = described_class.new(["--concurrency", "0"])
+      allow(cli).to receive(:load_rails_application)
+
+      expect { cli.run }.to raise_error(SystemExit).and output(/--concurrency must be 1 or greater/).to_stdout
+      expect(cli).not_to have_received(:load_rails_application)
     end
 
     it "prints usage for an unparseable option rather than a backtrace" do

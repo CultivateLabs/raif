@@ -2,8 +2,9 @@
 
 module Raif
   module Evals
-    # Collects the Raif::ModelCompletion records created while one eval's block runs, so the
-    # eval's result reports exactly the LLM calls that eval caused.
+    # Collects the Raif::ModelCompletion records created while one execution runs. EvalSet opens
+    # it around the whole execution and splits the result into the eval block's own calls and
+    # what setup and teardown spent around them.
     #
     # Holds the same objects Raif::Llm mutates in place as a request progresses, so tokens and
     # cost are read off the live records rather than re-queried out of a transaction that is

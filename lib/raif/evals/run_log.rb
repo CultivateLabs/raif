@@ -25,6 +25,9 @@ module Raif
         @configuration = configuration
         @results = results
         @recorded_keys = recorded_keys || Set.new
+        # Concurrent evals record into one log. The append is one File.open per LLM-bound eval,
+        # so serializing the whole of #record costs nothing next to what produced the result.
+        @mutex = Mutex.new
       end
 
       class << self
@@ -73,6 +76,17 @@ module Raif
             results: results,
             recorded_keys: recorded_keys
           )
+        end
+
+        # The configuration a log was started with, read without opening it for writing. A
+        # resumed run needs one value out of it - the seed - before it can state its own
+        # configuration, since a sampled run has to draw the same cases its first attempt did.
+        # Returns nil for anything that is not a readable log; #resume is what reports on that.
+        def logged_configuration(path)
+          header, = read(path)
+          header && header[:configuration]
+        rescue SystemCallError
+          nil
         end
 
       private
@@ -163,21 +177,25 @@ module Raif
       def record(eval_set:, result:)
         payload = result.to_h
 
-        append({ type: "result", eval_set: eval_set, result: payload })
+        @mutex.synchronize do
+          append({ type: "result", eval_set: eval_set, result: payload })
 
-        (@results[eval_set] ||= []) << payload
-        @recorded_keys << self.class.key(
-          eval_set: eval_set,
-          eval_index: payload[:eval_index],
-          case_id: payload[:case_id],
-          run_index: payload[:run_index]
-        )
+          (@results[eval_set] ||= []) << payload
+          @recorded_keys << self.class.key(
+            eval_set: eval_set,
+            eval_index: payload[:eval_index],
+            case_id: payload[:case_id],
+            run_index: payload[:run_index]
+          )
+        end
 
         payload
       end
 
+      # A copy, so a caller counting results cannot be walking the array a concurrent #record is
+      # pushing onto.
       def results_for(eval_set)
-        @results[eval_set] || []
+        @mutex.synchronize { (@results[eval_set] || []).dup }
       end
 
       # Derived from the log's own path so a resumed run completes the file its first attempt

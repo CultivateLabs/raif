@@ -3,8 +3,8 @@
 module Raif
   module Evals
     # The outcome of one execution of an eval block, not the eval block itself. The block and
-    # its description live in EvalSet.evals; running it against one EvalCase produces one of
-    # these.
+    # its description live on an EvalDefinition; running one against one EvalCase produces one
+    # of these.
     class EvalResult
       # The text :summary capture drops. Tokens and cost survive in every mode, so the usage
       # totals never depend on capture mode.
@@ -18,7 +18,8 @@ module Raif
         total_cost: 0.0
       }.freeze
 
-      attr_reader :description, :expectation_results, :model_completions, :run_index, :eval_index, :case_id, :scores, :usage
+      attr_reader :description, :expectation_results, :model_completions, :run_index, :eval_index, :case_id, :scores, :usage,
+        :overhead_usage
 
       # eval_index identifies which eval block produced this result; descriptions are not
       # unique, so it is the only stable way to tell two same-named eval blocks apart when
@@ -33,9 +34,10 @@ module Raif
         @model_completions = []
         @scores = []
         @usage = EMPTY_USAGE.dup
-        # Seeded from the configured mode, so an eval that never reached
-        # #record_model_completions - one whose setup raised - omits the key under :none like
-        # its siblings instead of being the one result carrying an empty array.
+        @overhead_usage = EMPTY_USAGE.dup
+        # Seeded from the configured mode, so a result that never reaches
+        # #record_model_completions - one built directly by a spec or a host app's own helper -
+        # omits the key under :none like its siblings instead of carrying an empty array.
         @model_completions_captured = capture_mode_records_completions?
       end
 
@@ -47,20 +49,31 @@ module Raif
       # for one eval would blend them into one row, hiding a regression in one behind an
       # improvement in the other and narrowing the confidence interval on correlated values.
       def add_score(score_result)
-        if @scores.any? { |score| score.name == score_result.name }
-          raise ArgumentError, "score #{score_result.name.inspect} was already recorded for this eval. Give the two scores distinct " \
-            "names (expect_llm_judge_score takes score_name:), or combine the values yourself and record one score."
-        end
+        ensure_score_name_available!(score_result.name)
 
         @scores << score_result
       end
 
-      # Records the Raif::ModelCompletion records that were created while this eval ran.
-      # These are captured before the eval's transaction is rolled back, so we serialize
-      # them into plain hashes that can be exported to the results JSON.
-      def record_model_completions(completions, capture_mode: :full)
+      # Public so a caller about to spend money producing the value can ask first, as
+      # expect_llm_judge_score does: discovering the collision on the way back from the judge
+      # costs a request and takes the rest of the eval block down with it.
+      def ensure_score_name_available!(name)
+        return unless @scores.any? { |score| score.name == name.to_s }
+
+        raise ArgumentError, "score #{name.to_s.inspect} was already recorded for this eval. Give the two scores distinct " \
+          "names (expect_llm_judge_score takes score_name:), or combine the values yourself and record one score."
+      end
+
+      # Serialized into plain hashes here because the eval's transaction is about to be rolled
+      # back and the rows with it.
+      #
+      # overhead is what setup and teardown spent. Kept out of #usage, which is the eval's own
+      # measurement, but summed so the run's cost total is not short of what the run cost. Usage
+      # only: the prompt and response of a call that built a fixture is not worth exporting.
+      def record_model_completions(completions, overhead: [], capture_mode: :full)
         serialized = Array(completions).map { |mc| serialize_model_completion(mc) }
         @usage = compute_usage(serialized)
+        @overhead_usage = compute_usage(Array(overhead).map { |mc| serialize_model_completion(mc) })
         @model_completions_captured = capture_mode.to_sym != :none
 
         @model_completions = case capture_mode.to_sym
@@ -87,6 +100,9 @@ module Raif
           expectation_results: expectation_results.map(&:to_h),
           scores: (scores.map(&:to_h) if scores.any?),
           usage: usage,
+          # Omitted rather than zeroed: setup making no LLM calls is the normal case, and the key
+          # would be noise in every result those runs wrote.
+          overhead_usage: (overhead_usage if overhead_usage[:model_completions].positive?),
           model_completions: (model_completions if @model_completions_captured)
         }.compact
       end

@@ -62,7 +62,7 @@ module Raif
         puts "Examples:"
         puts "  raif evals:setup                  # Setup eval directory structure"
         puts "  raif evals                        # Run all eval sets in test environment"
-        puts "  raif evals CustomerSupportEvalSet # Run specific eval set"
+        puts "  raif evals raif_evals/eval_sets/customer_support_eval_set.rb"
         puts "  raif evals -e development         # Run evals in development environment"
         puts "  raif evals --sample 5 --seed 42   # Run a reproducible sample of each dataset"
         puts "  raif evals:compare a.json b.json  # Diff two eval runs"

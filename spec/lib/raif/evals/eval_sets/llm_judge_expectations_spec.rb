@@ -268,6 +268,20 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
         .to raise_error(ArgumentError, /score_name/)
     end
 
+    # The collision is only knowable at run time, so the least it can do is not cost a judge
+    # call - and not raise out of the eval block after one, discarding everything that passed.
+    it "raises on a colliding score name before running the judge" do
+      eval_set.expect_llm_judge_score("bluf", scoring_rubric: rubric, min_passing_score: 7)
+      judged = Raif::Task.count
+
+      expect do
+        expect { eval_set.expect_llm_judge_score("findings", scoring_rubric: rubric, min_passing_score: 7) }
+          .to raise_error(ArgumentError, /already recorded/)
+      end.not_to change(Raif::Task, :count)
+
+      expect(Raif::Task.count).to eq(judged)
+    end
+
     it "omits the scale for a string rubric, which has no levels to derive one from" do
       eval_set.expect_llm_judge_score("test output", scoring_rubric: "Rate clarity 0-5", min_passing_score: 4, score_name: "clarity")
 

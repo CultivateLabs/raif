@@ -44,7 +44,19 @@ RSpec.describe Raif::Evals::EvalSet do
   describe ".eval" do
     it "adds eval definitions to the class" do
       expect(test_eval_set_class.evals.size).to eq(3)
-      expect(test_eval_set_class.evals.first[:description]).to eq("test passes")
+      expect(test_eval_set_class.evals.first).to be_a(Raif::Evals::EvalDefinition)
+      expect(test_eval_set_class.evals.first.description).to eq("test passes")
+    end
+
+    it "assigns each eval its position in the set" do
+      expect(test_eval_set_class.evals.map(&:index)).to eq([0, 1, 2])
+    end
+
+    it "records where the eval was defined" do
+      definition = test_eval_set_class.evals.first
+
+      expect(definition.file).to eq(__FILE__)
+      expect(definition.line_number).to be_a(Integer)
     end
 
     it "raises when called without a block" do
@@ -196,6 +208,31 @@ RSpec.describe Raif::Evals::EvalSet do
       expect(results.map(&:case_id)).to eq(["alpha", "beta"])
       expect(results.first.expectation_results.map(&:description)).to eq(["Setup execution"])
       expect(results.first.expectation_results.first).to be_error
+      expect(results.second).to be_passed
+    end
+
+    it "records an error for a case whose teardown raises and keeps running the rest" do
+      eval_set = Class.new(described_class) do
+        dataset :topics do
+          [{ id: "alpha", input: { "n" => 1 } }, { id: "beta", input: { "n" => 2 } }]
+        end
+
+        teardown do |eval_case|
+          raise "teardown blew up" if eval_case.id == "alpha"
+        end
+
+        eval "runs for both cases", dataset: :topics do
+          expect("ran") { true }
+        end
+      end
+
+      results = eval_set.run(output: StringIO.new)
+
+      expect(results.map(&:case_id)).to eq(["alpha", "beta"])
+      # The eval block still passed, so its expectation is kept alongside the teardown error -
+      # the case is only failed for the part of it that actually failed.
+      expect(results.first.expectation_results.map(&:description)).to eq(["ran", "Teardown execution"])
+      expect(results.first.expectation_results.last).to be_error
       expect(results.second).to be_passed
     end
 
@@ -351,6 +388,58 @@ RSpec.describe Raif::Evals::EvalSet do
 
       expect(eval_result.model_completions.size).to eq(1)
       expect(eval_result.usage[:total_tokens]).to eq(7)
+    end
+
+    # Not the eval's own measurement, but real money: a run summary that dropped it would
+    # understate the bill for a suite whose fixtures are built by an LLM.
+    it "counts setup and teardown calls as overhead rather than dropping them" do
+      eval_set_with_surrounding_llm_calls = Class.new(described_class) do
+        setup do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 11)
+        end
+
+        teardown do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 5)
+        end
+
+        eval "makes its own LLM call" do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 7)
+
+          expect("ran") { true }
+        end
+      end
+
+      eval_result = eval_set_with_surrounding_llm_calls.run.first
+
+      expect(eval_result.usage).to include(model_completions: 1, total_tokens: 7)
+      expect(eval_result.overhead_usage).to include(model_completions: 2, total_tokens: 16)
+      expect(eval_result.to_h[:overhead_usage]).to eq(eval_result.overhead_usage)
+    end
+
+    it "omits overhead usage entirely when setup and teardown make no LLM calls" do
+      eval_result = test_eval_set_class.run(output: StringIO.new).first
+
+      expect(eval_result.overhead_usage[:model_completions]).to eq(0)
+      expect(eval_result.to_h).not_to have_key(:overhead_usage)
+    end
+
+    it "still counts what a setup spent when that setup goes on to raise" do
+      eval_set_with_failing_setup = Class.new(described_class) do
+        setup do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 11)
+          raise "bad fixture"
+        end
+
+        eval "never runs" do
+          expect("ran") { true }
+        end
+      end
+
+      eval_result = eval_set_with_failing_setup.run(output: StringIO.new).first
+
+      expect(eval_result.expectation_results.map(&:description)).to eq(["Setup execution"])
+      expect(eval_result.usage[:model_completions]).to eq(0)
+      expect(eval_result.overhead_usage).to include(model_completions: 1, total_tokens: 11)
     end
 
     it "runs each eval on its own instance, so instance state does not leak between evals" do

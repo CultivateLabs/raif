@@ -135,6 +135,9 @@ bundle exec raif evals --repeat 5
 bundle exec raif evals --cases climate-report,earnings-call
 bundle exec raif evals --sample 5 --seed 42
 
+# Run 8 evals at a time instead of one after another
+bundle exec raif evals --concurrency 8
+
 # Print every expectation for every case rather than one line per case
 bundle exec raif evals --verbose
 
@@ -195,12 +198,38 @@ Resume with: bundle exec raif evals --resume raif_evals/results/eval_run_2026080
 
 Some specifics worth knowing:
 
+- **A sampled run resumes on the seed it recorded.** `--sample` without `--seed` still writes the seed it drew into the log header, and the resumed invocation samples on that rather than drawing again, so it continues the same subset of cases. Passing an explicit `--seed` that differs from the logged one is a configuration mismatch and is refused, per the next point.
 - **The whole configuration has to match.** Every key in the results `configuration` block either changes what a result means (which model produced it, which model judged it, how much of each call was captured) or which cases produce one (`cases`, `sample`, `seed`, `repeats`). A resume that let any of them drift would write one results file describing a run that never happened, so a mismatch is refused and names the keys that moved. Re-run with the settings the log was started with, or drop `--resume` to start fresh.
 - **A truncated last line is skipped, not fatal.** A hard kill lands mid-write. Losing the one result being appended is the cost of appending; losing the run over it would defeat the purpose.
 - **Results are carried forward for eval sets the resumed invocation doesn't visit.** Resuming with a narrower set of files keeps what the log already holds for the others.
 - **A run that stopped before recording anything deletes its own log**, since there is nothing there to resume.
 
 If you keep result files in version control, add `raif_evals/results/*.partial.jsonl` to your `.gitignore` - a log is transient, and the run it belongs to either finishes and replaces it or gets resumed.
+
+## Running Evals Concurrently
+
+An eval run is almost entirely spent waiting for provider responses. A 30-case dataset at `--repeat 5` with a judge call per case is 300 sequential round trips - half an hour in which your CPU does nothing. `--concurrency N` (or `RAIF_EVAL_CONCURRENCY=N`, or `Raif.config.evals_concurrency` in your initializer) overlaps that waiting across N threads:
+
+```bash
+bundle exec raif evals --concurrency 8
+```
+
+The default is 1, and the serial path is unchanged: same order, same output, no threads.
+
+The whole run's work - every eval, every dataset case, every repeat, across every eval set - is listed before any of it executes, so the threads stay busy across eval set boundaries rather than draining a pool at the end of each set. Raising concurrency changes nothing about what a result means, which is why `--resume` will happily resume a run at a different concurrency than the one that started it.
+
+Before turning it up, three things need to be true:
+
+- **Your database connection pool has to be bigger than the concurrency.** Each eval takes a connection for the transaction it runs in, so `--concurrency 8` against the default `pool: 5` would spend the run timing out on checkouts rather than on inference. Raif checks this at startup and refuses to run rather than letting you find out at case 40; raise `pool:` for your test environment in `config/database.yml`. On sqlite3 concurrency is capped to 1 instead - concurrent write transactions against one file serialize on `SQLITE_BUSY`, so the threads would only add contention.
+- **Your provider rate limit has to absorb it.** Concurrency turns 429s from rare into routine. Raif retries them with exponential backoff and honors a `Retry-After` header when the provider sends one (see `Raif.config.llm_request_max_retries`), but a concurrency well past your tokens-per-minute limit just converts wall clock into retry sleep. Start around 4-8 and watch for retries in the logs.
+- **Your evals have to be independent of each other.** They already need to be - each eval runs in its own transaction that is rolled back - but concurrency makes it visible: two evals running at once are in two uncommitted transactions on two connections, so neither can see what the other created. An eval that depends on data another eval's `setup` left behind was already relying on something Raif does not promise, and will start failing here.
+
+Two things about the console output change:
+
+- **Lines arrive in completion order, not definition order.** Every line carries its case id, and each eval's description is printed the first time one of its results lands. The results file is unaffected: it is always written back in definition order, so two runs of the same work produce the same file whatever concurrency produced them.
+- **Each execution's lines are written as one block.** A case summary and the failing expectations beneath it are emitted together rather than being interleaved with whatever else finished at the same moment.
+
+Ctrl-C still works. Workers stop before picking up their next execution and the in-flight ones are allowed to finish and be recorded, so everything already paid for reaches the run log and the run stays resumable.
 
 ## Repeating Evals
 
@@ -296,6 +325,8 @@ For each eval, the results include:
 The run's top-level `summary` also aggregates totals across every eval: `total_model_completions`, `total_prompt_tokens`, `total_completion_tokens`, `total_tokens`, and `total_cost`. These totals are also printed to the console at the end of the run under an `LLM Usage` heading.
 
 > Note: LLM calls made by [LLM judges](#llm-as-judge-expectations) run within the eval and are captured and counted in these totals alongside the calls made by the code under test.
+
+Calls your `setup` or `teardown` blocks make are treated differently. They are not the eval's own measurement - a fixture built by an LLM is not what the eval is testing - so they stay out of `usage` and out of the `total_*` figures above. But they are real spend, so they are reported rather than dropped: a result whose setup or teardown made any gains an `overhead_usage` object of the same shape as `usage`, the run's `summary` gains `total_overhead_model_completions`, `total_overhead_tokens`, and `total_overhead_cost`, and the console prints an extra line under `LLM Usage`. A result whose setup and teardown made no calls - the normal case - has no `overhead_usage` key at all.
 
 ### Limiting What Is Captured
 
@@ -431,6 +462,8 @@ bundle exec raif evals --sample 5 --seed 42
 Each flag has an environment variable equivalent, alongside the existing `RAIF_EVAL_REPEATS`: `RAIF_EVAL_CASES`, `RAIF_EVAL_SAMPLE`, and `RAIF_EVAL_SEED`.
 
 Sampling without a `--seed` draws different cases each run, which makes two runs uncomparable case-for-case. The same seed and sample size draw the same cases again.
+
+A sampled run always ends up with a seed even if you did not pass one: Raif draws one, prints it in the run header, and records it in the results `configuration` block. So a run you sampled without thinking about seeds can still be repeated case-for-case afterwards, and [resuming](#resuming-an-interrupted-run) it picks the sample back up rather than drawing a fresh one and finishing the results file with two unrelated samples in it.
 
 `--cases` filters every dataset in the run, so an id that belongs to one eval set's dataset simply skips the others. If it matches nothing anywhere, the run exits non-zero rather than reporting a suite of zero evals that passed.
 

@@ -175,6 +175,58 @@ RSpec.describe "Running a dataset eval set" do
     end
   end
 
+  context "with --sample and no --seed" do
+    let(:results_dir) { Rails.root.join("raif_evals", "results") }
+    let(:log_path) { results_dir.join("eval_run_20240101_120000_#{Raif.config.default_llm_model_key}.partial.jsonl") }
+    let(:run) { Raif::Evals::Run.new(file_paths: [{ file_path: eval_set_path }], output: output, repeats: 1, sample: 2) }
+
+    after { FileUtils.rm_f(log_path) }
+
+    it "draws a seed of its own and reports it" do
+      run.execute
+
+      expect(run.seed).to be_a(Integer)
+      expect(run.send(:configuration_data)).to include(sample: 2, seed: run.seed)
+      expect(output.string).to include("Sample per dataset: 2 (seed #{run.seed})")
+    end
+
+    it "adopts the seed the log records rather than drawing a new one" do
+      # Stands in for the first attempt, with a seed the assertions below can name. What it
+      # drew for itself is beside the point; what matters is that the resume reuses it.
+      interrupted = Raif::Evals::Run.new(
+        file_paths: [{ file_path: eval_set_path }], output: StringIO.new, repeats: 1, sample: 2, seed: 42
+      )
+      interrupted.execute
+      selection = interrupted.results["Raif::Evals::DatasetExampleEvalSet"].filter_map { |result| result[:case_id] }
+
+      expect(selection.count).to eq(2)
+
+      # The log it would have left behind had it died partway, carrying the seed it sampled on.
+      log = Raif::Evals::RunLog.start(
+        results_dir: results_dir,
+        basename: "eval_run_20240101_120000_#{Raif.config.default_llm_model_key}",
+        run_at: Time.current.iso8601,
+        configuration: interrupted.send(:configuration_data)
+      )
+
+      resumed = Raif::Evals::Run.new(
+        file_paths: [{ file_path: eval_set_path }],
+        output: StringIO.new,
+        repeats: 1,
+        sample: 2,
+        resume_path: log.path.to_s
+      )
+
+      # Drawing a fresh seed here would both resample the dataset and be refused outright, since
+      # the new seed no longer matches the one the log was started with.
+      expect(resumed.seed).to eq(42)
+
+      resumed.execute
+
+      expect(resumed.results["Raif::Evals::DatasetExampleEvalSet"].filter_map { |result| result[:case_id] }).to eq(selection)
+    end
+  end
+
   context "when capture is limited to :summary" do
     before { allow(Raif.config).to receive(:evals_capture_model_completions).and_return(:summary) }
 
