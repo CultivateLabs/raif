@@ -1,0 +1,13 @@
+<tr>
+  <td><%= link_to "##{archive.id}", raif.admin_archive_path(archive) %></td>
+  <td><%= archive.resource_type %></td>
+  <td><%= "#{archive.first_record_id}-#{archive.last_record_id}" %></td>
+  <td><%= number_with_delimiter(archive.record_count) %></td>
+  <td><%= archive.partition_value.present? ? content_tag(:code, archive.partition_value) : "-" %></td>
+  <td><%= number_to_human_size(archive.compressed_bytes) %></td>
+  <td><%= archive.cutoff_at.to_date %></td>
+  <td class="text-nowrap">
+    <code data-raif-copy-inline data-raif-copy-text="<%= archive.key %>" title="<%= archive.key %>"><%= truncate(archive.key, length: 44) %></code>
+  </td>
+  <td><%= archive.created_at.rfc822 %></td>
+</tr>

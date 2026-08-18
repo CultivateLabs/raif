@@ -1,5 +1,14 @@
 # frozen_string_literal: true
 
+# Regression guard for host initializers: these initializer-facing constants
+# (the documented archive_storage adapter and partition fallback sentinel)
+# must resolve while config/initializers run, BEFORE the engine's app/
+# autoload paths are available. Referencing them here makes every dummy boot,
+# and therefore every spec run, the test.
+unless Raif::ArchiveStorage::FileSystem && Raif::ArchivePartition::UNGROUPED
+  raise "Raif initializer-facing constants failed to load"
+end
+
 Raif.configure do |config|
   # config.conversations_controller = "ConversationsController"
   # config.conversation_entries_controller = "ConversationEntriesController"

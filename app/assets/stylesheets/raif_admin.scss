@@ -269,6 +269,32 @@ body.raif-admin {
     }
   }
 
+  // Inline copy button (sits in the text flow after short values like
+  // storage keys, vs the hover overlay used on pre blocks)
+  .raif-copy-btn-inline {
+    padding: 0.05rem 0.35rem;
+    margin-left: 0.35rem;
+    line-height: 1;
+    vertical-align: text-bottom;
+
+    svg {
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    &.raif-copy-btn-success {
+      color: white;
+      background-color: $accent-color;
+      border-color: $accent-color;
+    }
+
+    &.raif-copy-btn-error {
+      color: white;
+      background-color: $danger-color;
+      border-color: $danger-color;
+    }
+  }
+
   // List groups
   .list-group-item {
     border-color: $border-color;
