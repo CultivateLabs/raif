@@ -13,12 +13,15 @@ module Raif
     class ComparisonReport
       TEMPLATE_PATH = File.expand_path("comparison_report.html.erb", __dir__)
 
-      attr_reader :comparison, :threshold
+      attr_reader :comparison, :threshold, :alpha, :max_error_rate
 
-      def initialize(comparison, threshold: nil, color: true)
+      def initialize(comparison, threshold: nil, color: true, alpha: Comparison::FAMILY_WISE_ALPHA,
+        max_error_rate: Comparison::MAX_GATE_ERROR_RATE)
         @comparison = comparison
         @threshold = threshold
         @color = color
+        @alpha = alpha
+        @max_error_rate = max_error_rate
       end
 
       def render(format)
@@ -39,7 +42,9 @@ module Raif
         lines.concat(section("NEW FAILURES", comparison.new_failures) { |row| rate_lines(row, :red) })
         lines.concat(section("FIXED", comparison.fixed) { |row| rate_lines(row, :green) })
         lines.concat(section("SCORE MOVES", comparison.score_moves) { |row| score_lines(row) })
+        lines.concat(section("ERROR RATES", comparison.error_moves) { |row| error_lines(row) })
         lines.concat(section("NOT COMPARABLE", comparison.not_comparable) { |row| not_comparable_lines(row) })
+        lines.concat(section("REGRESSION GATE", comparison.candidate_regressions(threshold)) { |row| regression_lines(row) })
         lines.concat(summary_lines)
         lines.join("\n")
       end
@@ -64,13 +69,42 @@ module Raif
 
       # A single observation has no standard deviation, so one side can be absent while the
       # other is real. The sd fragment is dropped only when neither side has one.
+      #
+      # spread_n is named separately from n because they differ on a dataset score: n counts every
+      # observation, sd is over the per-case means, and printing only n would claim the spread was
+      # measured on more than it was.
       def score_spread(row)
         baseline = row[:baseline_stddev]
         candidate = row[:candidate_stddev]
         parts = ["n=#{row[:candidate_n]}"]
+        parts << "over #{row[:spread_n]} cases" if row[:spread_n] && row[:spread_n] != row[:candidate_n]
         parts << "sd #{baseline || "-"} -> #{candidate || "-"}" unless baseline.nil? && candidate.nil?
 
         parts.join(", ")
+      end
+
+      # How sure the gate is that a row is not noise, in the terms the reader has to act on: what
+      # was paired, how it split, and the p-value that came out. Nothing to say for a row that is
+      # not a regression candidate, which is most of them.
+      def evidence_summary(row)
+        case row[:evidence]
+        when :paired_cases then "#{row[:worsened]}/#{row[:pairs]} cases worse, #{format_p(row[:p_value])}"
+        when :repeats then "repeats only, #{format_p(row[:p_value])}"
+        else "no matched cases to test - add dataset cases, or --significance 1 to gate on size alone"
+        end
+      end
+
+      def gated_rows
+        @gated_rows ||= comparison.significant_regressions(threshold, alpha: alpha)
+      end
+
+      # A p-value rounded to 6 places can land on 0.0, which reads as a bug rather than as
+      # "smaller than this report shows".
+      def format_p(p_value)
+        return "p n/a" if p_value.nil?
+        return "p<0.000001" if p_value.zero?
+
+        "p=#{p_value}"
       end
 
       def format_delta(delta)
@@ -81,16 +115,58 @@ module Raif
         format("%.2f", rate.to_f)
       end
 
+      # The number the SUMMARY prints beside "evals errored". Not a pass rate's denominator: this
+      # one is every run, since the question is how much of the run was lost.
+      def error_fraction(side)
+        "#{side[:errored_evals]}/#{side[:total_evals]} (#{format("%.1f%%", side[:error_rate].to_f * 100)})"
+      end
+
       # The threshold is restated as a percentage: a bare "0.25" next to a list of absolute
       # deltas invites reading it as those deltas' units rather than as a fraction of baseline.
+      #
+      # Five outcomes, not two. A row can clear the size bar and still not be distinguishable from
+      # run-to-run variation, and saying so is the point - the alternative is the reader concluding
+      # either that nothing moved or that something definitely did, and only one of those is a
+      # thing this data can support. The error ceiling is checked ahead of all of it, since a run
+      # that lost too much to errors cannot support any of those readings.
       def verdict
         return "no regression threshold set (--fail-on-regression)" if threshold.nil?
 
-        gate = "--fail-on-regression #{threshold} (#{format("%g", threshold.to_f * 100)}% worse than baseline)"
-        return "no regression beyond #{gate}" unless comparison.regressed?(threshold)
+        if comparison.error_rate_unreliable?(max_error_rate: max_error_rate)
+          return "gate declined: #{format("%.1f%%", [comparison.baseline_error_rate, comparison.candidate_error_rate].max * 100)} " \
+            "of runs errored, above the #{format("%g", max_error_rate.to_f * 100)}% ceiling (exit 2)"
+        end
 
-        count = comparison.regressions.count { |row| row[:magnitude].nil? || row[:magnitude] > threshold.to_f }
-        "#{count} regression#{"s" if count != 1} beyond #{gate} (exit 1)"
+        gate = "--fail-on-regression #{threshold} (#{format("%g", threshold.to_f * 100)}% worse than baseline)"
+        candidates = comparison.candidate_regressions(threshold)
+        significant = comparison.significant_regressions(threshold, alpha: alpha)
+
+        return "no regression beyond #{gate}" if candidates.empty?
+
+        if significant.any?
+          return "#{significant.count} regression#{"s" if significant.count != 1} beyond #{gate}, " \
+            "#{evidence_note} (exit 1)"
+        end
+
+        if comparison.insufficient_evidence?(threshold, alpha: alpha)
+          return "#{candidates.count} regression#{"s" if candidates.count != 1} beyond #{gate}, none of them testable - " \
+            "#{unverifiable_advice} (exit 2)"
+        end
+
+        "#{candidates.count} regression#{"s" if candidates.count != 1} beyond #{gate}, none distinguishable from " \
+          "run-to-run variation #{evidence_note}"
+      end
+
+      def evidence_note
+        return "evidence not required (--significance #{alpha})" if alpha.nil? || alpha.to_f >= 1.0
+
+        count = comparison.candidate_regressions(threshold).count
+        "at a family-wise #{alpha} over #{count} candidate row#{"s" if count != 1}"
+      end
+
+      def unverifiable_advice
+        "a dataset gives the gate matched cases to test; --repeat sharpens each case rather than " \
+          "creating pairs. Pass --significance 1 to gate on effect size alone."
       end
 
       def h(value)
@@ -165,9 +241,33 @@ module Raif
         lines
       end
 
+      # The gate's own rows, so a reader can see why it decided what it decided rather than only
+      # the one-line verdict. One row per eval rather than per case: per-case detail is in NEW
+      # FAILURES, which reports, where this section acts.
+      def regression_lines(row)
+        size = row[:magnitude].nil? ? "unbounded (baseline was 0)" : "#{format("%g", row[:magnitude] * 100)}% worse"
+        color = gated_rows.include?(row) ? :red : :yellow
+
+        [
+          "  #{colorize("#{row[:label]} (#{row[:kind]})", color)}",
+          "    #{size}, #{row[:absolute]} absolute   #{evidence_summary(row)}"
+        ]
+      end
+
+      # Yellow either way: an error rate that moved in either direction is a fact about the
+      # infrastructure, not a verdict on the model, and neither red nor green would say that.
+      def error_lines(row)
+        transition = "#{row[:baseline_errored]}/#{row[:baseline_runs]} -> #{row[:candidate_errored]}/#{row[:candidate_runs]} runs errored"
+
+        [
+          "  #{row[:eval_set]}  #{row[:description]}",
+          "    #{colorize("#{format_rate(row[:baseline_rate])} -> #{format_rate(row[:candidate_rate])}  #{transition}", :yellow)}"
+        ]
+      end
+
       def not_comparable_lines(row)
         label = [row[:case_id] || "-", row[:expectation]].compact.join(" / ")
-        ["  #{row[:eval_set]}  #{row[:description]}", "    #{label.ljust(20)} #{row[:present_in]}"]
+        ["  #{row[:eval_set]}  #{row[:description]}", "    #{label.ljust(20)} #{row[:reason] || row[:present_in]}"]
       end
 
       def summary_lines
@@ -179,6 +279,12 @@ module Raif
           "#{candidate[:passed_evals]}/#{candidate[:total_evals]}"
         lines << "  expectations          #{baseline[:passed_expectations]}/#{baseline[:total_expectations]} -> " \
           "#{candidate[:passed_expectations]}/#{candidate[:total_expectations]}"
+
+        # Only when a side lost something: on a clean run this is two zeroes and a distraction
+        # from the numbers the reader came for.
+        if [baseline[:errored_evals], candidate[:errored_evals]].any? { |count| count.to_i.positive? }
+          lines << "  #{colorize("evals errored", :yellow)}         #{error_fraction(baseline)} -> #{error_fraction(candidate)}"
+        end
 
         comparison.score_moves.each do |row|
           lines << "  mean #{row[:name].ljust(16)} #{row[:baseline_mean]} -> #{row[:candidate_mean]}"

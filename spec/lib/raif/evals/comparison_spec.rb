@@ -11,12 +11,23 @@ RSpec.describe Raif::Evals::Comparison do
       "eval_id" => eval_id || "Set#eval-#{eval_index}",
       "eval_index" => eval_index,
       "case_id" => case_id,
-      "passed" => expectations.values.all?,
-      "expectation_results" => expectations.map do |expectation_description, passed|
-        { "description" => expectation_description, "status" => passed ? "passed" : "failed" }
+      "passed" => expectations.values.all?(true),
+      "expectation_results" => expectations.map do |expectation_description, status|
+        { "description" => expectation_description, "status" => expectation_status(status) }
       end,
       "scores" => scores
     }
+  end
+
+  # true/false is a passed/failed expectation; :error is one that raised. Written the way an
+  # older results file writes it - a status and no "errored" key - since that is what the
+  # comparison has to keep working on.
+  def expectation_status(value)
+    case value
+    when true then "passed"
+    when false then "failed"
+    else value.to_s
+    end
   end
 
   def score(name:, value:, min: nil, max: nil, higher_is_better: true)
@@ -350,7 +361,7 @@ RSpec.describe Raif::Evals::Comparison do
     # Descriptions are not unique across eval sets, and the label is all a script reading the
     # JSON has to tell two rows apart by.
     it "qualifies a pass rate regression label with its eval set" do
-      expect(comparison.regressions.map { |row| row[:label] }).to include("Set  produces expected output [a]")
+      expect(comparison.regressions.map { |row| row[:label] }).to include("Set  produces expected output")
     end
 
     # Magnitudes are fractions of the baseline, not absolute deltas: the rate halved (0.5), and
@@ -364,10 +375,13 @@ RSpec.describe Raif::Evals::Comparison do
       expect(comparison.max_regression).to eq(0.5)
     end
 
+    # alpha: 1 isolates the size bar from the evidence bar. These fixtures are one case at two
+    # repeats, which no test can separate from noise - that is what "the evidence bar" describes,
+    # and it has its own section below.
     it "is true past the threshold and false at or below it" do
-      expect(comparison.regressed?(0.25)).to be true
-      expect(comparison.regressed?(0.5)).to be false
-      expect(comparison.regressed?(nil)).to be false
+      expect(comparison.regressed?(0.25, alpha: 1)).to be true
+      expect(comparison.regressed?(0.5, alpha: 1)).to be false
+      expect(comparison.regressed?(nil, alpha: 1)).to be false
     end
 
     # One expectation fixed while another broke leaves the eval rate flat, but it is still a
@@ -380,7 +394,7 @@ RSpec.describe Raif::Evals::Comparison do
       )
 
       expect(traded.max_regression).to eq(1.0)
-      expect(traded.regressed?(0)).to be true
+      expect(traded.regressed?(0, alpha: 1)).to be true
     end
 
     # The same trade, but the eval came out ahead on its overall rate: "first" is fixed across
@@ -407,8 +421,8 @@ RSpec.describe Raif::Evals::Comparison do
       )
 
       expect(traded.regressions.map { |row| [row[:kind], row[:magnitude]] }).to contain_exactly([:pass_rate, 0.3333])
-      expect(traded.regressed?(0)).to be true
-      expect(traded.regressed?(0.5)).to be false
+      expect(traded.regressed?(0, alpha: 1)).to be true
+      expect(traded.regressed?(0.5, alpha: 1)).to be false
     end
 
     it "does not invent a regression for an eval that improved across the board" do
@@ -419,7 +433,7 @@ RSpec.describe Raif::Evals::Comparison do
 
       expect(improved.fixed.count).to eq(1)
       expect(improved.regressions).to be_empty
-      expect(improved.regressed?(0)).to be false
+      expect(improved.regressed?(0, alpha: 1)).to be false
     end
 
     # A score gated by a ceiling is gated, so a move away from that ceiling counts. As a
@@ -439,8 +453,8 @@ RSpec.describe Raif::Evals::Comparison do
 
       expect(latency.score_moves.first).to include(gated: true, delta: 80.0, regression: 80.0)
       expect(latency.regressions.first).to include(kind: :score, magnitude: 0.2, absolute: 80.0)
-      expect(latency.regressed?(0.1)).to be true
-      expect(latency.regressed?(0.25)).to be false
+      expect(latency.regressed?(0.1, alpha: 1)).to be true
+      expect(latency.regressed?(0.25, alpha: 1)).to be false
     end
 
     # Two metrics on wildly different scales, each 10% worse, must land on the same magnitude -
@@ -480,8 +494,8 @@ RSpec.describe Raif::Evals::Comparison do
       expect(errors.regressions.first).to include(kind: :score, magnitude: nil, absolute: 3.0)
       expect(errors.unbounded_regressions.count).to eq(1)
       expect(errors.max_regression).to eq(0.0)
-      expect(errors.regressed?(100)).to be true
-      expect(errors.regressed?(nil)).to be false
+      expect(errors.regressed?(100, alpha: 1)).to be true
+      expect(errors.regressed?(nil, alpha: 1)).to be false
       # Float::INFINITY would round-trip as invalid JSON, so the magnitude stays null.
       expect(JSON.generate(errors.to_h)).to include("\"magnitude\":null")
     end
@@ -498,7 +512,260 @@ RSpec.describe Raif::Evals::Comparison do
 
       expect(observational.score_moves.first[:gated]).to be false
       expect(observational.regressions).to be_empty
-      expect(observational.regressed?(0.25)).to be false
+      expect(observational.regressed?(0.25, alpha: 1)).to be false
+    end
+  end
+
+  # The other half of the gate: a move has to be big enough (above) AND consistent enough to tell
+  # apart from run-to-run variation. Point estimates alone fire on noise until someone disables the
+  # gate, which is worse than having no gate.
+  describe "regression evidence" do
+    # One eval, `count` dataset cases, each passing on the baseline and failing on the candidate.
+    def wide(count, scores: false, passed:, value: 5.0)
+      results = count.times.map do |i|
+        eval_result(
+          case_id: "case-#{i}",
+          expectations: { "e" => passed },
+          scores: scores ? [score(name: "clarity", value: value, min: 4)] : []
+        )
+      end
+
+      payload({ "Set" => results })
+    end
+
+    it "fires when enough matched cases move the same way" do
+      comparison = described_class.new(baseline: wide(8, passed: true), candidate: wide(8, passed: false))
+      row = comparison.regressions.first
+
+      expect(row).to include(kind: :pass_rate, evidence: :paired_cases, pairs: 8, worsened: 8, improved: 0)
+      expect(row[:p_value]).to be_within(0.000001).of(0.007813)
+      expect(comparison.regressed?(0.25)).to be true
+    end
+
+    # Five cases all worse is p=0.0625 - short of 0.05 however total the failure looks. Five
+    # matched pairs genuinely cannot get below that, which is a property of the sample size rather
+    # than a choice this code makes.
+    it "does not fire when too few cases moved to reach the level" do
+      comparison = described_class.new(baseline: wide(5, passed: true), candidate: wide(5, passed: false))
+
+      expect(comparison.regressions.first[:p_value]).to be_within(0.000001).of(0.0625)
+      expect(comparison.regressed?(0.25)).to be false
+      # Still reported, and still over the size threshold - it is the verdict that withholds, not
+      # the report.
+      expect(comparison.candidate_regressions(0.25).count).to eq(1)
+      expect(comparison.insufficient_evidence?(0.25)).to be false
+    end
+
+    # Six cases is p=0.03125: under 0.05 on its own, over 0.05/2 once a second candidate row is
+    # tested alongside it. Without the correction, the gate fails if ANY of N rows clears 0.05,
+    # which for a 20-row suite is a false failure in one run out of three.
+    it "divides the level by the number of rows it tests" do
+      one_row = described_class.new(baseline: wide(6, passed: true), candidate: wide(6, passed: false))
+      two_rows = described_class.new(
+        baseline: wide(6, passed: true, scores: true, value: 5.0),
+        candidate: wide(6, passed: false, scores: true, value: 3.0)
+      )
+
+      expect(one_row.candidate_regressions(0.25).count).to eq(1)
+      expect(one_row.regressed?(0.25)).to be true
+
+      expect(two_rows.candidate_regressions(0.25).count).to eq(2)
+      expect(two_rows.regressions.map { |row| row[:p_value] }).to all(be_within(0.000001).of(0.03125))
+      expect(two_rows.regressed?(0.25)).to be false
+      # The same data does fire once the level is not split.
+      expect(two_rows.regressed?(0.25, alpha: 0.1)).to be true
+    end
+
+    # An eval with no dataset has no matched unit, so its pass rate goes to an exact test on the
+    # repeat counts instead. At one repeat a side that test returns 1.0, which is the correct
+    # answer to "one draw against one draw".
+    it "falls back to an exact test on repeats when there are no cases" do
+      comparison = described_class.new(
+        baseline: payload({ "Set" => 6.times.map { eval_result(expectations: { "e" => true }) } }),
+        candidate: payload({ "Set" => 6.times.map { eval_result(expectations: { "e" => false }) } })
+      )
+      row = comparison.regressions.first
+
+      expect(row).to include(kind: :pass_rate, evidence: :repeats, pairs: 0)
+      expect(row[:p_value]).to be_within(0.000001).of(0.002165)
+      expect(comparison.regressed?(0.25)).to be true
+    end
+
+    it "cannot reach a verdict from a single repeat on each side" do
+      comparison = described_class.new(
+        baseline: payload({ "Set" => [eval_result(expectations: { "e" => true })] }),
+        candidate: payload({ "Set" => [eval_result(expectations: { "e" => false })] })
+      )
+
+      expect(comparison.regressions.first[:p_value]).to eq(1.0)
+      expect(comparison.regressed?(0.25)).to be false
+    end
+
+    # A continuous score has no exact two-sample test at these counts, so rather than invent one,
+    # the row is marked untestable - and the gate says so instead of exiting 0 on it.
+    it "marks a score with no matched cases unverifiable rather than passing it" do
+      scored = lambda do |value|
+        payload({ "Set" => [eval_result(expectations: { "e" => true }, scores: [score(name: "clarity", value: value, min: 1)])] })
+      end
+
+      comparison = described_class.new(baseline: scored.call(5.0), candidate: scored.call(2.0))
+      row = comparison.regressions.find { |r| r[:kind] == :score }
+
+      expect(row).to include(evidence: :none, p_value: nil)
+      expect(comparison.unverifiable_regressions(0.25)).to contain_exactly(row)
+      expect(comparison.insufficient_evidence?(0.25)).to be true
+      expect(comparison.regressed?(0.25)).to be false
+      # Waiving the requirement is how a caller who accepts the risk gates on size alone.
+      expect(comparison.regressed?(0.25, alpha: 1)).to be true
+      expect(comparison.insufficient_evidence?(0.25, alpha: 1)).to be false
+    end
+
+    # A score regresses upward when it is max-gated, so the direction each case moved has to be
+    # read against higher_is_better rather than off the sign of the delta.
+    it "reads case direction against higher_is_better for a max-gated score" do
+      latency = lambda do |value|
+        payload({ "Set" => 8.times.map do |i|
+          eval_result(case_id: "case-#{i}", expectations: { "e" => true },
+            scores: [score(name: "elapsed_ms", value: value, max: 500, higher_is_better: false)])
+        end })
+      end
+
+      comparison = described_class.new(baseline: latency.call(400), candidate: latency.call(480))
+      row = comparison.regressions.find { |r| r[:kind] == :score }
+
+      expect(row).to include(evidence: :paired_cases, worsened: 8, improved: 0)
+      expect(comparison.regressed?(0.1)).to be true
+    end
+
+    # Nothing cleared the size bar, so there is nothing to be uncertain about.
+    it "is not insufficient evidence when nothing regressed" do
+      steady = described_class.new(baseline: wide(8, passed: true), candidate: wide(8, passed: true))
+
+      expect(steady.insufficient_evidence?(0.25)).to be false
+      expect(steady.regressed?(0.25)).to be false
+    end
+
+    it "never fails without a threshold, however consistent the move" do
+      comparison = described_class.new(baseline: wide(20, passed: true), candidate: wide(20, passed: false))
+
+      expect(comparison.regressed?(nil)).to be false
+      expect(comparison.insufficient_evidence?(nil)).to be false
+      expect(comparison.candidate_regressions(nil)).to be_empty
+    end
+  end
+
+  # An error is a missing measurement, not a bad one. Folding the two together makes a provider
+  # incident on one side read as a pass-rate regression on that side.
+  describe "runs that errored" do
+    def errored_payload(statuses, **options)
+      payload({ "Set" => statuses.map.with_index do |status, index|
+        eval_result(eval_id: "Set#e-abc123", case_id: "case-#{index}", expectations: { "works" => status })
+      end }, **options)
+    end
+
+    # The denominator itself: one case, two repeats, one of which raised. The surviving repeat
+    # passed, so the case's rate is 1.0 - not the 0.5 that scoring the error as a miss gives.
+    it "divides by the runs that produced a measurement, not by every run" do
+      repeats = lambda do |*statuses|
+        payload({ "Set" => statuses.map do |status|
+          eval_result(eval_id: "Set#e-abc123", case_id: "only", expectations: { "works" => status })
+        end })
+      end
+
+      comparison = described_class.new(baseline: repeats.call(true, true), candidate: repeats.call(true, :error))
+
+      expect(comparison.new_failures).to be_empty
+      expect(comparison.not_comparable).to be_empty
+      expect(comparison.error_moves.first).to include(candidate_errored: 1, candidate_runs: 2, delta: 0.5)
+    end
+
+    it "keeps an errored run out of the pass rate rather than counting it as a failure" do
+      comparison = described_class.new(
+        baseline: errored_payload([true, true]),
+        candidate: errored_payload([true, :error])
+      )
+
+      # The one case that produced a measurement passed on both sides, so nothing regressed. With
+      # the error counted as a miss the candidate would read 0.5 against a baseline of 1.0.
+      expect(comparison.new_failures).to be_empty
+      expect(comparison.regressions).to be_empty
+    end
+
+    # Not a 100% regression: the case measured nothing, which is the same problem as a case only
+    # one side ran.
+    it "reports a case that errored on every run as not comparable" do
+      comparison = described_class.new(
+        baseline: errored_payload([true, true]),
+        candidate: errored_payload([true, :error, :error])
+      )
+
+      row = comparison.not_comparable.find { |r| r[:case_id] == "case-1" }
+
+      expect(row).to include(present_in: "both", reason: "candidate: all 1 run errored")
+      expect(comparison.new_failures).to be_empty
+      expect(comparison.regressions).to be_empty
+    end
+
+    it "reports the error rate move on its own" do
+      comparison = described_class.new(
+        baseline: errored_payload([true, true, true, true]),
+        candidate: errored_payload([true, :error, true, true])
+      )
+
+      expect(comparison.error_moves).to contain_exactly(
+        include(eval_id: "Set#e-abc123", baseline_errored: 0, candidate_errored: 1, candidate_runs: 4,
+          baseline_rate: 0.0, candidate_rate: 0.25, delta: 0.25)
+      )
+    end
+
+    it "says nothing about error rates when neither side errored" do
+      comparison = described_class.new(baseline: errored_payload([true, false]), candidate: errored_payload([true, true]))
+
+      expect(comparison.error_moves).to be_empty
+      expect(comparison.baseline_error_rate).to eq(0.0)
+      expect(comparison.error_rate_unreliable?).to be false
+    end
+
+    it "reports a side's overall error rate in its summary" do
+      comparison = described_class.new(
+        baseline: errored_payload([true, true, true, true]),
+        candidate: errored_payload([true, :error, true, true])
+      )
+
+      expect(comparison.to_h[:candidate]).to include(errored_evals: 1, error_rate: 0.25)
+      expect(comparison.to_h[:baseline]).to include(errored_evals: 0, error_rate: 0.0)
+    end
+
+    describe "#error_rate_unreliable?" do
+      # What the gate refuses on: the surviving runs may not be a fair sample of the ones that
+      # errored, and past this rate that bias can decide a close comparison on its own.
+      it "is true when either side lost more than the ceiling to errors" do
+        comparison = described_class.new(
+          baseline: errored_payload([true, true, true, true]),
+          candidate: errored_payload([true, :error, true, true])
+        )
+
+        expect(comparison.error_rate_unreliable?).to be true
+      end
+
+      it "tolerates a rate at or under the ceiling" do
+        comparison = described_class.new(
+          baseline: errored_payload(Array.new(20, true)),
+          candidate: errored_payload([:error] + Array.new(19, true))
+        )
+
+        expect(comparison.candidate_error_rate).to eq(0.05)
+        expect(comparison.error_rate_unreliable?).to be false
+      end
+
+      it "can be waived entirely" do
+        comparison = described_class.new(
+          baseline: errored_payload([true, true]),
+          candidate: errored_payload([:error, :error])
+        )
+
+        expect(comparison.error_rate_unreliable?(max_error_rate: 1)).to be false
+      end
     end
   end
 

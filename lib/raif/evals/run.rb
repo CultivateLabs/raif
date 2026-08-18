@@ -257,7 +257,6 @@ module Raif
           file_path = f[:file_path]
           line_number = f[:line_number]
 
-          # Convert relative path to absolute
           absolute_path = File.expand_path(file_path)
 
           unless File.exist?(absolute_path)
@@ -317,14 +316,12 @@ module Raif
           relative_path = Pathname.new(file).relative_path_from(Rails.root)
           require Rails.root.join(relative_path)
 
-          # Extract the path components after raif_evals/eval_sets
           path_from_eval_sets = Pathname.new(file).relative_path_from(eval_sets_dir)
           path_parts = path_from_eval_sets.dirname.to_s.split("/")
 
-          # Remove "." if it's the only element (meaning file is in eval_sets root)
+          # "." is what dirname gives for a file sitting directly in eval_sets.
           path_parts = [] if path_parts == ["."]
 
-          # Build the full class name
           class_name = File.basename(file, ".rb").camelize
           namespace_parts = ["Raif", "Evals"] + path_parts.map(&:camelize)
           full_class_name = (namespace_parts + [class_name]).join("::")
@@ -493,27 +490,18 @@ module Raif
       # while getting worse on one input. Non-dataset rows keep their existing keys.
       def eval_pass_rates
         grouped_evals.map do |eval_set_name, runs|
-          passed = runs.count { |e| e[:passed] }
-
-          next pass_rate_row(eval_set_name, runs, passed) unless runs.any? { |e| e[:case_id] }
+          next pass_rate_row(eval_set_name, runs) unless runs.any? { |e| e[:case_id] }
 
           per_case = runs.group_by { |e| e[:case_id] }.map do |case_id, case_runs|
-            case_passed = case_runs.count { |e| e[:passed] }
-            { case_id: case_id, runs: case_runs.count, passed: case_passed, pass_rate: rate(case_passed, case_runs.count) }
+            tally(case_runs).merge(case_id: case_id)
           end
 
-          {
-            eval_set: eval_set_name,
-            description: runs.first[:description],
-            eval_id: runs.first[:eval_id],
+          pass_rate_row(eval_set_name, runs).merge(
             eval_index: runs.first[:eval_index],
             cases: per_case.count,
             repeats: repeats,
-            runs: runs.count,
-            passed: passed,
-            pass_rate: rate(passed, runs.count),
             per_case: per_case
-          }
+          )
         end
       end
 
@@ -531,7 +519,12 @@ module Raif
             per_case = score_per_case(scores)
             # Unrounded, since resampling the rounded values per_case reports for display
             # would quantize the interval bounds.
-            ci95_sample = per_case ? per_case_means(scores) : values
+            #
+            # stddev and ci95 are both over this, not over the pooled values the mean comes from.
+            # Pooling mixes differences between inputs with repeat-to-repeat noise on one input,
+            # and on a dataset of any breadth the first dominates - so it measures how varied the
+            # dataset is, where a reader beside a mean needs how uncertain the mean is.
+            spread_sample = per_case ? per_case_means(scores) : values
 
             {
               eval_set: eval_set_name,
@@ -542,12 +535,16 @@ module Raif
               scale: scores.first[:scale],
               higher_is_better: scores.first[:higher_is_better],
               n: values.count,
+              # What stddev and ci95 are over, which is not n for a dataset eval: 20 cases at
+              # --repeat 3 is n: 60, spread_n: 20. Without it the two figures look like they
+              # describe the 60.
+              spread_n: spread_sample.count,
               mean: round(Statistics.mean(values)),
               median: round(Statistics.median(values)),
-              stddev: round(Statistics.stddev(values)),
+              stddev: round(Statistics.stddev(spread_sample)),
               min: values.min,
               max: values.max,
-              ci95: Statistics.bootstrap_ci95(ci95_sample)&.map { |bound| round(bound) },
+              ci95: Statistics.bootstrap_ci95(spread_sample)&.map { |bound| round(bound) },
               per_case: per_case
             }.compact
           end
@@ -560,15 +557,25 @@ module Raif
         end
       end
 
-      def pass_rate_row(eval_set_name, runs, passed)
+      def pass_rate_row(eval_set_name, runs)
         {
           eval_set: eval_set_name,
           description: runs.first[:description],
-          eval_id: runs.first[:eval_id],
-          runs: runs.count,
-          passed: passed,
-          pass_rate: rate(passed, runs.count)
-        }
+          eval_id: runs.first[:eval_id]
+        }.merge(tally(runs))
+      end
+
+      # Errored runs leave the denominator rather than counting as failures. An error measured
+      # nothing, so scoring it as a miss lets a provider incident masquerade as a quality drop -
+      # and pass rates are what evals:compare gates on.
+      #
+      # errored is always emitted, unlike the per-result key: a reader of the rate needs the
+      # denominator it was taken over, and an absent key cannot be told from a zero.
+      def tally(runs)
+        errored = runs.count { |e| e[:errored] }
+        passed = runs.count { |e| e[:passed] }
+
+        { runs: runs.count, errored: errored, passed: passed, pass_rate: rate(passed, runs.count - errored) }
       end
 
       def score_per_case(scores)
@@ -586,8 +593,13 @@ module Raif
         end
       end
 
-      def rate(passed, total)
-        (passed.to_f / total).round(4)
+      # nil, not 0.0, when every run errored: the evals produced no measurement, and a zero would
+      # claim they all failed. Consumers read it the way evals:compare reads an unmatched case -
+      # as nothing to compare rather than as a result.
+      def rate(passed, measured)
+        return if measured.zero?
+
+        (passed.to_f / measured).round(4)
       end
 
       def round(value)
@@ -613,6 +625,15 @@ module Raif
           evals.sum { |e| e[:expectation_results].count { |r| r[:status] == :passed } }
         end
 
+        # Counted separately at both levels so "failed" means what it says. Without these the
+        # only way back to the error count is to re-derive it from every expectation's status,
+        # which is exactly the work a summary exists to have already done.
+        errored_evals = @results.values.sum { |evals| evals.count { |e| e[:errored] } }
+
+        errored_expectations = @results.values.sum do |evals|
+          evals.sum { |e| e[:expectation_results].count { |r| r[:status] == :error } }
+        end
+
         all_evals = @results.values.flatten
         total_model_completions = all_evals.sum { |e| e.dig(:usage, :model_completions).to_i }
         total_prompt_tokens = all_evals.sum { |e| e.dig(:usage, :prompt_tokens).to_i }
@@ -631,8 +652,10 @@ module Raif
           total_eval_sets: total_eval_sets,
           total_evals: total_evals,
           passed_evals: passed_evals,
+          errored_evals: errored_evals,
           total_expectations: total_expectations,
           passed_expectations: passed_expectations,
+          errored_expectations: errored_expectations,
           total_model_completions: total_model_completions,
           total_prompt_tokens: total_prompt_tokens,
           total_completion_tokens: total_completion_tokens,
@@ -658,14 +681,10 @@ module Raif
         output.puts "Eval Sets: #{data[:total_eval_sets]}"
         output.puts ""
         output.puts "Evals:"
-        output.puts "  #{data[:total_evals]} total"
-        output.puts Raif::Utils::Colors.green("  #{data[:passed_evals]} passed")
-        output.puts Raif::Utils::Colors.red("  #{data[:total_evals] - data[:passed_evals]} failed")
+        print_outcome_counts(data[:total_evals], data[:passed_evals], data[:errored_evals])
         output.puts ""
         output.puts "Expectations:"
-        output.puts "  #{data[:total_expectations]} total"
-        output.puts Raif::Utils::Colors.green("  #{data[:passed_expectations]} passed")
-        output.puts Raif::Utils::Colors.red("  #{data[:total_expectations] - data[:passed_expectations]} failed")
+        print_outcome_counts(data[:total_expectations], data[:passed_expectations], data[:errored_expectations])
         output.puts ""
         output.puts "LLM Usage:"
         output.puts "  #{data[:total_model_completions]} LLM calls"
@@ -700,6 +719,9 @@ module Raif
           output.puts "Scores:"
           data[:score_summaries].each do |row|
             spread = ["n #{row[:n]}"]
+            # Named only when it differs from n, which is the dataset case: sd and ci95 are over
+            # the per-case means, so "n 60" beside them would overstate what they were measured on.
+            spread << "over #{row[:spread_n]} cases" if row[:spread_n] && row[:spread_n] != row[:n]
             spread << "sd #{row[:stddev]}" if row[:stddev]
             spread << "ci95 [#{row[:ci95].join(", ")}]" if row[:ci95]
 
@@ -713,8 +735,24 @@ module Raif
         end
       end
 
+      # Errored is its own line rather than folded into failed, and printed only when there is
+      # one: a "0 errored" on every clean run is noise, and the count is what tells a reader the
+      # rates below were taken over fewer runs than they asked for.
+      def print_outcome_counts(total, passed, errored)
+        output.puts "  #{total} total"
+        output.puts Raif::Utils::Colors.green("  #{passed} passed")
+        output.puts Raif::Utils::Colors.red("  #{total - passed - errored.to_i} failed")
+        output.puts Raif::Utils::Colors.yellow("  #{errored} errored") if errored.to_i.positive?
+      end
+
       def colorized_rate(row)
-        rate = "#{row[:passed]}/#{row[:runs]} (#{(row[:pass_rate] * 100).round}%)"
+        errored = row[:errored].to_i
+        measured = row[:runs] - errored
+
+        # Yellow rather than red: nothing was measured, so there is no verdict to report.
+        return Raif::Utils::Colors.yellow("#{errored}/#{row[:runs]} errored") if row[:pass_rate].nil?
+
+        rate = "#{row[:passed]}/#{measured} (#{(row[:pass_rate] * 100).round}%)"
         colorize = if row[:pass_rate] == 1.0
           :green
         elsif row[:pass_rate].zero?
@@ -723,7 +761,9 @@ module Raif
           :yellow
         end
 
-        Raif::Utils::Colors.public_send(colorize, rate)
+        line = Raif::Utils::Colors.public_send(colorize, rate)
+        line += Raif::Utils::Colors.yellow("  +#{errored} errored") if errored.positive?
+        line
       end
     end
   end

@@ -290,9 +290,17 @@ module Raif
       # 20-case dataset at --repeat 3 would otherwise bury the failures in.
       def print_case_summary
         result = @current_eval_result
-        color = result.passed? ? :green : :red
+        # Three outcomes, not two: an eval that raised did not fail, it did not run, and a red
+        # ✗ next to it sends the reader looking for a quality problem that is not there.
+        symbol, color = if result.errored?
+          ["!", :yellow]
+        elsif result.passed?
+          ["✓", :green]
+        else
+          ["✗", :red]
+        end
 
-        parts = ["  #{result.passed? ? "✓" : "✗"} #{result.case_id.ljust(@case_id_width.to_i)}"]
+        parts = ["  #{symbol} #{result.case_id.ljust(@case_id_width.to_i)}"]
         parts << "run #{result.run_index}" if result.run_index
         parts << "#{result.expectation_results.count(&:passed?)}/#{result.expectation_results.count} expectations"
         parts << result.scores.map { |score| "#{score.name} #{score.formatted_value}" }.join("  ") if result.scores.any?

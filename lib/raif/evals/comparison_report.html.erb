@@ -20,6 +20,8 @@
     --good-bg: #e8f5ee;
     --bad: #b3261e;
     --bad-bg: #fdeceb;
+    --warn: #8a5a00;
+    --warn-bg: #fdf3e2;
     --neutral-bg: #f1f3f6;
   }
   * { box-sizing: border-box; }
@@ -41,10 +43,12 @@
   .scroll { overflow-x: auto; }
   code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
   .bad { color: var(--bad); font-weight: 600; }
+  .warn { color: var(--warn); font-weight: 600; }
   .good { color: var(--good); font-weight: 600; }
   .muted { color: var(--muted); }
   .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--neutral-bg); }
   .pill.bad { background: var(--bad-bg); }
+  .pill.warn { background: var(--warn-bg); }
   .pill.good { background: var(--good-bg); }
   .sub td { padding-left: 28px; font-size: 13px; }
   .verdict { margin-top: 24px; font-weight: 600; }
@@ -165,19 +169,61 @@
     <% end -%>
   </div>
 
+  <h2>Error rates (<%= comparison.error_moves.count %>)</h2>
+  <div class="card scroll">
+    <% if comparison.error_moves.empty? -%>
+      <p class="empty">No run errored on either side.</p>
+    <% else -%>
+    <p class="muted">Runs that raised instead of producing a measurement. Excluded from the pass rates above, so a
+      provider incident does not read as a quality regression.</p>
+    <table>
+      <tr><th>Eval</th><th>Baseline</th><th>Candidate</th><th>Delta</th></tr>
+      <% comparison.error_moves.each do |row| -%>
+      <tr>
+        <td><%= h row[:eval_set] %><br><span class="muted"><%= h row[:description] %></span></td>
+        <td class="mono"><%= format_rate(row[:baseline_rate]) %> <span class="muted">(<%= h row[:baseline_errored] %>/<%= h row[:baseline_runs] %>)</span></td>
+        <td class="mono"><%= format_rate(row[:candidate_rate]) %> <span class="muted">(<%= h row[:candidate_errored] %>/<%= h row[:candidate_runs] %>)</span></td>
+        <td class="mono <%= row[:delta] > 0 ? "warn" : "muted" %>"><%= h format_delta(row[:delta]) %></td>
+      </tr>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
   <h2>Not comparable (<%= comparison.not_comparable.count %>)</h2>
   <div class="card scroll">
     <% if comparison.not_comparable.empty? -%>
       <p class="empty">None.</p>
     <% else -%>
     <table>
-      <tr><th>Eval</th><th>Case</th><th>Expectation</th><th>Present in</th></tr>
+      <tr><th>Eval</th><th>Case</th><th>Expectation</th><th>Reason</th></tr>
       <% comparison.not_comparable.each do |row| -%>
       <tr>
         <td><%= h row[:eval_set] %><br><span class="muted"><%= h row[:description] %></span></td>
         <td class="mono"><%= h row[:case_id] || "-" %></td>
         <td class="mono"><%= h row[:expectation] || "-" %></td>
-        <td><span class="pill"><%= h row[:present_in] %></span></td>
+        <td><span class="pill"><%= h row[:reason] || row[:present_in] %></span></td>
+      </tr>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
+  <h2>Regression gate (<%= comparison.candidate_regressions(threshold).count %>)</h2>
+  <div class="card scroll">
+    <% if threshold.nil? -%>
+      <p class="empty">No threshold set (--fail-on-regression).</p>
+    <% elsif comparison.candidate_regressions(threshold).empty? -%>
+      <p class="empty">Nothing moved past the threshold.</p>
+    <% else -%>
+    <table>
+      <tr><th>Row</th><th>Size</th><th>Absolute</th><th>Evidence</th></tr>
+      <% comparison.candidate_regressions(threshold).each do |row| -%>
+      <tr>
+        <td><%= h row[:label] %><br><span class="muted"><%= h row[:kind] %></span></td>
+        <td class="mono"><% if row[:magnitude].nil? -%>unbounded<% else -%><%= format("%g", row[:magnitude] * 100) %>% worse<% end -%></td>
+        <td class="mono"><%= h row[:absolute] %></td>
+        <td class="mono <%= gated_rows.include?(row) ? "bad" : "muted" %>"><%= h evidence_summary(row) %></td>
       </tr>
       <% end -%>
     </table>
@@ -198,6 +244,13 @@
         <td class="mono"><%= h baseline[:passed_expectations] %>/<%= h baseline[:total_expectations] %></td>
         <td class="mono"><%= h candidate[:passed_expectations] %>/<%= h candidate[:total_expectations] %></td>
       </tr>
+      <% if [baseline[:errored_evals], candidate[:errored_evals]].any? { |count| count.to_i > 0 } -%>
+      <tr>
+        <td>Evals errored</td>
+        <td class="mono warn"><%= h error_fraction(baseline) %></td>
+        <td class="mono warn"><%= h error_fraction(candidate) %></td>
+      </tr>
+      <% end -%>
       <% comparison.score_moves.each do |row| -%>
       <tr>
         <td>Mean <%= h row[:name] %></td>
@@ -211,7 +264,7 @@
         <td class="mono">$<%= format("%.2f", candidate[:total_cost].to_f) %></td>
       </tr>
     </table>
-    <p class="verdict <%= comparison.regressed?(threshold) ? "bad" : "" %>"><%= h verdict %></p>
+    <p class="verdict <%= comparison.regressed?(threshold, alpha: alpha) ? "bad" : "" %>"><%= h verdict %></p>
   </div>
 </div>
 </body>

@@ -11,11 +11,20 @@ module Raif
 
       # Rails is deliberately not loaded: this reads two JSON files and does arithmetic, so
       # booting an app would make the one part of the eval tooling that needs no database or
-      # API key the slowest to run.
+      # API key the slowest to run. These four are plain Ruby with no Rails dependency, and are
+      # required up front rather than after parsing so the --significance help text can name the
+      # real default instead of a copy of it that could drift.
       def run
+        require_relative "../evals/statistics"
+        require_relative "../evals/comparison"
+        require_relative "../evals/comparison_report"
+        require_relative "../utils/colors"
+
         format = "text"
         threshold = nil
         allow_judge_mismatch = false
+        alpha = nil
+        max_error_rate = Raif::Evals::Comparison::MAX_GATE_ERROR_RATE
 
         parser = OptionParser.new do |opts|
           opts.banner = "Usage: raif evals:compare BASELINE_RESULTS.json CANDIDATE_RESULTS.json [options]"
@@ -26,12 +35,24 @@ module Raif
             threshold = n
           end
 
+          opts.on("--significance ALPHA", Float,
+            "Family-wise significance level a regression must clear as well as the threshold " \
+            "(default: #{Raif::Evals::Comparison::FAMILY_WISE_ALPHA}). 1 waives it and gates on effect size alone.") do |value|
+            alpha = value
+          end
+
           opts.on("--format FORMAT", FORMATS, "Output format: #{FORMATS.join(", ")} (default: text)") do |value|
             format = value
           end
 
           opts.on("--allow-judge-mismatch", "Compare runs that used different judge models anyway") do
             allow_judge_mismatch = true
+          end
+
+          opts.on("--max-error-rate N", Float,
+            "Fraction of runs either side may lose to errors before --fail-on-regression declines to " \
+            "decide (default: #{Raif::Evals::Comparison::MAX_GATE_ERROR_RATE}). 1 gates regardless.") do |value|
+            max_error_rate = value
           end
 
           opts.on("-h", "--help", "Show this help message") do
@@ -42,16 +63,24 @@ module Raif
 
         parse_options!(parser)
 
+        # A level outside (0, 1] is a typo with a silent failure mode at each end: 0 can never be
+        # cleared, so the gate would never fire, and a negative one reads as "definitely gate" while
+        # doing the same thing.
+        if alpha && (alpha <= 0 || alpha > 1)
+          puts "Error: --significance must be greater than 0 and at most 1 (got #{alpha})"
+          exit 1
+        end
+
+        if max_error_rate.negative? || max_error_rate > 1
+          puts "Error: --max-error-rate must be between 0 and 1 (got #{max_error_rate})"
+          exit 1
+        end
+
         baseline_path, candidate_path = args
         if baseline_path.nil? || candidate_path.nil?
           puts parser
           exit 1
         end
-
-        require_relative "../evals/statistics"
-        require_relative "../evals/comparison"
-        require_relative "../evals/comparison_report"
-        require_relative "../utils/colors"
 
         comparison = Raif::Evals::Comparison.new(
           baseline: load_payload(baseline_path),
@@ -75,7 +104,14 @@ module Raif
           exit 2
         end
 
-        report = Raif::Evals::ComparisonReport.new(comparison, threshold: threshold, color: format == "text")
+        alpha ||= Raif::Evals::Comparison::FAMILY_WISE_ALPHA
+        report = Raif::Evals::ComparisonReport.new(
+          comparison,
+          threshold: threshold,
+          color: format == "text",
+          alpha: alpha,
+          max_error_rate: max_error_rate
+        )
 
         if format == "html"
           output_path = html_output_path(candidate_path, baseline_path)
@@ -85,7 +121,43 @@ module Raif
           puts report.render(format)
         end
 
-        exit 1 if comparison.regressed?(threshold)
+        # Ahead of the gate rather than after it: a run that lost this much to errors cannot
+        # support a verdict either way, for the reason Comparison#error_rate_unreliable? gives
+        # and the message below repeats. 2 rather than 1, matching the refusals around it.
+        if threshold && comparison.error_rate_unreliable?(max_error_rate: max_error_rate)
+          puts Raif::Utils::Colors.red(<<~MSG)
+            Refusing to pass or fail: too many runs errored to gate on this comparison.
+              baseline:  #{format("%.1f%%", comparison.baseline_error_rate * 100)} of runs errored
+              candidate: #{format("%.1f%%", comparison.candidate_error_rate * 100)} of runs errored
+              ceiling:   #{format("%g%%", max_error_rate * 100)} (--max-error-rate)
+
+            Errored runs are excluded from the pass rates rather than counted as failures, so the
+            rates above are sound - but the runs that survived may not be a fair sample of the ones
+            that did not, and a gate cannot tell the difference.
+
+            Re-run the failing arm, or pass --max-error-rate 1 to gate on the surviving runs anyway.
+          MSG
+          exit 2
+        end
+
+        exit 1 if comparison.regressed?(threshold, alpha: alpha)
+
+        # Something moved past the threshold and none of it could be tested, so the gate has no
+        # answer to give. Exiting 0 here would report a run that may well have regressed as clean,
+        # which is the failure mode a gate exists to prevent; 2 matches the judge mismatch above -
+        # refusing to decide, rather than deciding against.
+        if comparison.insufficient_evidence?(threshold, alpha: alpha)
+          puts Raif::Utils::Colors.red(<<~MSG)
+            Refusing to pass or fail: #{comparison.unverifiable_regressions(threshold).count} regression(s) cleared the
+            --fail-on-regression threshold, but none of them can be told apart from run-to-run variation.
+
+            The gate tests matched dataset cases. An eval with no dataset has none, and --repeat
+            sharpens each case's estimate rather than creating pairs to compare.
+
+            Give the evals a dataset, or pass --significance 1 to gate on effect size alone.
+          MSG
+          exit 2
+        end
       end
 
     private

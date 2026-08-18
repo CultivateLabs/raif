@@ -90,6 +90,13 @@ module Raif
         expectation_results.all?(&:passed?)
       end
 
+      # An error is a missing measurement, not a bad one: a 429, a socket timeout, or a raise in
+      # setup says nothing about the quality of the model's output. Kept distinct from a failure
+      # all the way through aggregation, so a rate-limited afternoon does not read as a regression.
+      def errored?
+        expectation_results.any?(&:error?)
+      end
+
       def to_h
         {
           description: description,
@@ -98,6 +105,8 @@ module Raif
           run_index: run_index,
           case_id: case_id,
           passed: passed?,
+          # Omitted when false, for the reason overhead_usage is omitted when empty.
+          errored: (true if errored?),
           expectation_results: expectation_results.map(&:to_h),
           scores: (scores.map(&:to_h) if scores.any?),
           usage: usage,

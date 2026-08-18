@@ -58,9 +58,9 @@ RSpec.describe "Running a dataset eval set" do
 
     expect(row).to include(cases: 3, repeats: 2, runs: 6, passed: 2, pass_rate: 0.3333)
     expect(row[:per_case]).to eq([
-      { case_id: "chicken", runs: 2, passed: 2, pass_rate: 1.0 },
-      { case_id: "atom", runs: 2, passed: 0, pass_rate: 0.0 },
-      { case_id: "monad", runs: 2, passed: 0, pass_rate: 0.0 }
+      { case_id: "chicken", runs: 2, errored: 0, passed: 2, pass_rate: 1.0 },
+      { case_id: "atom", runs: 2, errored: 0, passed: 0, pass_rate: 0.0 },
+      { case_id: "monad", runs: 2, errored: 0, passed: 0, pass_rate: 0.0 }
     ])
   end
 
@@ -79,6 +79,35 @@ RSpec.describe "Running a dataset eval set" do
 
     clarity = summaries.find { |s| s[:name] == "clarity" }
     expect(clarity).to include(n: 6, mean: 5.0, stddev: 0.0, scale: "1..5", higher_is_better: true)
+  end
+
+  # stddev and ci95 are over the per-case means, not over every observation: pooling the 6 would
+  # mix differences between the three topics with repeat-to-repeat noise on one topic, and report
+  # how varied the dataset is where the reader needs to know how uncertain the mean is.
+  # spread_n names what they were measured on, so "n 6" beside them cannot be misread as the unit.
+  it "measures score spread over cases rather than over every observation" do
+    run.execute
+
+    topic_length = run.send(:summary_data)[:score_summaries].find { |s| s[:name] == "topic_length" }
+
+    # Sample stddev of the per-case means [7.0, 5.0, 12.0], not of the 6 pooled values.
+    expect(topic_length).to include(n: 6, spread_n: 3)
+    expect(topic_length[:stddev]).to be_within(0.0001).of(Raif::Evals::Statistics.stddev([7.0, 5.0, 12.0]))
+    expect(topic_length[:stddev]).not_to be_within(0.0001).of(Raif::Evals::Statistics.stddev([7.0, 7.0, 5.0, 5.0, 12.0, 12.0]))
+  end
+
+  # Two observations but only one case, so there is no between-case variation to report. Pooled,
+  # this would have measured the two repeats of one input and called that the spread - which is the
+  # unit the mean is not taken over and the interval is not resampled from.
+  it "reports no spread for a one-case dataset however many times it repeated" do
+    single = Raif::Evals::Run.new(file_paths: [{ file_path: eval_set_path }], output: output, repeats: 2, cases: ["chicken"])
+    single.execute
+
+    topic_length = single.send(:summary_data)[:score_summaries].find { |s| s[:name] == "topic_length" }
+
+    expect(topic_length).to include(n: 2, spread_n: 1)
+    expect(topic_length).not_to have_key(:stddev)
+    expect(topic_length).not_to have_key(:ci95)
   end
 
   # A single-case run at --repeat 1 measures no spread, and "sd 0.0, ci95 [5.0, 5.0]" would

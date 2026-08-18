@@ -178,7 +178,7 @@ Once your evals have run, a JSON file will be created in `raif_evals/results` wi
 
 Alongside `run_at` and `configuration`, the file has two more top-level keys:
 
-- `results` - one entry per eval set, each an array with one result per execution of an eval block. A result carries its `description`, [`eval_id`](#eval-ids), `eval_index`, `passed`, `expectation_results`, any [`scores`](#scores), its [`usage` and `model_completions`](#captured-llm-calls), plus a `run_index` for [repeats](#repeating-evals) and a `case_id` for [dataset](#dataset-results) cases.
+- `results` - one entry per eval set, each an array with one result per execution of an eval block. A result carries its `description`, [`eval_id`](#eval-ids), `eval_index`, `passed`, `expectation_results`, any [`scores`](#scores), its [`usage` and `model_completions`](#captured-llm-calls), plus a `run_index` for [repeats](#repeating-evals) and a `case_id` for [dataset](#dataset-results) cases. A result that raised also carries `errored: true` - see [Errors Are Not Failures](#errors-are-not-failures).
 - `summary` - run-wide totals across every eval, plus an `eval_pass_rates` array with one row per eval and a `score_summaries` array with one row per score name per eval.
 
 This file is what [`evals:compare`](#comparing-runs) reads, so keep the runs you want to diff against.
@@ -207,6 +207,35 @@ end
 A declared `id:` replaces the slug-and-digest half, so the example above is `SummarizationEvalSet#word-count`. It has to be unique within the eval set, and may contain letters, numbers, and any of `_ . : -`.
 
 `eval_index`, also on every result, is the eval block's position in its set. It's what puts results back into definition order within one run, and is not an identity: inserting an eval block shifts every index below it.
+
+### Errors Are Not Failures
+
+An eval can end three ways, not two. It can pass, it can fail, or it can raise - a 429 from the provider, a socket timeout, a bad fixture in `setup`, a `JSON::ParserError` on a malformed response. The first two are measurements of your model's output. The third is not a measurement at all, and Raif keeps it separate everywhere:
+
+- The result carries `errored: true` alongside `passed: false`, and the expectation that raised has `"status": "error"` rather than `"failed"`.
+- The console prints `!` in yellow for that case rather than a red `✗`, and the run summary counts `N errored` on its own line rather than folding it into `N failed`.
+- **Errored runs leave the pass-rate denominator.** An eval that ran 4 times, passed 3 and errored once reports `3/3` - a `pass_rate` of `1.0`, not `0.75`. `summary.eval_pass_rates` rows carry an `errored` count next to `runs` and `passed` so the denominator is legible.
+- When *every* run of an eval or a case errored, its `pass_rate` is `null` rather than `0.0`. Nothing was measured, and a zero would claim it all failed. [`evals:compare`](#comparing-runs) reports those under NOT COMPARABLE, the same as a case only one run has.
+
+[`evals:compare`](#comparing-runs) reports what each run lost to errors as its own section, so a run that got worse and a run that got flakier are not the same finding:
+
+```
+ERROR RATES (1)
+  DocumentSummarizationEvalSet  produces expected output
+    0.00 -> 0.12  0/24 -> 3/24 runs errored
+
+NOT COMPARABLE (1)
+  DocumentSummarizationEvalSet  produces expected output
+    quarterly-report     candidate: all 3 runs errored
+
+SUMMARY
+  evals errored         0/24 (0.0%) -> 3/24 (12.5%)
+  gate declined: 12.5% of runs errored, above the 5% ceiling (exit 2)
+```
+
+The reason for all of this is CI. If an error counts as a failure, a rate-limited afternoon reads as a model regression and fails the build, and the usual response to that is to disable the gate. `evals:compare` goes one step further and [refuses to gate at all](#what-the-gate-requires) when too many runs errored.
+
+Errors are also retried before they get this far: transient provider failures (rate limits, timeouts, 5xx) are retried with jittered exponential backoff, honoring a `Retry-After` header when the provider sends one. What reaches the results file is what survived that.
 
 ## Resuming an Interrupted Run
 
@@ -271,10 +300,13 @@ Each result gains a `run_index`, and the run's `summary` gains an `eval_pass_rat
   "description": "produces expected output",
   "eval_id": "MyEvalSet#produces-expected-output-9c1de4a70b2f",
   "runs": 5,
+  "errored": 0,
   "passed": 4,
   "pass_rate": 0.8
 }
 ```
+
+`errored` counts the runs that raised rather than producing a measurement; they are excluded from `pass_rate`'s denominator, so `runs - errored` is what `passed` is out of. See [Errors Are Not Failures](#errors-are-not-failures).
 
 Pass rates are printed to the console at the end of the run. This is the number to compare when evaluating one model against another.
 
@@ -507,12 +539,13 @@ Each result in the [results JSON](#results) carries the `case_id` that produced 
   "cases": 3,
   "repeats": 2,
   "runs": 6,
+  "errored": 0,
   "passed": 5,
   "pass_rate": 0.8333,
   "per_case": [
-    { "case_id": "climate-report", "runs": 2, "passed": 2, "pass_rate": 1.0 },
-    { "case_id": "earnings-call",  "runs": 2, "passed": 2, "pass_rate": 1.0 },
-    { "case_id": "press-release",  "runs": 2, "passed": 1, "pass_rate": 0.5 }
+    { "case_id": "climate-report", "runs": 2, "errored": 0, "passed": 2, "pass_rate": 1.0 },
+    { "case_id": "earnings-call",  "runs": 2, "errored": 0, "passed": 2, "pass_rate": 1.0 },
+    { "case_id": "press-release",  "runs": 2, "errored": 0, "passed": 1, "pass_rate": 0.5 }
   ]
 }
 ```
@@ -532,7 +565,11 @@ produces expected output
   ✓ press-release   run 1  3/3 expectations  clarity 4
   ✗ press-release   run 2  2/3 expectations  clarity 3
       ✗ LLM judge score (clarity): >= 4
+  ! quarterly-report run 1  0/1 expectations
+      ✗ Setup execution
 ```
+
+The `!` in the last line is an eval that raised rather than failed - see [Errors Are Not Failures](#errors-are-not-failures).
 
 A failing expectation's description is truncated to 100 characters on these lines. An [LLM judge](#llm-as-judge-expectations) expectation is described by its whole criteria, and the same one repeats under every case that failed it, so at full length it buries the case ids and counts the lines exist to show. Pass `label:` to the judge helpers to choose what appears here; the untruncated text is always in the results JSON, the HTML comparison report, and `--verbose` output.
 
@@ -623,12 +660,13 @@ And the run's `summary` gains a `score_summaries` array, with one row per score 
   "scale": "1..5",
   "higher_is_better": true,
   "n": 6,
+  "spread_n": 3,
   "mean": 4.33,
   "median": 4.5,
-  "stddev": 0.47,
+  "stddev": 0.2887,
   "min": 4.0,
   "max": 5.0,
-  "ci95": [4.0, 4.67],
+  "ci95": [4.0, 4.5],
   "per_case": [
     { "case_id": "climate-report", "n": 2, "mean": 4.5 },
     { "case_id": "earnings-call",  "n": 2, "mean": 4.5 },
@@ -639,7 +677,13 @@ And the run's `summary` gains a `score_summaries` array, with one row per score 
 
 `min` and `max` here are the lowest and highest values the run actually observed, not the gate. The identically named keys in an individual result's `scores` array are the `min:`/`max:` bounds passed to `score`, so the same two names mean the threshold in one place and the range in the other.
 
-`per_case` is present only for a [dataset](#datasets) eval, since without cases there is nothing to break the mean down by. `ci95` is a 95% bootstrap confidence interval over cases (or over the individual values, for an eval with no dataset), resampled from a fixed seed so the same numbers always produce the same interval. It and `stddev` are reported alongside the mean because two models a tenth of a point apart with a standard deviation of half a point have not been distinguished.
+`per_case` is present only for a [dataset](#datasets) eval, since without cases there is nothing to break the mean down by. `stddev` and `ci95` are reported alongside the mean because two models a tenth of a point apart with a standard deviation of half a point have not been distinguished.
+
+**`stddev` and `ci95` are over cases, not over every observation** - which is what `spread_n` records, and why it is smaller than `n` in the example above: 3 cases, 6 observations. Pooling all 6 would mix two unrelated things, real differences between the inputs and repeat-to-repeat noise on one input, and on a dataset of any breadth the first dominates. That pooled number describes how varied your dataset is, where what a reader needs beside a mean is how uncertain the mean is. For an eval with no dataset there are no cases, so both are over the individual values and `spread_n` equals `n`.
+
+`stddev` is the sample standard deviation (dividing by n-1). These values are draws from the model's output distribution rather than the whole of it - that is what `--repeat` exists to sample - and dividing by n instead understates the spread by 0.71x at 2 values and 0.89x at 5, which is exactly the range these runs live in. Understating it would defeat the only reason it is printed. (This is a partial correction, not a complete one: the square root of an unbiased variance is still biased low. `ci95` is the figure to lean on when the difference matters, since it does not depend on that assumption.)
+
+`ci95` is a 95% bootstrap confidence interval, resampled from a fixed seed so the same numbers always produce the same interval.
 
 Both are omitted when there is only one observation to compute them from - a single-case run at `--repeat 1`, for instance. A standard deviation of `0.0` and a zero-width interval are what the arithmetic returns for one value, and in a summary read to decide whether a difference is real they would claim a spread had been measured when none was.
 
@@ -1175,15 +1219,19 @@ FIXED (1)
       0.33 -> 1.00  returns exactly the text 'Unable to generate summary'
 
 SCORE MOVES (2)
-  clarity  4.1111 -> 4.5556  +0.4445  (+10.8%, n=18, sd 0.5137 -> 0.4157)
+  clarity  4.1111 -> 4.5556  +0.4445  (+10.8%, n=18, over 6 cases, sd 0.5137 -> 0.4157)
     climate-report       4.3333 -> 5.0  +0.6667
     earnings-call        4.0 -> 4.6667  +0.6667
     press-release        4.0 -> 4.0  0.0
-  summary_word_count  284.0 -> 412.0  +128.0  (+45.1%, n=18, sd 31.2 -> 44.7, not gated)
+  summary_word_count  284.0 -> 412.0  +128.0  (+45.1%, n=18, over 6 cases, sd 31.2 -> 44.7, not gated)
 
 NOT COMPARABLE (1)
   DocumentSummarizationEvalSet  produces expected output
     quarterly-report     candidate only
+
+REGRESSION GATE (1)
+  DocumentSummarizationEvalSet  produces expected output (pass_rate)
+    67% worse, 0.6667 absolute   1/1 cases worse, p=1.0
 
 SUMMARY
   evals passed          16/18 -> 17/18
@@ -1191,7 +1239,7 @@ SUMMARY
   mean clarity          4.1111 -> 4.5556
   mean summary_word_count 284.0 -> 412.0
   total cost            $1.10 -> $1.64
-  1 regression beyond --fail-on-regression 0.25 (25% worse than baseline) (exit 1)
+  1 regression beyond --fail-on-regression 0.25 (25% worse than baseline), none distinguishable from run-to-run variation at a family-wise 0.05 over 1 candidate row
 ```
 
 Options:
@@ -1202,16 +1250,25 @@ Options:
 # reported and the command exits 0.
 --fail-on-regression 0.25
 
+# Family-wise significance level a regression must clear as well as the size threshold
+# (default 0.05). 1 waives the requirement and gates on the point estimate alone.
+--significance 0.05
+
 # text (default), json, or html. html writes a self-contained file next to the results.
 --format html
 
 # Compare runs that used different judge models anyway (see below)
 --allow-judge-mismatch
+
+# Fraction of runs either side may lose to errors before --fail-on-regression declines to
+# decide (default 0.05). 1 gates on the surviving runs regardless.
+--max-error-rate 0.05
 ```
 
 Some specific behaviors:
 
 - **Cases present in only one run are reported under NOT COMPARABLE, never dropped.** A silently omitted case is indistinguishable from agreement. An expectation that exists on only one side is reported the same way, which is what a renamed description looks like.
+- **Errors are reported apart from failures.** Runs that raised are excluded from the pass rates rather than counted as misses, so a flaky provider does not read as a quality regression. What each side lost to errors is reported under ERROR RATES and in the SUMMARY, and a case that errored on every run of a side is reported under NOT COMPARABLE - it measured nothing, which is the same problem as a case only one run has. See [Errors Are Not Failures](#errors-are-not-failures).
 - **Runs judged by different models are refused.** Scores from two different [judge models](#configuring-the-judge-llm-model) measure two different things, so the command exits 2 without printing a comparison. This compares the judge each run actually used, so it also catches the case where neither run configured a judge and each was therefore graded by its own model under test. `--allow-judge-mismatch` overrides this and labels the output accordingly.
 - **Score direction is honored.** A score declared `higher_is_better: false` counts a decrease as an improvement, and ungated observational scores are reported but never trip `--fail-on-regression`.
 - **The threshold is relative to the baseline, not absolute.** A pass rate, a 1-5 rubric score, and a latency in milliseconds are not in the same units, so one absolute threshold cannot mean the same thing to all three: `0.25` would ask for a quarter of an eval's runs on one row and a quarter of a millisecond on the next, which makes the flag fire on noise until you turn it off. Each regression is divided by what it started from instead, so `--fail-on-regression 0.25` asks one question everywhere - did anything get more than 25% worse. A `clarity` mean of 4.0 dropping to 3.6 is `0.1`; an `elapsed_ms` mean of 1000 rising to 1200 is `0.2`. Score moves print their relative change next to the absolute one so you can see which rows are near the threshold. For a pass rate that started at 1.0 - an eval that used to pass every run - the relative and absolute readings are the same number, so the common case reads exactly as you would expect.
@@ -1219,5 +1276,34 @@ Some specific behaviors:
 - **A case that traded one failure for another is a regression**, even though its pass rate did not drop. One failure traded for another is not a fix. A case whose rate held steady is reported under NEW FAILURES; a case that fixed more than it broke reads better under FIXED, but either way the expectation that dropped is listed beneath it and counts toward `--fail-on-regression`, so an improvement cannot hide the loss underneath it.
 - **No Rails boot.** The command reads two JSON files and does arithmetic, so it does not load your application, need a database, or need an API key.
 
-At `--repeat 1` a single unlucky draw is indistinguishable from a regression. The reported standard deviation indicates how much of a difference is run-to-run variation.
+## What the Gate Requires
+
+`--fail-on-regression` asks two questions, and a row has to answer both before the command exits 1:
+
+1. **Is it big enough?** The relative threshold above.
+2. **Is it consistent enough to tell apart from run-to-run variation?** LLM output varies between runs, so a threshold on point estimates alone fires on noise - and a gate that fires on noise gets disabled, which is worse than having no gate.
+
+The second question is answered from the pairing the two runs already have. The same dataset cases ran on both sides, so each case is a matched pair, and the gate asks how surprising it would be for this many pairs to move the same way if the two runs were interchangeable. That is a [sign test](https://en.wikipedia.org/wiki/Sign_test), computed exactly. Cases that did not move are excluded rather than split - a case that scored the same on both runs is evidence for neither.
+
+The report shows both halves, so a withheld verdict is legible rather than mysterious:
+
+```
+REGRESSION GATE (2)
+  DocumentSummarizationEvalSet  produces expected output (pass_rate)
+    100% worse, 1.0 absolute   8/8 cases worse, p=0.007813
+  clarity (score)
+    40% worse, 2.0 absolute   8/8 cases worse, p=0.007813
+```
+
+Some consequences worth knowing before you wire this into CI:
+
+- **How many cases you need.** The sign test's smallest reachable p-value is set by the number of pairs, not by how large the regression is: 5 cases all moving the same way is `p = 0.0625`, 6 is `0.03125`, 8 is `0.0078`. Below about 6 cases no regression can clear the default 0.05 - not because the tooling is being cautious, but because 5 matched pairs genuinely cannot distinguish a consistent move from a coin flip. Widen the dataset, or lower the bar deliberately with `--significance`.
+- **`--repeat` does not create pairs.** Repeats sharpen each case's own estimate, which makes its direction more reliable; cases are what the test counts. A run with many repeats and one case still has one pair.
+- **The level is divided by the number of rows tested.** The gate fails if *any* row regresses, so testing 20 rows at 0.05 each would fail one run in three on noise alone. Each candidate row is tested at `0.05 / (number of candidate rows)` instead ([Bonferroni](https://en.wikipedia.org/wiki/Bonferroni_correction)), so `0.05` means what it says about the run as a whole. Only rows that already cleared the size threshold are counted, which keeps the correction as loose as it can honestly be.
+- **Evals with no dataset are handled differently.** A non-dataset eval has no matched unit, so its pass rate goes to a [Fisher exact test](https://en.wikipedia.org/wiki/Fisher%27s_exact_test) on the repeat counts on each side. That works - 5 of 5 passing against 0 of 5 is `p = 0.0079` - but it needs several repeats: at `--repeat 1` it returns `p = 1.0`, which is the right answer to "one draw against one draw".
+- **A score on a non-dataset eval cannot be tested at all,** and the command says so rather than exiting 0 on it. There is no exact two-sample test for a continuous score at these counts, and approximating one would invent precision the data does not have. If every regression in a run is untestable, `evals:compare` exits **2** - refusing to decide, the same way it refuses two mismatched judges - rather than reporting a run that may well have regressed as clean. Give those evals a dataset, or pass `--significance 1`.
+- **A run that lost too much to errors is not gated at all.** Excluding errored runs from the pass rates fixes the first-order problem, but not the second: if the runs that errored were not a random sample of the ones that did not - the long inputs are the ones that time out - the surviving denominator is a biased one. Past `--max-error-rate` (default `0.05`) on either side, `evals:compare` prints the comparison and then exits **2** rather than passing or failing, the same way it refuses two mismatched judges. Re-run the affected arm, or pass `--max-error-rate 1` to gate on the surviving runs anyway.
+- **`--significance 1` restores gating on effect size alone.** Use it when you know the sample is too small for a verdict and you want the point estimate to gate anyway. It is the honest way to have the old behavior, and the report labels it: `evidence not required (--significance 1.0)`.
+
+Pass rate rows are gated per eval rather than per case, since the cases are what the evidence is drawn from. Per-case detail is still reported under NEW FAILURES, where a single case that got worse is visible without being able to fail the build on its own.
 

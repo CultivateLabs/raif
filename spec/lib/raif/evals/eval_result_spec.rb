@@ -68,6 +68,29 @@ RSpec.describe Raif::Evals::EvalResult do
     end
   end
 
+  describe "#errored?" do
+    def result_with(*statuses)
+      described_class.new(description: "test eval").tap do |eval|
+        statuses.each_with_index do |status, index|
+          eval.add_expectation_result(Raif::Evals::ExpectationResult.new(description: "e#{index}", status: status))
+        end
+      end
+    end
+
+    it "is true when any expectation raised" do
+      expect(result_with(:passed, :error)).to be_errored
+    end
+
+    # The distinction the whole thing exists for: a failure is a measurement, an error is not.
+    it "is false when an expectation merely failed" do
+      expect(result_with(:passed, :failed)).not_to be_errored
+    end
+
+    it "is false when there are no expectations at all" do
+      expect(result_with).not_to be_errored
+    end
+  end
+
   describe "#to_h" do
     it "converts to hash with all data" do
       eval = described_class.new(description: "test eval")
@@ -94,6 +117,18 @@ RSpec.describe Raif::Evals::EvalResult do
         },
         model_completions: []
       })
+    end
+
+    it "marks an errored result, and omits the key when nothing errored" do
+      errored = described_class.new(description: "test eval")
+      errored.add_expectation_result(Raif::Evals::ExpectationResult.new(description: "first", status: :error))
+
+      failed = described_class.new(description: "test eval")
+      failed.add_expectation_result(Raif::Evals::ExpectationResult.new(description: "first", status: :failed))
+
+      expect(errored.to_h).to include(passed: false, errored: true)
+      expect(failed.to_h).to include(passed: false)
+      expect(failed.to_h).not_to have_key(:errored)
     end
   end
 

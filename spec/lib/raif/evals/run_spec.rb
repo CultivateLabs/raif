@@ -357,6 +357,75 @@ RSpec.describe Raif::Evals::Run do
       end
     end
 
+    # Kept apart from failures at every level, so a rate-limited afternoon does not read as a
+    # model regression.
+    describe "evals that raised rather than failed" do
+      let(:test_eval_set) do
+        Class.new(Raif::Evals::EvalSet) do
+          dataset(:topics) { [{ id: "alpha", input: {} }, { id: "beta", input: {} }] }
+
+          eval "raises on alpha", dataset: :topics do |eval_case|
+            raise "429 Too Many Requests" if eval_case.id == "alpha"
+
+            expect("beta is fine") { true }
+          end
+
+          eval "raises everywhere" do
+            raise "socket timeout"
+          end
+        end
+      end
+
+      let(:run) { described_class.new(output: output) }
+
+      it "counts errors separately from failures in the summary" do
+        run.execute
+
+        summary = run.send(:summary_data)
+
+        # 3 evals: alpha (errored), beta (passed), "raises everywhere" (errored), plus the one in
+        # AnotherEvalSet. Nothing here actually failed.
+        expect(summary).to include(total_evals: 4, passed_evals: 2, errored_evals: 2)
+        expect(summary).to include(passed_expectations: 2, errored_expectations: 2)
+      end
+
+      it "leaves errored runs out of the pass-rate denominator" do
+        run.execute
+
+        row = run.send(:summary_data)[:eval_pass_rates].find { |r| r[:description] == "raises on alpha" }
+
+        # 1 of 2 runs errored, so the rate is over the one that produced a measurement - not the
+        # 0.5 that counting the error as a miss would give.
+        expect(row).to include(runs: 2, errored: 1, passed: 1, pass_rate: 1.0)
+        expect(row[:per_case]).to contain_exactly(
+          { case_id: "alpha", runs: 1, errored: 1, passed: 0, pass_rate: nil },
+          { case_id: "beta", runs: 1, errored: 0, passed: 1, pass_rate: 1.0 }
+        )
+      end
+
+      it "reports no pass rate at all when every run of an eval errored" do
+        run.execute
+
+        row = run.send(:summary_data)[:eval_pass_rates].find { |r| r[:description] == "raises everywhere" }
+
+        # nil rather than 0.0: nothing was measured, and a zero would claim it all failed.
+        expect(row).to include(runs: 1, errored: 1, passed: 0, pass_rate: nil)
+      end
+
+      it "prints errors on their own line rather than folding them into failed" do
+        run.execute
+
+        expect(output.string).to include("2 errored")
+        expect(output.string).to match(/0 failed/)
+      end
+    end
+
+    it "does not print an errored line for a clean run" do
+      run.execute
+
+      expect(output.string).not_to include("errored")
+    end
+
     it "omits the run index when each eval runs only once" do
       run.execute
 
