@@ -431,9 +431,8 @@ class Raif::Evals::Tasks::DocumentSummarizationEvalSet < Raif::Evals::EvalSet
       task.completed?
     end
 
-    expect "mentions the document's main subject" do
-      task.parsed_response.downcase.include?(eval_case.expected["subject"])
-    end
+    expect_includes(task.parsed_response, eval_case.expected["subject"],
+      label: "mentions the document's main subject")
 
     expect_llm_judge_score(
       task.parsed_response,
@@ -467,7 +466,7 @@ A dataset is a block that returns an array of cases. The eval will be run agains
 
 - `id` (**required**) - identifies the case in the console, the [results JSON](#results), and [comparisons](#comparing-runs). Ids must be unique within a dataset. A missing or duplicated id raises when the dataset loads, before any LLM call is made, because a case that can't be told apart from another can't be compared against its own past results.
 - `input` (**required**) - whatever your `setup` and `eval` blocks need to build the case.
-- `expected` (optional) - ground truth to assert against, for cases where you have a known-correct answer.
+- `expected` (optional) - ground truth to assert against, for cases where you have a known-correct answer. See [Ground Truth Matchers](#ground-truth-matchers) for the helpers that compare against it.
 
 Inside your blocks, the case is a `Raif::Evals::EvalCase` exposing `id`, `input`, and `expected`. `[]` reads from `input`, so `eval_case["title"]` and `eval_case.input["title"]` are the same thing.
 
@@ -608,6 +607,58 @@ The metadata will be included in the results JSON:
 ```
 
 Metadata holds context that isn't a measurement - a judge's reasoning, a case label, the model's raw response. It is stored but never aggregated or compared; [scores](#scores) are the mechanism for numbers that are.
+
+# Ground Truth Matchers
+
+When a case has a known-correct answer, four matchers compare against it. Each one is an `expect` block underneath, so it counts toward the eval's pass rate and matches across runs like any other expectation.
+
+```ruby
+eval "extracts the invoice fields", dataset: :invoices do |eval_case|
+  task = Raif::Tasks::InvoiceExtraction.run(creator: @user, document: @document)
+  fields = task.parsed_response
+
+  expect_exact_match(fields["vendor"], eval_case.expected["vendor"])
+  expect_includes(fields["summary"], eval_case.expected["keywords"])
+  expect_matches(fields["invoice_number"], /\A[A-Z]{2}-\d{4}\z/)
+  expect_within(fields["total"], eval_case.expected["total"], percent: 1)
+end
+```
+
+| Matcher | Passes when |
+| --- | --- |
+| `expect_exact_match(actual, expected)` | The two values are equal. Strings are stripped and downcased first; pass `strip: false` or `ignore_case: false` to compare them as they are. Non-strings are compared with `==`, so `false` and `42` are not coerced through `to_s`. |
+| `expect_includes(actual, expected)` | Every expected text appears in `actual.to_s`. `expected` is a String or an Array of Strings, and an Array requires all of them. Pass `ignore_case: false` for a case-sensitive search. |
+| `expect_matches(actual, pattern)` | `actual.to_s` matches the pattern. A String pattern is compiled to a Regexp, so a dataset row can carry one. |
+| `expect_within(actual, expected, delta:)` | The two numbers differ by no more than the tolerance. Give `delta:` for an absolute tolerance or `percent:` for a relative one, and exactly one of the two. A non-numeric `actual` fails; a non-numeric `expected` raises, since only your eval put it there. |
+
+Every matcher records what it compared as [result metadata](#adding-result-metadata-to-expectations), which a hand-written `expect` block does not:
+
+```json
+{
+  "description": "includes expected text",
+  "status": "failed",
+  "metadata": {
+    "actual": "The company reported strong quarterly results.",
+    "expected": "[\"revenue\", \"margin\", \"guidance\"]",
+    "missing": ["margin", "guidance"]
+  }
+}
+```
+
+Values longer than 500 characters are truncated, so a long response does not become most of the results file.
+
+## Naming Matcher Expectations
+
+A matcher's default description names the check and not the value: `exact match`, `includes expected text`, `matches expected pattern`, `within 0.5 of expected`. That is deliberate. [`evals:compare`](#comparing-runs) tallies an expectation across the cases of an eval by its description, so a description carrying case data would split into one tally per case, and the regression gate would read a rate measured on a single case.
+
+Pass `label:` when a check deserves a better name, or when one eval uses the same matcher twice:
+
+```ruby
+expect_includes(task.parsed_response, eval_case.expected["subject"], label: "mentions the main subject")
+expect_includes(task.parsed_response, eval_case.expected["author"], label: "credits the author")
+```
+
+Keep values that vary per case out of a `label:`, for the same reason.
 
 # Scores
 

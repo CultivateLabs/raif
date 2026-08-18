@@ -2,6 +2,7 @@
 
 require "raif/evals/eval_sets/expectations"
 require "raif/evals/eval_sets/llm_judge_expectations"
+require "raif/evals/eval_sets/matchers"
 
 module Raif
   module Evals
@@ -12,6 +13,7 @@ module Raif
     # #score can reach them. Deciding what to run and dispatching it is EvalSetCoordinator's.
     class EvalSet
       include Raif::Evals::EvalSets::Expectations
+      include Raif::Evals::EvalSets::Matchers
       include Raif::Evals::EvalSets::LlmJudgeExpectations
 
       attr_reader :current_eval_result, :current_case, :output

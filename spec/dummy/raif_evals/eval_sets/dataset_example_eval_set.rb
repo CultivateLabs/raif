@@ -24,9 +24,7 @@ class Raif::Evals::DatasetExampleEvalSet < Raif::Evals::EvalSet
       @topic == eval_case["topic"]
     end
 
-    expect "response mentions the subject" do
-      task.parsed_response.to_s.downcase.include?(eval_case.expected["subject"])
-    end
+    expect_includes(task.parsed_response, eval_case.expected["subject"], label: "response mentions the subject")
 
     score "topic_length", @topic.length
 
