@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+#
+# Regenerate the LLM/embedding model registry and its derived docs from
+# model_manifest/*.yml.
+#
+# Usage:
+#   bin/generate_llm_registry
+
+set -eu
+
+bundle exec spec/dummy/bin/rails runner script/generate_llm_registry.rb "$@"
