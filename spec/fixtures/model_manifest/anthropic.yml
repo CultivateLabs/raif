@@ -1,0 +1,58 @@
+provider: anthropic
+references:
+  models_doc: https://docs.claude.com/en/docs/about-claude/models
+  pricing: https://claude.com/pricing
+  deprecations: https://docs.claude.com/en/docs/about-claude/model-deprecations
+models:
+  - key: anthropic_test_model
+    api_name: claude-test-1
+    display_name: Anthropic Test Model
+    max_completion_tokens: 64000
+    pricing:
+      input_per_million: 3.0
+      output_per_million: 15.0
+    capabilities:
+      temperature: false
+      structured_outputs: true
+      native_tool_use: true
+      streaming: true
+      batch_inference: true
+      images: true
+      pdfs: true
+      provider_managed_tools: [web_search, code_execution]
+    lifecycle:
+      status: active
+      added_on: 2025-11-24
+      deprecated_on: null
+      retirement_date: null
+      replacement_key: null
+      migration_note: null
+    verification:
+      last_full_run_at: "2026-08-15T14:02:11Z"
+      results:
+        completion: { claimed: true, result: pass, checked_at: "2026-08-15T14:02:11Z" }
+        streaming: { claimed: true, result: pass, checked_at: "2026-08-15T14:02:11Z" }
+  - key: anthropic_old_model
+    api_name: claude-old-1
+    display_name: Anthropic Old Model
+    max_completion_tokens: 32000
+    pricing:
+      input_per_million: 15.0
+      output_per_million: 75.0
+    capabilities:
+      temperature: true
+      structured_outputs: false
+      native_tool_use: true
+      streaming: true
+      batch_inference: true
+      images: true
+      pdfs: true
+      provider_managed_tools: []
+    lifecycle:
+      status: deprecated
+      added_on: 2024-01-01
+      deprecated_on: 2026-06-01
+      retirement_date: 2026-12-01
+      replacement_key: anthropic_test_model
+      migration_note: null
+    verification: null

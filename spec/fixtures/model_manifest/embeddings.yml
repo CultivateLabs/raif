@@ -1,0 +1,17 @@
+providers:
+  - provider: open_ai
+    adapter: Raif::EmbeddingModels::OpenAi
+    models:
+      - key: open_ai_test_embedding
+        api_name: text-embedding-test
+        display_name: OpenAI Test Embedding
+        input_per_million: 0.02
+        default_output_vector_size: 1536
+        lifecycle:
+          status: active
+          added_on: 2024-01-25
+          deprecated_on: null
+          retirement_date: null
+          replacement_key: null
+          migration_note: null
+        verification: null
