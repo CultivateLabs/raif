@@ -1175,7 +1175,9 @@ git add lib/raif/model_manifest/generator.rb script/generate_llm_registry.rb bin
 git commit -m "Add registry generator emitting Ruby, locale, initializer, and docs artifacts"
 ```
 
----### Task 6: Wire-up: generated files replace the hand-written registry data
+---
+
+### Task 6: Wire-up: generated files replace the hand-written registry data
 
 **Files:**
 - Modify: `lib/raif/llm_registry.rb` (delete `default_llms`, keep machinery at lines 1-41)
