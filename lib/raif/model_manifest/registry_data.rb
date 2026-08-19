@@ -45,11 +45,19 @@ module Raif
       end
 
       def self.provider_settings_for(entry)
+        caps = entry.capabilities
         defaults = ADAPTER_DEFAULTS.fetch(entry.adapter_class_name)
         settings = {}
-        settings[:supports_temperature] = entry.capabilities.fetch("temperature") if entry.capabilities.fetch("temperature") != defaults.fetch("temperature")
-        settings[:supports_structured_outputs] = entry.capabilities.fetch("structured_outputs") if entry.capabilities.fetch("structured_outputs") != defaults.fetch("structured_outputs")
-        settings[:supports_batch_inference] = entry.capabilities.fetch("batch_inference") if entry.capabilities.fetch("batch_inference") != defaults.fetch("batch_inference")
+
+        temperature = caps.fetch("temperature")
+        settings[:supports_temperature] = temperature if temperature != defaults.fetch("temperature")
+
+        structured_outputs = caps.fetch("structured_outputs")
+        settings[:supports_structured_outputs] = structured_outputs if structured_outputs != defaults.fetch("structured_outputs")
+
+        batch_inference = caps.fetch("batch_inference")
+        settings[:supports_batch_inference] = batch_inference if batch_inference != defaults.fetch("batch_inference")
+
         settings
       end
 
