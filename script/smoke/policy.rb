@@ -5,39 +5,42 @@
 # the manifest as a verification.
 module Smoke
   module Policy
-    FAILING_STATUSES = %i[fail timeout].freeze
+    TOLERABLE_STATUSES = %i[skip timeout].freeze
     RECORDABLE_STATUSES = %i[pass fail note].freeze
 
     # results - Array of model_result hashes: { key:, explicit:, capabilities: { name => { status:, detail: } } }.
     # explicit_keys - selector strings the caller named directly (Smoke::Selection.resolve's :explicit_keys);
     #   a model_result counts as explicit when its key is in this list or its own :explicit flag is set.
     #
-    # Returns 1 when an explicit model has any capability result of :fail, :timeout, or :skip, or ran no
-    # checks at all (an empty capabilities hash - an unexecuted required check); or when strict is true and
-    # any model, explicit or pattern, has :fail, :timeout, or ran no checks. A pattern model's :skip never
-    # fails the run, strict or not, and :note never fails the run for any model.
+    # Returns 1 when any selected model has a :fail, or ran no checks at all (an empty capabilities
+    # hash - an unexecuted required check); this holds regardless of explicit/pattern/strict. A :skip
+    # or :timeout also fails the run for an explicit model, or for any model when strict (--strict
+    # drops the sweep's tolerance for those two); otherwise a pattern model's :skip/:timeout is
+    # tolerated as a missing-credentials sweep result. :note never fails.
     def self.exit_code(results, explicit_keys:, strict: false)
       results.any? { |model_result| failing?(model_result, explicit_keys: explicit_keys, strict: strict) } ? 1 : 0
     end
 
     def self.failing?(model_result, explicit_keys:, strict:)
-      explicit = explicit?(model_result, explicit_keys)
-      return false unless explicit || strict
-
       capabilities = model_result[:capabilities] || {}
-      return true if capabilities.empty? # an unexecuted required check
+      return true if capabilities.empty? # an unexecuted required check, never tolerated
 
-      capabilities.each_value.any? { |result| failing_capability?(result, explicit: explicit) }
+      explicit = explicit?(model_result, explicit_keys)
+      capabilities.each_value.any? { |result| failing_capability?(result, explicit: explicit, strict: strict) }
     end
     private_class_method :failing?
 
-    def self.failing_capability?(result, explicit:)
-      status = result[:status]
-      return false if status == :note
-      return true if FAILING_STATUSES.include?(status)
-
-      # Pattern selections tolerate credential skips; only an explicit selection's own skip fails the run.
-      status == :skip && explicit
+    def self.failing_capability?(result, explicit:, strict:)
+      case result[:status]
+      when :pass, :note
+        false
+      when *TOLERABLE_STATUSES
+        # Tolerated only for a non-explicit (pattern) model outside --strict; --strict drops the
+        # tolerance so a full sweep also catches a stuck or uncredentialed provider.
+        explicit || strict
+      else
+        true # :fail, or an unrecognized status, always fails the run
+      end
     end
     private_class_method :failing_capability?
 

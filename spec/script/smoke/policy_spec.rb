@@ -59,10 +59,10 @@ RSpec.describe Smoke::Policy do
       expect(described_class.exit_code(results, explicit_keys: [])).to eq(0)
     end
 
-    it "ignores a non-explicit pattern model's fail when not strict" do
+    it "fails on a non-explicit pattern model's fail, even when not strict" do
       results = [model_result("bedrock_some_model", explicit: false, completion: :fail)]
 
-      expect(described_class.exit_code(results, explicit_keys: [])).to eq(0)
+      expect(described_class.exit_code(results, explicit_keys: [])).to eq(1)
     end
 
     it "tolerates a credential skip on a non-explicit pattern model when not strict" do
@@ -71,16 +71,16 @@ RSpec.describe Smoke::Policy do
       expect(described_class.exit_code(results, explicit_keys: [])).to eq(0)
     end
 
-    it "ignores a non-explicit pattern model's timeout when not strict" do
+    it "tolerates a non-explicit pattern model's timeout when not strict" do
       results = [model_result("bedrock_some_model", explicit: false, completion: :timeout)]
 
       expect(described_class.exit_code(results, explicit_keys: [])).to eq(0)
     end
 
-    it "ignores an empty capabilities hash on a non-explicit model when not strict" do
+    it "fails on an empty capabilities hash on a non-explicit model, even when not strict (unexecuted required check is never tolerated)" do
       results = [{ key: "bedrock_some_model", explicit: false, capabilities: {} }]
 
-      expect(described_class.exit_code(results, explicit_keys: [])).to eq(0)
+      expect(described_class.exit_code(results, explicit_keys: [])).to eq(1)
     end
 
     it "fails in strict mode on a non-explicit model's fail" do
@@ -89,16 +89,16 @@ RSpec.describe Smoke::Policy do
       expect(described_class.exit_code(results, explicit_keys: [], strict: true)).to eq(1)
     end
 
-    it "fails in strict mode on a non-explicit model's timeout" do
+    it "fails in strict mode on a non-explicit model's timeout (--strict removes the sweep tolerance)" do
       results = [model_result("bedrock_some_model", explicit: false, completion: :timeout)]
 
       expect(described_class.exit_code(results, explicit_keys: [], strict: true)).to eq(1)
     end
 
-    it "still tolerates a credential skip on a non-explicit model in strict mode" do
+    it "fails in strict mode on a non-explicit model's skip too (--strict removes the sweep tolerance)" do
       results = [model_result("bedrock_some_model", explicit: false, completion: :skip)]
 
-      expect(described_class.exit_code(results, explicit_keys: [], strict: true)).to eq(0)
+      expect(described_class.exit_code(results, explicit_keys: [], strict: true)).to eq(1)
     end
 
     it "passes in strict mode when every model passes" do
@@ -110,10 +110,19 @@ RSpec.describe Smoke::Policy do
       expect(described_class.exit_code(results, explicit_keys: ["anthropic_test_model"], strict: true)).to eq(0)
     end
 
-    it "does not let a failing pattern model drag down an otherwise-passing explicit selection" do
+    it "fails the run when a pattern model fails, even though the explicit selection passes" do
       results = [
         model_result("anthropic_test_model", explicit: true, completion: :pass),
         model_result("bedrock_some_model", explicit: false, completion: :fail)
+      ]
+
+      expect(described_class.exit_code(results, explicit_keys: ["anthropic_test_model"])).to eq(1)
+    end
+
+    it "tolerates a pattern model's credential skip alongside a passing explicit selection" do
+      results = [
+        model_result("anthropic_test_model", explicit: true, completion: :pass),
+        model_result("bedrock_some_model", explicit: false, completion: :skip)
       ]
 
       expect(described_class.exit_code(results, explicit_keys: ["anthropic_test_model"])).to eq(0)
