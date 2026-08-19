@@ -184,6 +184,13 @@ RSpec.describe Raif::ModelManifest::Generator do
     end
   end
 
+  describe ".initializer_embedding_keys_block" do
+    it "emits one comment line per embedding key, in the same format as the LLM block" do
+      block = described_class.initializer_embedding_keys_block(manifest)
+      expect(block).to eq("  #   open_ai_test_embedding\n")
+    end
+  end
+
   describe ".setup_md_keys_block" do
     it "emits a markdown bullet per key for a provider section" do
       block = described_class.setup_md_keys_block(manifest, "anthropic")
@@ -239,6 +246,12 @@ RSpec.describe Raif::ModelManifest::Generator do
           #   placeholder_key
           # END GENERATED MODEL KEYS
           # config.default_llm_model_key = "open_ai_gpt_4o"
+
+          # Available keys:
+          # BEGIN GENERATED EMBEDDING MODEL KEYS (bin/generate_llm_registry)
+          #   placeholder_embedding_key
+          # END GENERATED EMBEDDING MODEL KEYS
+          # config.default_embedding_model_key = "open_ai_text_embedding_3_small"
         end
       RUBY
 
@@ -281,13 +294,22 @@ RSpec.describe Raif::ModelManifest::Generator do
       expect(content).not_to include("placeholder_model")
     end
 
-    it "rewrites the content between the initializer markers" do
+    it "rewrites the content between the initializer LLM markers" do
       described_class.write_all!(manifest, root: @tmp_root)
       content = File.read(File.join(@tmp_root, "lib/generators/raif/install/templates/initializer.rb"))
 
       expect(content).to include("#   anthropic_test_model")
       expect(content).not_to include("placeholder_key")
       expect(content).to include('config.default_llm_model_key = "open_ai_gpt_4o"')
+    end
+
+    it "rewrites the content between the initializer embedding markers" do
+      described_class.write_all!(manifest, root: @tmp_root)
+      content = File.read(File.join(@tmp_root, "lib/generators/raif/install/templates/initializer.rb"))
+
+      expect(content).to include("#   open_ai_test_embedding")
+      expect(content).not_to include("placeholder_embedding_key")
+      expect(content).to include('config.default_embedding_model_key = "open_ai_text_embedding_3_small"')
     end
 
     it "rewrites the content between each setup.md marker pair" do

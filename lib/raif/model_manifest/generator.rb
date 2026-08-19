@@ -31,6 +31,8 @@ module Raif
 
       INITIALIZER_BEGIN_MARKER = "# BEGIN GENERATED MODEL KEYS (bin/generate_llm_registry)"
       INITIALIZER_END_MARKER = "# END GENERATED MODEL KEYS"
+      INITIALIZER_EMBEDDING_BEGIN_MARKER = "# BEGIN GENERATED EMBEDDING MODEL KEYS (bin/generate_llm_registry)"
+      INITIALIZER_EMBEDDING_END_MARKER = "# END GENERATED EMBEDDING MODEL KEYS"
 
       DEFAULT_LLMS_RELATIVE_PATH = "lib/raif/default_llms.rb"
       DEFAULT_EMBEDDING_MODELS_RELATIVE_PATH = "lib/raif/default_embedding_models.rb"
@@ -96,6 +98,11 @@ module Raif
 
         def initializer_keys_block(manifest)
           keys = RegistryData.llm_configs(manifest).values.flatten.map { |config| config[:key] }
+          keys.map { |key| "  #   #{key}\n" }.join
+        end
+
+        def initializer_embedding_keys_block(manifest)
+          keys = RegistryData.embedding_configs(manifest).values.flatten.map { |config| config[:key] }
           keys.map { |key| "  #   #{key}\n" }.join
         end
 
@@ -167,6 +174,9 @@ module Raif
           path = File.join(root, INITIALIZER_RELATIVE_PATH)
           content = File.read(path)
           content = replace_between_markers(content, INITIALIZER_BEGIN_MARKER, INITIALIZER_END_MARKER, initializer_keys_block(manifest))
+          content = replace_between_markers(
+            content, INITIALIZER_EMBEDDING_BEGIN_MARKER, INITIALIZER_EMBEDDING_END_MARKER, initializer_embedding_keys_block(manifest)
+          )
           File.write(path, content)
         end
 
