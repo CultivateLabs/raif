@@ -100,7 +100,11 @@ def capabilities_for(config, adapter_class_name:, images:, pdfs:)
   settings = config[:model_provider_settings] || {}
   adapter_defaults = Raif::ModelManifest::ADAPTER_DEFAULTS.fetch(adapter_class_name)
 
-  structured_outputs = settings.key?(:supports_structured_outputs) ? settings[:supports_structured_outputs] : adapter_defaults.fetch("structured_outputs")
+  structured_outputs = if settings.key?(:supports_structured_outputs)
+    settings[:supports_structured_outputs]
+  else
+    adapter_defaults.fetch("structured_outputs")
+  end
   batch_inference = settings.key?(:supports_batch_inference) ? settings[:supports_batch_inference] : adapter_defaults.fetch("batch_inference")
 
   {

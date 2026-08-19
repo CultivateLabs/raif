@@ -62,9 +62,12 @@ module Raif
       "Raif::Llms::OpenAiResponses" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true },
       "Raif::Llms::Anthropic" => { "temperature" => true, "structured_outputs" => false, "batch_inference" => true },
       "Raif::Llms::Bedrock" => { "temperature" => true, "structured_outputs" => false, "batch_inference" => false },
-      "Raif::Llms::OpenRouter" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => false }, # VERIFIED: mirrors OpenAI for structured outputs
-      "Raif::Llms::XAi" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true }, # VERIFIED: mirrors OpenAI for structured outputs; includes XAi::BatchInference
-      "Raif::Llms::Google" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true } # VERIFIED: native JSON schema support; includes Google::BatchInference
+      # VERIFIED: mirrors OpenAI for structured outputs
+      "Raif::Llms::OpenRouter" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => false },
+      # VERIFIED: mirrors OpenAI for structured outputs; includes XAi::BatchInference
+      "Raif::Llms::XAi" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true },
+      # VERIFIED: native JSON schema support; includes Google::BatchInference
+      "Raif::Llms::Google" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true }
     }.freeze
 
     Entry = Struct.new(

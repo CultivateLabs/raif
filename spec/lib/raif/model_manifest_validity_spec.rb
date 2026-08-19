@@ -15,7 +15,11 @@ RSpec.describe "model_manifest validity" do
   entries.each do |entry|
     describe entry.key.to_s do
       it "prefixes the key with its provider" do
-        prefix = entry.provider_name == "open_ai" ? Raif::ModelManifest::OPEN_AI_ENDPOINT_KEY_PREFIXES.fetch(entry.endpoint) : "#{entry.provider_name}_"
+        prefix = if entry.provider_name == "open_ai"
+          Raif::ModelManifest::OPEN_AI_ENDPOINT_KEY_PREFIXES.fetch(entry.endpoint)
+        else
+          "#{entry.provider_name}_"
+        end
         expect(entry.key.to_s).to start_with(prefix)
       end
 
