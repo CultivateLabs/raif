@@ -344,7 +344,7 @@ RSpec.describe Raif::ModelManifest::Generator do
       # (e.g. Raif::Llms::Anthropic => [...]), matching how the registry is
       # actually consumed at runtime. RegistryData.llm_configs groups by the
       # adapter's String class name instead, so key by name on both sides
-      # to compare, mirroring spec/lib/raif/registry_equivalence_spec.rb.
+      # to compare.
       actual = sandbox.default_llms.transform_keys(&:name)
       expected = Raif::ModelManifest::RegistryData.llm_configs(manifest)
 
