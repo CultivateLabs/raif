@@ -11,26 +11,16 @@ RSpec.describe Raif::ModelManifest::Generator do
   let(:fixture_dir) { Raif::Engine.root.join("spec/fixtures/model_manifest").to_s }
   let(:manifest) { Raif::ModelManifest.load(dir: fixture_dir) }
 
-  # Evaluates the generated default_llms.rb source in isolation from the real
-  # Raif module. The generated file starts with a top-level `module Raif`
-  # statement; if we simply eval'd that as-is at the top level, it would
-  # reopen and redefine the REAL ::Raif.default_llms for the rest of the
-  # suite (the hand-written registry data still lives in llm_registry.rb at
-  # this point in the branch).
-  #
-  # Renaming the leading "module Raif" line to a unique top-level constant
-  # isolates the *definition* (methods land on the sandbox module, not on
-  # ::Raif) while leaving every other reference in the method bodies (e.g.
-  # `Raif::Llms::Anthropic`, `Date`) untouched. Those bare `Raif`/`Date`
-  # lookups still resolve correctly to the real top-level constants because
-  # constant lookup falls back to Object once the lexical scope (just the
-  # freshly-named sandbox module) doesn't already define them. We eval at
-  # TOPLEVEL_BINDING (not via Module#module_eval with a string) specifically
-  # so that fallback to Object happens: module_eval on an anonymous receiver
-  # nests Module.nesting under that receiver instead, so a bare `Raif`
-  # reference would resolve to (and only look inside) the anonymous
-  # sandbox's own nested constants and never fall through to the real
-  # top-level ::Raif, raising NameError instead.
+  # The generated source starts with a top-level `module Raif`; eval'd as-is
+  # it would redefine the REAL ::Raif.default_llms for the rest of the suite
+  # (llm_registry.rb still hand-writes it at this point in the branch). We
+  # rename that line to a fresh top-level constant and eval at
+  # TOPLEVEL_BINDING rather than via Module#module_eval on an anonymous
+  # module: an anonymous receiver would nest Module.nesting under itself, so
+  # bare `Raif::Llms::Anthropic` / `Date` references inside the method
+  # bodies would look for a same-named constant there and raise NameError
+  # instead of falling through to the real top-level constants, which is
+  # what a plain top-level rename preserves.
   def eval_isolated_default_llms_module(source)
     sandbox_const_name = :RaifGeneratorSpecSandbox
     isolated_source = source.sub(/^module Raif$/, "module #{sandbox_const_name}")
@@ -211,11 +201,10 @@ RSpec.describe Raif::ModelManifest::Generator do
   end
 
   describe ".write_all!" do
-    # Controller ruling: write_all! must never run against the real repo
-    # files in this task (real files get their markers in Task 6). We build
-    # tiny synthetic stand-ins in a tmpdir that mimic just enough of the real
-    # file shapes (marker pairs / YAML sections) for the rewriter logic to
-    # find its targets, then point write_all! at that tmp root via `root:`.
+    # Must not run against the real repo files here: they don't get their
+    # markers until Task 6. These tmpdir stand-ins mimic just enough of the
+    # real file shapes (marker pairs / YAML sections) to exercise the
+    # rewriter logic, pointed at via write_all!'s `root:` kwarg.
     around do |example|
       Dir.mktmpdir("raif-generator-spec") do |dir|
         @tmp_root = dir

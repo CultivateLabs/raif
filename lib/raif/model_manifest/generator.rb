@@ -39,8 +39,6 @@ module Raif
       SETUP_MD_RELATIVE_PATH = "docs/_getting_started/setup.md"
 
       class << self
-        # -- Ruby literal emitters -------------------------------------------------
-
         def default_llms_rb(manifest)
           entries_by_key = manifest.llm_entries.index_by(&:key)
           configs_by_adapter = RegistryData.llm_configs(manifest)
@@ -88,8 +86,6 @@ module Raif
           "#{lines.join("\n")}\n"
         end
 
-        # -- Locale (en.yml) emitters ------------------------------------------------
-
         def model_names_yaml_block(manifest)
           yaml_section_block("model_names", RegistryData.model_names(manifest))
         end
@@ -97,8 +93,6 @@ module Raif
         def embedding_model_names_yaml_block(manifest)
           yaml_section_block("embedding_model_names", RegistryData.embedding_model_names(manifest))
         end
-
-        # -- Initializer / setup.md emitters ------------------------------------------
 
         def initializer_keys_block(manifest)
           keys = RegistryData.llm_configs(manifest).values.flatten.map { |config| config[:key] }
@@ -117,12 +111,10 @@ module Raif
           keys.map { |key| "- `#{key}`\n" }.join
         end
 
-        # -- String splicing helpers (also used by the freshness spec) ---------------
-
         # Finds the line matching /^    #{section_key}:$/ (4-space indent) and
         # replaces it, and every immediately following line matching
         # /^      \S/ (6-space indent), with replacement_block (which already
-        # includes the header line).
+        # includes the header line). Also used directly by the freshness spec.
         def replace_yaml_section(file_content, section_key, replacement_block)
           lines = file_content.lines
           header_pattern = /^    #{Regexp.escape(section_key)}:$/
@@ -136,7 +128,8 @@ module Raif
         end
 
         # Replaces the content strictly between (not including) the lines
-        # containing begin_marker and end_marker.
+        # containing begin_marker and end_marker. Also used directly by the
+        # freshness spec.
         def replace_between_markers(file_content, begin_marker, end_marker, replacement)
           lines = file_content.lines
           begin_index = lines.index { |line| line.include?(begin_marker) }
@@ -149,8 +142,6 @@ module Raif
 
           (lines[0..begin_index] + block_lines(replacement) + lines[end_index..]).join
         end
-
-        # -- Disk application ---------------------------------------------------------
 
         def write_all!(manifest, root: Raif::Engine.root)
           root = root.to_s
@@ -193,11 +184,9 @@ module Raif
           File.write(path, content)
         end
 
-        # Splits a replacement block into lines, guaranteeing a trailing
-        # newline on the last line (so splicing it between two array
-        # slices never runs it into the following line) and returning no
-        # lines at all for an empty block, so an empty section collapses to
-        # nothing rather than an unwanted blank line.
+        # An empty block yields no lines (an empty section collapses rather
+        # than leaving a blank line); otherwise ensures a trailing newline
+        # so it doesn't run into the line that follows it.
         def block_lines(block)
           return [] if block.empty?
 
@@ -210,9 +199,8 @@ module Raif
           "#{lines.join("\n")}\n"
         end
 
-        # Quotes a YAML scalar only when required: the value contains ": ",
-        # "#", or has leading/trailing whitespace. Otherwise emits it as a
-        # plain scalar, matching the current en.yml style.
+        # Matches the current en.yml style: only quote when a plain scalar
+        # would be ambiguous or lossy.
         def yaml_scalar(value)
           needs_quotes = value.include?(": ") || value.include?("#") || value != value.strip
           needs_quotes ? value.inspect : value
