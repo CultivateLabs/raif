@@ -265,10 +265,11 @@ module Raif
       # transparently falls back to the non-streaming path. Each entry may be
       # a String, Symbol, or Regexp matched against the model key.
       #
-      # Default covers Bedrock gpt-oss, whose Converse streaming endpoint
-      # delivers corrupted/truncated tool_use deltas. Set to [] to disable
-      # the workaround.
-      @streaming_unsupported_model_keys = [/\Abedrock_gpt_oss_/]
+      # Default is derived from model_manifest/ capability data (streaming:
+      # false) via the generated registry. It currently covers Bedrock
+      # gpt-oss, whose Converse streaming endpoint delivers corrupted/
+      # truncated tool_use deltas. Set to [] to disable the workaround.
+      @streaming_unsupported_model_keys = Raif.default_streaming_unsupported_model_keys.dup
       @streaming_update_chunk_size_threshold = 25
       @task_creator_optional = true
       # How long Raif::Task rows are retained before Raif::ArchiveTasksJob
