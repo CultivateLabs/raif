@@ -1,0 +1,25 @@
+# Model Retire
+
+Deprecate or remove a model. Argument: a model key, optionally with a provider announcement URL.
+
+Rules: confirm the provider's announcement before editing; NEVER push or open a PR without explicit approval; no em or en dashes; no AI attribution in commits.
+
+Decide the mode first:
+- Provider announced end of life but the model still works: DEPRECATE.
+- Retirement date reached or the API already rejects it: REMOVE.
+Confirm the mode with the user.
+
+DEPRECATE:
+1. Verify the announcement (fetch the provider's deprecations URL from the manifest references; cite it).
+2. Set lifecycle on the manifest entry: status: deprecated, deprecated_on, retirement_date, and replacement_key (must be an active key). When the provider names no successor, ask the user: propose the closest alternative with caveats stated, or set migration_note explaining there is no direct replacement.
+3. `bin/generate_llm_registry`, then `bundle exec rspec`.
+4. CHANGELOG bullet: "Deprecated `<key>`; scheduled for removal after <retirement_date>. <replacement or note>."
+5. Branch `model-deprecate-<key>`, commit, show the diff, STOP for review.
+
+REMOVE:
+1. Set status: retired on the manifest entry (keep all lifecycle history; never delete the entry).
+2. `bin/generate_llm_registry`.
+3. Find residue: `grep -rn "<key>" spec/ lib/ app/ docs/ vcr_cassettes/`. Migrate specs that used the key to the replacement; regenerate or edit affected VCR cassettes the way the repo has done before (see git log for prior removals, for example cec8728d).
+4. `bundle exec rspec` and `bin/lint` until green.
+5. CHANGELOG bullet prefixed "**Breaking change**:" naming the key, the provider's retirement notice (cite URL), and the replacement guidance.
+6. Branch `model-retire-<key>`, commit, show the diff, STOP for review.
