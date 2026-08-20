@@ -81,12 +81,12 @@ end
 
 ### Diagnosing streaming issues
 
-Two diagnostic scripts are shipped with Raif for investigating suspected streaming problems with a given model:
+`bin/smoke` is shipped with Raif for investigating suspected streaming problems with a given model, checking it against the streaming capabilities claimed for it in `model_manifest/*.yml`:
 
-- `bin/probe_streaming_tool_calls` — runs the same tool-call prompt through one or more models in both streaming and non-streaming modes and reports per-model failure rates. Temporarily clears `streaming_unsupported_model_keys` so the streaming path is always exercised.
-- `bin/probe_bedrock_stream_transport` — bypasses Raif entirely, hits Bedrock's Converse + ConverseStream APIs directly via the AWS SDK, and reports whether the reconstructed tool_use buffer is JSON-parseable. Useful for determining whether streaming corruption originates at the AWS service/SDK layer (below Raif's accumulator).
+- `bin/smoke bedrock_gpt_oss_120b --only streaming` runs the same prompt through the model in both streaming and non-streaming modes and reports whether the streamed response came through with deltas. Temporarily clears `streaming_unsupported_model_keys` so the streaming path is always exercised.
+- `bin/smoke bedrock_gpt_oss_120b --only streaming_tool_calls --iterations 5` runs a tool-call prompt through the model in both streaming and non-streaming modes across multiple iterations and reports per-iteration failures, useful for the intermittent tool_use corruption described above.
 
-Both scripts print usage details when invoked without arguments.
+Run `bin/smoke` with no arguments to print usage details.
 
 ---
 

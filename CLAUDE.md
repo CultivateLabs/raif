@@ -59,6 +59,8 @@ Raif.register_llm(Raif::Llms::Anthropic, key: :anthropic_claude_5_sonnet, ...)
 Raif.llm(:anthropic_claude_5_sonnet)  # Returns configured instance
 ```
 
+Model definitions live in `model_manifest/*.yml`; `bin/generate_llm_registry` regenerates `lib/raif/default_llms.rb`, locale names, the initializer template, and setup docs. Never edit generated files directly.
+
 ### Key Design Patterns
 - **Isolated namespace**: All models/controllers under `Raif::`
 - **Concern-based composition**: HasLlm, InvokesModelTools, LlmResponseParsing
@@ -96,6 +98,7 @@ rails g raif:views             # Copy views for customization
 - Migration checker warns in development if Raif migrations are missing
 - Provider configuration validates that default model keys match registered models
 - Test environment automatically registers test LLMs and embedding models
+- Editing `lib/raif/default_llms.rb` or the en.yml model_names section by hand will fail the freshness spec; edit `model_manifest/` and regenerate. Smoke models with `bin/smoke <key> --record`.
 
 ## File Structure
 
