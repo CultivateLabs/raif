@@ -36,6 +36,19 @@ module Raif
 
       def show
         @task = Raif::Task.includes(:raif_model_completion).find(params[:id])
+
+        # When the completion row has been archived and culled, its durable
+        # cost/token record still renders (with an "archived" badge linking
+        # to its Raif::Archive). Stamp-only: an event without raif_archive_id
+        # belongs to a completion deleted outside the archive job, which was
+        # never archived, so nothing may claim it was.
+        if @task.raif_model_completion.blank?
+          @archived_inference_cost_event = Raif::InferenceCostEvent
+            .where(source: @task, raif_model_completion_id: nil)
+            .where.not(raif_archive_id: nil)
+            .order(:id)
+            .last
+        end
       end
     end
   end

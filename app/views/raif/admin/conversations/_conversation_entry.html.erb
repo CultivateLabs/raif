@@ -17,7 +17,14 @@
 
     <small class="text-muted"><%= entry.created_at.rfc822 %></small>
 
-    <% if entry.raif_model_completions.any? %>
+    <%# Live attempts and archived attempts render independently: attempts
+        of one entry can straddle an archive batch boundary (or one can be
+        guard-blocked while another culls), so retained attempts must not
+        hide the badges for attempts already culled. Archived events arrive
+        via the archived_events_by_entry_id local (loaded once, stamp-only,
+        archives preloaded - see Raif::Admin::ConversationsController#show);
+        no database work happens in this partial. %>
+    <% if entry.raif_model_completions.any? || archived_events_by_entry_id.fetch(entry.id, []).any? %>
       <div class="d-flex flex-column align-items-end">
         <% if entry.raif_model_completions.length > 1 %>
           <small class="text-muted"><%= t("raif.admin.common.attempts") %>: <%= entry.raif_model_completions.length %></small>
@@ -30,6 +37,11 @@
               <% else %>
                 <%= t("raif.admin.common.model_completion") %>
               <% end %>
+            <% end %>
+          <% end %>
+          <% archived_events_by_entry_id.fetch(entry.id, []).each do |event| %>
+            <%= link_to raif.admin_archive_path(event.raif_archive) do %>
+              <%= t("raif.admin.common.model_completion") %> #<%= event.original_model_completion_id %> (<%= t("raif.admin.common.archived").downcase %>)
             <% end %>
           <% end %>
         </div>

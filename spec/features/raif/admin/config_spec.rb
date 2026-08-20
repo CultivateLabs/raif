@@ -7,6 +7,7 @@ RSpec.describe "Admin::Config", type: :feature do
     it "displays the Raif configuration settings" do
       allow(Raif.config).to receive(:open_ai_api_key).and_return("oai-key-1234567890abcdef")
       allow(Raif.config).to receive(:anthropic_api_key).and_return("an-key-1234567890abcdef")
+      allow(Raif.config).to receive(:archive_partition_column).and_return(:account_id)
 
       visit raif.admin_config_path
 
@@ -20,6 +21,12 @@ RSpec.describe "Admin::Config", type: :feature do
       # API key should be masked
       expect(page).to have_content("oai-k********************")
       expect(page).to have_content("an-ke********************")
+
+      # Partition settings surface so operators can verify tenant isolation
+      # before enabling archival
+      expect(page).to have_content("archive_partition_column")
+      expect(page).to have_content(":account_id")
+      expect(page).to have_content("archive_partition_fallback")
 
       # Check for LLM registry section
       expect(page).to have_content(I18n.t("raif.admin.config.show.registered_llms"))

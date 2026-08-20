@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "raif/errors/archive_busy_error"
+require "raif/errors/archive_storage_error"
 require "raif/errors/invalid_batch_error"
 require "raif/errors/invalid_config_error"
 require "raif/errors/action_not_authorized_error"

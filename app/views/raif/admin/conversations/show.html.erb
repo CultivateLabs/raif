@@ -40,7 +40,13 @@
     <h5 class="mb-0"><%= t("raif.admin.common.system_prompt") %></h5>
   </div>
   <div class="card-body">
-    <pre><%= @conversation.entries.last&.system_prompt %></pre>
+    <% if @system_prompt.present? %>
+      <pre><%= @system_prompt %></pre>
+    <% elsif @archived_events_by_entry_id.any? %>
+      <p class="text-muted mb-0"><%= t("raif.admin.common.system_prompt_archived_notice") %></p>
+    <% else %>
+      <pre><%= @system_prompt %></pre>
+    <% end %>
   </div>
 </div>
 
@@ -55,7 +61,8 @@
               .order(created_at: :asc)
               .includes(:raif_model_completion, :raif_model_completions, :raif_model_tool_invocations),
               partial: "raif/admin/conversations/conversation_entry",
-              as: :entry %>
+              as: :entry,
+              locals: { archived_events_by_entry_id: @archived_events_by_entry_id } %>
       </div>
     </div>
   </div>

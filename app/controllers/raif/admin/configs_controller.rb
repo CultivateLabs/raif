@@ -16,6 +16,10 @@ module Raif
           { key: "agent_types", value: format_array(@config.agent_types.to_a) },
           { key: "anthropic_api_key", value: mask_sensitive_value(@config.anthropic_api_key) },
           { key: "anthropic_models_enabled", value: @config.anthropic_models_enabled },
+          { key: "archive_enabled", value: @config.archive_enabled },
+          { key: "archive_partition_column", value: @config.archive_partition_column&.inspect },
+          { key: "archive_partition_fallback", value: @config.archive_partition_fallback&.inspect },
+          { key: "archive_storage", value: @config.archive_storage.present? ? @config.archive_storage.class.name : "Not set" },
           { key: "authorize_admin_controller_action", value: format_proc(@config.authorize_admin_controller_action) },
           { key: "authorize_controller_action", value: format_proc(@config.authorize_controller_action) },
           { key: "aws_bedrock_model_name_prefix", value: @config.aws_bedrock_model_name_prefix },
@@ -40,6 +44,7 @@ module Raif
           { key: "llm_api_requests_enabled", value: @config.llm_api_requests_enabled },
           { key: "llm_request_max_retries", value: @config.llm_request_max_retries },
           { key: "llm_request_retriable_exceptions", value: @config.llm_request_retriable_exceptions.map(&:name).join(", ") },
+          { key: "model_completion_retention_period", value: format_duration(@config.model_completion_retention_period) },
           { key: "model_superclass", value: @config.model_superclass },
           { key: "open_ai_api_key", value: mask_sensitive_value(@config.open_ai_api_key) },
           { key: "open_ai_api_version", value: @config.open_ai_api_version },
@@ -91,6 +96,12 @@ module Raif
         return "None" if array.blank?
 
         array.join(", ")
+      end
+
+      def format_duration(duration)
+        return "Not set" if duration.nil?
+
+        duration.inspect
       end
     end
   end

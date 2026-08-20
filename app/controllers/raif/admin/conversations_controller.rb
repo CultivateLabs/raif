@@ -9,6 +9,20 @@ module Raif
 
       def show
         @conversation = Raif::Conversation.find(params[:id])
+        @system_prompt = @conversation.entries.last&.system_prompt
+
+        # Archived cost events for all of this conversation's entries, loaded
+        # once with their archives and grouped by entry id: the entry partial
+        # renders archived-attempt badges from this hash instead of querying
+        # per rendered entry. Stamp-only: an event without raif_archive_id
+        # belongs to a completion deleted outside the archive job, which was
+        # never archived, so nothing may claim it was.
+        @archived_events_by_entry_id = Raif::InferenceCostEvent
+          .where(source: @conversation.entries, raif_model_completion_id: nil)
+          .where.not(raif_archive_id: nil)
+          .includes(:raif_archive)
+          .order(:id)
+          .group_by(&:source_id)
       end
     end
   end

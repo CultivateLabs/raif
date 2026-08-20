@@ -27,6 +27,7 @@ require "rails_helper"
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null
 #  original_model_completion_id   :bigint           not null
+#  raif_archive_id                :bigint
 #  raif_model_completion_batch_id :bigint
 #  raif_model_completion_id       :bigint
 #  source_id                      :bigint
@@ -35,6 +36,7 @@ require "rails_helper"
 #
 #  index_raif_inference_cost_events_on_incurred_at                (incurred_at)
 #  index_raif_inference_cost_events_on_original_completion_id     (original_model_completion_id)
+#  index_raif_inference_cost_events_on_raif_archive_id            (raif_archive_id)
 #  index_raif_inference_cost_events_on_raif_model_completion_id   (raif_model_completion_id) UNIQUE
 #  index_raif_inference_cost_events_on_source_type_and_source_id  (source_type,source_id)
 #  index_raif_inference_cost_events_on_source_type_incurred_at    (source_type,incurred_at)
@@ -159,6 +161,84 @@ RSpec.describe Raif::InferenceCostEvent, type: :model do
       end.not_to change(described_class, :count)
 
       expect(completion.reload.raif_inference_cost_event).to eq(event)
+    end
+
+    it "re-syncs a stale event (older than its completion) and certifies its freshness" do
+      completion = without_live_sync { create_completion(completed_at: 1.day.ago) }
+      described_class.backfill!
+      event = completion.reload.raif_inference_cost_event
+
+      # A post-terminal update commits but its event re-sync fails: the
+      # event is left older than the completion with stale spend data.
+      completion.update_columns(total_cost: 9.99, updated_at: Time.current)
+      event.update_columns(updated_at: completion.updated_at - 1.day)
+
+      expect do
+        described_class.backfill!
+      end.not_to change(described_class, :count)
+
+      event.reload
+      expect(event.total_cost).to eq(9.99)
+      expect(event.updated_at).to be >= completion.reload.updated_at
+    end
+
+    it "freshness-certifies a stale-but-accurate event without creating anything" do
+      completion = without_live_sync { create_completion(completed_at: 1.day.ago) }
+      described_class.backfill!
+      event = completion.reload.raif_inference_cost_event
+
+      # e.g. a bare touch of the completion: nothing material changed, so
+      # the re-sync writes no attributes and save! bumps no timestamp; the
+      # repair pass must still certify the event as fresh.
+      event.update_columns(updated_at: completion.updated_at - 1.day)
+
+      expect do
+        described_class.backfill!
+      end.not_to change(described_class, :count)
+
+      expect(event.reload.updated_at).to be >= completion.reload.updated_at
+    end
+
+    it "treats a freshness-certification failure like a sync failure: accumulated into the retryable error, batch continues" do
+      failing, succeeding = without_live_sync do
+        [create_completion(completed_at: 1.day.ago), create_completion(completed_at: 1.day.ago)]
+      end
+      described_class.backfill!
+      failing_event = failing.reload.raif_inference_cost_event
+      succeeding_event = succeeding.reload.raif_inference_cost_event
+      failing_event.update_columns(updated_at: failing.updated_at - 1.day)
+      succeeding_event.update_columns(updated_at: succeeding.updated_at - 1.day)
+
+      allow_any_instance_of(Raif::InferenceCostEvent).to receive(:touch) do |instance|
+        raise ActiveRecord::ConnectionTimeoutError, "touch boom" if instance.original_model_completion_id == failing.id
+
+        instance.update_column(:updated_at, Time.current)
+      end
+
+      expect do
+        described_class.backfill!
+      end.to raise_error(Raif::Errors::InferenceCostEventsBackfillError, /#{failing.id}/)
+
+      # The failure was contained to its record: the rest of the batch was
+      # still processed, and the failing event was not falsely certified.
+      expect(succeeding_event.reload.updated_at).to be >= succeeding.reload.updated_at
+      expect(failing_event.reload.updated_at).to be < failing.reload.updated_at
+    end
+
+    it "does not freshness-certify a stale event whose re-sync fails" do
+      completion = without_live_sync { create_completion(completed_at: 1.day.ago) }
+      described_class.backfill!
+      event = completion.reload.raif_inference_cost_event
+
+      stale_time = completion.updated_at - 1.day
+      event.update_columns(updated_at: stale_time)
+
+      allow_any_instance_of(Raif::ModelCompletion)
+        .to receive(:create_or_update_inference_cost_event!)
+        .and_raise(StandardError, "sync boom")
+
+      expect { described_class.backfill! }.to raise_error(Raif::Errors::InferenceCostEventsBackfillError)
+      expect(event.reload.updated_at).to be_within(1.second).of(stale_time)
     end
 
     it "tolerates a deleted source, falling back to source_type for source_class_name" do

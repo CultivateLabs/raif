@@ -1,5 +1,12 @@
 <h1 class="my-4"><%= t("raif.admin.common.model_completions") %></h1>
 
+<% if Raif.config.archive_enabled && Raif.config.model_completion_retention_period.present? %>
+  <div class="alert alert-info">
+    <%= t("raif.admin.model_completions.index.retention_banner", period: Raif.config.model_completion_retention_period.inspect) %>
+    <%= link_to t("raif.admin.model_completions.index.see_archives"), raif.admin_archives_path, class: "alert-link" %>
+  </div>
+<% end %>
+
 <div class="row">
   <div class="col-12">
     <%= form_tag raif.admin_model_completions_path, method: :get, class: "mb-4" do %>

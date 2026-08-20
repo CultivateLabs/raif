@@ -39,6 +39,29 @@ export default class extends Controller {
 
   attachAll() {
     this.element.querySelectorAll("pre").forEach((pre) => this.attach(pre));
+    this.element.querySelectorAll("[data-raif-copy-inline]").forEach((el) => this.attachInline(el));
+  }
+
+  // Inline variant for short values (e.g. storage keys in table cells): the
+  // button sits in the text flow after the element instead of overlaying a
+  // wrapper, and copies data-raif-copy-text so a truncated display still
+  // copies the full value.
+  attachInline(el) {
+    if (el.dataset.raifCopyAttached === "true") return;
+    el.dataset.raifCopyAttached = "true";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-sm btn-outline-secondary raif-copy-btn-inline";
+    button.setAttribute("aria-label", "Copy to clipboard");
+    button.setAttribute("title", "Copy to clipboard");
+    button.innerHTML = COPY_ICON;
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      this.copy(el, button);
+    });
+
+    el.insertAdjacentElement("afterend", button);
   }
 
   attach(pre) {
@@ -74,7 +97,7 @@ export default class extends Controller {
   }
 
   async copy(pre, button) {
-    const text = pre.textContent;
+    const text = pre.dataset.raifCopyText || pre.textContent;
     let succeeded = false;
 
     if (navigator.clipboard && window.isSecureContext) {

@@ -304,6 +304,59 @@ Raif.configure do |config|
   #   { account_id: model_completion.source.try(:account_id) }
   # }
 
+  # Archival of old Raif::ModelCompletion rows. Disabled by default: with
+  # archive_enabled false and no archive_storage adapter configured, Raif
+  # never deletes anything. Enabling requires all three of archive_enabled,
+  # archive_storage and model_completion_retention_period, plus scheduling
+  # Raif::ArchiveModelCompletionsJob (e.g. nightly) and
+  # Raif::RepairInferenceCostEventsJob (e.g. daily). Preview what a run
+  # would do, before enabling, with
+  # Raif::ArchiveModelCompletionsJob.dry_run.
+  # Full guide: https://docs.raif.ai/learn_more/archiving
+  # config.archive_enabled = false
+
+  # Storage adapter used by the archive job. Raif ships
+  # Raif::ArchiveStorage::FileSystem (local disk); production hosts
+  # typically supply their own, commonly S3-backed. The adapter contract is
+  # documented in the archiving guide linked above.
+  #
+  # Archives contain full prompts and responses, so the target must be
+  # private, encrypted, and access-controlled at least as strictly as your
+  # application data. Apply that policy, and any lifecycle rules, to whole
+  # prefixes rather than deriving it from raif_archives rows: a crashed run
+  # can leave an uploaded object that no row references.
+  # config.archive_storage = Raif::ArchiveStorage::FileSystem.new(root: Rails.root.join("storage", "raif-archives"))
+
+  # Partition archives by a column on the archived resource (e.g. a
+  # host-added account_id on raif_model_completions), which is what lets
+  # Raif::Archive.purge_partition! erase one tenant's archived data - its
+  # objects and audit rows, not its live records. nil (the default) keeps
+  # unpartitioned behavior, and enabling this later does not retrofit
+  # archives created without it.
+  #
+  # The column's value MUST be immutable for a record's lifetime (e.g. pair
+  # a NOT NULL column with attr_readonly and
+  # config.active_record.raise_on_assign_to_attr_readonly): a record that
+  # changes partitions mid-archival can leave a copy under its old prefix
+  # that the new partition's purge can never find.
+  # config.archive_partition_column = nil
+
+  # With a partition column set, a record whose partition value is NULL (or
+  # normalizes to blank) fails closed by default: it is never archived, so
+  # a later tenant purge cannot miss records that lost their attribution.
+  # Hosts with intentionally global/unowned records may explicitly set
+  # Raif::ArchivePartition::UNGROUPED to archive them under a reserved
+  # "_ungrouped" storage segment that purge_partition! never touches.
+  # config.archive_partition_fallback = nil
+
+  # How long model completions are retained before being archived and
+  # deleted. Applies to completed/failed completions AND to nonterminal
+  # completions older than the cutoff; the latter have no cost event, so no
+  # per-record link back to their archive survives. nil (the default)
+  # disables model completion culling even when archive_enabled is true.
+  # Must be at least 1 month.
+  # config.model_completion_retention_period = 6.months
+
   # Timeout settings for LLM API requests (in seconds). All default to nil (use Faraday defaults).
   # config.request_open_timeout = nil  # Time to wait for a connection to be opened
   # config.request_read_timeout = nil  # Time to wait for data to be read

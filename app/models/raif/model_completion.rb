@@ -277,9 +277,13 @@ private
   # each of its failing records would otherwise enqueue another full repair
   # run and a persistent failure would multiply jobs without bound. Failures
   # there still report; recovery is the next scheduled repair/backfill run.
+  # Returns true when the event was successfully created/updated, false when
+  # the sync failed (the repair path uses this to avoid freshness-certifying
+  # an event whose re-sync did not actually run).
   def sync_inference_cost_event(enqueue_repair_on_failure: true)
     @inference_cost_event_sync_pending = nil
     create_or_update_inference_cost_event!
+    true
   rescue ActiveRecord::RecordNotUnique
     # A concurrent writer inserted the event first (unique index on
     # raif_model_completion_id). We're outside any enclosing transaction, so
@@ -287,11 +291,14 @@ private
     begin
       association(:raif_inference_cost_event).reload
       create_or_update_inference_cost_event!
+      true
     rescue StandardError => e
       report_inference_cost_event_sync_failure(e, enqueue_repair: enqueue_repair_on_failure)
+      false
     end
   rescue StandardError => e
     report_inference_cost_event_sync_failure(e, enqueue_repair: enqueue_repair_on_failure)
+    false
   end
 
   def create_or_update_inference_cost_event!
