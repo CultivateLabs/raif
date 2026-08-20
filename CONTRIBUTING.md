@@ -51,7 +51,7 @@ bundle exec guard
 ```bash
 bin/smoke anthropic_claude_5_sonnet          # one model, full capability matrix
 bin/smoke anthropic bedrock                  # provider sweeps
-bin/smoke ALL                                # everything with credentials available
+bin/smoke ALL                                # all LLM models with credentials available (use `embeddings` for embedding models)
 bin/smoke --stale 30                         # models with unverified or stale capabilities
 bin/smoke x_ai --only batch_inference        # one capability
 bin/smoke bedrock_claude_5_sonnet --only streaming_tool_calls --iterations 5
