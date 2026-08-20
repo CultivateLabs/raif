@@ -47,6 +47,43 @@ RSpec.describe Raif::ModelManifest::Generator do
       expect(source).to include("output_token_cost: 15.0 / 1_000_000,")
     end
 
+    it "emits a Float literal even when the manifest pricing is an Integer, so it never floors to 0" do
+      integer_priced_entry = Raif::ModelManifest::Entry.new(
+        key: :integer_priced_test_model,
+        provider_name: "anthropic",
+        endpoint: nil,
+        adapter_class_name: "Raif::Llms::Anthropic",
+        api_name: "integer-priced-test-1",
+        display_name: "Integer Priced Test Model",
+        max_completion_tokens: nil,
+        pricing: { "input_per_million" => 3, "output_per_million" => 15 },
+        capabilities: {
+          "temperature" => true,
+          "structured_outputs" => false,
+          "native_tool_use" => true,
+          "streaming" => true,
+          "batch_inference" => true,
+          "images" => false,
+          "pdfs" => false,
+          "provider_managed_tools" => []
+        },
+        lifecycle: { "status" => "active" },
+        verification: nil,
+        source_path: "spec/fixtures/model_manifest/anthropic.yml",
+        key_base: "integer_priced_test_model"
+      )
+      integer_priced_manifest = Raif::ModelManifest::Manifest.new(
+        llm_entries: [integer_priced_entry], embedding_entries: [], provider_references: {}, provider_files: {}
+      )
+
+      integer_source = described_class.default_llms_rb(integer_priced_manifest)
+
+      expect(integer_source).to include("input_token_cost: 3.0 / 1_000_000,")
+      # No trailing comma: output_token_cost is the last field emitted for this fixture
+      # (no max_completion_tokens, provider settings, tools, or deprecation fields).
+      expect(integer_source).to include("output_token_cost: 15.0 / 1_000_000")
+    end
+
     it "emits deprecation fields for a deprecated model and omits nil migration_note" do
       expect(source).to include("key: :anthropic_old_model,")
       expect(source).to include("deprecated: true,")
@@ -94,6 +131,28 @@ RSpec.describe Raif::ModelManifest::Generator do
       expect(source).to include("input_token_cost: 0.02 / 1_000_000,")
       # No trailing comma: default_output_vector_size is always the last field.
       expect(source).to include("default_output_vector_size: 1536")
+    end
+
+    it "emits a Float literal even when the manifest's input_per_million is an Integer" do
+      integer_priced_entry = Raif::ModelManifest::EmbeddingEntry.new(
+        key: :integer_priced_test_embedding,
+        provider_name: "open_ai",
+        adapter_class_name: "Raif::EmbeddingModels::OpenAi",
+        api_name: "integer-priced-test-embedding",
+        display_name: "Integer Priced Test Embedding",
+        input_per_million: 2,
+        default_output_vector_size: 1536,
+        lifecycle: { "status" => "active" },
+        verification: nil,
+        source_path: "spec/fixtures/model_manifest/embeddings.yml"
+      )
+      integer_priced_manifest = Raif::ModelManifest::Manifest.new(
+        llm_entries: [], embedding_entries: [integer_priced_entry], provider_references: {}, provider_files: {}
+      )
+
+      integer_source = described_class.default_embedding_models_rb(integer_priced_manifest)
+
+      expect(integer_source).to include("input_token_cost: 2.0 / 1_000_000,")
     end
   end
 

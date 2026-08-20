@@ -40,8 +40,10 @@ RSpec.describe "model_manifest validity" do
       it "has pricing unless retired" do
         next if entry.retired?
 
-        expect(entry.pricing["input_per_million"]).to be_a(Numeric)
-        expect(entry.pricing["output_per_million"]).to be_a(Numeric)
+        # Must be a Float, not an Integer: RegistryData and the generator divide by
+        # 1_000_000 to get a per-token cost, and an Integer would silently floor to 0.
+        expect(entry.pricing["input_per_million"]).to be_a(Float)
+        expect(entry.pricing["output_per_million"]).to be_a(Float)
       end
 
       it "has coherent lifecycle fields" do
@@ -74,6 +76,14 @@ RSpec.describe "model_manifest validity" do
         expect(entry.display_name).to be_present
         expect(entry.default_output_vector_size).to be_a(Integer)
         expect(Raif::ModelManifest::LIFECYCLE_STATUSES).to include(entry.status)
+      end
+
+      it "has pricing unless retired" do
+        next if entry.retired?
+
+        # Must be a Float, not an Integer: RegistryData and the generator divide by
+        # 1_000_000 to get a per-token cost, and an Integer would silently floor to 0.
+        expect(entry.input_per_million).to be_a(Float)
       end
     end
   end

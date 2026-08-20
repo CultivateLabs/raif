@@ -238,8 +238,8 @@ module Raif
           case field
           when :key then "#{pad}key: :#{value},"
           when :api_name then "#{pad}api_name: #{value.inspect},"
-          when :input_token_cost then "#{pad}input_token_cost: #{entry.pricing.fetch("input_per_million")} / 1_000_000,"
-          when :output_token_cost then "#{pad}output_token_cost: #{entry.pricing.fetch("output_per_million")} / 1_000_000,"
+          when :input_token_cost then "#{pad}input_token_cost: #{entry.pricing.fetch("input_per_million").to_f} / 1_000_000,"
+          when :output_token_cost then "#{pad}output_token_cost: #{entry.pricing.fetch("output_per_million").to_f} / 1_000_000,"
           when :max_completion_tokens then "#{pad}max_completion_tokens: #{underscored_integer(value)},"
           when :model_provider_settings then "#{pad}model_provider_settings: { #{inline_settings(value)} },"
           when :supported_provider_managed_tools then supported_provider_managed_tools_field(value, pad)
@@ -271,7 +271,7 @@ module Raif
           case field
           when :key then "#{pad}key: :#{value},"
           when :api_name then "#{pad}api_name: #{value.inspect},"
-          when :input_token_cost then "#{pad}input_token_cost: #{entry.input_per_million} / 1_000_000,"
+          when :input_token_cost then "#{pad}input_token_cost: #{entry.input_per_million.to_f} / 1_000_000,"
           when :default_output_vector_size then "#{pad}default_output_vector_size: #{value},"
           else raise ArgumentError, "Generator: unknown embedding config field #{field.inspect}"
           end

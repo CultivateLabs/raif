@@ -19,8 +19,8 @@ module Raif
         config = {
           key: entry.key,
           api_name: entry.api_name,
-          input_token_cost: entry.pricing.fetch("input_per_million") / 1_000_000,
-          output_token_cost: entry.pricing.fetch("output_per_million") / 1_000_000
+          input_token_cost: entry.pricing.fetch("input_per_million").to_f / 1_000_000,
+          output_token_cost: entry.pricing.fetch("output_per_million").to_f / 1_000_000
         }
         config[:max_completion_tokens] = entry.max_completion_tokens if entry.max_completion_tokens
 
@@ -67,7 +67,7 @@ module Raif
             {
               key: entry.key,
               api_name: entry.api_name,
-              input_token_cost: entry.input_per_million / 1_000_000,
+              input_token_cost: entry.input_per_million.to_f / 1_000_000,
               default_output_vector_size: entry.default_output_vector_size
             }
           end
