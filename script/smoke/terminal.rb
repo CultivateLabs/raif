@@ -56,9 +56,8 @@ module Smoke
       paint(label, color, stream: stream, enabled: enabled)
     end
 
-    # Prompts on stderr (progress lines already go there) and reads a line from $stdin. Only an
-    # explicit y/yes (case-insensitive) counts as confirmation; anything else, including a blank
-    # line or EOF, is a "no".
+    # Prompts on stderr, since progress lines already go there. Only an explicit y/yes
+    # (case-insensitive) counts as confirmation.
     def self.confirm?(question)
       $stderr.print("#{question} [y/N] ")
       $stderr.flush

@@ -41,8 +41,8 @@ EMBEDDING_PROMPT = "hello smoke"
 # Worst-first: a model's summary-footer bucket is its single worst capability status.
 STATUS_PRIORITY = %i[fail timeout skip note pass].freeze
 
-# repo root, since script/smoke.rb lives at <repo_root>/script/smoke.rb -- used to print
-# manifest paths relative to the repo in the pre-run --record confirmation preview.
+# Repo root (script/smoke.rb lives at <repo_root>/script/smoke.rb); used to print manifest
+# paths relative to the repo in the --record confirmation preview.
 REPO_ROOT = File.expand_path("..", __dir__)
 
 # Guards the stderr progress lines emitted by provider threads in run_all so concurrent
@@ -174,7 +174,7 @@ end
 
 # A model's worst capability status, fail > timeout > skip > note > pass -- an empty capabilities
 # hash (an unexecuted required check; see Smoke::Policy) counts as fail, since it's never a benign
-# outcome. Used only to bucket the summary footer's per-model counts, one bucket per model.
+# outcome. Used only to bucket the summary footer's per-model counts.
 def worst_model_status(capabilities)
   return :fail if capabilities.empty?
 
@@ -207,9 +207,9 @@ def print_json_results(model_results)
   puts JSON.pretty_generate(payload)
 end
 
-# batch_inference is a live, minutes-long check (see script/smoke/checks.rb), so it alone is
-# enough to warrant a confirmation even on a small selection: options[:only] and options[:skip]
-# are mutually exclusive CLI flags, so exactly one branch applies here.
+# --only and --skip take the same precedence here as in Smoke::Checks.run_for: --only decides
+# inclusion outright when given, otherwise --skip does. batch_inference alone justifies asking,
+# since it's a live, minutes-long check (see script/smoke/checks.rb).
 def batch_included?(options)
   options[:only].nil? ? !options[:skip].include?("batch_inference") : options[:only].include?("batch_inference")
 end
