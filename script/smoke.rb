@@ -4,17 +4,20 @@
 #
 # Runs the smoke capability checks (script/smoke/checks.rb) against the live models described in
 # model_manifest/*.yml, using script/smoke/selection.rb to resolve CLI selectors, script/smoke/credentials.rb
-# to gate providers on configured credentials, script/smoke/policy.rb to decide the process exit code, and
-# script/smoke/recorder.rb (with --record) to write verified results back into the manifest.
+# to gate providers on configured credentials, script/smoke/policy.rb to decide the process exit code,
+# script/smoke/recorder.rb (with --record) to write verified results back into the manifest, and
+# script/smoke/terminal.rb for colored output and the pre-run confirmation prompt.
 
 require "optparse"
 require "json"
+require "pathname"
 require "raif/model_manifest"
 require_relative "smoke/selection"
 require_relative "smoke/credentials"
 require_relative "smoke/checks"
 require_relative "smoke/policy"
 require_relative "smoke/recorder"
+require_relative "smoke/terminal"
 
 # rails runner buffers stdout in blocks when it isn't a tty (e.g. piped to head or a log file),
 # which would otherwise hold back both the final matrix and anything printed along the way.
@@ -35,6 +38,13 @@ CAPABILITY_COLUMN_ORDER = %w[
 
 EMBEDDING_PROMPT = "hello smoke"
 
+# Worst-first: a model's summary-footer bucket is its single worst capability status.
+STATUS_PRIORITY = %i[fail timeout skip note pass].freeze
+
+# repo root, since script/smoke.rb lives at <repo_root>/script/smoke.rb -- used to print
+# manifest paths relative to the repo in the pre-run --record confirmation preview.
+REPO_ROOT = File.expand_path("..", __dir__)
+
 # Guards the stderr progress lines emitted by provider threads in run_all so concurrent
 # writes don't interleave mid-line.
 PROGRESS_MUTEX = Mutex.new
@@ -46,7 +56,7 @@ end
 def progress_summary(capabilities)
   CAPABILITY_COLUMN_ORDER
     .select { |cap| capabilities.key?(cap) }
-    .map { |cap| "#{cap}=#{status_label(capabilities[cap][:status])}" }
+    .map { |cap| "#{cap}=#{Smoke::Terminal.status_paint(status_label(capabilities[cap][:status]), capabilities[cap][:status], stream: $stderr)}" }
     .join(" ")
 end
 
@@ -99,7 +109,9 @@ def run_all(selection, options)
 
   threads = entries.group_by(&:provider_name).map do |provider_name, group|
     Thread.new do
-      PROGRESS_MUTEX.synchronize { warn "progress: starting #{provider_name} (#{group.size} models)" }
+      PROGRESS_MUTEX.synchronize do
+        warn Smoke::Terminal.paint("progress: starting #{provider_name} (#{group.size} models)", :bold, stream: $stderr)
+      end
 
       missing_credentials = Smoke::Credentials.missing_for?(provider_name)
 
@@ -126,12 +138,19 @@ def print_text_matrix(model_results)
   key_width = (["MODEL".length] + model_results.map { |result| result[:key].length }).max
   column_widths = columns.to_h { |cap| [cap, [cap.length, 7].max] }
 
-  puts "MODEL".ljust(key_width) + "  " + columns.map { |cap| cap.upcase.ljust(column_widths[cap]) }.join("  ")
+  header = "MODEL".ljust(key_width) + "  " + columns.map { |cap| cap.upcase.ljust(column_widths[cap]) }.join("  ")
+  puts Smoke::Terminal.paint(header, :bold, stream: $stdout)
 
   model_results.each do |result|
     row = columns.map do |cap|
       cell = result[:capabilities][cap]
-      (cell ? status_label(cell[:status]) : "-").ljust(column_widths[cap])
+
+      if cell
+        label = status_label(cell[:status]).ljust(column_widths[cap])
+        Smoke::Terminal.status_paint(label, cell[:status], stream: $stdout)
+      else
+        Smoke::Terminal.paint("-".ljust(column_widths[cap]), :dim, stream: $stdout)
+      end
     end.join("  ")
 
     puts result[:key].ljust(key_width) + "  " + row
@@ -141,7 +160,8 @@ def print_text_matrix(model_results)
     result[:capabilities].filter_map do |cap, cell|
       next if cell[:status] == :pass
 
-      "  #{result[:key]} #{cap}: #{status_label(cell[:status])} #{cell[:detail]}"
+      label = Smoke::Terminal.status_paint(status_label(cell[:status]), cell[:status], stream: $stdout)
+      "  #{result[:key]} #{cap}: #{label} #{cell[:detail]}"
     end
   end
 
@@ -150,6 +170,29 @@ def print_text_matrix(model_results)
   puts
   puts "Details:"
   details.each { |line| puts line }
+end
+
+# A model's worst capability status, fail > timeout > skip > note > pass -- an empty capabilities
+# hash (an unexecuted required check; see Smoke::Policy) counts as fail, since it's never a benign
+# outcome. Used only to bucket the summary footer's per-model counts, one bucket per model.
+def worst_model_status(capabilities)
+  return :fail if capabilities.empty?
+
+  statuses = capabilities.values.map { |cell| cell[:status] }
+  STATUS_PRIORITY.find { |candidate| statuses.include?(candidate) } || :fail
+end
+
+def print_summary_footer(model_results, elapsed_seconds, exit_code)
+  return if model_results.empty?
+
+  counts = Hash.new(0)
+  model_results.each { |result| counts[worst_model_status(result[:capabilities])] += 1 }
+
+  line = "#{model_results.size} models: #{counts[:pass]} pass, #{counts[:fail]} fail, #{counts[:skip]} skip, " \
+    "#{counts[:timeout]} timeout, #{counts[:note]} note (#{Smoke::Terminal.format_duration(elapsed_seconds)})"
+
+  puts
+  puts Smoke::Terminal.paint(line, exit_code.zero? ? :green : :red, stream: $stdout)
 end
 
 def print_json_results(model_results)
@@ -164,6 +207,51 @@ def print_json_results(model_results)
   puts JSON.pretty_generate(payload)
 end
 
+# batch_inference is a live, minutes-long check (see script/smoke/checks.rb), so it alone is
+# enough to warrant a confirmation even on a small selection: options[:only] and options[:skip]
+# are mutually exclusive CLI flags, so exactly one branch applies here.
+def batch_included?(options)
+  options[:only].nil? ? !options[:skip].include?("batch_inference") : options[:only].include?("batch_inference")
+end
+
+def confirmation_needed?(entries, options)
+  return false unless $stdin.tty?
+  return false if options[:yes]
+
+  entries.size > 10 || batch_included?(options)
+end
+
+def relative_source_path(entry)
+  Pathname.new(entry.source_path.to_s).relative_path_from(Pathname.new(REPO_ROOT)).to_s
+end
+
+def print_confirmation_preview(entries, options)
+  warn "#{entries.size} model(s) selected:"
+  entries.group_by(&:provider_name).sort_by { |provider_name, _group| provider_name }.each do |provider_name, group|
+    warn "  #{provider_name}: #{group.size}"
+  end
+
+  warn "batch_inference checks poll up to #{options[:batch_timeout]}s per model" if batch_included?(options)
+
+  return unless options[:record]
+
+  files = entries.map { |entry| relative_source_path(entry) }.uniq.sort
+  warn "--record will rewrite: #{files.join(", ")}"
+end
+
+# Blocks on a [y/N] prompt before a large or batch_inference-including run, since both make real,
+# possibly slow or costly API calls. Skipped entirely off a tty (CI, piped input) so automation
+# never hangs waiting on stdin.
+def confirm_run!(entries, options)
+  return unless confirmation_needed?(entries, options)
+
+  print_confirmation_preview(entries, options)
+  return if Smoke::Terminal.confirm?("Continue?")
+
+  warn "Aborted."
+  exit 1
+end
+
 options = {
   only: nil,
   skip: [],
@@ -173,7 +261,8 @@ options = {
   format: "text",
   iterations: 1,
   batch_timeout: 600,
-  list: false
+  list: false,
+  yes: false
 }
 
 parser = OptionParser.new do |opts|
@@ -213,6 +302,14 @@ parser = OptionParser.new do |opts|
 
   opts.on("--list", "List all registered model keys (LLM + embedding) and exit") do
     options[:list] = true
+  end
+
+  opts.on("--yes", "Skip the pre-run confirmation prompt for large or batch_inference-including runs") do
+    options[:yes] = true
+  end
+
+  opts.on("--no-color", "Disable colored output") do
+    Smoke::Terminal.disable_colors!
   end
 end
 
@@ -255,12 +352,19 @@ if selectors.empty? && options[:stale_days].nil?
   exit 1
 end
 
+confirm_run!(selection[:entries] + selection[:embedding_entries], options)
+
+run_started_at = Time.now
 model_results = run_all(selection, options)
+elapsed_seconds = Time.now - run_started_at
+
+exit_code = Smoke::Policy.exit_code(model_results, explicit_keys: selection[:explicit_keys], strict: options[:strict])
 
 if options[:format] == "json"
   print_json_results(model_results)
 else
   print_text_matrix(model_results)
+  print_summary_footer(model_results, elapsed_seconds, exit_code)
 end
 
-exit Smoke::Policy.exit_code(model_results, explicit_keys: selection[:explicit_keys], strict: options[:strict])
+exit exit_code
