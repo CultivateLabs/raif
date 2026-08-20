@@ -183,7 +183,7 @@ module Smoke
       model_completion = Raif.llm(entry.key).chat(
         message: TOOL_CALL_PROMPT,
         available_model_tools: [Raif::ModelTools::WikipediaSearch],
-        tool_choice: "wikipedia_search"
+        tool_choice: Raif::ModelTools::WikipediaSearch.to_s
       )
       arguments = model_completion&.response_tool_calls&.first&.dig("arguments")
       { status: arguments.is_a?(Hash) ? :pass : :fail, detail: arguments.inspect.first(180) }
