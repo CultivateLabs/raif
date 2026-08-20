@@ -15,3 +15,16 @@ providers:
           replacement_key: null
           migration_note: null
         verification: null
+      - key: open_ai_test_embedding_gone
+        api_name: text-embedding-test-gone
+        display_name: OpenAI Test Embedding Gone
+        input_per_million: 0.02
+        default_output_vector_size: 1536
+        lifecycle:
+          status: retired
+          added_on: 2022-01-01
+          deprecated_on: 2023-01-01
+          retirement_date: 2023-06-01
+          replacement_key: open_ai_test_embedding
+          migration_note: null
+        verification: null

@@ -96,5 +96,28 @@ RSpec.describe Smoke::Selection do
 
       expect(result[:embedding_entries]).to eq([])
     end
+
+    it "resolves an exact embedding key and marks it explicit" do
+      result = described_class.resolve(["open_ai_test_embedding"], entries, embedding_entries: manifest.embedding_entries)
+
+      expect(result[:embedding_entries].map(&:key)).to eq([:open_ai_test_embedding])
+      expect(result[:entries]).to be_empty
+      expect(result[:explicit_keys]).to eq(["open_ai_test_embedding"])
+      expect(result[:unknown]).to be_empty
+    end
+
+    it "still reports an unrecognized selector as unknown when embedding_entries are given" do
+      result = described_class.resolve(["not_a_real_selector"], entries, embedding_entries: manifest.embedding_entries)
+
+      expect(result[:unknown]).to eq(["not_a_real_selector"])
+      expect(result[:embedding_entries]).to be_empty
+    end
+
+    it "reports a retired embedding model's own key as unknown rather than selecting it" do
+      result = described_class.resolve(["open_ai_test_embedding_gone"], entries, embedding_entries: manifest.embedding_entries)
+
+      expect(result[:embedding_entries]).to be_empty
+      expect(result[:unknown]).to eq(["open_ai_test_embedding_gone"])
+    end
   end
 end

@@ -63,6 +63,7 @@ Notes:
 - Credentials: ANTHROPIC_API_KEY, OPENAI_API_KEY, OPEN_ROUTER_API_KEY (or OPENROUTER_API_KEY), GOOGLE_AI_API_KEY (or GOOGLE_API_KEY), XAI_API_KEY (or X_AI_API_KEY), AWS credentials plus AWS_REGION for Bedrock.
 - `--record` updates the verification blocks in model_manifest/; commit those changes.
 - `bin/smoke --list` prints all model keys. `--format json` emits machine-readable results.
+- `embeddings` selects all embedding models; an exact embedding key (e.g. `bin/smoke open_ai_text_embedding_3_small`) works too.
 
 ### Linting
 
