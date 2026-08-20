@@ -204,6 +204,12 @@ end
 
 Smoke::Credentials.configure_raif!
 
+# The runner must exercise the real streaming path, not have it silently swapped out by the
+# streaming_unsupported_model_keys fallback. Cleared once here (the process exits after this
+# run) rather than saved/restored per-check, since per-provider threads (see run_all) would
+# race each other's restore.
+Raif.config.streaming_unsupported_model_keys = []
+
 manifest = Raif::ModelManifest.load
 selection = Smoke::Selection.resolve(
   selectors, manifest.llm_entries, stale_days: options[:stale_days], embedding_entries: manifest.embedding_entries

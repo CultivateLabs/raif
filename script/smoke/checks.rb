@@ -191,13 +191,10 @@ module Smoke
       { status: :fail, detail: "#{e.class}: #{e.message.to_s.first(180)}" }
     end
 
-    # Clears Raif.config.streaming_unsupported_model_keys around the call (so the fallback
-    # safety net can't hide the very path this check exercises) and always restores the
-    # prior value, even if the check raises.
+    # script/smoke.rb clears Raif.config.streaming_unsupported_model_keys once at startup, for
+    # the whole process; it must not be saved/cleared/restored here too, since per-provider
+    # threads (see Smoke.run_all) would race each other's restore.
     def self.check_streaming(entry)
-      previous_unsupported = Raif.config.streaming_unsupported_model_keys
-      Raif.config.streaming_unsupported_model_keys = []
-
       llm = Raif.llm(entry.key)
       deltas = 0
       streamed = llm.chat(message: COMPLETION_PROMPT) { |_model_completion, _delta, _event| deltas += 1 }
@@ -210,14 +207,9 @@ module Smoke
       { status: pass ? :pass : :fail, detail: "deltas=#{deltas} streamed_ok=#{streamed_ok} unstreamed_ok=#{unstreamed_ok}" }
     rescue StandardError => e
       { status: :fail, detail: "#{e.class}: #{e.message.to_s.first(180)}" }
-    ensure
-      Raif.config.streaming_unsupported_model_keys = previous_unsupported
     end
 
     def self.check_streaming_tool_calls(entry, iterations:)
-      previous_unsupported = Raif.config.streaming_unsupported_model_keys
-      Raif.config.streaming_unsupported_model_keys = []
-
       llm = Raif.llm(entry.key)
       tool = Raif::ModelTools::WikipediaSearch
       streamed_statuses = []
@@ -235,8 +227,6 @@ module Smoke
       { status: pass ? :pass : :fail, detail: "streamed=#{streamed_statuses.tally} unstreamed=#{unstreamed_statuses.tally}" }
     rescue StandardError => e
       { status: :fail, detail: "#{e.class}: #{e.message.to_s.first(180)}" }
-    ensure
-      Raif.config.streaming_unsupported_model_keys = previous_unsupported
     end
 
     def self.classify_tool_call(model_completion)
