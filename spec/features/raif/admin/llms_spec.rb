@@ -21,5 +21,16 @@ RSpec.describe "Admin::Llms", type: :feature do
         break # just check the first one is present
       end
     end
+
+    it "badges deprecated LLMs" do
+      Raif.register_llm(Raif::Llms::TestLlm, key: :admin_badge_test_llm, api_name: "admin-badge-test-llm",
+        deprecated: true, retirement_date: Date.new(2026, 12, 1))
+
+      visit raif.admin_llms_path
+
+      expect(page).to have_content("Deprecated")
+    ensure
+      Raif.llm_registry.delete(:admin_badge_test_llm)
+    end
   end
 end
