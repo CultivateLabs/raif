@@ -64,6 +64,7 @@ Notes:
 - `--record` updates the verification blocks in model_manifest/; commit those changes.
 - `bin/smoke --list` prints all model keys. `--format json` emits machine-readable results.
 - `embeddings` selects all embedding models; an exact embedding key (e.g. `bin/smoke open_ai_text_embedding_3_small`) works too.
+- A full `bin/smoke ALL` run makes live calls for every model, and batch_inference checks can poll for up to 10 minutes per model, so sweeps commonly add `--skip batch_inference`; per-model progress streams to stderr as each one finishes, with the final matrix printed at the end.
 
 ### Linting
 

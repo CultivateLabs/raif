@@ -16,6 +16,10 @@ require_relative "smoke/checks"
 require_relative "smoke/policy"
 require_relative "smoke/recorder"
 
+# rails runner buffers stdout in blocks when it isn't a tty (e.g. piped to head or a log file),
+# which would otherwise hold back both the final matrix and anything printed along the way.
+$stdout.sync = true
+
 STATUS_LABELS = {
   pass: "PASS",
   fail: "FAIL",
@@ -31,8 +35,19 @@ CAPABILITY_COLUMN_ORDER = %w[
 
 EMBEDDING_PROMPT = "hello smoke"
 
+# Guards the stderr progress lines emitted by provider threads in run_all so concurrent
+# writes don't interleave mid-line.
+PROGRESS_MUTEX = Mutex.new
+
 def status_label(status)
   STATUS_LABELS.fetch(status, status.to_s.upcase)
+end
+
+def progress_summary(capabilities)
+  CAPABILITY_COLUMN_ORDER
+    .select { |cap| capabilities.key?(cap) }
+    .map { |cap| "#{cap}=#{status_label(capabilities[cap][:status])}" }
+    .join(" ")
 end
 
 # Builds the single capability result representing "this model's provider has no credentials
@@ -84,14 +99,20 @@ def run_all(selection, options)
 
   threads = entries.group_by(&:provider_name).map do |provider_name, group|
     Thread.new do
+      PROGRESS_MUTEX.synchronize { warn "progress: starting #{provider_name} (#{group.size} models)" }
+
       missing_credentials = Smoke::Credentials.missing_for?(provider_name)
 
       if missing_credentials
         instructions = Smoke::Credentials.instructions_for(provider_name)
-        warn "NOTE #{provider_name}: missing credentials, skipping #{group.size} model(s). #{instructions}"
+        PROGRESS_MUTEX.synchronize { warn "NOTE #{provider_name}: missing credentials, skipping #{group.size} model(s). #{instructions}" }
       end
 
-      group.map { |entry| run_entry(entry, options, selection[:explicit_keys], missing_credentials: missing_credentials) }
+      group.map do |entry|
+        result = run_entry(entry, options, selection[:explicit_keys], missing_credentials: missing_credentials)
+        PROGRESS_MUTEX.synchronize { warn "progress: #{result[:key]} #{progress_summary(result[:capabilities])}" }
+        result
+      end
     end
   end
 
