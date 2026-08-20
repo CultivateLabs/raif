@@ -40,8 +40,8 @@ RSpec.describe "model_manifest validity" do
       it "has pricing unless retired" do
         next if entry.retired?
 
-        # Must be a Float, not an Integer: RegistryData and the generator divide by
-        # 1_000_000 to get a per-token cost, and an Integer would silently floor to 0.
+        # Float, not Integer: RegistryData and the generator divide this by 1_000_000, and
+        # an Integer would silently floor the result to 0.
         expect(entry.pricing["input_per_million"]).to be_a(Float)
         expect(entry.pricing["output_per_million"]).to be_a(Float)
       end
@@ -81,8 +81,8 @@ RSpec.describe "model_manifest validity" do
       it "has pricing unless retired" do
         next if entry.retired?
 
-        # Must be a Float, not an Integer: RegistryData and the generator divide by
-        # 1_000_000 to get a per-token cost, and an Integer would silently floor to 0.
+        # Float, not Integer: RegistryData and the generator divide this by 1_000_000, and
+        # an Integer would silently floor the result to 0.
         expect(entry.input_per_million).to be_a(Float)
       end
     end
