@@ -45,25 +45,24 @@ bundle exec guard
 ```
 
 ### Manual LLM Smoke Tests
-Use this helper to quickly verify live model calls from the dummy app:
+
+`bin/smoke` verifies live models against the capabilities claimed in `model_manifest/*.yml`:
 
 ```bash
-bin/smoke_llm_models ALL
-bin/smoke_llm_models anthropic bedrock
-bin/smoke_llm_models anthropic_claude_4_6_opus bedrock_claude_4_6_opus
-AWS_PROFILE=your-profile AWS_REGION=us-east-1 bin/smoke_llm_models bedrock
-bin/smoke_llm_models open_ai_responses --prompt "Reply with exactly: ping"
+bin/smoke anthropic_claude_5_sonnet          # one model, full capability matrix
+bin/smoke anthropic bedrock                  # provider sweeps
+bin/smoke ALL                                # everything with credentials available
+bin/smoke --stale 30                         # models with unverified or stale capabilities
+bin/smoke x_ai --only batch_inference        # one capability
+bin/smoke bedrock_claude_5_sonnet --only streaming_tool_calls --iterations 5
+bin/smoke anthropic_claude_5_sonnet --record # write results back to the manifest
 ```
 
 Notes:
-- Anthropic requires `ANTHROPIC_API_KEY`.
-- OpenAI requires `OPENAI_API_KEY`.
-- OpenRouter requires `OPEN_ROUTER_API_KEY` (or `OPENROUTER_API_KEY`).
-- Google requires `GOOGLE_AI_API_KEY` (or `GOOGLE_API_KEY`).
-- Bedrock requires valid AWS credentials and model access.
-- To avoid metadata lookup delays locally, `bin/smoke_llm_models` sets `AWS_EC2_METADATA_DISABLED=true` if not already set.
-- Use `bin/smoke_llm_models --list` to print all registered model keys.
-- `RAIF_SMOKE_MODELS` can still be used as a comma-separated fallback list when no positional selectors are provided.
+- Explicitly selected models fail (nonzero exit) on SKIP or TIMEOUT; provider sweeps skip providers without credentials.
+- Credentials: ANTHROPIC_API_KEY, OPENAI_API_KEY, OPEN_ROUTER_API_KEY (or OPENROUTER_API_KEY), GOOGLE_AI_API_KEY (or GOOGLE_API_KEY), XAI_API_KEY (or X_AI_API_KEY), AWS credentials plus AWS_REGION for Bedrock.
+- `--record` updates the verification blocks in model_manifest/; commit those changes.
+- `bin/smoke --list` prints all model keys. `--format json` emits machine-readable results.
 
 ### Linting
 
