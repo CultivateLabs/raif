@@ -83,12 +83,14 @@ module Raif
 
       # Capabilities the smoke runner would test for this entry: "completion"
       # always, plus every schema capability, plus the derived
-      # streaming_tool_calls when both streaming and native tool use are claimed.
+      # streaming_tool_calls whenever native tool use is claimed (even if
+      # streaming itself is claimed false, so --only streaming_tool_calls
+      # still works as a diagnostic on a streaming-disabled model).
       def smokable_capabilities
         caps = ["completion"]
         caps += CAPABILITY_KEYS.reject { |c| c == "provider_managed_tools" }
         caps << "provider_managed_tools" if capabilities["provider_managed_tools"]&.any?
-        caps << "streaming_tool_calls" if capabilities["streaming"] && capabilities["native_tool_use"]
+        caps << "streaming_tool_calls" if capabilities["native_tool_use"]
         caps
       end
 

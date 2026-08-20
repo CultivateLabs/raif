@@ -46,6 +46,46 @@ RSpec.describe Raif::ModelManifest do
     end
   end
 
+  describe "Entry#smokable_capabilities and Entry#claimed_value for streaming_tool_calls" do
+    # native_tool_use: true, streaming: false -- e.g. a model whose streaming path is broken
+    # (see docs/_learn_more/streaming.md), where bin/smoke --only streaming_tool_calls should
+    # still work as a diagnostic even though a full run wouldn't probe it by default.
+    let(:streaming_disabled_entry) do
+      Raif::ModelManifest::Entry.new(
+        key: :streaming_disabled_test_model,
+        provider_name: "bedrock",
+        endpoint: nil,
+        adapter_class_name: "Raif::Llms::Bedrock",
+        api_name: "streaming-disabled-test-1",
+        display_name: "Streaming Disabled Test Model",
+        max_completion_tokens: nil,
+        pricing: { "input_per_million" => 1.0, "output_per_million" => 2.0 },
+        capabilities: {
+          "temperature" => true,
+          "structured_outputs" => false,
+          "native_tool_use" => true,
+          "streaming" => false,
+          "batch_inference" => false,
+          "images" => false,
+          "pdfs" => false,
+          "provider_managed_tools" => []
+        },
+        lifecycle: { "status" => "active" },
+        verification: nil,
+        source_path: "model_manifest/bedrock.yml",
+        key_base: "streaming_disabled_test_model"
+      )
+    end
+
+    it "includes streaming_tool_calls in smokable_capabilities when native_tool_use is claimed, even with streaming false" do
+      expect(streaming_disabled_entry.smokable_capabilities).to include("streaming_tool_calls")
+    end
+
+    it "claims streaming_tool_calls false when streaming is false, even though it's smokable" do
+      expect(streaming_disabled_entry.claimed_value("streaming_tool_calls")).to eq(false)
+    end
+  end
+
   describe "Entry#unverified_capabilities" do
     it "returns capabilities with no verification record" do
       entry = manifest.llm_entries.find { |e| e.key == :anthropic_test_model }

@@ -37,6 +37,36 @@ RSpec.describe Smoke::Checks do
     )
   end
 
+  # native_tool_use claimed true but streaming claimed false (e.g. a model whose streaming
+  # path is disabled/broken): streaming_tool_calls is smokable but claimed false, so a full
+  # run should omit it while --only streaming_tool_calls still runs it as a diagnostic.
+  let(:streaming_disabled_entry) do
+    Raif::ModelManifest::Entry.new(
+      key: :smoke_checks_streaming_disabled_test_model,
+      provider_name: "anthropic",
+      endpoint: nil,
+      adapter_class_name: "Raif::Llms::Anthropic",
+      api_name: "smoke-checks-streaming-disabled-test-1",
+      display_name: "Smoke Checks Streaming Disabled Test Model",
+      max_completion_tokens: 4096,
+      pricing: { "input_per_million" => 1.0, "output_per_million" => 2.0 },
+      capabilities: {
+        "temperature" => false,
+        "structured_outputs" => false,
+        "native_tool_use" => true,
+        "streaming" => false,
+        "batch_inference" => false,
+        "images" => false,
+        "pdfs" => true,
+        "provider_managed_tools" => ["web_search"]
+      },
+      lifecycle: { "status" => "active" },
+      verification: nil,
+      source_path: "spec/fixtures/model_manifest/anthropic.yml",
+      key_base: "smoke_checks_streaming_disabled_test_model"
+    )
+  end
+
   let(:model_completion) do
     instance_double(
       Raif::ModelCompletion,
@@ -81,6 +111,10 @@ RSpec.describe Smoke::Checks do
   before do
     allow(Raif).to receive(:llm).with(entry.key).and_return(llm)
     allow(Raif).to receive(:llm_config).with(entry.key).and_return(llm_class: forced_llm_class, model_provider_settings: {})
+    allow(Raif).to receive(:llm).with(streaming_disabled_entry.key).and_return(llm)
+    allow(Raif).to receive(:llm_config).with(streaming_disabled_entry.key).and_return(
+      llm_class: forced_llm_class, model_provider_settings: {}
+    )
   end
 
   describe "NONCE" do
@@ -148,6 +182,18 @@ RSpec.describe Smoke::Checks do
       result = described_class.run_for(entry, only: ["not_a_real_capability"])
 
       expect(result).to be_empty
+    end
+
+    it "omits claimed-false streaming_tool_calls (native_tool_use true, streaming false) from a full run" do
+      result = described_class.run_for(streaming_disabled_entry)
+
+      expect(result).not_to have_key("streaming_tool_calls")
+    end
+
+    it "runs streaming_tool_calls when explicitly requested via only, despite streaming being claimed false" do
+      result = described_class.run_for(streaming_disabled_entry, only: "streaming_tool_calls")
+
+      expect(result.keys).to eq(["streaming_tool_calls"])
     end
   end
 end
