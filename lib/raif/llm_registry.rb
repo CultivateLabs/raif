@@ -24,7 +24,23 @@ module Raif
     end
 
     llm_class = llm_config[:llm_class]
-    llm_class.new(**llm_config.except(:llm_class))
+    llm = llm_class.new(**llm_config.except(:llm_class))
+    warn_if_deprecated(llm)
+    llm
+  end
+
+  def self.warn_if_deprecated(llm)
+    return unless llm.deprecated?
+
+    @deprecation_warnings_issued ||= {}
+    return if @deprecation_warnings_issued[llm.key]
+
+    @deprecation_warnings_issued[llm.key] = true
+    Raif.logger.warn(llm.deprecation_message)
+  end
+
+  def self.reset_deprecation_warnings!
+    @deprecation_warnings_issued = {}
   end
 
   def self.available_llms

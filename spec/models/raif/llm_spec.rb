@@ -10,6 +10,49 @@ RSpec.describe Raif::Llm, type: :model do
     end
   end
 
+  describe "deprecation" do
+    let(:llm) do
+      Raif::Llms::TestLlm.new(
+        key: :raif_test_llm, api_name: "raif-test-llm",
+        deprecated: true, retirement_date: Date.new(2026, 12, 1),
+        replacement_key: :anthropic_claude_5_sonnet
+      )
+    end
+
+    it "builds the full message with a replacement" do
+      expect(llm.deprecation_message).to eq(
+        "Raif model :raif_test_llm is deprecated and will be removed after 2026-12-01. Use :anthropic_claude_5_sonnet instead."
+      )
+    end
+
+    it "uses the migration note when there is no replacement" do
+      llm = Raif::Llms::TestLlm.new(
+        key: :raif_test_llm, api_name: "raif-test-llm",
+        deprecated: true, retirement_date: Date.new(2026, 12, 1),
+        migration_note: "No direct replacement."
+      )
+      expect(llm.deprecation_message).to eq(
+        "Raif model :raif_test_llm is deprecated and will be removed after 2026-12-01. No direct replacement."
+      )
+    end
+
+    it "warns once per process per key when instantiated through Raif.llm" do
+      Raif.register_llm(Raif::Llms::TestLlm, key: :deprecated_test_llm, api_name: "dep-test",
+        deprecated: true, retirement_date: Date.new(2026, 12, 1))
+      Raif.reset_deprecation_warnings!
+      expect(Raif.logger).to receive(:warn).with(/deprecated_test_llm is deprecated/).once
+      2.times { Raif.llm(:deprecated_test_llm) }
+    ensure
+      Raif.llm_registry.delete(:deprecated_test_llm)
+    end
+
+    it "does not warn for active models" do
+      Raif.reset_deprecation_warnings!
+      expect(Raif.logger).not_to receive(:warn)
+      Raif.llm(:raif_test_llm)
+    end
+  end
+
   describe "#chat" do
     let(:messages) { [{ role: "user", content: "Hello" }] }
     let(:system_prompt) { "You are a helpful assistant." }

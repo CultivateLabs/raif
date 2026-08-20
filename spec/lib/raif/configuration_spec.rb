@@ -101,6 +101,34 @@ RSpec.describe Raif::Configuration do
       end
     end
 
+    describe "default_llm_model_key deprecation" do
+      around do |example|
+        original_default_llm_model_key = Raif.config.default_llm_model_key
+        example.run
+      ensure
+        Raif.config.default_llm_model_key = original_default_llm_model_key
+        Raif.llm_registry.delete(:deprecated_default_test_llm)
+      end
+
+      it "warns when the default llm model key is deprecated" do
+        Raif.register_llm(Raif::Llms::TestLlm, key: :deprecated_default_test_llm, api_name: "dep-default-test",
+          deprecated: true, retirement_date: Date.new(2026, 12, 1), replacement_key: :anthropic_claude_5_sonnet)
+        Raif.config.default_llm_model_key = :deprecated_default_test_llm
+
+        expect(Raif.logger).to receive(:warn).with(
+          "Raif.config.default_llm_model_key is set to :deprecated_default_test_llm, which is deprecated and will be removed " \
+            "after 2026-12-01. Use :anthropic_claude_5_sonnet instead."
+        )
+
+        Raif.config.validate!
+      end
+
+      it "does not warn when the default llm model key is not deprecated" do
+        expect(Raif.logger).not_to receive(:warn)
+        Raif.config.validate!
+      end
+    end
+
     describe "archive settings" do
       around do |example|
         originals = {

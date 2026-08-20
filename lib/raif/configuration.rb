@@ -320,6 +320,15 @@ module Raif
           "Raif.config.default_llm_model_key was set to #{default_llm_model_key}, but must be one of: #{Raif.available_llm_keys.join(", ")}"
       end
 
+      default_llm_config = Raif.llm_config(default_llm_model_key.to_sym)
+      if default_llm_config && default_llm_config[:deprecated]
+        Raif.logger.warn(
+          "Raif.config.default_llm_model_key is set to :#{default_llm_model_key}, which is deprecated" \
+            "#{default_llm_config[:retirement_date] ? " and will be removed after #{default_llm_config[:retirement_date]}" : ""}." \
+            "#{default_llm_config[:replacement_key] ? " Use :#{default_llm_config[:replacement_key]} instead." : ""}"
+        )
+      end
+
       if default_embedding_model_key.present? &&
           Raif.embedding_model_registry.present? &&
           !Raif.available_embedding_model_keys.include?(default_embedding_model_key.to_sym)

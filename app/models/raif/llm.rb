@@ -14,7 +14,11 @@ module Raif
       :provider_settings,
       :input_token_cost,
       :output_token_cost,
-      :supported_provider_managed_tools
+      :supported_provider_managed_tools,
+      :deprecated,
+      :retirement_date,
+      :replacement_key,
+      :migration_note
 
     validates :key, presence: true
     validates :api_name, presence: true
@@ -33,7 +37,11 @@ module Raif
       temperature: nil,
       max_completion_tokens: nil,
       input_token_cost: nil,
-      output_token_cost: nil
+      output_token_cost: nil,
+      deprecated: false,
+      retirement_date: nil,
+      replacement_key: nil,
+      migration_note: nil
     )
       @key = key
       @api_name = api_name
@@ -45,6 +53,26 @@ module Raif
       @input_token_cost = input_token_cost
       @output_token_cost = output_token_cost
       @supported_provider_managed_tools = supported_provider_managed_tools.map(&:to_s)
+      @deprecated = deprecated
+      @retirement_date = retirement_date
+      @replacement_key = replacement_key
+      @migration_note = migration_note
+    end
+
+    def deprecated?
+      !!deprecated
+    end
+
+    def deprecation_message
+      message = +"Raif model :#{key} is deprecated"
+      message << " and will be removed after #{retirement_date}" if retirement_date
+      message << "."
+      if replacement_key
+        message << " Use :#{replacement_key} instead."
+      elsif migration_note
+        message << " #{migration_note}"
+      end
+      message
     end
 
     def name
