@@ -60,9 +60,8 @@ module Raif
             **resolved_judge_attributes(judge_attributes)
           )
 
-          # To console_output rather than output: a dataset run discards output so it can print
-          # one compact line per case, and a low-confidence judgment - like an error - is the
-          # signal that the pass or fail on that line should not be trusted.
+          # To console_output rather than output: a dataset run discards output so it can print one
+          # compact line per case, and a low-confidence judgment is a reason to distrust that line.
           if judge_task.low_confidence?
             console_output.puts Raif::Utils::Colors.yellow("    ⚠ Low confidence: #{judge_task.judgment_confidence}")
           end
@@ -157,10 +156,9 @@ module Raif
           result_metadata: {}, judge_attributes: {}, label: nil, score_name: nil)
           scoring_rubric_obj = scoring_rubric
 
-          # A score name is the metric the run summary aggregates by and evals:compare joins on.
-          # A ScoringRubric carries one; a string rubric does not, and a placeholder would put an
-          # unidentifiable metric in the summary and collide with any other string rubric in the
-          # same eval. Raised before the judge call so it costs nothing to hit.
+          # A score name is the metric the run summary aggregates by and evals:compare joins on. A
+          # ScoringRubric carries one; a string rubric does not, and a placeholder would put an
+          # unidentifiable metric in the summary. Raised before the judge call so it costs nothing.
           if score_name.blank? && !scoring_rubric_obj.respond_to?(:name)
             raise ArgumentError, "expect_llm_judge_score with a #{scoring_rubric_obj.class} rubric requires score_name: to name the " \
               "score it records. A Raif::Evals::ScoringRubric supplies that name itself; a rubric passed as a string has none."
@@ -169,9 +167,8 @@ module Raif
           rubric_name = scoring_rubric_obj.respond_to?(:name) ? scoring_rubric_obj.name : "custom"
           resolved_score_name = score_name.presence || rubric_name
 
-          # Also before the judge runs, and for the same reason: a name already taken by an
-          # earlier score in this eval raises, and finding that out on the way back would cost a
-          # judge request and take every expectation that already passed down with it.
+          # Also before the judge runs: a name already taken by an earlier score in this eval
+          # raises, and finding out on the way back would cost a judge request.
           current_eval_result.ensure_score_name_available!(resolved_score_name)
 
           judge_task = LlmJudges::Scored.run(

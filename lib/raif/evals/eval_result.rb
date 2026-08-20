@@ -56,8 +56,7 @@ module Raif
       end
 
       # Public so a caller about to spend money producing the value can ask first, as
-      # expect_llm_judge_score does: discovering the collision on the way back from the judge
-      # costs a request and takes the rest of the eval block down with it.
+      # expect_llm_judge_score does: discovering the collision on the way back costs a request.
       def ensure_score_name_available!(name)
         return unless @scores.any? { |score| score.name == name.to_s }
 
@@ -65,8 +64,8 @@ module Raif
           "names (expect_llm_judge_score takes score_name:), or combine the values yourself and record one score."
       end
 
-      # Serialized into plain hashes here because the eval's transaction is about to be rolled
-      # back and the rows with it.
+      # Serialized into plain hashes here because the eval's transaction is about to be rolled back
+      # and the rows with it.
       #
       # overhead is what setup and teardown spent. Kept out of #usage, which is the eval's own
       # measurement, but summed so the run's cost total is not short of what the run cost. Usage
@@ -76,8 +75,7 @@ module Raif
         @usage = compute_usage(serialized)
         @overhead_usage = compute_usage(Array(overhead).map { |mc| serialize_model_completion(mc) })
         # A subset of #usage rather than a slice taken out of it: the eval did spend this, so the
-        # run's cost total must keep counting it. What the split is for is the comparison, where a
-        # fixed judge's spend is not part of what separates two models under test.
+        # run's cost total must keep counting it. The split is for the comparison.
         @judge_usage = compute_usage(serialized.select { |mc| mc[:judge] })
         @model_completions_captured = capture_mode.to_sym != :none
 
@@ -153,10 +151,9 @@ module Raif
         serialized.sum { |mc| mc[key].to_f }.round(6)
       end
 
-      # An LLM judge grades on the same terms across a comparison by design - evals:compare
-      # refuses two different judges - so its spend is a near-constant that should not be read as
-      # part of the difference between two models. It is not quite constant, since a wordier model
-      # gives the judge more to read, which is the other reason for telling the two apart.
+      # An LLM judge grades on the same terms across a comparison by design - evals:compare refuses
+      # two different judges - so its spend should not be read as part of the difference between two
+      # models. Not quite constant, since a wordier model gives the judge more to read.
       #
       # Read off the in-memory source rather than source_type, which holds "Raif::Task" for every
       # task: source_type is the polymorphic base class and a judge is an STI subclass of it.

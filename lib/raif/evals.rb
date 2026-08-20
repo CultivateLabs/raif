@@ -38,8 +38,8 @@ end
 # per-thread, so concurrent evals keep their own completions.
 #
 # The block closes over the sink instead of naming it: app/models/raif/evals makes Raif::Evals a
-# Zeitwerk-managed namespace, so a reload drops the constants this file requires into it, and
-# resolving one per event would raise on a host app's own LLM calls.
+# Zeitwerk-managed namespace, so a reload would drop the constant this file requires and resolving
+# one per event would raise on a host app's own LLM calls.
 sink = Raif::Evals::ModelCompletionSink
 ActiveSupport::Notifications.subscribe("create.raif_model_completion") do |event|
   sink.record(event.payload[:model_completion])

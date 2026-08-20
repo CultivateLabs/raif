@@ -72,10 +72,9 @@ class Raif::Utils::TransientRetry
     end
   end
 
-  # A Retry-After header, when the provider sent one, is the only number here that is not a
-  # guess. Exponential backoff otherwise. Both paths are jittered, the header path especially:
-  # a 429 is what produces N callers limited at once, and a header is the most likely reason
-  # they would then agree on a delay to the millisecond.
+  # A Retry-After header, when the provider sent one, is the only number here that is not a guess.
+  # Exponential backoff otherwise. Both paths are jittered, the header path especially: a 429 is
+  # what produces N callers limited at once, and a header makes them agree on a delay exactly.
   def self.delay_for(error, attempt:, base_delay:, max_delay:, jitter:)
     retry_after = retry_after_seconds(error)
     return jittered_up([retry_after, MAX_RETRY_AFTER_DELAY].min, jitter) if retry_after

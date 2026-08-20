@@ -45,12 +45,12 @@ module Raif
 
     # A minimal results payload of the shape `raif evals` exports.
     #
-    # case_ids defaults to a single case, which is enough for the specs that only care about the
-    # payload's shape. The regression gate tests matched cases, so a spec about the gate has to
-    # pass enough of them for a verdict to be reachable at all - see "exits 1" below.
+    # case_ids defaults to a single case, enough for the specs that only care about the payload's
+    # shape. The regression gate tests matched cases, so a spec about the gate has to pass enough
+    # of them for a verdict to be reachable - see "exits 1" below.
     #
-    # errored_case_ids are cases that raised: no score, and an expectation whose status is
-    # "error". Written without an "errored" key, as a results file from before that key would be.
+    # errored_case_ids are cases that raised: no score, and an expectation whose status is "error".
+    # Written without an "errored" key, as a results file from before that key would be.
     def cli_results_payload(model:, passed:, score_value:, judge: "judge_model", cost: 0.1,
       expectation_description: "is under 1000 words", case_ids: ["press-release"], errored_case_ids: [], datasets: nil)
       results = case_ids.map do |case_id|

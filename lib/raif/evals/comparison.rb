@@ -2,12 +2,12 @@
 
 module Raif
   module Evals
-    # Diffs two eval run payloads. Deliberately free of Rails and of any provider call, so it
-    # needs no database, API key, or spend.
+    # Diffs two eval run payloads. Free of Rails and of any provider call, so it needs no
+    # database, API key, or spend.
     #
-    # Results are matched on eval id, case id, and expectation description. Matching per case is
-    # what makes a dataset run diffable: a model can improve on average while getting materially
-    # worse on one input.
+    # Results are matched on eval id, case id, and expectation description. Per-case matching is
+    # what makes a dataset run diffable: a model can improve on average while getting worse on
+    # one input.
     class Comparison
       # Family-wise significance level for the regression gate: the chance the whole comparison
       # reports at least one regression that was only noise. Per-row levels are this divided by
@@ -15,8 +15,7 @@ module Raif
       FAMILY_WISE_ALPHA = 0.05
 
       # The share of runs either side may lose to errors before the regression gate refuses to
-      # decide - see #error_rate_unreliable?. Loose enough that one flaky call in a thirty-run
-      # suite does not block a gate, tight enough that a provider incident does.
+      # decide - see #error_rate_unreliable?.
       MAX_GATE_ERROR_RATE = 0.05
 
       attr_reader :baseline, :candidate, :baseline_label, :candidate_label
@@ -42,20 +41,18 @@ module Raif
         baseline_judge != candidate_judge
       end
 
-      # Whether both runs recorded what their datasets held. A run written before provenance existed
-      # has no datasets key at all, which is not the same as a run that used no dataset - so the
-      # fingerprint check says nothing rather than reporting a match it cannot support.
+      # Whether both runs recorded what their datasets held. A run written before provenance
+      # existed has no datasets key at all, which is not the same as a run that used no dataset,
+      # so the fingerprint check says nothing rather than claiming a match it cannot support.
       def dataset_provenance?
         [baseline, candidate].all? { |payload| (payload["configuration"] || {}).key?("datasets") }
       end
 
-      # Datasets whose contents are not identical across the two runs. Cases are joined on case id,
-      # so an edited case reads as the model behaving differently on the same input - which is the
-      # conclusion this report exists to support, drawn from a changed input.
+      # Datasets whose contents are not identical across the two runs. Cases are joined on case
+      # id, so an edited case reads as the model behaving differently on the same input.
       #
       # Reported rather than refused, unlike a judge mismatch: comparing a widened dataset against
-      # its predecessor is a legitimate thing to do, as long as the reader knows that is what they
-      # are looking at.
+      # its predecessor is legitimate, as long as the reader knows that is what they are seeing.
       def dataset_differences
         @dataset_differences ||= build_dataset_differences
       end
@@ -85,15 +82,14 @@ module Raif
       end
 
       # Cases and expectations present on only one side, plus the ones a side errored out of
-      # entirely. Surfaced rather than dropped: a silently omitted case looks exactly like
-      # agreement.
+      # entirely. Surfaced rather than dropped: a silently omitted case looks like agreement.
       def not_comparable
         @not_comparable ||= build_not_comparable
       end
 
       # How often each side raised instead of producing a measurement. Reported on its own rather
-      # than through the pass rates, which now exclude errors: a run that got worse and a run that
-      # got flakier need different responses, and folding them together tells the reader neither.
+      # than through the pass rates, which exclude errors: a run that got worse and a run that got
+      # flakier need different responses.
       def error_moves
         @error_moves ||= build_error_moves
       end
@@ -106,11 +102,10 @@ module Raif
         @candidate_error_rate ||= overall_error_rate(candidate_units)
       end
 
-      # Errors are out of the pass-rate denominator, which handles the first-order problem. What
-      # is left is selection: if the runs that errored were not a random sample of the runs - the
-      # long inputs are the ones that time out - the surviving denominator is a biased one, and
-      # the bias scales with how many were lost. Past this rate the comparison is not a sound
-      # basis for a pass/fail, so callers refuse to gate on it rather than gate on it badly.
+      # Errors leave the pass-rate denominator, but that leaves selection bias: if the runs that
+      # errored were not a random sample - the long inputs are the ones that time out - the
+      # surviving denominator is biased, and the bias scales with how many were lost. Past this
+      # rate callers refuse to gate rather than gate badly.
       #
       # @param max_error_rate [Numeric] the fraction of runs allowed to error on either side.
       def error_rate_unreliable?(max_error_rate: MAX_GATE_ERROR_RATE)
@@ -118,27 +113,21 @@ module Raif
       end
 
       # Every regression either run shows, each with two independent halves: how big it is
-      # (#magnitude, the effect size) and how sure we can be it is not noise (#p_value).
-      # #regressed? demands both, because either alone gates badly - a threshold on point
-      # estimates fires on run-to-run variation until someone disables it, and a significance
-      # test with no floor on size fails a run over a rounding error it happened to measure
-      # precisely.
+      # (#magnitude) and how sure we can be it is not noise (#p_value). #regressed? demands both,
+      # because either alone gates badly - a size threshold fires on run-to-run variation, and
+      # significance with no floor on size fails a run over a precisely measured rounding error.
       #
-      # Magnitudes are relative to the baseline, not absolute: a pass rate, a rubric score, and
-      # a latency are not in the same units, so one absolute threshold would mean a quarter of
-      # the runs in one row and a quarter of a millisecond in the next. Relative,
-      # --fail-on-regression asks the same question everywhere: did this get more than N% worse.
-      #
-      # Rows come from every comparable eval, not just new_failures: an eval that fixed one
-      # expectation and broke another can come out ahead on its rate and still be a trade.
+      # Magnitudes are relative to the baseline, since a pass rate, a rubric score, and a latency
+      # are not in the same units. Rows come from every comparable eval, not just new_failures: an
+      # eval that fixed one expectation and broke another can come out ahead on its rate and still
+      # be a trade.
       def regressions
         # An unbounded row (nil magnitude) sorts first: it is the worst thing in the list.
         @regressions ||= (pass_rate_regressions + score_regressions).sort_by { |row| -(row[:magnitude] || Float::INFINITY) }
       end
 
-      # Rows with no fraction to take because the baseline was zero. "0 errors became 3" is
-      # still a regression, so it is separated out rather than dropped and #regressed? treats
-      # it as exceeding any threshold.
+      # Rows with no fraction to take because the baseline was zero. "0 errors became 3" is still
+      # a regression, so #regressed? treats it as exceeding any threshold.
       def unbounded_regressions
         regressions.select { |row| row[:magnitude].nil? }
       end
@@ -150,8 +139,8 @@ module Raif
       end
 
       # The rows big enough to gate on, before asking whether they are distinguishable from
-      # noise. Everything below is derived from this set rather than from #regressions, so the
-      # evidence bar is only ever applied to rows that already cleared the size bar.
+      # noise. Everything below derives from this set, so the evidence bar is only ever applied
+      # to rows that already cleared the size bar.
       def candidate_regressions(threshold)
         return [] if threshold.nil?
 
@@ -159,19 +148,17 @@ module Raif
       end
 
       # Candidates whose move cannot be tested at all: a score on an eval with no dataset, where
-      # the only unit is the repeat and repeat 3 of one run is not the counterpart of repeat 3 of
-      # the other. Reported rather than silently passed - a gate that cannot answer the question
-      # it was asked has to say so, or a run with a real regression exits 0 looking green.
+      # repeat 3 of one run is not the counterpart of repeat 3 of the other. Reported rather than
+      # silently passed, so a run with a real regression does not exit 0 looking green.
       def unverifiable_regressions(threshold)
         candidate_regressions(threshold).select { |row| row[:p_value].nil? }
       end
 
       # Candidates that cleared both bars. The per-row level is the family-wise alpha divided by
       # the number of candidates (Bonferroni): the gate fails if ANY row is significant, so
-      # testing each at 0.05 would fail one run in every three of a 20-row suite on noise alone -
-      # turning a fix for a flaky gate into a flakier one. Dividing by the candidate count rather
-      # than by every row in the report keeps the correction as loose as it can honestly be,
-      # since the size threshold does not depend on the spread.
+      # testing each at 0.05 would fail one run in three of a 20-row suite on noise alone.
+      # Dividing by the candidate count rather than by every row in the report keeps the
+      # correction as loose as it can honestly be.
       def significant_regressions(threshold, alpha: FAMILY_WISE_ALPHA)
         candidates = candidate_regressions(threshold)
         return candidates if evidence_waived?(alpha)
@@ -184,18 +171,17 @@ module Raif
       # @param threshold [Numeric, nil] the effect size gate, as a fraction of baseline. nil
       #   never fails.
       # @param alpha [Numeric] family-wise significance level. 1 or greater waives the evidence
-      #   requirement entirely, gating on point estimates alone - which is what someone with a
-      #   three-case dataset has to do, since three matched pairs cannot reach any conventional
-      #   level however large the regression.
+      #   requirement, gating on point estimates alone - all a three-case dataset can support,
+      #   since three matched pairs cannot reach any conventional level however large the drop.
       def regressed?(threshold, alpha: FAMILY_WISE_ALPHA)
         return false if threshold.nil?
 
         significant_regressions(threshold, alpha: alpha).any?
       end
 
-      # True when the gate was asked a question it has no evidence to answer: something moved
-      # past the threshold, nothing that moved could be tested. Distinct from "nothing regressed",
-      # and the caller is expected to report it rather than exit 0 on it.
+      # True when the gate was asked a question it has no evidence to answer: something moved past
+      # the threshold, nothing that moved could be tested. Distinct from "nothing regressed", and
+      # callers report it rather than exit 0 on it.
       def insufficient_evidence?(threshold, alpha: FAMILY_WISE_ALPHA)
         return false if threshold.nil? || evidence_waived?(alpha)
 
@@ -234,9 +220,8 @@ module Raif
       end
 
       # Shared keys minus the ones where a side has no measured run left to compare. A case whose
-      # every run errored produced no rate, and inventing one - in either direction - would let an
-      # outage decide the gate. It is reported under NOT COMPARABLE instead, alongside the cases
-      # that only one side ran, which is the same problem: a missing measurement.
+      # every run errored produced no rate, and inventing one would let an outage decide the gate.
+      # Reported under NOT COMPARABLE instead.
       def comparable_keys
         @comparable_keys ||= shared_keys.reject { |key| errored_out?(key) }
       end
@@ -269,9 +254,8 @@ module Raif
 
             unit[:runs] += 1
             unit[:passed] += 1 if result["passed"]
-            # Derived from the expectation statuses rather than read from result["errored"],
-            # which runs written before this distinction existed do not carry. The statuses they
-            # do carry, so an old results file compares on the same terms as a new one.
+            # Derived from the expectation statuses rather than result["errored"], which runs
+            # written before this distinction existed do not carry.
             unit[:errored] += 1 if Array(result["expectation_results"]).any? { |e| e["status"].to_s == "error" }
 
             Array(result["expectation_results"]).each do |expectation|
@@ -323,9 +307,8 @@ module Raif
 
       def eval_moves
         @eval_moves ||= begin
-          # An eval whose rate held steady while a different expectation started failing is a
-          # new failure: one failure traded for another is not a fix. A trade the rate came out
-          # ahead on reads better under FIXED, and #regressions catches it either way.
+          # An eval whose rate held steady while a different expectation started failing is a new
+          # failure: one failure traded for another is not a fix.
           regressed, rest = eval_rows.partition do |row|
             row[:delta] < 0 || (row[:delta].zero? && row[:expectations].any? { |move| move[:delta] < 0 })
           end
@@ -341,11 +324,9 @@ module Raif
         alpha.nil? || alpha.to_f >= 1.0
       end
 
-      # Gate rows for pass rates, one per eval rather than one per case. A dataset eval's cases
-      # are the matched pairs the evidence test counts, so gating each case on its own would ask
-      # for a verdict from a single draw - which is the noise the gate exists to filter, not the
-      # signal it is looking for. Per-case detail stays in #new_failures, where it is reported
-      # rather than acted on.
+      # Gate rows for pass rates, one per eval rather than one per case. A dataset eval's cases are
+      # the matched pairs the evidence test counts, so gating each case on its own would ask for a
+      # verdict from a single draw. Per-case detail stays in #new_failures, reported not acted on.
       def pass_rate_regressions
         comparable_keys.group_by { |key| key.first }.filter_map do |_eval_id, keys|
           pairs = keys.map { |key| [baseline_units[key], candidate_units[key]] }
@@ -359,9 +340,8 @@ module Raif
             kind: :pass_rate,
             magnitude: round(drop[:absolute] / drop[:baseline]),
             absolute: round(drop[:absolute]),
-            # Qualified by eval set: descriptions are not unique, and this label is all a script
-            # reading the JSON has to identify the row by. The expectation joins it when the drop
-            # came from one, since the eval's own rate will not show it.
+            # Qualified by eval set, since descriptions are not unique. The expectation joins it
+            # when the drop came from one, since the eval's own rate will not show it.
             label: [unit[:eval_set], unit[:description], drop[:expectation]].compact.join("  "),
             eval_set: unit[:eval_set],
             eval_id: unit[:eval_id],
@@ -372,9 +352,8 @@ module Raif
         end
       end
 
-      # The eval's own mean pass rate across its cases, when that is what dropped. The baseline is
-      # always positive here, since a rate that dropped cannot have started at zero, so the
-      # caller's division is defined.
+      # The eval's own mean pass rate across its cases, when that is what dropped. A rate that
+      # dropped cannot have started at zero, so the caller's division by baseline is defined.
       def eval_rate_drop(pairs)
         deltas = pairs.map { |baseline_unit, candidate_unit| tally_rate(candidate_unit) - tally_rate(baseline_unit) }
         mean_delta = Statistics.mean(deltas)
@@ -388,17 +367,16 @@ module Raif
         }
       end
 
-      # When a fix absorbed a break, the eval's rate can no longer say so, and the expectation
-      # that broke is what the gate has to read instead. Averaged over every case the expectation
-      # appears in on both sides, including the ones where it did not move: a mean over only the
-      # cases that moved would report a bigger drop than there was, and the tied cases are exactly
-      # what the sign test then discards.
+      # When a fix absorbed a break, the eval's rate can no longer say so, and the expectation that
+      # broke is what the gate reads instead. Averaged over every case the expectation appears in on
+      # both sides, including the tied ones: a mean over only the cases that moved would report a
+      # bigger drop than there was.
       def worst_expectation_drop(pairs)
         descriptions = pairs.flat_map { |baseline_unit, candidate_unit| baseline_unit[:expectations].keys & candidate_unit[:expectations].keys }.uniq
 
         descriptions.filter_map do |description|
-          # Both sides need a measured run of the expectation, not merely a record of it: an
-          # expectation that only ever errored has no rate, and tally_rate returns nil there.
+          # Both sides need a measured run, not merely a record: an expectation that only ever
+          # errored has no rate, and tally_rate returns nil there.
           present = pairs.select do |baseline_unit, candidate_unit|
             [baseline_unit, candidate_unit].all? do |unit|
               tally = unit[:expectations][description]
@@ -425,10 +403,8 @@ module Raif
 
       # Matched cases when there are any: two runs over the same dataset are paired by case id, and
       # a paired test over N cases sees a consistent move that two independent means of the same
-      # numbers cannot separate from spread. With a single case - or none, on an eval with no
-      # dataset - the repeats are all there is and they are not paired, so the two rates go to an
-      # exact test on their counts instead. At one repeat a side that test cannot reach any level,
-      # which is the correct answer to "did this one draw prove anything".
+      # numbers cannot separate from spread. With a single case, or none, the repeats are all there
+      # is and they are not paired, so the two rates go to an exact test on their counts instead.
       def rate_evidence(drop)
         deltas = drop[:deltas]
 
@@ -470,10 +446,9 @@ module Raif
         end
       end
 
-      # A score's matched unit is the dataset case. Without a dataset there is nothing to pair -
-      # the repeats are independent draws on each side, and a continuous score has no exact
-      # two-sample test at the counts these runs produce - so the row is left unverifiable rather
-      # than handed to something that would invent precision it does not have.
+      # A score's matched unit is the dataset case. Without a dataset there is nothing to pair, and
+      # a continuous score has no exact two-sample test at the counts these runs produce, so the
+      # row is left unverifiable rather than given invented precision.
       def score_evidence(row)
         deltas = row[:per_case].map { |per_case| per_case[:delta] }
         return { evidence: :none, pairs: 0, p_value: nil } if deltas.count < 2
@@ -505,8 +480,7 @@ module Raif
       end
 
       # Rounded further than the other figures here because a Bonferroni-adjusted level goes
-      # several places into the tail, and 4 would flatten the difference between "significant" and
-      # "not" for a suite with more than a handful of candidate rows.
+      # several places into the tail, and 4 would flatten "significant" against "not".
       def round_p(value)
         value&.round(6)
       end
@@ -579,12 +553,9 @@ module Raif
       end
 
       # The unit the reported spread describes: per-case means for a dataset score, raw values
-      # without one - never the pooled values the mean is taken over, for the reason
-      # Raif::Evals::Run#score_summaries gives where it picks the same unit.
-      #
-      # Restricted to the shared cases for the same reason #comparable_score_values is: a candidate
-      # sampled down to a subset must not have its spread measured over a different set of inputs
-      # than the baseline it is printed next to.
+      # without one - never the pooled values the mean is taken over, matching the unit
+      # Raif::Evals::Run#score_summaries picks. Restricted to the shared cases for the same reason
+      # #comparable_score_values is.
       def spread_values(score, other)
         return score[:values] if score[:per_case].empty? || other[:per_case].empty?
 
@@ -592,10 +563,9 @@ module Raif
         shared.filter_map { |case_id| Statistics.mean(score[:per_case][case_id]) }
       end
 
-      # When both sides carry a per-case breakdown (a dataset score), compare only the cases
-      # they share: a candidate sampled down to a subset must not look improved merely because
-      # the cases it dropped were the low-scoring ones. An empty shared set yields nil means,
-      # and the move is omitted.
+      # When both sides carry a per-case breakdown (a dataset score), compare only the cases they
+      # share: a candidate sampled down to a subset must not look improved because the cases it
+      # dropped were the low-scoring ones. An empty shared set yields nil means and no move.
       def comparable_score_values(baseline_score, candidate_score)
         return [baseline_score[:values], candidate_score[:values]] if baseline_score[:per_case].empty? || candidate_score[:per_case].empty?
 
@@ -653,8 +623,7 @@ module Raif
       end
 
       # One row per eval both runs share, kept only when a side actually errored: a table of
-      # 0.00 -> 0.00 rows would bury the one eval that went flaky. Grouped per eval rather than
-      # per case for the same reason the gate is - a single case's error count is one draw.
+      # 0.00 -> 0.00 rows would bury the one eval that went flaky.
       def build_error_moves
         shared_keys.group_by { |key| key.first }.filter_map do |_eval_id, keys|
           baseline_errored = keys.sum { |key| baseline_units[key][:errored] }
@@ -683,9 +652,8 @@ module Raif
         end.sort_by { |row| -row[:delta] }
       end
 
-      # Over every unit on the side, not only the shared ones: the question the gate asks with it
-      # is whether that run was healthy enough to draw a conclusion from, which the cases the
-      # other run happens to have does not change.
+      # Over every unit on the side, not only the shared ones: the question is whether that run was
+      # healthy enough to draw a conclusion from, which the other run's cases do not change.
       def overall_error_rate(units)
         runs = units.sum { |_key, unit| unit[:runs] }
         return 0.0 if runs.zero?
@@ -715,9 +683,6 @@ module Raif
         rows
       end
 
-      # The description travels with the id: a NOT COMPARABLE row carrying only a digest tells a
-      # reader nothing, where the description usually shows them the eval they reworded.
-      #
       # reason is what the report prints. present_in is kept beside it because it is the field a
       # script reading the JSON already keys on, and it stays true of these rows.
       def unmatched_row(unit, present_in)
@@ -732,10 +697,9 @@ module Raif
         }
       end
 
-      # Both runs have the case; one of them has nothing left to compare after its errors. Named
-      # by which side, and with the count, because the two readings differ: a candidate that
-      # errored out is usually the run to re-do, where a baseline that did means the comparison
-      # never had a reference point.
+      # Both runs have the case; one of them has nothing left to compare after its errors. Named by
+      # side and count because the readings differ: a candidate that errored out is the run to
+      # re-do, where a baseline that did means the comparison never had a reference point.
       def errored_out_row(key)
         sides = { "baseline" => baseline_units[key], "candidate" => candidate_units[key] }
         out = sides.select { |_side, unit| measured_runs(unit).zero? }
@@ -761,18 +725,15 @@ module Raif
           total_evals: summary["total_evals"],
           passed_expectations: summary["passed_expectations"],
           total_expectations: summary["total_expectations"],
-          # Counted off the units rather than read from summary["errored_evals"], which runs
-          # written before that key existed do not have. The expectation statuses they do have.
+          # Counted off the units rather than summary["errored_evals"], which runs written before
+          # that key existed do not have.
           errored_evals: units.sum { |_key, unit| unit[:errored] },
           error_rate: overall_error_rate(units),
           total_cost: summary["total_cost"],
-          # The judge is held fixed across a comparison by design - see #judge_mismatch? - so its
-          # spend is not part of what separates the two models under test, except that a wordier
-          # model gives the judge more to read. Reported apart so a cost row that is really the
-          # judge working harder is not read as the model costing more.
-          #
-          # nil, not zero, for a run recorded before judge spend was tagged: the split is unknown
-          # there rather than known to be all subject.
+          # The judge is held fixed across a comparison - see #judge_mismatch? - so its spend is
+          # reported apart, and a cost row that is really the judge working harder is not read as
+          # the model costing more. nil, not zero, for a run recorded before judge spend was
+          # tagged: the split is unknown there rather than known to be all subject.
           judge_cost: summary["total_judge_cost"],
           subject_cost: subject_cost(summary),
           code: code(payload)
@@ -813,7 +774,7 @@ module Raif
       end
 
       # "not run" rather than nothing for a dataset only one side has: a dataset that arrived or
-      # disappeared between two runs is a difference in what was measured, the same as an edited one.
+      # disappeared is a difference in what was measured, the same as an edited one.
       def describe_dataset(entry)
         return "not run" if entry.nil?
 
@@ -825,8 +786,8 @@ module Raif
       end
 
       # The judge a run resolved, not the one it configured: a run that configured nothing was
-      # graded by its own model under test, so reading the setting made two runs graded by two
-      # different models look like they shared one ruler.
+      # graded by its own model under test, and reading the setting would make two runs graded by
+      # two different models look like they shared one ruler.
       def judge_model(payload)
         (payload["configuration"] || {})["judge_model_key"]
       end
@@ -837,7 +798,7 @@ module Raif
 
       # Errored runs come out of the denominator: they measured nothing, and counting them as
       # misses would let a rate-limited afternoon read as a quality regression. nil when nothing
-      # was measured at all, which callers route to NOT COMPARABLE rather than to zero.
+      # was measured, which callers route to NOT COMPARABLE rather than to zero.
       def tally_rate(tally)
         measured = measured_runs(tally)
         return if measured.zero?

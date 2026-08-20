@@ -155,9 +155,8 @@ module Raif
         Faraday::ConnectionFailed,
         Faraday::TimeoutError,
         Faraday::ServerError,
-        # 429. A ClientError rather than a ServerError, so it is not covered above, and the one
-        # transient failure that gets more likely the more requests you have in flight - which
-        # is what an eval run at --concurrency does.
+        # 429. A ClientError rather than a ServerError, so it is not covered above, and the
+        # transient failure that gets more likely the more requests are in flight at once.
         Faraday::TooManyRequestsError,
         Net::ReadTimeout,
         Net::OpenTimeout,

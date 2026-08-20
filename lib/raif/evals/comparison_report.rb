@@ -67,12 +67,10 @@ module Raif
         format("%+.1f%%", (row[:delta].to_f / baseline) * 100)
       end
 
-      # A single observation has no standard deviation, so one side can be absent while the
-      # other is real. The sd fragment is dropped only when neither side has one.
-      #
-      # spread_n is named separately from n because they differ on a dataset score: n counts every
-      # observation, sd is over the per-case means, and printing only n would claim the spread was
-      # measured on more than it was.
+      # A single observation has no standard deviation, so one side can be absent while the other is
+      # real. The sd fragment is dropped only when neither side has one. spread_n is named apart
+      # from n because they differ on a dataset score: n counts every observation, sd is over the
+      # per-case means, and printing only n would overstate what the spread was measured on.
       def score_spread(row)
         baseline = row[:baseline_stddev]
         candidate = row[:candidate_stddev]
@@ -159,14 +157,13 @@ module Raif
         "#{side[:errored_evals]}/#{side[:total_evals]} (#{format("%.1f%%", side[:error_rate].to_f * 100)})"
       end
 
-      # The threshold is restated as a percentage: a bare "0.25" next to a list of absolute
-      # deltas invites reading it as those deltas' units rather than as a fraction of baseline.
+      # The threshold is restated as a percentage: a bare "0.25" next to a list of absolute deltas
+      # invites reading it as those deltas' units rather than as a fraction of baseline.
       #
       # Five outcomes, not two. A row can clear the size bar and still not be distinguishable from
-      # run-to-run variation, and saying so is the point - the alternative is the reader concluding
-      # either that nothing moved or that something definitely did, and only one of those is a
-      # thing this data can support. The error ceiling is checked ahead of all of it, since a run
-      # that lost too much to errors cannot support any of those readings.
+      # run-to-run variation, and saying so keeps the reader from concluding either that nothing
+      # moved or that something definitely did. The error ceiling is checked ahead of all of it,
+      # since a run that lost too much to errors cannot support any of those readings.
       def verdict
         return "no regression threshold set (--fail-on-regression)" if threshold.nil?
 
@@ -290,9 +287,8 @@ module Raif
         lines
       end
 
-      # The gate's own rows, so a reader can see why it decided what it decided rather than only
-      # the one-line verdict. One row per eval rather than per case: per-case detail is in NEW
-      # FAILURES, which reports, where this section acts.
+      # The gate's own rows, so a reader can see why it decided what it decided. One row per eval
+      # rather than per case: per-case detail is in NEW FAILURES, which reports where this acts.
       def regression_lines(row)
         size = row[:magnitude].nil? ? "unbounded (baseline was 0)" : "#{format("%g", row[:magnitude] * 100)}% worse"
         color = gated_rows.include?(row) ? :red : :yellow
@@ -342,9 +338,8 @@ module Raif
         lines << "  total cost            $#{format("%.2f", baseline[:total_cost].to_f)} -> " \
           "$#{format("%.2f", candidate[:total_cost].to_f)}"
 
-        # Indented under the total, which they split rather than add to. The subject line is the one
-        # that answers "is this model more expensive": the judge is the same on both sides by
-        # design, so its share is not part of the difference between the models.
+        # Indented under the total, which they split rather than add to. The subject line answers
+        # "is this model more expensive": the judge is the same on both sides by design.
         if cost_split?
           lines << "    model under test    #{format_cost(baseline[:subject_cost])} -> #{format_cost(candidate[:subject_cost])}"
           lines << "    judge               #{format_cost(baseline[:judge_cost])} -> #{format_cost(candidate[:judge_cost])}"

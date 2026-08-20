@@ -63,9 +63,8 @@ private
   end
 
   # Bedrock raises its own error classes rather than Faraday's, so none of the config defaults
-  # match. Named individually rather than by their ServiceError base class: that base also
-  # covers ValidationException and AccessDeniedException, which no amount of waiting fixes and
-  # which retrying only delays the error the caller needs to see.
+  # match. Named individually rather than by their ServiceError base class, which also covers
+  # ValidationException and AccessDeniedException - errors no amount of waiting fixes.
   def retriable_exceptions
     super + [
       Aws::BedrockRuntime::Errors::ThrottlingException,

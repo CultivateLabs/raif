@@ -60,12 +60,9 @@ module Raif
 
       # executor.wrap gives each item the same boundary a Rails request gets: it is what makes
       # concurrent Zeitwerk autoloads safe, and it returns the connection and clears per-thread
-      # state afterwards.
-      #
-      # It also clears ActiveSupport::IsolatedExecutionState, which is where
-      # Raif::Evals::ModelCompletionSink lives, so the sink has to be opened inside this
-      # boundary. EvalSet#run_eval opens it, so anything reached from here is fine; hoisting the
-      # sink out to the pool would silently stop capturing completions.
+      # state afterwards. It also clears ActiveSupport::IsolatedExecutionState, where
+      # Raif::Evals::ModelCompletionSink lives, so the sink has to be opened inside this boundary.
+      # EvalSet#run_eval opens it; hoisting the sink out to the pool would stop capturing.
       def in_worker_context(&block)
         Rails.application.executor.wrap do
           ActiveRecord::Base.connection_pool.with_connection(&block)

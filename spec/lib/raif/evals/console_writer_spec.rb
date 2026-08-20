@@ -4,9 +4,8 @@ require "rails_helper"
 
 RSpec.describe Raif::Evals::ConsoleWriter do
   # An IO that gives up the GVL between lines, so anything writing to it without holding a lock
-  # will interleave with a concurrent writer. A plain StringIO would not: its writes are short
-  # enough to usually complete within one thread's turn, which would let an unsynchronized
-  # writer pass by luck.
+  # will interleave with a concurrent writer. A plain StringIO would not: its writes usually
+  # complete within one thread's turn, letting an unsynchronized writer pass by luck.
   class SlowIo
     attr_reader :lines
 

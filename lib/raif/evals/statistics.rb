@@ -7,12 +7,10 @@ module Raif
     module Statistics
       BOOTSTRAP_RESAMPLES = 1000
 
-      # The fewest values a percentile bootstrap is reported from. Resampling can only be as
-      # informative as the number of values it draws from: 3 values have 10 distinct resamples
-      # between them, so the interval is a restatement of those three rather than an inference from
-      # them, and its actual coverage is neither 95% nor stable. Printing one next to a mean invites
-      # exactly the over-reading it was added to prevent. 5 is the conventional floor for the
-      # percentile method; below it callers report why the interval is absent rather than nothing.
+      # The fewest values a percentile bootstrap is reported from. 3 values have only 10 distinct
+      # resamples between them, so the interval restates those three rather than inferring from
+      # them, and its actual coverage is neither 95% nor stable. 5 is the conventional floor for
+      # the percentile method; below it callers report why the interval is absent.
       MIN_BOOTSTRAP_SAMPLE = 5
 
       # Fixed seed so the interval is stable: two comparisons of the same numbers must not
@@ -40,20 +38,14 @@ module Raif
         end
 
         # Sample standard deviation - divided by n-1, not n. These values are draws from the
-        # model's output distribution, not the whole of it: that is what --repeat exists to
-        # sample, and the reason the figure is printed at all is to stop a reader over-reading a
-        # difference in means, which is an inference about the distribution behind them.
-        # Dividing by n understates the spread by 0.71x at n=2 and 0.89x at n=5, which is exactly
-        # the range these runs live in, and understating it is the one error that defeats the
-        # purpose of showing it.
+        # model's output distribution, not the whole of it, and the figure exists to stop a reader
+        # over-reading a difference in means. Dividing by n understates the spread by 0.71x at n=2
+        # and 0.89x at n=5, which is the range these runs live in.
         #
-        # Bessel's correction makes the variance unbiased, not the standard deviation - the sqrt
-        # of an unbiased variance is still biased low (about 0.80x at n=2). It reduces the bias
-        # rather than removing it; ask #bootstrap_ci95 for an interval that does not lean on the
-        # normal assumption a closed-form correction would need.
-        #
-        # Returns nil rather than 0.0 for a single value, since 0.0 would read as "measured,
-        # doesn't vary" when nothing was measured.
+        # Bessel's correction makes the variance unbiased, not the standard deviation: the sqrt of
+        # an unbiased variance is still biased low (about 0.80x at n=2). Ask #bootstrap_ci95 for an
+        # interval that does not lean on a normal assumption. nil rather than 0.0 for a single
+        # value, since 0.0 would read as "measured, does not vary" when nothing was measured.
         def stddev(values)
           return if values.length < 2
 
@@ -81,16 +73,14 @@ module Raif
         # Two-sided sign test over matched pairs: of the pairs that moved, how surprising is it
         # that this many moved the same way, if the two runs were interchangeable.
         #
-        # Exact rather than resampled, which matters here for two reasons. Eval runs produce a
-        # handful of pairs, where a bootstrap's normal-ish assumptions are worst, and the gate
-        # divides its threshold by the number of rows it tests, so it asks for p-values well into
-        # the tail - further than the 1,000 resamples #bootstrap_ci95 draws can resolve.
+        # Exact rather than resampled, for two reasons. Eval runs produce a handful of pairs, where
+        # a bootstrap's normal-ish assumptions are worst, and the gate divides its threshold by the
+        # number of rows it tests, so it asks for p-values further into the tail than the 1,000
+        # resamples #bootstrap_ci95 draws can resolve.
         #
-        # Ties are excluded rather than split, the standard treatment: a case that did not move
-        # is evidence for neither side. That also means the test reads only the direction each
-        # pair moved, not how far, which is deliberate - magnitude is what the caller's
-        # effect-size threshold is for, and keeping the two separate stops a single wild case
-        # from carrying a verdict.
+        # Ties are excluded rather than split, the standard treatment: a case that did not move is
+        # evidence for neither side. The test therefore reads only the direction each pair moved,
+        # not how far, which is what the caller's effect-size threshold is for.
         #
         # @return [Float, nil] two-sided p-value, or nil when no pair moved
         def sign_test(worsened:, improved:)
@@ -106,12 +96,12 @@ module Raif
         end
 
         # Two-sided Fisher exact test on a 2x2 table, for two runs whose observations cannot be
-        # paired - a non-dataset eval, where the only unit is the repeat, and repeat 3 of one run
-        # is not the counterpart of repeat 3 of the other.
+        # paired - a non-dataset eval, where repeat 3 of one run is not the counterpart of repeat 3
+        # of the other.
         #
-        # Exact for the same reason as #sign_test, and doubly so here: at the repeat counts these
-        # runs use, the smallest reachable p-value is a property of the table's margins, and an
-        # approximation would invent significance the counts cannot support.
+        # Exact for the same reason as #sign_test, and doubly so here: at these repeat counts the
+        # smallest reachable p-value is a property of the table's margins, and an approximation
+        # would invent significance the counts cannot support.
         #
         # @return [Float, nil] two-sided p-value, or nil when a margin is empty
         def fisher_exact_p(baseline_passed:, baseline_total:, candidate_passed:, candidate_total:)
@@ -139,8 +129,7 @@ module Raif
 
       private
 
-        # Rational, so the comparison against the observed table is exact and a large table
-        # cannot overflow its way into a wrong answer.
+        # Rational, so the comparison against the observed table is exact and cannot overflow.
         def hypergeometric(row1, row2, col1, k)
           Rational(
             binomial_coefficient(row1, k) * binomial_coefficient(row2, col1 - k),

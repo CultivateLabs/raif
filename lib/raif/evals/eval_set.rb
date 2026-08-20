@@ -49,9 +49,8 @@ module Raif
           datasets[name.to_sym] = block
         end
 
-        # This shadows Kernel#eval inside the class body. Without the block check, a
-        # block-less call - what reaching for Kernel#eval looks like here - would register an
-        # eval that fails only once it runs, after setup has spent inference money.
+        # This shadows Kernel#eval inside the class body. Without the block check, a block-less
+        # call would register an eval that fails only once it runs, after setup has spent money.
         #
         # @param id [String, Symbol, nil] Overrides the description-derived half of the eval's
         #   id - see Raif::Evals::EvalDefinition#id. Pass one when you expect to reword the
@@ -124,9 +123,8 @@ module Raif
           id
         end
 
-        # Checked here rather than when an id is first derived, so a mistake costs a load error
-        # instead of a run's worth of inference. On descriptions rather than ids because a derived id
-        # is a digest of one, so two evals collide exactly when their descriptions do.
+        # Checked here rather than when an id is first derived, so a mistake costs a load error and
+        # not a run's worth of inference. On descriptions because a derived id is a digest of one.
         def check_eval_identity!(description, declared_id)
           if declared_id && evals.any? { |definition| definition.declared_id == declared_id }
             raise ArgumentError, "eval #{description.inspect} declares id #{declared_id.inspect}, which another eval in " \
@@ -153,9 +151,8 @@ module Raif
         {}
       end
 
-      # Evaluates one of the set's dataset blocks. Here rather than on the coordinator because
-      # a dataset block is user DSL - it can call file/files/json/jsonl, which only exist on an
-      # eval set instance.
+      # Evaluates one of the set's dataset blocks. Here rather than on the coordinator because a
+      # dataset block is user DSL - file/files/json/jsonl only exist on an eval set instance.
       def resolve_dataset(name)
         instance_eval(&self.class.datasets.fetch(name))
       end
@@ -176,8 +173,7 @@ module Raif
         compact = compact_output?
         if compact
           # The compact line reports counts that only exist once the case has run, so
-          # per-expectation output is discarded rather than printed. Errors still go to
-          # console_output - a swallowed backtrace makes a dataset run undebuggable.
+          # per-expectation output is discarded. Errors still go to console_output.
           @output = StringIO.new
         else
           output.puts "Running: #{eval_definition.description}#{" [#{eval_case.id}]" if eval_case}#{" (run #{run_index})" if run_index}"
@@ -185,9 +181,8 @@ module Raif
 
         begin
           ActiveRecord::Base.transaction do
-            # Opened before setup and closed after teardown, so nothing an execution spends
-            # escapes the run's cost total. Which of those calls the eval itself made is
-            # decided by the offsets taken around the eval block, not by the sink's lifetime.
+            # Opened before setup and closed after teardown, so nothing an execution spends escapes
+            # the run's cost total. The eval's own share comes from offsets around the eval block.
             completions = ModelCompletionSink.open
             eval_completions_range = nil
 
@@ -203,8 +198,7 @@ module Raif
               run_stage("Teardown") { run_block(self.class.teardown_block, eval_case) } if self.class.teardown_block
 
               # Closed first, so a capture failure cannot leave the sink open. Capturing after
-              # teardown is safe because the sink holds the records rather than re-querying them,
-              # so a teardown that destroys them cannot take them with it.
+              # teardown is safe because the sink holds the records rather than re-querying them.
               ModelCompletionSink.close
               capture_model_completions(completions, eval_completions_range)
             end
@@ -316,8 +310,7 @@ module Raif
       end
 
       # Runs one stage of an execution inside its own rescue, returning whether it got through. An
-      # escaping raise would abort the run - under concurrency, every execution in flight with it -
-      # and the result this one already paid for would never reach the run log.
+      # escaping raise would abort every execution in flight and lose the result this one paid for.
       def run_stage(stage)
         yield
         true

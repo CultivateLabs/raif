@@ -69,9 +69,8 @@ module Raif
       end
 
       # Keys stringified as well as sorted, so a case written with symbol keys in a Ruby dataset
-      # block fingerprints the same as the same case read out of a JSONL file. Anything that is not
-      # JSON-native goes through to_s rather than to JSON's rendering of an arbitrary object, which
-      # can carry a memory address and so differ between two runs of identical cases.
+      # block fingerprints the same as the same case read out of a JSONL file. Anything not
+      # JSON-native goes through to_s, since JSON's rendering can carry a memory address.
       def canonicalize(value)
         case value
         when Hash then value.keys.sort_by(&:to_s).to_h { |key| [key.to_s, canonicalize(value[key])] }

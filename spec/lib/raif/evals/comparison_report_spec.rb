@@ -76,13 +76,12 @@ RSpec.describe Raif::Evals::ComparisonReport do
       expect(text).to include("clarity  4.5 -> 3.5  -1.0  (-22.2%")
       expect(text).to include("evals passed          2/2 -> 1/2")
       expect(text).to include("total cost            $1.10 -> $1.64")
-      # One, not two: the pass rate went 1.00 -> 0.00, but clarity's 1-point drop is 22% of a
-      # 4.5 baseline and sits under the 25% threshold. Compared absolutely it would have
-      # counted - the confusion a relative threshold exists to avoid.
+      # One, not two: the pass rate went 1.00 -> 0.00, but clarity's 1-point drop is 22% of a 4.5
+      # baseline and sits under the 25% threshold. Compared absolutely it would have counted.
       #
       # And that one regression does not fail the run: one of two cases moved, which a sign test
-      # cannot separate from noise. The verdict has to say which of those two things happened,
-      # since "nothing moved" and "something moved and we cannot tell" are different news.
+      # cannot separate from noise. "nothing moved" and "something moved and we cannot tell" are
+      # different news, so the verdict has to say which one it found.
       expect(text).to include("REGRESSION GATE (1)")
       expect(text).to include("1/1 cases worse, p=1.0")
       expect(text).to include(

@@ -164,8 +164,7 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   before_destroy :ensure_durable_inference_cost_event!
 
   # On create rather than a later save so a subscriber gets the record itself, which Raif::Llm
-  # then mutates in place as the request progresses - no re-query needed to see the finished
-  # completion.
+  # then mutates in place as the request progresses - no re-query needed to see the result.
   after_create -> { ActiveSupport::Notifications.instrument("create.raif_model_completion", model_completion: self) }
 
   after_initialize -> { self.messages ||= [] }

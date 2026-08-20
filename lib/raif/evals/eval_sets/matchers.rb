@@ -13,10 +13,9 @@ module Raif
         # an untruncated response is most of the file.
         MAX_METADATA_LENGTH = 500
 
-        # Descriptions omit the expected value: evals:compare tallies an expectation across the
-        # cases of an eval by its description (Comparison#worst_expectation_drop), so case data in
-        # one splits it into a tally per case and the gate reads a rate measured on a single case.
-        # A tolerance is written in the eval block rather than the dataset, so it is stable.
+        # Descriptions omit the expected value: evals:compare tallies an expectation across an
+        # eval's cases by its description (Comparison#worst_expectation_drop), so case data in one
+        # would split it into a tally per case. A tolerance is written in the eval block instead.
 
         # Compares a value against ground truth, ignoring the differences a case or whitespace
         # change makes. Strings are normalized and compared; anything else is compared with ==,

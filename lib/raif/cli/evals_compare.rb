@@ -9,11 +9,10 @@ module Raif
     class EvalsCompare < Base
       FORMATS = ["text", "json", "html"].freeze
 
-      # Rails is deliberately not loaded: this reads two JSON files and does arithmetic, so
-      # booting an app would make the one part of the eval tooling that needs no database or
-      # API key the slowest to run. These four are plain Ruby with no Rails dependency, and are
-      # required up front rather than after parsing so the --significance help text can name the
-      # real default instead of a copy of it that could drift.
+      # Rails is deliberately not loaded: this reads two JSON files and does arithmetic, so booting
+      # an app would make the one part of the eval tooling that needs no database or API key the
+      # slowest to run. Required up front rather than after parsing so the --significance help text
+      # can name the real default instead of a copy that could drift.
       def run
         require_relative "../evals/statistics"
         require_relative "../evals/comparison"
@@ -64,8 +63,7 @@ module Raif
         parse_options!(parser)
 
         # A level outside (0, 1] is a typo with a silent failure mode at each end: 0 can never be
-        # cleared, so the gate would never fire, and a negative one reads as "definitely gate" while
-        # doing the same thing.
+        # cleared, so the gate would never fire, and a negative one does the same.
         if alpha && (alpha <= 0 || alpha > 1)
           puts "Error: --significance must be greater than 0 and at most 1 (got #{alpha})"
           exit 1
@@ -118,8 +116,7 @@ module Raif
           File.write(output_path, report.render("html"))
 
           # The report went to a file rather than the screen, and a dataset that changed under the
-          # comparison is the one thing in it a reader has to see before reading the rest. The other
-          # two formats carry it themselves - text in its header, json in dataset_differences.
+          # comparison has to be seen before the rest. text and json carry it themselves.
           dataset_warning = report.dataset_warning
           puts Raif::Utils::Colors.yellow(dataset_warning) if dataset_warning
 
@@ -128,9 +125,8 @@ module Raif
           puts report.render(format)
         end
 
-        # Ahead of the gate rather than after it: a run that lost this much to errors cannot
-        # support a verdict either way, for the reason Comparison#error_rate_unreliable? gives
-        # and the message below repeats. 2 rather than 1, matching the refusals around it.
+        # Ahead of the gate rather than after it: a run that lost this much to errors cannot support
+        # a verdict either way. 2 rather than 1, matching the refusals around it.
         if threshold && comparison.error_rate_unreliable?(max_error_rate: max_error_rate)
           puts Raif::Utils::Colors.red(<<~MSG)
             Refusing to pass or fail: too many runs errored to gate on this comparison.
@@ -150,9 +146,8 @@ module Raif
         exit 1 if comparison.regressed?(threshold, alpha: alpha)
 
         # Something moved past the threshold and none of it could be tested, so the gate has no
-        # answer to give. Exiting 0 here would report a run that may well have regressed as clean,
-        # which is the failure mode a gate exists to prevent; 2 matches the judge mismatch above -
-        # refusing to decide, rather than deciding against.
+        # answer to give. Exiting 0 would report a possibly-regressed run as clean; 2 matches the
+        # judge mismatch above - refusing to decide, rather than deciding against.
         if comparison.insufficient_evidence?(threshold, alpha: alpha)
           puts Raif::Utils::Colors.red(<<~MSG)
             Refusing to pass or fail: #{comparison.unverifiable_regressions(threshold).count} regression(s) cleared the
@@ -182,11 +177,9 @@ module Raif
           exit 1
         end
 
-        # Every key this command reads is looked up with a nil fallback, so without a shape
-        # check two unrecognized JSON objects would compare cleanly and report no regressions -
-        # from a command whose whole job is to exit non-zero when there is one. `--format json`
-        # writes its own report into the same results directory, so feeding one back in is an
-        # easy mistake to make.
+        # Every key this command reads is looked up with a nil fallback, so without a shape check
+        # two unrecognized JSON objects would compare cleanly and report no regressions. `--format
+        # json` writes into the same results directory, so feeding one back in is an easy mistake.
         unless payload.is_a?(Hash) && payload["results"].is_a?(Hash)
           puts Raif::Utils::Colors.red(<<~MSG)
             Error: #{path} is not a Raif eval results file (no top-level "results" object).

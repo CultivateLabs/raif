@@ -38,16 +38,14 @@ module Raif
       # every index below it and a comparison would then join one eval's baseline to another eval's
       # candidate with nothing looking wrong.
       #
-      # Derived rather than declared so nothing has to be hand-written: class name, a slug of the
-      # description, and a digest over both. The digest is the identifying half and is taken over
-      # the description verbatim, so "handles > 100 items" and "handles < 100 items" stay distinct
-      # despite slugging identically; the slug is there to make the id readable. Rewording a
-      # description therefore produces a new id, which a comparison reports as one eval leaving and
-      # another arriving - `id:` is the escape hatch when the wording changed but the eval did not.
+      # Derived rather than declared: class name, a slug of the description, and a digest over both.
+      # The digest is the identifying half and is taken over the description verbatim, so "handles >
+      # 100 items" and "handles < 100 items" stay distinct despite slugging identically. Rewording a
+      # description therefore produces a new id - `id:` is the escape hatch when the wording changed
+      # but the eval did not.
       #
       # Computed on first use rather than at registration, because a class assigned to a constant
-      # after its body runs - `Foo = Class.new(Raif::Evals::EvalSet) { eval "..." }`, or
-      # stub_const - has no name while its evals are registering.
+      # after its body runs - or stub_const - has no name while its evals are registering.
       def id
         @id ||= "#{eval_set_name}##{declared_id || derived_suffix}"
       end

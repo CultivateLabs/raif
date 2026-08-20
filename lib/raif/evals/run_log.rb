@@ -19,8 +19,7 @@ module Raif
 
       # Configuration keys the log records to describe the run rather than to constrain a resume.
       # The code the run started against is one: insisting on it would strand the results of any run
-      # interrupted across a commit, including the commit made to fix what interrupted it.
-      # Raif::Evals::Run warns when it moved instead.
+      # interrupted across a commit. Raif::Evals::Run warns when it moved instead.
       PROVENANCE_KEYS = ["code"].freeze
 
       # Compared specially - see .dataset_differences.
@@ -52,8 +51,7 @@ module Raif
           )
 
           # Truncating, unlike every write after it: a stale log left at the same path by an
-          # abandoned run of the same second would otherwise gain a second header and read
-          # back as one run.
+          # abandoned run of the same second would otherwise gain a second header.
           log.send(:write_header, { type: "run", run_at: run_at, configuration: configuration })
           log
         end
@@ -92,9 +90,8 @@ module Raif
           )
         end
 
-        # The configuration a log was started with, read without opening it for writing. A
-        # resumed run needs one value out of it - the seed - before it can state its own
-        # configuration, since a sampled run has to draw the same cases its first attempt did.
+        # The configuration a log was started with, read without opening it for writing. A resumed
+        # run needs one value out of it - the seed - before it can state its own configuration.
         # Returns nil for anything that is not a readable log; #resume is what reports on that.
         def logged_configuration(path)
           header, = read(path)
@@ -135,8 +132,7 @@ module Raif
               (results[record[:eval_set]] ||= []) << result
 
               # A result from before evals carried an id has nothing to match a pending execution
-              # against. Counted rather than keyed on nil, which would make every execution look
-              # already-recorded and skip the whole run.
+              # against. Counted rather than keyed on nil, which would skip the whole run.
               if result[:eval_id].to_s.empty?
                 unidentified_results += 1
                 next
@@ -165,9 +161,8 @@ module Raif
           result
         end
 
-        # Compared after a JSON round trip: the live configuration holds symbols where the
-        # header holds the strings they were written as, so :open_ai_gpt_4o has to match
-        # "open_ai_gpt_4o".
+        # Compared after a JSON round trip: the live configuration holds symbols where the header
+        # holds the strings they were written as, so :open_ai_gpt_4o must match "open_ai_gpt_4o".
         def configuration_differences(logged, current)
           logged = json_normalized(logged)
           current = json_normalized(current)
@@ -184,8 +179,7 @@ module Raif
         # Entry by entry, over the datasets both sides resolved. A resume narrowed to one eval set
         # file resolves only that file's datasets, and refusing over the ones this invocation never
         # looked at would make --resume unusable with a file argument. A dataset both sides did
-        # resolve has to fingerprint the same: an edited case means the results either side of the
-        # interruption measured different inputs under one case id.
+        # resolve has to fingerprint the same: an edited case means different inputs under one id.
         def dataset_differences(logged, current)
           logged_by_key = dataset_index(logged)
           current_by_key = dataset_index(current)

@@ -13,8 +13,8 @@ module Raif
     protected
 
       # OptionParser raises for an unknown switch, a missing argument, or a value outside a
-      # declared list. Unrescued, those surface as a backtrace out of a command whose every
-      # other error path prints one line and exits 1.
+      # declared list. Unrescued, those surface as a backtrace out of a command whose every other
+      # error path prints one line and exits 1.
       def parse_options!(parser)
         parser.parse!(args)
       rescue OptionParser::ParseError => e

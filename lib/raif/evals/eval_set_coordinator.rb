@@ -12,8 +12,7 @@ module Raif
       attr_reader :eval_set_class, :output, :writer, :header, :cases, :sample, :seed
 
       # Assignable because Raif::Evals::Run builds its coordinators before its run log: the log's
-      # header records the dataset fingerprints only a resolved coordinator can produce, so the log
-      # cannot exist yet when the coordinator is constructed.
+      # header records dataset fingerprints only a resolved coordinator can produce.
       attr_accessor :run_log
 
       # @param eval_set_class [Class] the Raif::Evals::EvalSet subclass being run.
@@ -109,10 +108,9 @@ module Raif
       end
 
       # Where each [eval_index, case_id] pair sits in this set's definition order, for putting
-      # results that completed in another order back into it. Keyed on every selected case rather
-      # than the pending ones, so a resumed run orders the results it inherited too. A position
-      # rather than the case id, since dataset order is the dataset author's and sorting on the id
-      # would replace it with alphabetical order.
+      # results that completed in another order back into it. Keyed on every selected case, so a
+      # resumed run orders the results it inherited too. A position rather than the case id, since
+      # sorting on the id would replace the dataset author's order with alphabetical order.
       def result_order
         eval_set_class.evals.flat_map do |eval_definition|
           eval_cases = selected_cases_for(eval_definition) || [nil]
@@ -122,15 +120,13 @@ module Raif
 
       # Runs one execution and records its result. The unit of work Raif::Evals::Run hands to a
       # worker thread, so everything it touches has to be safe to call concurrently: the run log
-      # takes a lock, and the console output goes through a writer that flushes this execution's
-      # lines as one block.
+      # takes a lock, and console output goes through a writer that flushes as one block.
       def run_and_record(execution)
         eval_result = nil
 
         writer.capture(headers: headers_for(execution)) do |execution_output|
           # A fresh eval set per execution: run_eval writes the current case and result onto the
-          # instance it runs on, so a shared one would allow only one execution in flight, and
-          # nothing an eval's setup leaves behind would be hidden from the next eval.
+          # instance, so a shared one would allow only one execution in flight.
           eval_result = eval_set_class.new(output: execution_output).run_eval(
             execution.eval_definition,
             eval_case: execution.eval_case,
@@ -149,11 +145,9 @@ module Raif
     private
 
       # The eval set banner, then the eval's own description, each printed once when the first
-      # result underneath it lands - under concurrency results arrive in completion order, so
-      # there is no earlier point at which a header is known to describe what follows it.
-      #
-      # Only the compact one-line-per-case output needs a description above it: a non-dataset eval
-      # and verbose output both name the eval on every line they print.
+      # result underneath it lands - under concurrency results arrive in completion order, so there
+      # is no earlier point at which a header is known to describe what follows it. Only the compact
+      # one-line-per-case output needs one: verbose output names the eval on every line.
       def headers_for(execution)
         eval_header = if execution.eval_case && !Raif.config.evals_verbose_output
           ["eval:#{execution.eval_id}", execution.eval_definition.description]
@@ -169,10 +163,8 @@ module Raif
       end
 
       # Resolved and validated before the first eval executes, so a missing fixture or a duplicated
-      # case id fails before any inference is paid for.
-      #
-      # Through an eval set instance because a dataset block is user DSL: it can call
-      # file/files/json/jsonl, which only exist there.
+      # case id fails before any inference is paid for. Through an eval set instance because a
+      # dataset block is user DSL: file/files/json/jsonl only exist there.
       def resolve_datasets
         names = eval_set_class.evals.filter_map(&:dataset).uniq
         return {} if names.empty?

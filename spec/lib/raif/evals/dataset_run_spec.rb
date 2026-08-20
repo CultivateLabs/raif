@@ -82,9 +82,8 @@ RSpec.describe "Running a dataset eval set" do
   end
 
   # stddev and ci95 are over the per-case means, not over every observation: pooling the 6 would
-  # mix differences between the three topics with repeat-to-repeat noise on one topic, and report
-  # how varied the dataset is where the reader needs to know how uncertain the mean is.
-  # spread_n names what they were measured on, so "n 6" beside them cannot be misread as the unit.
+  # report how varied the dataset is where the reader needs how uncertain the mean is. spread_n
+  # names what they were measured on, so "n 6" beside them cannot be misread as the unit.
   it "measures score spread over cases rather than over every observation" do
     run.execute
 
