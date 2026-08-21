@@ -301,10 +301,33 @@ module Smoke
       per_tool = tool_names.to_h { |tool_name| [tool_name, check_provider_managed_tool(llm, tool_name, only_list: only_list)] }
 
       { status: aggregate_status(per_tool.values.map { |result| result[:status] }),
-        detail: per_tool.map { |name, result| "#{name}=#{result[:status]}" }.join(", ").first(180) }
+        detail: provider_managed_tools_detail(per_tool).first(180) }
     rescue StandardError => e
       { status: :fail, detail: "#{e.class}: #{e.message.to_s.first(180)}" }
     end
+
+    STATUS_DETAIL_LABELS = {
+      pass: "pass",
+      fail: "failed",
+      timeout: "timed out",
+      skip: "skipped"
+    }.freeze
+
+    # Groups per-tool results by status, in order of first appearance (so a pass-then-skip run
+    # reads "pass: ...; skipped: ..." rather than being reordered by severity). Only non-pass
+    # entries carry their per-tool detail, since that's the part worth surfacing.
+    def self.provider_managed_tools_detail(per_tool)
+      per_tool.values.map { |result| result[:status] }.uniq.map do |status|
+        names = per_tool.filter_map do |name, result|
+          next unless result[:status] == status
+
+          status == :pass ? name.to_s : "#{name} (#{result[:detail]})"
+        end
+
+        "#{STATUS_DETAIL_LABELS.fetch(status, status.to_s)}: #{names.join(", ")}"
+      end.join("; ")
+    end
+    private_class_method :provider_managed_tools_detail
 
     def self.check_provider_managed_tool(llm, tool_name, only_list:)
       case tool_name.to_s
@@ -322,14 +345,14 @@ module Smoke
         text = response_text(model_completion)
         { status: text.include?("42") ? :pass : :fail, detail: text.first(120) }
       when "image_generation"
-        if only_list == ["provider_managed_tools"]
+        if only_list&.include?("provider_managed_tools")
           model_completion = llm.chat(
             message: "Generate a simple image of a red circle.",
             available_model_tools: [Raif::ModelTools::ProviderManaged::ImageGeneration]
           )
           { status: model_completion ? :pass : :fail, detail: response_text(model_completion).first(120) }
         else
-          { status: :skip, detail: "not smoked (expensive)" }
+          { status: :skip, detail: "expensive; run --only provider_managed_tools" }
         end
       else
         { status: :skip, detail: "no smoke check implemented for #{tool_name}" }
@@ -339,11 +362,14 @@ module Smoke
     end
     private_class_method :check_provider_managed_tool
 
+    # fail > timeout > skip > pass: any skipped tool (e.g. one omitted from this run as
+    # expensive) keeps the whole capability out of :pass, so an unverified tool can't hide
+    # inside a passing aggregate.
     def self.aggregate_status(statuses)
       return :pass if statuses.empty?
       return :fail if statuses.include?(:fail)
       return :timeout if statuses.include?(:timeout)
-      return :skip if statuses.all? { |status| status == :skip }
+      return :skip if statuses.include?(:skip)
 
       :pass
     end

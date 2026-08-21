@@ -3,6 +3,9 @@
 require "rails_helper"
 require "raif/model_manifest"
 require Raif::Engine.root.join("script/smoke/checks")
+require Raif::Engine.root.join("script/smoke/recorder")
+require "tmpdir"
+require "fileutils"
 
 RSpec.describe Smoke::Checks do
   # A fixture entry with a deliberate mix of claims, so a single run_for call can exercise every
@@ -67,6 +70,16 @@ RSpec.describe Smoke::Checks do
     )
   end
 
+  # Minimal entry for exercising check_provider_managed_tools directly: that method only calls
+  # Raif.llm(entry.key) and reads entry.capabilities["provider_managed_tools"], so the rest of
+  # the Entry fields are irrelevant here.
+  let(:pmt_entry) do
+    Raif::ModelManifest::Entry.new(
+      key: :smoke_checks_pmt_test_model,
+      capabilities: { "provider_managed_tools" => ["web_search", "image_generation"] }
+    )
+  end
+
   let(:model_completion) do
     instance_double(
       Raif::ModelCompletion,
@@ -115,6 +128,7 @@ RSpec.describe Smoke::Checks do
     allow(Raif).to receive(:llm_config).with(streaming_disabled_entry.key).and_return(
       llm_class: forced_llm_class, model_provider_settings: {}
     )
+    allow(Raif).to receive(:llm).with(pmt_entry.key).and_return(llm)
   end
 
   describe "NONCE" do
@@ -194,6 +208,55 @@ RSpec.describe Smoke::Checks do
       result = described_class.run_for(streaming_disabled_entry, only: "streaming_tool_calls")
 
       expect(result.keys).to eq(["streaming_tool_calls"])
+    end
+  end
+
+  describe ".check_provider_managed_tools" do
+    it "aggregates to :skip, naming both groups, when one tool is skipped as expensive and the rest pass" do
+      result = described_class.check_provider_managed_tools(pmt_entry, only_list: nil)
+
+      expect(result[:status]).to eq(:skip)
+      expect(result[:detail]).to eq("pass: web_search; skipped: image_generation (expensive; run --only provider_managed_tools)")
+    end
+
+    it "runs image_generation, instead of skipping it, when only names provider_managed_tools alongside another capability" do
+      result = described_class.check_provider_managed_tools(pmt_entry, only_list: ["completion", "provider_managed_tools"])
+
+      expect(result[:status]).to eq(:pass)
+      expect(result[:detail]).to eq("pass: web_search, image_generation")
+    end
+
+    it "does not fold a skipped tool into a passing aggregate (the bug this method's ladder fixes)" do
+      result = described_class.check_provider_managed_tools(pmt_entry, only_list: nil)
+
+      expect(result[:status]).not_to eq(:pass)
+    end
+  end
+
+  describe "downstream truthfulness: Smoke::Recorder never records a skipped provider_managed_tools aggregate" do
+    it "leaves provider_managed_tools unrecorded and last_full_run_at unset when the aggregate is :skip" do
+      fixture_dir = Raif::Engine.root.join("spec/fixtures/model_manifest").to_s
+
+      Dir.mktmpdir("raif-checks-recorder-spec") do |dir|
+        FileUtils.cp_r(Dir.glob(File.join(fixture_dir, "*")), dir)
+        recording_entry = Raif::ModelManifest.load(dir: dir).llm_entries.find { |e| e.key.to_s == "anthropic_old_model" }
+
+        capability_results = {
+          "completion" => { status: :pass, detail: "ok" },
+          "provider_managed_tools" => described_class.check_provider_managed_tools(pmt_entry, only_list: nil)
+        }
+        ran_full_unskipped = capability_results.values.none? { |result| %i[skip timeout].include?(result[:status]) }
+
+        Smoke::Recorder.record!(recording_entry, capability_results, ran_full_unskipped: ran_full_unskipped)
+
+        raw = YAML.safe_load_file(File.join(dir, "anthropic.yml"), permitted_classes: [Date], aliases: true)
+        node = raw.fetch("models").find { |m| m["key"] == "anthropic_old_model" }
+
+        expect(ran_full_unskipped).to eq(false)
+        expect(node["verification"]["results"]).to have_key("completion")
+        expect(node["verification"]["results"]).not_to have_key("provider_managed_tools")
+        expect(node["verification"]).not_to have_key("last_full_run_at")
+      end
     end
   end
 end
