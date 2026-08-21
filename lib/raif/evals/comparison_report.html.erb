@@ -1,0 +1,301 @@
+<%
+  data = comparison.to_h
+  baseline = data[:baseline]
+  candidate = data[:candidate]
+-%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raif eval comparison</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --border: #e2e5ea;
+    --text: #23272f;
+    --muted: #6b7280;
+    --good: #1f7a4d;
+    --good-bg: #e8f5ee;
+    --bad: #b3261e;
+    --bad-bg: #fdeceb;
+    --warn: #8a5a00;
+    --warn-bg: #fdf3e2;
+    --neutral-bg: #f1f3f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 20px 64px;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 32px 0 10px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  .scroll { overflow-x: auto; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .bad { color: var(--bad); font-weight: 600; }
+  .warn { color: var(--warn); font-weight: 600; }
+  .good { color: var(--good); font-weight: 600; }
+  .muted { color: var(--muted); }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--neutral-bg); }
+  .pill.bad { background: var(--bad-bg); }
+  .pill.warn { background: var(--warn-bg); }
+  .pill.good { background: var(--good-bg); }
+  .sub td { padding-left: 28px; font-size: 13px; }
+  .verdict { margin-top: 24px; font-weight: 600; }
+  .empty { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Raif eval comparison</h1>
+  <p class="muted">Matched on eval set, eval index, expectation description, and case id.</p>
+
+  <div class="card scroll">
+    <table>
+      <tr><th>Run</th><th>Model</th><th>When</th><th>Shape</th><th>Cost</th><th>File</th></tr>
+      <tr>
+        <td>baseline</td>
+        <td class="mono"><%= h baseline[:model] %></td>
+        <td class="mono"><%= h run_at(baseline[:run_at]) %></td>
+        <td><%= h baseline[:evals] %> evals &times; <%= h baseline[:repeats] %> repeats<%= ", #{baseline[:cases]} cases" if baseline[:cases].to_i > 0 %></td>
+        <td class="mono">$<%= format("%.2f", baseline[:total_cost].to_f) %></td>
+        <td class="mono muted"><%= h baseline[:label] %></td>
+      </tr>
+      <tr>
+        <td>candidate</td>
+        <td class="mono"><%= h candidate[:model] %></td>
+        <td class="mono"><%= h run_at(candidate[:run_at]) %></td>
+        <td><%= h candidate[:evals] %> evals &times; <%= h candidate[:repeats] %> repeats<%= ", #{candidate[:cases]} cases" if candidate[:cases].to_i > 0 %></td>
+        <td class="mono">$<%= format("%.2f", candidate[:total_cost].to_f) %></td>
+        <td class="mono muted"><%= h candidate[:label] %></td>
+      </tr>
+      <tr>
+        <td>judge</td>
+        <td colspan="5" class="mono">
+          <% if comparison.judge_mismatch? -%>
+            <span class="pill bad">mismatched</span> <%= h baseline[:judge] %> &rarr; <%= h candidate[:judge] %>
+          <% else -%>
+            <%= h candidate[:judge] %> (both runs)
+          <% end -%>
+        </td>
+      </tr>
+      <% if [baseline[:code], candidate[:code]].any? -%>
+      <tr>
+        <td>code</td>
+        <td colspan="5" class="mono"><%= h describe_code(baseline[:code]) %> &rarr; <%= h describe_code(candidate[:code]) %></td>
+      </tr>
+      <% end -%>
+      <% if comparison.dataset_mismatch? -%>
+      <tr>
+        <td>datasets</td>
+        <td colspan="5">
+          <span class="pill warn">changed</span>
+          <% comparison.dataset_differences.each do |row| -%>
+            <div class="mono"><%= h row[:name] %> (<%= h row[:eval_set] %>): <%= h row[:baseline] %> &rarr; <%= h row[:candidate] %></div>
+          <% end -%>
+          <div class="muted">Cases are joined by id, so a difference the dataset caused reads as a difference the model caused.</div>
+        </td>
+      </tr>
+      <% end -%>
+    </table>
+  </div>
+
+  <h2>New failures (<%= comparison.new_failures.count %>)</h2>
+  <div class="card scroll">
+    <% if comparison.new_failures.empty? -%>
+      <p class="empty">None.</p>
+    <% else -%>
+    <table>
+      <tr><th>Eval</th><th>Case</th><th>Pass rate</th><th>Expectations that moved</th></tr>
+      <% comparison.new_failures.each do |row| -%>
+      <tr>
+        <td><%= h row[:eval_set] %><br><span class="muted"><%= h row[:description] %></span></td>
+        <td class="mono"><%= h row[:case_id] || "-" %></td>
+        <td class="mono bad"><%= format_rate(row[:baseline_rate]) %> &rarr; <%= format_rate(row[:candidate_rate]) %></td>
+        <td>
+          <% row[:expectations].each do |move| -%>
+            <div><span class="mono"><%= format_rate(move[:baseline_rate]) %> &rarr; <%= format_rate(move[:candidate_rate]) %></span> <%= h move[:description] %></div>
+          <% end -%>
+        </td>
+      </tr>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
+  <h2>Fixed (<%= comparison.fixed.count %>)</h2>
+  <div class="card scroll">
+    <% if comparison.fixed.empty? -%>
+      <p class="empty">None.</p>
+    <% else -%>
+    <table>
+      <tr><th>Eval</th><th>Case</th><th>Pass rate</th><th>Expectations that moved</th></tr>
+      <% comparison.fixed.each do |row| -%>
+      <tr>
+        <td><%= h row[:eval_set] %><br><span class="muted"><%= h row[:description] %></span></td>
+        <td class="mono"><%= h row[:case_id] || "-" %></td>
+        <td class="mono good"><%= format_rate(row[:baseline_rate]) %> &rarr; <%= format_rate(row[:candidate_rate]) %></td>
+        <td>
+          <% row[:expectations].each do |move| -%>
+            <div><span class="mono"><%= format_rate(move[:baseline_rate]) %> &rarr; <%= format_rate(move[:candidate_rate]) %></span> <%= h move[:description] %></div>
+          <% end -%>
+        </td>
+      </tr>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
+  <h2>Score moves (<%= comparison.score_moves.count %>)</h2>
+  <div class="card scroll">
+    <% if comparison.score_moves.empty? -%>
+      <p class="empty">None.</p>
+    <% else -%>
+    <table>
+      <tr><th>Score</th><th>Mean</th><th>Delta</th><th>Spread</th></tr>
+      <% comparison.score_moves.each do |row| -%>
+      <tr>
+        <td>
+          <%= h row[:name] %>
+          <% unless row[:gated] -%><span class="pill">not gated</span><% end -%>
+          <br><span class="muted"><%= h row[:eval_set] %> &middot; <%= h row[:description] %></span>
+        </td>
+        <td class="mono"><%= h row[:baseline_mean] %> &rarr; <%= h row[:candidate_mean] %></td>
+        <td class="mono <%= row[:regression] > 0 ? "bad" : "good" %>"><%= h format_delta(row[:delta]) %><% if score_relative(row) -%><br><span class="muted"><%= h score_relative(row) %></span><% end -%></td>
+        <td class="mono muted"><%= h score_spread(row) %></td>
+      </tr>
+        <% row[:per_case].each do |per_case| -%>
+        <tr class="sub">
+          <td class="mono"><%= h per_case[:case_id] %></td>
+          <td class="mono"><%= h per_case[:baseline_mean] %> &rarr; <%= h per_case[:candidate_mean] %></td>
+          <td class="mono"><%= h format_delta(per_case[:delta]) %></td>
+          <td></td>
+        </tr>
+        <% end -%>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
+  <h2>Error rates (<%= comparison.error_moves.count %>)</h2>
+  <div class="card scroll">
+    <% if comparison.error_moves.empty? -%>
+      <p class="empty">No run errored on either side.</p>
+    <% else -%>
+    <p class="muted">Runs that raised instead of producing a measurement. Excluded from the pass rates above, so a
+      provider incident does not read as a quality regression.</p>
+    <table>
+      <tr><th>Eval</th><th>Baseline</th><th>Candidate</th><th>Delta</th></tr>
+      <% comparison.error_moves.each do |row| -%>
+      <tr>
+        <td><%= h row[:eval_set] %><br><span class="muted"><%= h row[:description] %></span></td>
+        <td class="mono"><%= format_rate(row[:baseline_rate]) %> <span class="muted">(<%= h row[:baseline_errored] %>/<%= h row[:baseline_runs] %>)</span></td>
+        <td class="mono"><%= format_rate(row[:candidate_rate]) %> <span class="muted">(<%= h row[:candidate_errored] %>/<%= h row[:candidate_runs] %>)</span></td>
+        <td class="mono <%= row[:delta] > 0 ? "warn" : "muted" %>"><%= h format_delta(row[:delta]) %></td>
+      </tr>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
+  <h2>Not comparable (<%= comparison.not_comparable.count %>)</h2>
+  <div class="card scroll">
+    <% if comparison.not_comparable.empty? -%>
+      <p class="empty">None.</p>
+    <% else -%>
+    <table>
+      <tr><th>Eval</th><th>Case</th><th>Expectation</th><th>Reason</th></tr>
+      <% comparison.not_comparable.each do |row| -%>
+      <tr>
+        <td><%= h row[:eval_set] %><br><span class="muted"><%= h row[:description] %></span></td>
+        <td class="mono"><%= h row[:case_id] || "-" %></td>
+        <td class="mono"><%= h row[:expectation] || "-" %></td>
+        <td><span class="pill"><%= h row[:reason] || row[:present_in] %></span></td>
+      </tr>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
+  <h2>Regression gate (<%= comparison.candidate_regressions(threshold).count %>)</h2>
+  <div class="card scroll">
+    <% if threshold.nil? -%>
+      <p class="empty">No threshold set (--fail-on-regression).</p>
+    <% elsif comparison.candidate_regressions(threshold).empty? -%>
+      <p class="empty">Nothing moved past the threshold.</p>
+    <% else -%>
+    <table>
+      <tr><th>Row</th><th>Size</th><th>Absolute</th><th>Evidence</th></tr>
+      <% comparison.candidate_regressions(threshold).each do |row| -%>
+      <tr>
+        <td><%= h row[:label] %><br><span class="muted"><%= h row[:kind] %></span></td>
+        <td class="mono"><% if row[:magnitude].nil? -%>unbounded<% else -%><%= format("%g", row[:magnitude] * 100) %>% worse<% end -%></td>
+        <td class="mono"><%= h row[:absolute] %></td>
+        <td class="mono <%= gated_rows.include?(row) ? "bad" : "muted" %>"><%= h evidence_summary(row) %></td>
+      </tr>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
+  <h2>Summary</h2>
+  <div class="card scroll">
+    <table>
+      <tr><th>Metric</th><th>Baseline</th><th>Candidate</th></tr>
+      <tr>
+        <td>Evals passed</td>
+        <td class="mono"><%= h baseline[:passed_evals] %>/<%= h baseline[:total_evals] %></td>
+        <td class="mono"><%= h candidate[:passed_evals] %>/<%= h candidate[:total_evals] %></td>
+      </tr>
+      <tr>
+        <td>Expectations passed</td>
+        <td class="mono"><%= h baseline[:passed_expectations] %>/<%= h baseline[:total_expectations] %></td>
+        <td class="mono"><%= h candidate[:passed_expectations] %>/<%= h candidate[:total_expectations] %></td>
+      </tr>
+      <% if [baseline[:errored_evals], candidate[:errored_evals]].any? { |count| count.to_i > 0 } -%>
+      <tr>
+        <td>Evals errored</td>
+        <td class="mono warn"><%= h error_fraction(baseline) %></td>
+        <td class="mono warn"><%= h error_fraction(candidate) %></td>
+      </tr>
+      <% end -%>
+      <% comparison.score_moves.each do |row| -%>
+      <tr>
+        <td>Mean <%= h row[:name] %></td>
+        <td class="mono"><%= h row[:baseline_mean] %></td>
+        <td class="mono"><%= h row[:candidate_mean] %></td>
+      </tr>
+      <% end -%>
+      <tr>
+        <td>Total cost</td>
+        <td class="mono">$<%= format("%.2f", baseline[:total_cost].to_f) %></td>
+        <td class="mono">$<%= format("%.2f", candidate[:total_cost].to_f) %></td>
+      </tr>
+      <% if cost_split? -%>
+      <tr class="sub">
+        <td>Model under test</td>
+        <td class="mono"><%= h format_cost(baseline[:subject_cost]) %></td>
+        <td class="mono"><%= h format_cost(candidate[:subject_cost]) %></td>
+      </tr>
+      <tr class="sub">
+        <td>Judge</td>
+        <td class="mono"><%= h format_cost(baseline[:judge_cost]) %></td>
+        <td class="mono"><%= h format_cost(candidate[:judge_cost]) %></td>
+      </tr>
+      <% end -%>
+    </table>
+    <p class="verdict <%= comparison.regressed?(threshold, alpha: alpha) ? "bad" : "" %>"><%= h verdict %></p>
+  </div>
+</div>
+</body>
+</html>

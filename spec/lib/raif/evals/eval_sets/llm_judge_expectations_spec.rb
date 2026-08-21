@@ -12,7 +12,7 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
       def initialize(output: $stdout)
         super
 
-        @current_eval = Raif::Evals::Eval.new(description: "test description")
+        @current_eval_result = Raif::Evals::EvalResult.new(description: "test description")
       end
     end
   end
@@ -77,6 +77,23 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
 
       eval_set.expect_llm_judge_passes("test output", criteria: "Must be polite")
       expect(output.string).to include("Low confidence:")
+    end
+
+    # A dataset case discards `output` so it can print one compact line per case. A
+    # low-confidence judgment says that line's pass or fail is not to be trusted, so it has to
+    # reach the console rather than the discarded buffer.
+    it "prints the low confidence warning to the console even when per-expectation output is discarded" do
+      stub_raif_task(Raif::Evals::LlmJudges::Binary) do |_messages, _model_completion|
+        { passes: true, reasoning: "ok", confidence: 0.3 }.to_json
+      end
+
+      discarded = StringIO.new
+      eval_set.instance_variable_set(:@output, discarded)
+
+      eval_set.expect_llm_judge_passes("test output", criteria: "Must be polite")
+
+      expect(output.string).to include("Low confidence:")
+      expect(discarded.string).not_to include("Low confidence:")
     end
 
     it "prints reasoning when verbose output is enabled" do
@@ -168,11 +185,14 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
       expect(task.llm_model_key).to eq("raif_test_llm")
     end
 
+    # The description is the join key evals:compare matches on, so it keeps saying "custom"
+    # even though the score the same call records is named explicitly.
     it "uses 'custom' in description for a string rubric" do
       result = eval_set.expect_llm_judge_score(
         "test output",
         scoring_rubric: "Custom rubric string",
-        min_passing_score: 7
+        min_passing_score: 7,
+        score_name: "code_quality"
       )
 
       expect(result.description).to eq("LLM judge score (custom): >= 7")
@@ -205,6 +225,87 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
       expect(result.passed?).to eq(false)
       expect(result.failed?).to eq(true)
       expect(result.metadata).to eq({ score: 5, reasoning: "Below threshold", confidence: 0.9 })
+    end
+
+    it "records the judge's score as a first-class score named after the rubric" do
+      eval_set.expect_llm_judge_score("test output", scoring_rubric: rubric, min_passing_score: 7)
+
+      expect(eval_set.current_eval_result.scores.map(&:to_h)).to eq([
+        { name: "accuracy", value: 8.0, scale: "0..10", higher_is_better: true, min: 7, passed: true }
+      ])
+    end
+
+    it "records a gated score that failed without adding a second expectation" do
+      stub_raif_task(Raif::Evals::LlmJudges::Scored) do |_messages, _model_completion|
+        { score: 5, reasoning: "Below threshold", confidence: 0.9 }.to_json
+      end
+
+      eval_set.expect_llm_judge_score("test output", scoring_rubric: rubric, min_passing_score: 7)
+
+      expect(eval_set.current_eval_result.scores.map { |score| [score.value, score.passed?] }).to eq([[5.0, false]])
+      expect(eval_set.current_eval_result.expectation_results.count).to eq(1)
+    end
+
+    it "records no score when the judge produced none" do
+      eval_set.expect_llm_judge_score("test output", scoring_rubric: rubric, min_passing_score: 7, llm_judge_model_key: :invalid)
+
+      expect(eval_set.current_eval_result.scores).to be_empty
+    end
+
+    # Judging two fields against one rubric in a single eval is legitimate, and they have to
+    # be named apart or the summary averages them into one row.
+    it "takes a score_name overriding the rubric name" do
+      eval_set.expect_llm_judge_score("bluf", scoring_rubric: rubric, min_passing_score: 7, score_name: "bluf_accuracy")
+      eval_set.expect_llm_judge_score("findings", scoring_rubric: rubric, min_passing_score: 7, score_name: "findings_accuracy")
+
+      expect(eval_set.current_eval_result.scores.map(&:name)).to eq(["bluf_accuracy", "findings_accuracy"])
+    end
+
+    it "raises when the same rubric is used twice in one eval without distinct score names" do
+      eval_set.expect_llm_judge_score("bluf", scoring_rubric: rubric, min_passing_score: 7)
+
+      expect { eval_set.expect_llm_judge_score("findings", scoring_rubric: rubric, min_passing_score: 7) }
+        .to raise_error(ArgumentError, /score_name/)
+    end
+
+    # The collision is only knowable at run time, so the least it can do is not cost a judge
+    # call - and not raise out of the eval block after one, discarding everything that passed.
+    it "raises on a colliding score name before running the judge" do
+      eval_set.expect_llm_judge_score("bluf", scoring_rubric: rubric, min_passing_score: 7)
+      judged = Raif::Task.count
+
+      expect do
+        expect { eval_set.expect_llm_judge_score("findings", scoring_rubric: rubric, min_passing_score: 7) }
+          .to raise_error(ArgumentError, /already recorded/)
+      end.not_to change(Raif::Task, :count)
+
+      expect(Raif::Task.count).to eq(judged)
+    end
+
+    it "omits the scale for a string rubric, which has no levels to derive one from" do
+      eval_set.expect_llm_judge_score("test output", scoring_rubric: "Rate clarity 0-5", min_passing_score: 4, score_name: "clarity")
+
+      expect(eval_set.current_eval_result.scores.first.to_h).not_to have_key(:scale)
+    end
+
+    # A string rubric carries no name, and "custom" as a metric identifier is not one: the
+    # summary aggregates by name and evals:compare joins on it.
+    it "raises when a string rubric is given no score_name" do
+      expect { eval_set.expect_llm_judge_score("test output", scoring_rubric: "Rate clarity 0-5", min_passing_score: 4) }
+        .to raise_error(ArgumentError, /requires score_name:/)
+    end
+
+    it "raises before running the judge, so the check costs nothing" do
+      expect do
+        expect { eval_set.expect_llm_judge_score("test output", scoring_rubric: "Rate clarity 0-5", min_passing_score: 4) }
+          .to raise_error(ArgumentError)
+      end.not_to change(Raif::Task, :count)
+    end
+
+    it "names the score for a string rubric from score_name" do
+      eval_set.expect_llm_judge_score("test output", scoring_rubric: "Rate clarity 0-5", min_passing_score: 4, score_name: "clarity")
+
+      expect(eval_set.current_eval_result.scores.map(&:name)).to eq(["clarity"])
     end
 
     it "merges user metadata with judge metadata for scoring" do
@@ -320,6 +421,109 @@ RSpec.describe Raif::Evals::EvalSets::LlmJudgeExpectations do
         confidence: 0.88
       })
       expect(result.metadata[:winner]).to be_in(["A", "B"])
+    end
+  end
+
+  describe "judge task attributes" do
+    let(:test_eval_set_class) do
+      Class.new(Raif::Evals::EvalSet) do
+        def self.name
+          "TestEvalSet"
+        end
+
+        def initialize(output: $stdout)
+          super
+
+          @current_eval_result = Raif::Evals::EvalResult.new(description: "test description")
+        end
+
+        def judge_task_attributes
+          { requested_language_key: "es" }
+        end
+      end
+    end
+
+    before do
+      stub_raif_task(Raif::Evals::LlmJudges::Binary) do |_messages, _model_completion|
+        { passes: true, reasoning: "ok", confidence: 0.9 }.to_json
+      end
+    end
+
+    # Without these an app that has extended Raif::Task with a required column cannot use
+    # the built-in judges at all: the judge's insert fails and takes the eval's transaction.
+    it "applies the eval set's judge_task_attributes to the judge task" do
+      eval_set.expect_llm_judge_passes("test output", criteria: "Must be polite")
+
+      expect(Raif::Task.last.requested_language_key).to eq("es")
+    end
+
+    it "lets an individual expectation override them" do
+      eval_set.expect_llm_judge_passes("test output", criteria: "Must be polite", judge_attributes: { requested_language_key: "fr" })
+
+      expect(Raif::Task.last.requested_language_key).to eq("fr")
+    end
+
+    it "applies them to scored judges" do
+      stub_raif_task(Raif::Evals::LlmJudges::Scored) do |_messages, _model_completion|
+        { score: 5, reasoning: "ok", confidence: 0.9 }.to_json
+      end
+
+      eval_set.expect_llm_judge_score("test output", scoring_rubric: Raif::Evals::ScoringRubric.clarity, min_passing_score: 4)
+
+      expect(Raif::Task.last.requested_language_key).to eq("es")
+    end
+
+    it "applies them to comparative judges" do
+      stub_raif_task(Raif::Evals::LlmJudges::Comparative) do |_messages, model_completion|
+        { winner: model_completion.source.expected_winner, reasoning: "ok", confidence: 0.9 }.to_json
+      end
+
+      eval_set.expect_llm_judge_prefers("A", over: "B", criteria: "Clearer")
+
+      expect(Raif::Task.last.requested_language_key).to eq("es")
+    end
+  end
+
+  describe "label:" do
+    before do
+      stub_raif_task(Raif::Evals::LlmJudges::Binary) do |_messages, _model_completion|
+        { passes: true, reasoning: "ok", confidence: 0.9 }.to_json
+      end
+    end
+
+    it "replaces the criteria-derived description, which is unwieldy for a paragraph" do
+      result = eval_set.expect_llm_judge_passes(
+        "test output",
+        criteria: "Retains the specific figures, dates, and named entities from the source rather than paraphrasing them",
+        label: "keeps the specifics"
+      )
+
+      expect(result.description).to eq("keeps the specifics")
+    end
+
+    it "names a scored judge expectation" do
+      stub_raif_task(Raif::Evals::LlmJudges::Scored) do |_messages, _model_completion|
+        { score: 5, reasoning: "ok", confidence: 0.9 }.to_json
+      end
+
+      result = eval_set.expect_llm_judge_score(
+        "test output",
+        scoring_rubric: Raif::Evals::ScoringRubric.clarity,
+        min_passing_score: 4,
+        label: "reads clearly"
+      )
+
+      expect(result.description).to eq("reads clearly")
+    end
+
+    it "names a comparative judge expectation" do
+      stub_raif_task(Raif::Evals::LlmJudges::Comparative) do |_messages, model_completion|
+        { winner: model_completion.source.expected_winner, reasoning: "ok", confidence: 0.9 }.to_json
+      end
+
+      result = eval_set.expect_llm_judge_prefers("A", over: "B", criteria: "Clearer", label: "beats the baseline")
+
+      expect(result.description).to eq("beats the baseline")
     end
   end
 end

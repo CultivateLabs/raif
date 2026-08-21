@@ -34,6 +34,8 @@ module Raif
           { key: "current_user_method", value: @config.current_user_method },
           { key: "default_embedding_model_key", value: @config.default_embedding_model_key },
           { key: "default_llm_model_key", value: @config.default_llm_model_key },
+          { key: "evals_capture_model_completions", value: @config.evals_capture_model_completions },
+          { key: "evals_concurrency", value: @config.evals_concurrency },
           { key: "evals_default_llm_judge_model_key", value: @config.evals_default_llm_judge_model_key },
           { key: "evals_verbose_output", value: @config.evals_verbose_output },
           { key: "google_api_key", value: mask_sensitive_value(@config.google_api_key) },

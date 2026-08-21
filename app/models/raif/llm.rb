@@ -314,6 +314,10 @@ module Raif
     def retry_with_backoff(model_completion, &block)
       Raif::Utils::TransientRetry.call(
         label: "Raif::Llm##{api_name} perform_model_completion",
+        # Without this the provider overrides below are dead: TransientRetry would fall back to
+        # the config list, which only names the Faraday errors, and a Bedrock throttle - the
+        # provider's 429 - would fail the request on the first try.
+        retriable_exceptions: retriable_exceptions,
         on_retry: ->(error, attempt, max_retries, delay) {
           log_blank_response_retry(error, model_completion, attempt, max_retries, delay)
           model_completion.increment!(:retry_count)

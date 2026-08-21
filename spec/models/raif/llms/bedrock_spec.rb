@@ -422,13 +422,49 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
   end
 
   describe "#retriable_exceptions" do
-    it "includes AWS SDK exceptions in addition to the default retriable exceptions" do
+    it "includes the transient AWS SDK exceptions in addition to the default retriable exceptions" do
       exceptions = llm.send(:retriable_exceptions)
-      expect(exceptions).to include(Aws::BedrockRuntime::Errors::ServiceError)
-      expect(exceptions).to include(Seahorse::Client::NetworkingError)
+
+      expect(exceptions).to include(
+        Aws::BedrockRuntime::Errors::ThrottlingException,
+        Aws::BedrockRuntime::Errors::ServiceUnavailableException,
+        Aws::BedrockRuntime::Errors::InternalServerException,
+        Aws::BedrockRuntime::Errors::ModelTimeoutException,
+        Aws::BedrockRuntime::Errors::ModelNotReadyException,
+        Seahorse::Client::NetworkingError
+      )
+
       Raif.config.llm_request_retriable_exceptions.each do |exception|
         expect(exceptions).to include(exception)
       end
+    end
+
+    # ServiceError is the base class for every Bedrock error, transient or not. Retrying a
+    # ValidationException only delays the error the caller has to see.
+    it "leaves the errors that will not pass on their own alone" do
+      exceptions = llm.send(:retriable_exceptions)
+
+      expect(exceptions).not_to include(Aws::BedrockRuntime::Errors::ServiceError)
+      expect(exceptions).not_to include(Aws::BedrockRuntime::Errors::ValidationException)
+      expect(exceptions).not_to include(Aws::BedrockRuntime::Errors::AccessDeniedException)
+    end
+
+    # The override was previously dead: #retry_with_backoff did not pass it, so TransientRetry
+    # fell back to the config list, which names no AWS error at all.
+    it "is what the retry actually runs on" do
+      mock_client = instance_double(Aws::BedrockRuntime::Client)
+      allow(llm).to receive(:bedrock_client).and_return(mock_client)
+      allow(mock_client).to receive(:converse).and_raise(Aws::BedrockRuntime::Errors::ThrottlingException.new(nil, "slow down"))
+      allow(Raif::Utils::TransientRetry).to receive(:call).and_call_original
+
+      expect do
+        llm.chat(messages: [{ role: "user", content: "Hello" }])
+      end.to raise_error(Aws::BedrockRuntime::Errors::ThrottlingException)
+
+      expect(Raif::Utils::TransientRetry).to have_received(:call)
+        .with(hash_including(retriable_exceptions: llm.send(:retriable_exceptions)))
+      # The initial attempt plus Raif.config.llm_request_max_retries.
+      expect(mock_client).to have_received(:converse).exactly(3).times
     end
   end
 
