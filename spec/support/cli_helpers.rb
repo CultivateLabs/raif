@@ -7,6 +7,17 @@ module Raif
   module CliHelpers
     EXE_PATH = Raif::Engine.root.join("exe", "raif").to_s
 
+    # The environment a child needs to run outside the bundle. RUBYOPT alone is not enough:
+    # RubyGems requires BUNDLER_SETUP on its own, so the child would load the bundle anyway.
+    # Under a non-default BUNDLE_GEMFILE that bundle is not even the installed one, and the
+    # child dies in Bundler before it reaches the CLI.
+    UNBUNDLED_ENV = {
+      "RUBYOPT" => nil,
+      "RUBYLIB" => nil,
+      "BUNDLE_GEMFILE" => nil,
+      "BUNDLER_SETUP" => nil
+    }.freeze
+
     CliResult = Struct.new(:stdout, :stderr, :status) do
       def exit_code
         status.exitstatus
@@ -22,8 +33,7 @@ module Raif
     # rails_helper has already loaded the whole engine, which hides a missing require in a
     # command that is contracted to run without Rails.
     def run_raif_cli(*args)
-      env = { "RUBYOPT" => nil, "BUNDLE_GEMFILE" => nil, "RUBYLIB" => nil }
-      stdout, stderr, status = Open3.capture3(env, RbConfig.ruby, EXE_PATH, *args.map(&:to_s))
+      stdout, stderr, status = Open3.capture3(UNBUNDLED_ENV, RbConfig.ruby, EXE_PATH, *args.map(&:to_s))
 
       CliResult.new(stdout, stderr, status)
     end
@@ -37,8 +47,7 @@ module Raif
       RUBY
 
       cli_path = Raif::Engine.root.join("lib", "raif", "cli").to_s
-      env = { "RUBYOPT" => nil, "BUNDLE_GEMFILE" => nil, "RUBYLIB" => nil }
-      stdout, stderr, status = Open3.capture3(env, RbConfig.ruby, "-e", script, "--", cli_path, *args.map(&:to_s))
+      stdout, stderr, status = Open3.capture3(UNBUNDLED_ENV, RbConfig.ruby, "-e", script, "--", cli_path, *args.map(&:to_s))
 
       CliResult.new(stdout, stderr, status)
     end
