@@ -54,13 +54,29 @@ module Raif
         end
       end
 
+      # Every execution key this eval set covers, whether or not the run log already holds a result
+      # for it: the plan, where #executions_for is whatever is left of it. Deliberately blind to
+      # the log, since this is what the log is started with, before there is one to consult.
+      #
+      # @param eval_definitions [Array<Raif::Evals::EvalDefinition>, nil] restrict the plan to
+      #   these evals, which is what a file path given with a line number does.
+      def planned_keys(eval_definitions: nil, repeats: 1)
+        (eval_definitions || eval_set_class.evals).flat_map do |eval_definition|
+          eval_cases = selected_cases_for(eval_definition) || [nil]
+
+          eval_cases.flat_map do |eval_case|
+            repeat_run_indexes(repeats).map do |run_index|
+              RunLog.key(eval_id: eval_definition.id, case_id: eval_case&.id, run_index: run_index)
+            end
+          end
+        end
+      end
+
       # The pending executions of one eval definition, in dataset order then repeat order.
       def executions_for(eval_definition, repeats: 1)
         eval_cases = selected_cases_for(eval_definition)
         eval_id = eval_definition.id
-
-        # nil rather than 1 for a single run, matching the run_index EvalResult records.
-        run_indexes = repeats.times.map { |i| (i + 1 if repeats > 1) }
+        run_indexes = repeat_run_indexes(repeats)
 
         if eval_cases.nil?
           return run_indexes.filter_map do |run_index|
@@ -143,6 +159,11 @@ module Raif
       end
 
     private
+
+      # nil rather than 1 for a single run, matching the run_index EvalResult records.
+      def repeat_run_indexes(repeats)
+        repeats.times.map { |i| (i + 1 if repeats > 1) }
+      end
 
       # The eval set banner, then the eval's own description, each printed once when the first
       # result underneath it lands - under concurrency results arrive in completion order, so there

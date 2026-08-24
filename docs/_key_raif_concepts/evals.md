@@ -255,7 +255,7 @@ Errors are also retried before they get this far: transient provider failures (r
 
 The results file above is written once, after every eval set has finished. On its own that would mean a run killed at case 48 of 50 - by Ctrl-C, a provider outage, a rate limit cascade, the process running out of memory - loses every result it already paid for.
 
-So each result is also appended to a run log the moment it completes, at `raif_evals/results/<run name>.partial.jsonl`. It's JSON Lines: a header line identifying the run, then one line per eval result. A run that stops early tells you what it has and how to pick it up:
+So each result is also appended to a run log the moment it completes, at `raif_evals/results/<run name>.partial.jsonl`. It's JSON Lines: a header line identifying the run and listing the executions it set out to perform, then one line per eval result. A run that stops early tells you what it has and how to pick it up:
 
 ```
 Run interrupted.
@@ -272,6 +272,17 @@ Some specifics worth knowing:
 - **An edited dataset is refused; edited code is only reported.** A [dataset whose fingerprint moved](#what-was-measured) is a configuration mismatch like any other, since the two halves of the results file would describe different inputs under one case id. The `code` key is deliberately not held to that standard - the commit that landed while a run was interrupted is often the one that fixed whatever interrupted it - so a resume across a commit prints a warning and carries on. The results file then names one commit for work produced under two, which is why it says so.
 - **A truncated last line is skipped, not fatal.** A hard kill lands mid-write. Losing the one result being appended is the cost of appending; losing the run over it would defeat the purpose.
 - **Results are carried forward for eval sets the resumed invocation doesn't visit.** Resuming with a narrower set of files keeps what the log already holds for the others.
+- **The log, not the invocation, decides when the run is finished.** The header records the run's plan: every [eval id](#eval-ids), dataset case and repeat the run set out to execute. The results file is written and the log deleted only once a result exists for all of them. So a resume narrowed to one eval set file runs that file, then reports what is still outstanding and leaves the log in place:
+
+  ```
+  Run incomplete: 12 of 50 planned evals have not run, so no results file was written.
+    DocumentEvalSet: 12
+  38 results are recorded: raif_evals/results/eval_run_20260805_094122_anthropic_claude_5_sonnet.partial.jsonl
+  Finish the run with: bundle exec raif evals --resume raif_evals/results/eval_run_20260805_094122_anthropic_claude_5_sonnet.partial.jsonl
+  ```
+
+  An eval block added to a file while the run was interrupted is work the run now owes too: the resume appends it to the plan and the run isn't finished until it has run.
+- **A log written without a plan is refused.** Its finished work can't be told from its outstanding work, so there is no safe way to finish it. Start a new run.
 - **A run that stopped before recording anything deletes its own log**, since there is nothing there to resume.
 
 If you keep result files in version control, add `raif_evals/results/*.partial.jsonl` to your `.gitignore` - a log is transient, and the run it belongs to either finishes and replaces it or gets resumed.
@@ -548,7 +559,7 @@ bundle exec raif evals --sample 5 --seed 42
 
 Each flag has an environment variable equivalent, alongside the existing `RAIF_EVAL_REPEATS`: `RAIF_EVAL_CASES`, `RAIF_EVAL_SAMPLE`, and `RAIF_EVAL_SEED`.
 
-Sampling without a `--seed` draws different cases each run, which makes two runs uncomparable case-for-case. The same seed and sample size draw the same cases again.
+Sampling without a `--seed` draws different cases each run, which makes two runs uncomparable case-for-case. The same seed and sample size draw the same cases again. The draw is over the case ids, not over the order the rows are written in, so reordering or reformatting a dataset file leaves the sample alone - the same thing its [digest](#what-was-measured) promises. The cases that are drawn still run in dataset order.
 
 A sampled run always ends up with a seed even if you did not pass one: Raif draws one, prints it in the run header, and records it in the results `configuration` block. So a run you sampled without thinking about seeds can still be repeated case-for-case afterwards, and [resuming](#resuming-an-interrupted-run) it picks the sample back up rather than drawing a fresh one and finishing the results file with two unrelated samples in it.
 

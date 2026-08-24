@@ -65,7 +65,11 @@ module Raif
 
         run_eval_sets
 
-        export_results
+        # The results file describes a whole run, so it is only written once the whole run has been
+        # done - which is a question for the log's plan, not for this invocation's work list. See
+        # Raif::Evals::RunPlan.
+        complete = run_log.complete?
+        export_results if complete
         print_summary
 
         # --cases filters every dataset in the run, so an id matching nothing anywhere is a typo.
@@ -74,6 +78,11 @@ module Raif
         # spent inference money.
         if cases && dataset_evals_present? && @results.values.flatten.none? { |e| e[:case_id] }
           output.puts Raif::Utils::Colors.red("\nNo eval cases matched --cases #{cases.join(",")}")
+          exit 1
+        end
+
+        unless complete
+          print_incomplete_run_notice
           exit 1
         end
       end
@@ -121,14 +130,11 @@ module Raif
         # coordinators resolve, so the log cannot exist until they do.
         coordinators.each_value { |coordinator| coordinator.run_log = run_log }
 
-        @eval_sets.flat_map do |eval_set_entry|
-          eval_set_class, line_number = entry_parts(eval_set_entry)
-          coordinator = coordinators.fetch(eval_set_class)
+        planned_evals.flat_map do |coordinator, eval_definitions|
+          eval_set_class = coordinator.eval_set_class
 
-          executions = if line_number
-            executions_at_line(coordinator, line_number)
-          else
-            coordinator.pending_executions(repeats: repeats)
+          executions = eval_definitions.flat_map do |eval_definition|
+            coordinator.executions_for(eval_definition, repeats: repeats)
           end
 
           @pending_by_eval_set[eval_set_class] += executions.count
@@ -138,6 +144,29 @@ module Raif
 
           executions.map { |execution| Unit.new(coordinator: coordinator, execution: execution) }
         end
+      end
+
+      # One [coordinator, eval definitions] pair per eval set entry, in the order the entries were
+      # given. Both the work list and the run plan are taken over this, so the plan cannot end up
+      # describing a different run from the one that executes.
+      def planned_evals
+        @planned_evals ||= @eval_sets.map do |eval_set_entry|
+          eval_set_class, line_number = entry_parts(eval_set_entry)
+          coordinator = coordinators.fetch(eval_set_class)
+
+          [coordinator, line_number ? Array(eval_at_line(coordinator, line_number)) : eval_set_class.evals]
+        end
+      end
+
+      # Everything this invocation covers, before the log is consulted about what has already run.
+      # A fresh run records it as its plan; a resume hands it to the log to reconcile against the
+      # plan the run was started with.
+      def invocation_plan
+        @invocation_plan ||= RunPlan.new(
+          keys: planned_evals.flat_map do |coordinator, eval_definitions|
+            coordinator.planned_keys(eval_definitions: eval_definitions, repeats: repeats)
+          end
+        )
       end
 
       # One coordinator per eval set, not one per entry: the same file can appear twice on a command
@@ -237,7 +266,7 @@ module Raif
       def build_run_log
         if resume_path
           warn_on_code_change
-          return RunLog.resume(path: resume_path, configuration: configuration_data)
+          return RunLog.resume(path: resume_path, configuration: configuration_data, plan: invocation_plan)
         end
 
         run_at = Time.current
@@ -246,11 +275,38 @@ module Raif
           results_dir: Rails.root.join("raif_evals", "results"),
           basename: "eval_run_#{run_at.strftime("%Y%m%d_%H%M%S")}_#{Raif.config.default_llm_model_key}",
           run_at: run_at.iso8601,
-          configuration: configuration_data
+          configuration: configuration_data,
+          plan: invocation_plan
         )
       rescue RunLog::IncompatibleResumeError => e
         output.puts Raif::Utils::Colors.red("\n#{e.message}")
         exit 1
+      end
+
+      # An invocation that ran everything it was asked for can still leave the run unfinished: a
+      # resume given one eval set file owes only that file, while the log's plan covers the whole
+      # run. Saying so is the difference between a run that is finished and a run that stopped.
+      def print_incomplete_run_notice
+        outstanding = run_log.outstanding_keys
+
+        output.puts Raif::Utils::Colors.yellow(
+          "\nRun incomplete: #{outstanding.count} of #{run_log.plan.size} planned evals have not run, so no results file was written."
+        )
+
+        outstanding_by_eval_set(outstanding).each do |eval_set_name, count|
+          output.puts Raif::Utils::Colors.yellow("  #{eval_set_name}: #{count}")
+        end
+
+        output.puts "#{run_log.results_count} results are recorded: #{run_log.display_path}"
+        output.puts "Finish the run with: bundle exec raif evals --resume #{run_log.display_path}"
+      end
+
+      # An eval id is "EvalSetName#slug-digest", so the set an outstanding execution belongs to is
+      # already in its key - no coordinator needed for a set this invocation never visited.
+      def outstanding_by_eval_set(outstanding)
+        outstanding.group_by { |eval_id, _case_id, _run_index| eval_id.split("#").first }
+          .transform_values(&:count)
+          .sort_by { |eval_set_name, _count| eval_set_name.to_s }
       end
 
       # A warning rather than a refusal, unlike the rest of the resume check: the commit that landed
@@ -333,15 +389,12 @@ module Raif
         end
       end
 
-      def executions_at_line(coordinator, line_number)
+      def eval_at_line(coordinator, line_number)
         target_eval = coordinator.eval_set_class.evals.find{|e| e.line_number == line_number }
 
-        if target_eval.nil?
-          output.puts Raif::Utils::Colors.red("Error: No eval block found at line #{line_number}")
-          return []
-        end
+        output.puts Raif::Utils::Colors.red("Error: No eval block found at line #{line_number}") if target_eval.nil?
 
-        coordinator.executions_for(target_eval, repeats: repeats)
+        target_eval
       end
 
       def discover_eval_sets

@@ -285,7 +285,8 @@ RSpec.describe "Running a dataset eval set" do
         results_dir: results_dir,
         basename: "eval_run_20240101_120000_#{Raif.config.default_llm_model_key}",
         run_at: Time.current.iso8601,
-        configuration: interrupted.send(:configuration_data)
+        configuration: interrupted.send(:configuration_data),
+        plan: interrupted.send(:invocation_plan)
       )
 
       resumed = Raif::Evals::Run.new(

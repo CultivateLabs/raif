@@ -2,6 +2,7 @@
 
 require "digest"
 require "json"
+require "set"
 
 module Raif
   module Evals
@@ -80,11 +81,17 @@ module Raif
         end
       end
 
-      # Sampled cases keep their dataset order so the console and the results read the same
-      # way whether or not a sample was taken.
+      # Drawn from the candidates in id order, not in file order, so a seed picks out the same
+      # cases whenever the dataset holds the same cases - which is exactly what #digest promises,
+      # since it ignores row order too. Shuffling the rows as they are written would let a
+      # reordered file resolve one logged seed to two different samples, and `--resume` would
+      # finish a results file holding two unrelated samples under one seed.
+      #
+      # The drawn cases are then put back into dataset order, so the console and the results read
+      # the same way whether or not a sample was taken.
       def sample_cases(candidates, count, seed)
         random = seed ? Random.new(seed.to_i) : Random.new
-        drawn = candidates.shuffle(random: random).take(count)
+        drawn = candidates.sort_by(&:id).shuffle(random: random).take(count).to_set
 
         candidates.select { |eval_case| drawn.include?(eval_case) }
       end

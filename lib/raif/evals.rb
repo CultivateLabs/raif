@@ -16,6 +16,7 @@ require "raif/evals/eval_set"
 require "raif/evals/eval_set_coordinator"
 require "raif/evals/comparison"
 require "raif/evals/comparison_report"
+require "raif/evals/run_plan"
 require "raif/evals/run_log"
 require "raif/evals/run"
 

@@ -111,6 +111,16 @@ RSpec.describe Raif::Evals::Dataset do
       expect(first).to eq(first.sort_by { |id| ["alpha", "beta", "gamma"].index(id) })
     end
 
+    # #digest ignores row order, so a resume is allowed across a reordered file. If the draw
+    # followed row order the same logged seed would resolve to a different sample, and the results
+    # file would end up holding two unrelated samples under one seed.
+    it "draws the same cases under one seed however the rows are ordered" do
+      reordered = described_class.new(name: :topics, cases: rows.reverse)
+
+      expect(reordered.digest).to eq(dataset.digest)
+      expect(reordered.sample(2, seed: 42).map(&:id).sort).to eq(dataset.sample(2, seed: 42).map(&:id).sort)
+    end
+
     it "draws a different sample under a different seed" do
       samples = (1..25).map { |seed| dataset.sample(2, seed: seed).map(&:id) }.uniq
 

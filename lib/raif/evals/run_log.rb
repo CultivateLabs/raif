@@ -5,12 +5,16 @@ require "json"
 
 module Raif
   module Evals
-    # An append-only JSON Lines log of a run: a header line carrying the run's identity, then
-    # one line per eval result as that result completes.
+    # An append-only JSON Lines log of a run: a header line carrying the run's identity and the
+    # plan it set out to execute, then one line per eval result as that result completes.
     #
     # A run's results file is only written once every eval set has finished, so without this a
     # run killed partway through would lose every result it had already paid for.
     # `raif evals --resume` reads the log back so that work is not bought twice.
+    #
+    # The plan is what makes the log the authority on whether the run is done - see
+    # Raif::Evals::RunPlan. Without it a resume could only ask itself, and an invocation narrowed
+    # to one eval set file would answer yes while most of the run was still outstanding.
     class RunLog
       PARTIAL_SUFFIX = ".partial.jsonl"
 
@@ -25,12 +29,13 @@ module Raif
       # Compared specially - see .dataset_differences.
       DATASETS_KEY = "datasets"
 
-      attr_reader :path, :run_at, :configuration, :results
+      attr_reader :path, :run_at, :configuration, :plan, :results
 
-      def initialize(path:, run_at:, configuration:, results: {}, recorded_keys: nil)
+      def initialize(path:, run_at:, configuration:, plan:, results: {}, recorded_keys: nil)
         @path = Pathname.new(path.to_s)
         @run_at = run_at
         @configuration = configuration
+        @plan = plan
         @results = results
         @recorded_keys = recorded_keys || Set.new
         # Concurrent evals record into one log. The append is one File.open per LLM-bound eval,
@@ -40,35 +45,43 @@ module Raif
 
       class << self
         # Starts a fresh log and writes its header, so a run that dies before its first result
-        # still leaves a file that identifies what was being run.
-        def start(results_dir:, basename:, run_at:, configuration:)
+        # still leaves a file that identifies what was being run and what it owes.
+        def start(results_dir:, basename:, run_at:, configuration:, plan:)
           FileUtils.mkdir_p(results_dir)
 
           log = new(
             path: File.join(results_dir, "#{basename}#{PARTIAL_SUFFIX}"),
             run_at: run_at,
-            configuration: configuration
+            configuration: configuration,
+            plan: plan
           )
 
           # Truncating, unlike every write after it: a stale log left at the same path by an
           # abandoned run of the same second would otherwise gain a second header.
-          log.send(:write_header, { type: "run", run_at: run_at, configuration: configuration })
+          log.send(:write_header, { type: "run", run_at: run_at, plan: plan.to_h, configuration: configuration })
           log
         end
 
         # Reopens an interrupted run's log. The whole configuration has to match - see
         # Run#configuration_data.
-        def resume(path:, configuration:)
-          header, results, recorded_keys, unidentified_results = read(path)
+        #
+        # @param plan [Raif::Evals::RunPlan] what the resuming invocation itself covers, which for
+        #   a resume narrowed to one file is a fraction of the run. Reconciled against the logged
+        #   plan rather than replacing it - see #extend_plan!.
+        def resume(path:, configuration:, plan:)
+          log = read(path)
+          header = log[:header]
 
           if header.nil?
             raise IncompatibleResumeError, "#{path} has no run header line, so it is not a Raif eval run log."
           end
 
-          if unidentified_results.positive?
-            raise IncompatibleResumeError, "Refusing to resume #{path}: #{unidentified_results} of its results were written " \
+          if log[:unidentified_results].positive?
+            raise IncompatibleResumeError, "Refusing to resume #{path}: #{log[:unidentified_results]} of its results were written " \
               "before evals had ids, so there is no way to tell which of this run's executions they cover. Start a new run."
           end
+
+          logged_plan = read_plan(path, log[:plan_records])
 
           differences = configuration_differences(header[:configuration], configuration)
           unless differences.empty?
@@ -81,20 +94,24 @@ module Raif
             MSG
           end
 
-          new(
+          run_log = new(
             path: path,
             run_at: header[:run_at],
             configuration: configuration,
-            results: results,
-            recorded_keys: recorded_keys
+            plan: logged_plan,
+            results: log[:results],
+            recorded_keys: log[:recorded_keys]
           )
+
+          run_log.extend_plan!(plan)
+          run_log
         end
 
         # The configuration a log was started with, read without opening it for writing. A resumed
         # run needs one value out of it - the seed - before it can state its own configuration.
         # Returns nil for anything that is not a readable log; #resume is what reports on that.
         def logged_configuration(path)
-          header, = read(path)
+          header = read(path)[:header]
           header && header[:configuration]
         rescue SystemCallError
           nil
@@ -102,10 +119,29 @@ module Raif
 
       private
 
+        # Every plan record in the log, folded into one. Unreadable rather than absent is its own
+        # refusal: a log written before plans existed, or under a version this code cannot read,
+        # is one whose outstanding work cannot be told from its finished work.
+        def read_plan(path, plan_records)
+          if plan_records.empty?
+            raise IncompatibleResumeError, "Refusing to resume #{path}: it records no run plan, so there is no way to tell " \
+              "which of this run's executions are still outstanding. Start a new run."
+          end
+
+          plans = plan_records.map do |record|
+            RunPlan.from_h(record) || raise(IncompatibleResumeError,
+              "Refusing to resume #{path}: its run plan was written in a format this version of Raif cannot read " \
+              "(expected version #{RunPlan::VERSION}). Start a new run.")
+          end
+
+          plans.reduce { |merged, plan| merged.plus(merged.additions(plan)) }
+        end
+
         def read(path)
           header = nil
           results = {}
           recorded_keys = Set.new
+          plan_records = []
           unidentified_results = 0
 
           File.foreach(path) do |line|
@@ -125,6 +161,10 @@ module Raif
             case record[:type]
             when "run"
               header = record
+              plan_records << record[:plan] if record[:plan]
+            when "plan"
+              # Appended by a resume that found work the run had not planned - see #extend_plan!.
+              plan_records << record[:plan] if record[:plan]
             when "result"
               result = normalize_result(record[:result])
               next if result.nil?
@@ -146,7 +186,13 @@ module Raif
             end
           end
 
-          [header, results, recorded_keys, unidentified_results]
+          {
+            header: header,
+            results: results,
+            recorded_keys: recorded_keys,
+            plan_records: plan_records,
+            unidentified_results: unidentified_results
+          }
         end
 
         # JSON has no symbols, so an expectation's status comes back as a string where the run
@@ -218,6 +264,34 @@ module Raif
 
       def recorded?(eval_id:, case_id: nil, run_index: nil)
         @recorded_keys.include?(self.class.key(eval_id: eval_id, case_id: case_id, run_index: run_index))
+      end
+
+      # Adds executions the run did not originally plan and appends them to the log, so a later
+      # resume owes them too. An eval block added to a file while the run was interrupted is the
+      # case: Raif::Evals::Run warns about the code moving rather than refusing, so the new eval
+      # runs, and the run is not complete until it has.
+      #
+      # Returns the keys that were new.
+      def extend_plan!(other)
+        added = plan.additions(other)
+        return [] if added.empty?
+
+        @mutex.synchronize do
+          append({ type: "plan", plan: RunPlan.new(keys: added).to_h })
+          @plan = plan.plus(added)
+        end
+
+        added
+      end
+
+      # The planned executions no result has been recorded for. Empty is what makes the run
+      # finishable: see Raif::Evals::Run#export_results.
+      def outstanding_keys
+        @mutex.synchronize { plan.outstanding(@recorded_keys) }
+      end
+
+      def complete?
+        outstanding_keys.empty?
       end
 
       # Appends one result and returns the hash that was written.

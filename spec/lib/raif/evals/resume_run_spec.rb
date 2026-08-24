@@ -246,6 +246,8 @@ RSpec.describe "Resuming an interrupted eval run" do
 
     # A resume narrowed to one eval set file resolves only that file's datasets. Refusing over the
     # ones this invocation never looked at would make --resume unusable with a file argument.
+    #
+    # It still owes the case it died on, so the run is not finished - see the plan examples below.
     it "resumes an invocation that never resolves the dataset at all" do
       begin
         Raif::Evals::Run.new(output: StringIO.new).execute
@@ -256,10 +258,63 @@ RSpec.describe "Resuming an interrupted eval run" do
       resumed = Raif::Evals::Run.new(output: output, resume_path: log_path.to_s)
       allow(resumed).to receive(:discover_eval_sets).and_return([ResumeFirstEvalSet])
       resumed.instance_variable_set(:@eval_sets, [ResumeFirstEvalSet])
-      resumed.execute
+
+      expect { resumed.execute }.to raise_error(SystemExit)
 
       expect(output.string).not_to include("Refusing to resume")
       expect(resumed.results.keys).to include("ResumeDatasetEvalSet")
+    end
+
+    # The bug this guards: the log records what a run has done, so an invocation narrowed to one
+    # eval set file used to write the results file and delete the log the moment its own shorter
+    # work list drained - finishing a run whose remaining cases had never been bought.
+    it "will not finish the run from an invocation that does not cover it" do
+      begin
+        Raif::Evals::Run.new(output: StringIO.new).execute
+      rescue SystemExit
+        nil
+      end
+
+      executions.clear
+
+      resumed = Raif::Evals::Run.new(output: output, resume_path: log_path.to_s)
+      allow(resumed).to receive(:discover_eval_sets).and_return([ResumeFirstEvalSet])
+      resumed.instance_variable_set(:@eval_sets, [ResumeFirstEvalSet])
+
+      expect { resumed.execute }.to raise_error(SystemExit)
+
+      expect(executions).to eq(["first", "second"])
+      expect(File.exist?(results_path)).to be false
+      expect(File.exist?(log_path)).to be true
+      expect(output.string).to include("Run incomplete: 1 of 5 planned evals have not run")
+      expect(output.string).to include("ResumeDatasetEvalSet: 1")
+      expect(output.string).to include("--resume raif_evals/results/eval_run_20240101_120000")
+    end
+
+    # The evals the narrowed resume added are part of the run now, so the resume that follows owes
+    # them nothing - and finishing the one case that was outstanding finishes the whole run.
+    it "finishes the run once a later resume covers what is left" do
+      begin
+        Raif::Evals::Run.new(output: StringIO.new).execute
+      rescue SystemExit
+        nil
+      end
+
+      narrowed = Raif::Evals::Run.new(output: StringIO.new, resume_path: log_path.to_s)
+      allow(narrowed).to receive(:discover_eval_sets).and_return([ResumeFirstEvalSet])
+      narrowed.instance_variable_set(:@eval_sets, [ResumeFirstEvalSet])
+
+      expect { narrowed.execute }.to raise_error(SystemExit)
+
+      executions.clear
+      Raif::Evals::Run.new(output: StringIO.new, resume_path: log_path.to_s).execute
+
+      expect(executions).to eq(["monad"])
+      expect(File.exist?(log_path)).to be false
+
+      payload = JSON.parse(File.read(results_path))
+      expect(payload["results"]["ResumeDatasetEvalSet"].map { |r| r["case_id"] }).to eq(["chicken", "atom", "monad"])
+      expect(payload["results"]["ResumeFirstEvalSet"].map { |r| r["description"] }).to eq(["first eval", "second eval"])
     end
 
     it "resumes at the case it died on, keeping the ones already bought" do
