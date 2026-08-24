@@ -50,8 +50,15 @@ module Raif
       run_with :content_to_judge # the content to judge
       run_with :additional_context # additional context to be provided to the judge
 
+      # The model that will grade, which is the model under test unless a judge is configured. A
+      # class method because Raif::Evals::Run reports it before any judge exists to ask, and the
+      # two must not be able to disagree about who is judging.
+      def self.resolved_llm_model_key
+        Raif.config.evals_default_llm_judge_model_key.presence || Raif.config.default_llm_model_key
+      end
+
       def default_llm_model_key
-        Raif.config.evals_default_llm_judge_model_key || super
+        self.class.resolved_llm_model_key
       end
 
       def judgment_reasoning

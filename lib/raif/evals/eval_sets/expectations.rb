@@ -21,8 +21,29 @@ module Raif
             ExpectationResult.new(description: description, status: :error, error: e, metadata: result_metadata)
           end
 
-          current_eval.add_expectation_result(result)
+          current_eval_result.add_expectation_result(result)
           result
+        end
+
+        # Records a number on the eval result, for the quality differences a pass/fail
+        # expectation cannot see - once two models clear every bar, their results are identical.
+        # Passing min: and/or max: also gates the eval on the value, so a score can replace an
+        # expect block rather than sitting alongside one.
+        def score(name, value, scale: nil, min: nil, max: nil, higher_is_better: true)
+          score_result = ScoreResult.new(
+            name: name,
+            value: value,
+            scale: scale,
+            min: min,
+            max: max,
+            higher_is_better: higher_is_better
+          )
+          current_eval_result.add_score(score_result)
+
+          output.puts "    #{score_result.name}: #{score_result.formatted_value}"
+          expect(score_result.gate_description) { score_result.passed? } if score_result.gated?
+
+          score_result
         end
 
         def expect_tool_invocation(tool_invoker, tool_type, with: {})

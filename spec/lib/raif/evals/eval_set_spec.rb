@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Raif::Evals::EvalSet do
   let(:test_eval_set_class) do
-    Class.new(described_class) do
+    named_eval_set("TestEvalSet") do
       setup do
         @setup_called = true
       end
@@ -44,7 +44,210 @@ RSpec.describe Raif::Evals::EvalSet do
   describe ".eval" do
     it "adds eval definitions to the class" do
       expect(test_eval_set_class.evals.size).to eq(3)
-      expect(test_eval_set_class.evals.first[:description]).to eq("test passes")
+      expect(test_eval_set_class.evals.first).to be_a(Raif::Evals::EvalDefinition)
+      expect(test_eval_set_class.evals.first.description).to eq("test passes")
+    end
+
+    it "assigns each eval its position in the set" do
+      expect(test_eval_set_class.evals.map(&:index)).to eq([0, 1, 2])
+    end
+
+    it "records where the eval was defined" do
+      definition = test_eval_set_class.evals.first
+
+      expect(definition.file).to eq(__FILE__)
+      expect(definition.line_number).to be_a(Integer)
+    end
+
+    it "raises when called without a block" do
+      expect do
+        Class.new(described_class) do
+          eval "no block given"
+        end
+      end.to raise_error(ArgumentError, /requires a block/)
+    end
+
+    it "does not register the eval when called without a block" do
+      eval_set_class = Class.new(described_class)
+
+      expect { eval_set_class.eval("no block given") }.to raise_error(ArgumentError)
+      expect(eval_set_class.evals).to be_empty
+    end
+  end
+
+  describe ".dataset" do
+    it "raises when called without a block" do
+      expect do
+        Class.new(described_class) do
+          dataset :topics
+        end
+      end.to raise_error(ArgumentError, /requires a block/)
+    end
+
+    # A typo'd dataset name would otherwise run zero cases and report a suite that passed.
+    it "raises when an eval names a dataset that was not declared" do
+      expect do
+        Class.new(described_class) do
+          dataset(:topics) { [] }
+
+          eval "uses a typo", dataset: :topcis do
+            expect("never runs") { true }
+          end
+        end
+      end.to raise_error(ArgumentError, /names dataset :topcis, which has not been declared/)
+    end
+
+    it "raises when given an inline array instead of a registered name" do
+      expect do
+        Class.new(described_class) do
+          eval "inlines its cases", dataset: [{ id: "alpha", input: {} }] do
+            expect("never runs") { true }
+          end
+        end
+      end.to raise_error(ArgumentError, /passed Array to dataset:/)
+    end
+
+    it "raises when no datasets have been declared at all" do
+      expect do
+        Class.new(described_class) do
+          eval "uses a dataset", dataset: :topics do
+            expect("never runs") { true }
+          end
+        end
+      end.to raise_error(ArgumentError, /has not been declared/)
+    end
+  end
+
+  describe ".run with a dataset" do
+    let(:dataset_eval_set) do
+      named_eval_set("DatasetEvalSet") do
+        dataset :topics do
+          [
+            { id: "alpha", input: { "n" => 1 }, expected: { "double" => 2 } },
+            { id: "beta", input: { "n" => 2 }, expected: { "double" => 4 } }
+          ]
+        end
+
+        setup do |eval_case|
+          @doubled = eval_case["n"] * 2
+        end
+
+        eval "doubles the input", dataset: :topics do |eval_case|
+          expect "setup ran for this case" do
+            @doubled == eval_case.expected["double"]
+          end
+
+          score "n", eval_case["n"]
+        end
+      end
+    end
+
+    it "runs the eval body once per case per repeat, stamping each result with its case" do
+      results = dataset_eval_set.run(output: StringIO.new, repeats: 2)
+
+      expect(results.map { |result| [result.case_id, result.run_index] }).to eq([
+        ["alpha", 1], ["alpha", 2], ["beta", 1], ["beta", 2]
+      ])
+      expect(results).to all(be_passed)
+    end
+
+    it "records scores on each result" do
+      results = dataset_eval_set.run(output: StringIO.new)
+
+      expect(results.map { |result| result.scores.map(&:value) }).to eq([[1.0], [2.0]])
+    end
+
+    it "restricts the run to the selected cases" do
+      results = dataset_eval_set.run(output: StringIO.new, cases: ["beta"])
+
+      expect(results.map(&:case_id)).to eq(["beta"])
+    end
+
+    it "skips the eval entirely when the selection matches none of its cases" do
+      expect(dataset_eval_set.run(output: StringIO.new, cases: ["nope"])).to eq([])
+    end
+
+    # One bad fixture in a 20-case dataset must not cost the other 19 results.
+    it "records an error for a case that raises and keeps running the rest" do
+      eval_set = named_eval_set("TestEvalSet") do
+        dataset :topics do
+          [{ id: "alpha", input: { "n" => 1 } }, { id: "beta", input: { "n" => 2 } }]
+        end
+
+        eval "blows up on alpha", dataset: :topics do |eval_case|
+          raise "boom" if eval_case.id == "alpha"
+
+          expect("beta is fine") { true }
+        end
+      end
+
+      results = eval_set.run(output: StringIO.new)
+
+      expect(results.map(&:case_id)).to eq(["alpha", "beta"])
+      expect(results.first.expectation_results.first).to be_error
+      expect(results.second).to be_passed
+    end
+
+    it "records an error for a case whose setup raises and keeps running the rest" do
+      eval_set = named_eval_set("TestEvalSet") do
+        dataset :topics do
+          [{ id: "alpha", input: { "n" => 1 } }, { id: "beta", input: { "n" => 2 } }]
+        end
+
+        setup do |eval_case|
+          raise "bad fixture" if eval_case.id == "alpha"
+        end
+
+        eval "runs for both cases", dataset: :topics do
+          expect("ran") { true }
+        end
+      end
+
+      results = eval_set.run(output: StringIO.new)
+
+      expect(results.map(&:case_id)).to eq(["alpha", "beta"])
+      expect(results.first.expectation_results.map(&:description)).to eq(["Setup execution"])
+      expect(results.first.expectation_results.first).to be_error
+      expect(results.second).to be_passed
+    end
+
+    it "records an error for a case whose teardown raises and keeps running the rest" do
+      eval_set = named_eval_set("TestEvalSet") do
+        dataset :topics do
+          [{ id: "alpha", input: { "n" => 1 } }, { id: "beta", input: { "n" => 2 } }]
+        end
+
+        teardown do |eval_case|
+          raise "teardown blew up" if eval_case.id == "alpha"
+        end
+
+        eval "runs for both cases", dataset: :topics do
+          expect("ran") { true }
+        end
+      end
+
+      results = eval_set.run(output: StringIO.new)
+
+      expect(results.map(&:case_id)).to eq(["alpha", "beta"])
+      # The eval block still passed, so its expectation is kept alongside the teardown error -
+      # the case is only failed for the part of it that actually failed.
+      expect(results.first.expectation_results.map(&:description)).to eq(["ran", "Teardown execution"])
+      expect(results.first.expectation_results.last).to be_error
+      expect(results.second).to be_passed
+    end
+
+    it "raises before running anything when the dataset has duplicate ids" do
+      eval_set = named_eval_set("TestEvalSet") do
+        dataset :topics do
+          [{ id: "alpha", input: {} }, { id: "alpha", input: {} }]
+        end
+
+        eval "never runs", dataset: :topics do
+          raise "should not get here"
+        end
+      end
+
+      expect { eval_set.run(output: StringIO.new) }.to raise_error(ArgumentError, /duplicate case ids/)
     end
   end
 
@@ -62,8 +265,32 @@ RSpec.describe Raif::Evals::EvalSet do
       expect(results[2].passed?).to be false
     end
 
+    # The backwards-compatibility guarantee: adding datasets to the DSL must not require
+    # touching an eval set that does not use them.
+    it "leaves zero-arity setup, teardown, and eval blocks running exactly as before" do
+      eval_set = named_eval_set("TestEvalSet") do
+        setup do
+          @calls = ["setup"]
+        end
+
+        teardown do
+          @calls << "teardown"
+        end
+
+        eval "no case" do
+          expect("setup ran with no argument") { @calls == ["setup"] }
+        end
+      end
+
+      results = eval_set.run(output: StringIO.new)
+
+      expect(results.first).to be_passed
+      expect(results.first.case_id).to be_nil
+      expect(results.first.to_h).not_to have_key(:case_id)
+    end
+
     it "runs within a transaction that is rolled back" do
-      eval_set_with_db = Class.new(described_class) do
+      eval_set_with_db = named_eval_set("EvalSetWithDb") do
         eval "creates a record" do
           initial_count = Raif::Conversation.count
           user = FB.create(:raif_test_user)
@@ -81,7 +308,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "captures model completions created during the eval before the transaction rolls back" do
-      eval_set_with_llm_call = Class.new(described_class) do
+      eval_set_with_llm_call = named_eval_set("EvalSetWithLlmCall") do
         eval "makes an LLM call" do
           FB.create(
             :raif_model_completion,
@@ -112,7 +339,7 @@ RSpec.describe Raif::Evals::EvalSet do
     end
 
     it "captures model completions before a teardown that destroys their source" do
-      eval_set_with_destructive_teardown = Class.new(described_class) do
+      eval_set_with_destructive_teardown = named_eval_set("EvalSetWithDestructiveTeardown") do
         teardown do
           @entry&.destroy
         end
@@ -144,6 +371,137 @@ RSpec.describe Raif::Evals::EvalSet do
       expect(eval_result.usage[:total_tokens]).to eq(20)
     end
 
+    it "does not capture model completions created in teardown" do
+      eval_set_with_teardown_llm_call = named_eval_set("EvalSetWithTeardownLlmCall") do
+        teardown do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 99)
+        end
+
+        eval "makes its own LLM call" do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 7)
+
+          expect("ran") { true }
+        end
+      end
+
+      eval_result = eval_set_with_teardown_llm_call.run.first
+
+      expect(eval_result.model_completions.size).to eq(1)
+      expect(eval_result.usage[:total_tokens]).to eq(7)
+    end
+
+    # Not the eval's own measurement, but real money: a run summary that dropped it would
+    # understate the bill for a suite whose fixtures are built by an LLM.
+    it "counts setup and teardown calls as overhead rather than dropping them" do
+      eval_set_with_surrounding_llm_calls = named_eval_set("EvalSetWithSurroundingLlmCalls") do
+        setup do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 11)
+        end
+
+        teardown do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 5)
+        end
+
+        eval "makes its own LLM call" do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 7)
+
+          expect("ran") { true }
+        end
+      end
+
+      eval_result = eval_set_with_surrounding_llm_calls.run.first
+
+      expect(eval_result.usage).to include(model_completions: 1, total_tokens: 7)
+      expect(eval_result.overhead_usage).to include(model_completions: 2, total_tokens: 16)
+      expect(eval_result.to_h[:overhead_usage]).to eq(eval_result.overhead_usage)
+    end
+
+    # The judge is held fixed across a comparison by design, so its share of the bill has to be
+    # separable from the model under test's - otherwise a wordier model, which gives the judge more
+    # to read, reads as a more expensive model.
+    it "tags what a judge spent as a subset of the eval's own usage" do
+      stub_raif_task(Raif::Evals::LlmJudges::Binary) do |_messages, _model_completion|
+        { passes: true, reasoning: "fine", confidence: 0.9 }.to_json
+      end
+
+      eval_set_with_judge = named_eval_set("EvalSetWithJudge") do
+        eval "makes its own LLM call and then judges the output" do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 7)
+
+          expect_llm_judge_passes("some output", criteria: "is polite")
+        end
+      end
+
+      eval_result = eval_set_with_judge.run(output: StringIO.new).first
+
+      expect(eval_result.usage[:model_completions]).to eq(2)
+      expect(eval_result.judge_usage[:model_completions]).to eq(1)
+      expect(eval_result.to_h[:judge_usage]).to eq(eval_result.judge_usage)
+      expect(eval_result.model_completions.count { |mc| mc[:judge] }).to eq(1)
+    end
+
+    it "omits judge usage entirely when no judge ran" do
+      eval_result = test_eval_set_class.run(output: StringIO.new).first
+
+      expect(eval_result.judge_usage[:model_completions]).to eq(0)
+      expect(eval_result.to_h).not_to have_key(:judge_usage)
+    end
+
+    it "omits overhead usage entirely when setup and teardown make no LLM calls" do
+      eval_result = test_eval_set_class.run(output: StringIO.new).first
+
+      expect(eval_result.overhead_usage[:model_completions]).to eq(0)
+      expect(eval_result.to_h).not_to have_key(:overhead_usage)
+    end
+
+    it "still counts what a setup spent when that setup goes on to raise" do
+      eval_set_with_failing_setup = named_eval_set("EvalSetWithFailingSetup") do
+        setup do
+          FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", total_tokens: 11)
+          raise "bad fixture"
+        end
+
+        eval "never runs" do
+          expect("ran") { true }
+        end
+      end
+
+      eval_result = eval_set_with_failing_setup.run(output: StringIO.new).first
+
+      expect(eval_result.expectation_results.map(&:description)).to eq(["Setup execution"])
+      expect(eval_result.usage[:model_completions]).to eq(0)
+      expect(eval_result.overhead_usage).to include(model_completions: 1, total_tokens: 11)
+    end
+
+    it "runs each eval on its own instance, so instance state does not leak between evals" do
+      eval_set_class = named_eval_set("TestEvalSet") do
+        eval "leaves an instance variable behind" do
+          @leaked = "from the first eval"
+          expect("ran") { true }
+        end
+
+        eval "does not see the previous eval's instance variable" do
+          expect("no leaked state") { @leaked.nil? }
+        end
+      end
+
+      expect(eval_set_class.run(output: StringIO.new)).to all(be_passed)
+    end
+
+    # A sink left open keeps collecting - and keeps the records alive - for the rest of the
+    # process, including whatever the host app does after the run.
+    it "closes the completion sink even when the eval raises" do
+      eval_set_class = named_eval_set("TestEvalSet") do
+        eval "blows up" do
+          raise "boom"
+        end
+      end
+
+      eval_set_class.run(output: StringIO.new)
+
+      expect(ActiveSupport::IsolatedExecutionState[Raif::Evals::ModelCompletionSink::STATE_KEY]).to be_nil
+    end
+
     it "does not capture model completions created before the eval ran (setup)" do
       completion_before = FB.create(
         :raif_model_completion,
@@ -151,7 +509,7 @@ RSpec.describe Raif::Evals::EvalSet do
         model_api_name: "raif-test-llm"
       )
 
-      eval_set_class = Class.new(described_class) do
+      eval_set_class = named_eval_set("TestEvalSet") do
         eval "no LLM calls of its own" do
           expect "ran" do
             true
@@ -170,13 +528,13 @@ RSpec.describe Raif::Evals::EvalSet do
     it "creates passing expectation results" do
       output = StringIO.new
       instance = test_eval_set_class.new(output: output)
-      instance.instance_variable_set(:@current_eval, Raif::Evals::Eval.new(description: "test"))
+      instance.instance_variable_set(:@current_eval_result, Raif::Evals::EvalResult.new(description: "test"))
 
       instance.expect "this passes" do
         true
       end
 
-      eval = instance.current_eval
+      eval = instance.current_eval_result
       expect(eval.expectation_results.size).to eq(1)
       expect(eval.expectation_results.first.passed?).to be true
       expect(output.string).to include("✓ this passes")
@@ -185,13 +543,13 @@ RSpec.describe Raif::Evals::EvalSet do
     it "creates failing expectation results" do
       output = StringIO.new
       instance = test_eval_set_class.new(output: output)
-      instance.instance_variable_set(:@current_eval, Raif::Evals::Eval.new(description: "test"))
+      instance.instance_variable_set(:@current_eval_result, Raif::Evals::EvalResult.new(description: "test"))
 
       instance.expect "this fails" do
         false
       end
 
-      eval = instance.current_eval
+      eval = instance.current_eval_result
       expect(eval.expectation_results.size).to eq(1)
       expect(eval.expectation_results.first.failed?).to be true
       expect(output.string).to include("✗ this fails")
@@ -200,13 +558,13 @@ RSpec.describe Raif::Evals::EvalSet do
     it "handles errors in expectation blocks" do
       output = StringIO.new
       instance = test_eval_set_class.new(output: output)
-      instance.instance_variable_set(:@current_eval, Raif::Evals::Eval.new(description: "test"))
+      instance.instance_variable_set(:@current_eval_result, Raif::Evals::EvalResult.new(description: "test"))
 
       instance.expect "this errors" do
         raise "Boom!"
       end
 
-      eval = instance.current_eval
+      eval = instance.current_eval_result
       expect(eval.expectation_results.size).to eq(1)
       expect(eval.expectation_results.first.error?).to be true
       expect(output.string).to include("✗ this errors (Error: Boom!)")
@@ -216,7 +574,7 @@ RSpec.describe Raif::Evals::EvalSet do
       let(:instance) do
         output = StringIO.new
         instance = test_eval_set_class.new(output: output)
-        instance.instance_variable_set(:@current_eval, Raif::Evals::Eval.new(description: "test"))
+        instance.instance_variable_set(:@current_eval_result, Raif::Evals::EvalResult.new(description: "test"))
         instance
       end
 
@@ -248,6 +606,119 @@ RSpec.describe Raif::Evals::EvalSet do
     end
   end
 
+  describe "#score" do
+    let(:instance) do
+      instance = test_eval_set_class.new(output: StringIO.new)
+      instance.instance_variable_set(:@current_eval_result, Raif::Evals::EvalResult.new(description: "test"))
+      instance
+    end
+
+    it "records the value without affecting pass/fail" do
+      instance.score "summary_word_count", 284
+
+      expect(instance.current_eval_result.scores.map(&:to_h)).to eq([
+        { name: "summary_word_count", value: 284.0, higher_is_better: true }
+      ])
+      expect(instance.current_eval_result.expectation_results).to be_empty
+      expect(instance.current_eval_result).to be_passed
+    end
+
+    it "also gates the eval when a min is given" do
+      instance.score "clarity", 3, scale: 1..5, min: 4
+
+      expect(instance.current_eval_result.expectation_results.map(&:description)).to eq(["clarity score >= 4"])
+      expect(instance.current_eval_result).not_to be_passed
+    end
+
+    it "gates on a ceiling when a max is given" do
+      instance.score "elapsed_ms", 812, max: 500, higher_is_better: false
+
+      expect(instance.current_eval_result.expectation_results.map(&:description)).to eq(["elapsed_ms score <= 500"])
+      expect(instance.current_eval_result).not_to be_passed
+    end
+
+    it "gates on both bounds when both are given" do
+      instance.score "summary_word_count", 284, min: 100, max: 1000
+
+      expect(instance.current_eval_result.expectation_results.map(&:description)).to eq(["summary_word_count score >= 100 and <= 1000"])
+      expect(instance.current_eval_result).to be_passed
+    end
+
+    # The name is the metric the run summary aggregates by, so two of them would be averaged
+    # into one row and count values from a single response as independent samples.
+    it "refuses to record the same score name twice for one eval" do
+      instance.score "clarity", 4
+
+      expect { instance.score("clarity", 2) }.to raise_error(ArgumentError, /was already recorded for this eval/)
+      expect(instance.current_eval_result.scores.count).to eq(1)
+    end
+
+    it "prints the value" do
+      output = StringIO.new
+      instance = test_eval_set_class.new(output: output)
+      instance.instance_variable_set(:@current_eval_result, Raif::Evals::EvalResult.new(description: "test"))
+
+      instance.score "clarity", 4.0
+
+      expect(output.string).to include("clarity: 4")
+    end
+  end
+
+  describe "#files" do
+    let(:eval_set_instance) { test_eval_set_class.new(output: StringIO.new) }
+    let(:corpora_dir) { Rails.root.join("raif_evals", "files", "corpora") }
+
+    before do
+      FileUtils.mkdir_p(corpora_dir)
+      File.write(corpora_dir.join("b.json"), "{}")
+      File.write(corpora_dir.join("a.json"), "{}")
+      File.write(corpora_dir.join("notes.txt"), "hi")
+    end
+
+    after { FileUtils.rm_rf(corpora_dir) }
+
+    it "returns sorted paths relative to raif_evals/files, so they compose with #file" do
+      expect(eval_set_instance.files("corpora/*.json")).to eq(["corpora/a.json", "corpora/b.json"])
+      expect(eval_set_instance.file(eval_set_instance.files("corpora/*.json").first)).to eq("{}")
+    end
+
+    it "returns nothing when the glob matches nothing" do
+      expect(eval_set_instance.files("corpora/*.csv")).to eq([])
+    end
+
+    it "refuses to traverse out of the files directory" do
+      expect { eval_set_instance.files("../../*") }.to raise_error(ArgumentError, /cannot contain '\.\.'/)
+    end
+  end
+
+  describe "#jsonl and #json" do
+    let(:eval_set_instance) { test_eval_set_class.new(output: StringIO.new) }
+    let(:datasets_dir) { Rails.root.join("raif_evals", "datasets") }
+
+    before do
+      FileUtils.mkdir_p(datasets_dir)
+      File.write(datasets_dir.join("spec_cases.jsonl"), "{\"id\":\"a\"}\n\n{\"id\":\"b\"}\n")
+      File.write(datasets_dir.join("spec_cases.json"), "[{\"id\":\"a\"}]")
+    end
+
+    after do
+      FileUtils.rm_f(datasets_dir.join("spec_cases.jsonl"))
+      FileUtils.rm_f(datasets_dir.join("spec_cases.json"))
+    end
+
+    it "reads one case per line, skipping blanks" do
+      expect(eval_set_instance.jsonl("spec_cases.jsonl")).to eq([{ "id" => "a" }, { "id" => "b" }])
+    end
+
+    it "reads a JSON array" do
+      expect(eval_set_instance.json("spec_cases.json")).to eq([{ "id" => "a" }])
+    end
+
+    it "raises for a missing file" do
+      expect { eval_set_instance.jsonl("nope.jsonl") }.to raise_error(ArgumentError, %r{does not exist in raif_evals/datasets/})
+    end
+  end
+
   describe "#expect_tool_invocation" do
     let(:creator) { FB.create(:raif_test_user) }
     let(:conversation) { FB.create(:raif_conversation, creator: creator) }
@@ -255,7 +726,7 @@ RSpec.describe Raif::Evals::EvalSet do
     let(:eval_set_instance) do
       output = StringIO.new
       instance = test_eval_set_class.new(output: output)
-      instance.instance_variable_set(:@current_eval, Raif::Evals::Eval.new(description: "test"))
+      instance.instance_variable_set(:@current_eval_result, Raif::Evals::EvalResult.new(description: "test"))
       instance
     end
 
@@ -275,7 +746,7 @@ RSpec.describe Raif::Evals::EvalSet do
     it "fails when tool is not invoked" do
       eval_set_instance.expect_tool_invocation(tool_invoker, "MissingTool")
 
-      result = eval_set_instance.current_eval.expectation_results.first
+      result = eval_set_instance.current_eval_result.expectation_results.first
       expect(result.failed?).to be true
     end
 
@@ -305,14 +776,14 @@ RSpec.describe Raif::Evals::EvalSet do
     let(:eval_set_instance) do
       output = StringIO.new
       instance = test_eval_set_class.new(output: output)
-      instance.instance_variable_set(:@current_eval, Raif::Evals::Eval.new(description: "test"))
+      instance.instance_variable_set(:@current_eval_result, Raif::Evals::EvalResult.new(description: "test"))
       instance
     end
 
     it "passes when tool is not invoked" do
       eval_set_instance.expect_no_tool_invocation(tool_invoker, "test_model_tool")
 
-      result = eval_set_instance.current_eval.expectation_results.first
+      result = eval_set_instance.current_eval_result.expectation_results.first
       expect(result.passed?).to be true
       expect(result.description).to eq("does not invoke test_model_tool")
     end
@@ -326,7 +797,7 @@ RSpec.describe Raif::Evals::EvalSet do
 
       eval_set_instance.expect_no_tool_invocation(tool_invoker, "test_model_tool")
 
-      result = eval_set_instance.current_eval.expectation_results.first
+      result = eval_set_instance.current_eval_result.expectation_results.first
       expect(result.failed?).to be true
     end
   end
