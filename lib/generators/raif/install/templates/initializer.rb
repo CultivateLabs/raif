@@ -304,14 +304,15 @@ Raif.configure do |config|
   #   { account_id: model_completion.source.try(:account_id) }
   # }
 
-  # Archival of old Raif::ModelCompletion rows. Disabled by default: with
-  # archive_enabled false and no archive_storage adapter configured, Raif
-  # never deletes anything. Enabling requires all three of archive_enabled,
-  # archive_storage and model_completion_retention_period, plus scheduling
-  # Raif::ArchiveModelCompletionsJob (e.g. nightly) and
+  # Archival of old Raif::ModelCompletion and Raif::Task rows. Disabled by
+  # default: with archive_enabled false and no archive_storage adapter
+  # configured, Raif never deletes anything. Enabling requires
+  # archive_enabled, archive_storage and at least one retention period, plus
+  # scheduling the matching job (e.g. nightly) and
   # Raif::RepairInferenceCostEventsJob (e.g. daily). Preview what a run
   # would do, before enabling, with
-  # Raif::ArchiveModelCompletionsJob.dry_run.
+  # Raif::ArchiveModelCompletionsJob.dry_run or
+  # Raif::ArchiveTasksJob.dry_run.
   # Full guide: https://docs.raif.ai/learn_more/archiving
   # config.archive_enabled = false
 
@@ -356,6 +357,17 @@ Raif.configure do |config|
   # disables model completion culling even when archive_enabled is true.
   # Must be at least 1 month.
   # config.model_completion_retention_period = 6.months
+
+  # How long Raif::Task rows are retained before Raif::ArchiveTasksJob
+  # archives and deletes them. Applies to completed/failed tasks AND to
+  # nonterminal tasks older than the cutoff. nil (the default) disables task
+  # culling even when archive_enabled is true. Must be at least 1 month.
+  #
+  # A task is never culled while its Raif::ModelCompletion row survives, so
+  # a value below model_completion_retention_period does not cull tasks any
+  # sooner - it just lets the completion's window govern both. Tasks
+  # referenced by a prompt studio batch run are retained indefinitely.
+  # config.task_retention_period = 6.months
 
   # Timeout settings for LLM API requests (in seconds). All default to nil (use Faraday defaults).
   # config.request_open_timeout = nil  # Time to wait for a connection to be opened

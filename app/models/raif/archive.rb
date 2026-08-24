@@ -143,9 +143,15 @@ class Raif::Archive < Raif::ApplicationRecord
           .select { |_id, value| value == partition.value }
           .map(&:first)
 
+        # Both stamps: an event's completion and its task are archived by
+        # different jobs into different objects, and a purge erases the
+        # partition's objects of every resource type.
         stamps_nullified = Raif::InferenceCostEvent
           .where(raif_archive_id: purged_ids)
           .update_all(raif_archive_id: nil)
+        stamps_nullified += Raif::InferenceCostEvent
+          .where(raif_task_archive_id: purged_ids)
+          .update_all(raif_task_archive_id: nil)
         archive_rows_deleted = where(id: purged_ids).delete_all
       end
 

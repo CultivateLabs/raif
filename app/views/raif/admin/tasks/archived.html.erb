@@ -1,0 +1,41 @@
+<%# The task row was archived and culled. Everything here comes from the
+    surviving Raif::InferenceCostEvent; the task's prompt, system prompt and
+    raw response live only in the archive object. %>
+<div class="d-flex justify-content-between align-items-center my-4">
+  <h1><%= t(".title", id: @archived_task_id) %></h1>
+  <%= link_to t(".back_to_tasks"), raif.admin_tasks_path, class: "btn btn-outline-secondary" %>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0"><%= t("raif.admin.common.details") %></h5>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.id") %>:</strong></div>
+      <div class="col-md-9">
+        #<%= @archived_task_id %>
+        <span class="badge bg-info text-dark ms-1"><%= t("raif.admin.common.archived") %></span>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.archive") %>:</strong></div>
+      <div class="col-md-9">
+        <%= link_to "##{@archived_task_event.raif_task_archive_id}", raif.admin_archive_path(@archived_task_event.raif_task_archive) %>
+        <div class="text-muted small mt-1"><%= t("raif.admin.common.task_archived_notice") %></div>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.model") %>:</strong></div>
+      <div class="col-md-9"><%= @archived_task_event.llm_model_key %></div>
+    </div>
+    <div class="row mb-3">
+      <div class="col-md-3"><strong><%= t("raif.admin.common.created_at") %>:</strong></div>
+      <div class="col-md-9"><%= @archived_task_event.incurred_at.rfc822 %></div>
+    </div>
+  </div>
+</div>
+
+<% if @archived_task_event.raif_archive_id.present? %>
+  <%= render "raif/admin/shared/archived_model_completion", event: @archived_task_event %>
+<% end %>

@@ -35,7 +35,8 @@ module Raif
       end
 
       def show
-        @task = Raif::Task.includes(:raif_model_completion).find(params[:id])
+        @task = Raif::Task.includes(:raif_model_completion).find_by(id: params[:id])
+        return render_archived_task if @task.nil?
 
         # When the completion row has been archived and culled, its durable
         # cost/token record still renders (with an "archived" badge linking
@@ -49,6 +50,25 @@ module Raif
             .order(:id)
             .last
         end
+      end
+
+    private
+
+      # The task row was culled. Its cost event outlives it and still points
+      # at the id, so the event carries what is left to show. An event with no
+      # raif_task_archive_id belongs to a task deleted outside the archive
+      # job, so it stays a 404 rather than claiming an archive.
+      def render_archived_task
+        @archived_task_id = params[:id]
+        @archived_task_event = Raif::InferenceCostEvent
+          .where(source_type: "Raif::Task", source_id: @archived_task_id)
+          .where.not(raif_task_archive_id: nil)
+          .order(:id)
+          .last
+
+        raise ActiveRecord::RecordNotFound if @archived_task_event.nil?
+
+        render :archived
       end
     end
   end

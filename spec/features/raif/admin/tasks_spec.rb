@@ -146,5 +146,42 @@ RSpec.describe "Admin::Tasks", type: :feature do
         expect(page).to have_content("1,020") # total_tokens
       end
     end
+
+    context "when the task row itself was archived and culled" do
+      let(:archive) { FB.create(:raif_archive, resource_type: "Raif::Task") }
+      let!(:event) do
+        FB.create(
+          :raif_inference_cost_event,
+          source_type: "Raif::Task",
+          source_id: 999_999,
+          raif_task_archive: archive,
+          total_tokens: 1_020
+        )
+      end
+
+      it "renders the archived task page from the surviving cost event" do
+        visit raif.admin_task_path(999_999)
+
+        expect(page).to have_content(I18n.t("raif.admin.tasks.archived.title", id: 999_999))
+        expect(page).to have_content(I18n.t("raif.admin.common.archived"))
+        expect(page).to have_content(I18n.t("raif.admin.common.task_archived_notice"))
+        expect(page).to have_link("##{archive.id}", href: raif.admin_archive_path(archive))
+        expect(page).to have_content(event.llm_model_key)
+      end
+
+      it "404s for an id whose cost event carries no archive stamp" do
+        event.update!(raif_task_archive_id: nil)
+
+        visit raif.admin_task_path(999_999)
+
+        expect(page.status_code).to eq(404)
+      end
+
+      it "404s for an id that never existed" do
+        visit raif.admin_task_path(888_888)
+
+        expect(page.status_code).to eq(404)
+      end
+    end
   end
 end

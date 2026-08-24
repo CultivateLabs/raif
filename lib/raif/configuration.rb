@@ -62,6 +62,7 @@ module Raif
       :streaming_unsupported_model_keys,
       :streaming_update_chunk_size_threshold,
       :task_creator_optional,
+      :task_retention_period,
       :prompt_studio_runs_enabled,
       :task_system_prompt_intro,
       :user_tool_types,
@@ -224,6 +225,16 @@ module Raif
       @streaming_unsupported_model_keys = [/\Abedrock_gpt_oss_/]
       @streaming_update_chunk_size_threshold = 25
       @task_creator_optional = true
+      # How long Raif::Task rows are retained before Raif::ArchiveTasksJob
+      # archives and deletes them (e.g. 12.months). nil (the default)
+      # disables task culling even when archive_enabled is true. Independent
+      # of model_completion_retention_period, and validated against the same
+      # 1.month floor.
+      #
+      # A task is never culled while its Raif::ModelCompletion row survives,
+      # so setting this below model_completion_retention_period does not cull
+      # tasks any earlier - it just makes the completion's window govern both.
+      @task_retention_period = nil
       @user_tool_types = []
       x_ai_api_key = ENV["XAI_API_KEY"].presence || ENV["X_AI_API_KEY"]
       @x_ai_api_key = default_disable_llm_api_requests? ? "placeholder-x-ai-api-key" : x_ai_api_key
@@ -364,6 +375,11 @@ module Raif
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.model_completion_retention_period must be at least 1 month (got #{model_completion_retention_period.inspect})"
       end
+
+      return if task_retention_period.blank? || task_retention_period >= 1.month
+
+      raise Raif::Errors::InvalidConfigError,
+        "Raif.config.task_retention_period must be at least 1 month (got #{task_retention_period.inspect})"
     end
 
     # By default, evals run in the test environment, but need real API keys.
