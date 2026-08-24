@@ -154,7 +154,7 @@ module Raif
           eval_set_class, line_number = entry_parts(eval_set_entry)
           coordinator = coordinators.fetch(eval_set_class)
 
-          [coordinator, line_number ? Array(eval_at_line(coordinator, line_number)) : eval_set_class.evals]
+          [coordinator, line_number ? [eval_at_line(coordinator, line_number)] : eval_set_class.evals]
         end
       end
 
@@ -389,10 +389,17 @@ module Raif
         end
       end
 
+      # Fatal, like a file path that does not exist: a line number that names no eval block is a
+      # typo, and running nothing is not what was asked for. Reported before the run log is opened,
+      # so the mistake costs neither a results file reporting zero of zero evals passed nor a
+      # partial log describing a run that never started.
       def eval_at_line(coordinator, line_number)
         target_eval = coordinator.eval_set_class.evals.find{|e| e.line_number == line_number }
 
-        output.puts Raif::Utils::Colors.red("Error: No eval block found at line #{line_number}") if target_eval.nil?
+        if target_eval.nil?
+          output.puts Raif::Utils::Colors.red("Error: No eval block found at line #{line_number}")
+          exit 1
+        end
 
         target_eval
       end

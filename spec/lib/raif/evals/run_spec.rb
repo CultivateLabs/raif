@@ -250,9 +250,12 @@ RSpec.describe Raif::Evals::Run do
           expect(output.string).to include("Running TestEvalForExecute at line 8")
         end
 
-        it "reports a line with no eval block rather than running the whole set" do
+        # Exits rather than running nothing and reporting a suite of zero evals that passed, which
+        # is what an unmatched --cases and a missing file path both do.
+        it "exits on a line with no eval block rather than running the whole set" do
           run = described_class.new(file_paths: [{ file_path: temp_eval_file.to_s, line_number: 3 }], output: output)
-          run.execute
+
+          expect { run.execute }.to raise_error(SystemExit)
 
           expect(run.results).to be_empty
           expect(output.string).to include("No eval block found at line 3")
