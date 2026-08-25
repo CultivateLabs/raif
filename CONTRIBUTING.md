@@ -46,22 +46,23 @@ bundle exec guard
 
 ### Manual LLM Smoke Tests
 
-`bin/smoke` verifies live models against the capabilities claimed in `model_manifest/*.yml`:
+`bin/smoke` verifies live models against the capabilities claimed in `model_manifest/*.rb`:
 
 ```bash
 bin/smoke anthropic_claude_5_sonnet          # one model, full capability matrix
 bin/smoke anthropic bedrock                  # provider sweeps
 bin/smoke ALL                                # all LLM models with credentials available (use `embeddings` for embedding models)
-bin/smoke --stale 30                         # models with unverified or stale capabilities
+bin/smoke --stale 30                         # models with missing or stale successful observations
 bin/smoke x_ai --only batch_inference        # one capability
 bin/smoke bedrock_claude_5_sonnet --only streaming_tool_calls --iterations 5
-bin/smoke anthropic_claude_5_sonnet --record # write results back to the manifest
+bin/smoke anthropic_claude_5_sonnet --record # record hard-oracle passes to model_smoke_results/
 ```
 
 Notes:
 - Explicitly selected models fail (nonzero exit) on SKIP or TIMEOUT; provider sweeps skip providers without credentials.
 - Credentials: ANTHROPIC_API_KEY, OPENAI_API_KEY, OPEN_ROUTER_API_KEY (or OPENROUTER_API_KEY), GOOGLE_AI_API_KEY (or GOOGLE_API_KEY), XAI_API_KEY (or X_AI_API_KEY), AWS credentials plus AWS_REGION for Bedrock.
-- `--record` updates the verification blocks in model_manifest/; commit those changes.
+- `--record` stores only successful observations from checks with concrete pass criteria in `model_smoke_results/`. It never changes declared capabilities and never records FAIL, NOTE, SKIP, TIMEOUT, or CONSISTENT. A CONSISTENT cell means the provider rejected a claimed-false capability's forced parameter exactly as the manifest declares (agreement with the manifest, not a probe result to record). A later failure does not remove a previously recorded success; withdrawing or acting on evidence is a maintainer decision. Provider documentation and reviewed manifest changes remain authoritative. Commit the updated `model_smoke_results/*.json` files.
+- `--stale DAYS` selects models whose positively claimed, recordable capabilities have missing or old successful observations.
 - `bin/smoke --list` prints all model keys. `--format json` emits machine-readable results.
 - `embeddings` selects all embedding models; an exact embedding key (e.g. `bin/smoke open_ai_text_embedding_3_small`) works too.
 - A full `bin/smoke ALL` run makes live calls for every model, and batch_inference checks can poll for up to 10 minutes per model, so sweeps commonly add `--skip batch_inference`; per-model progress streams to stderr as each one finishes, with the final matrix printed at the end.

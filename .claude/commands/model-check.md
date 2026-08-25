@@ -6,9 +6,10 @@ Rules that apply to every step:
 - Research first, report second, act only after explicit approval. Never edit files before the user picks items to act on.
 - One PR-sized branch per concern. NEVER push or open a PR without explicit approval of that specific branch.
 - No em dashes or en dashes in anything you write (CHANGELOG, commits, docs). No AI attribution in commits. Keep wording generic to raif.
+- Provider documentation plus the user's approved proposal determines manifest truth. Smoke output is supporting runtime evidence. Never change a declared capability solely because a generic API request failed.
 
 Steps:
-1. Read `model_manifest/*.yml`. Note each provider's `references` URLs.
+1. Read `model_manifest/*.rb`. Note each provider's `references` URLs.
 2. Gather, scoped by the user's hint when given: fetch the reference URLs (WebFetch), search the web for announcements since the newest `added_on`, and where a provider has a public list-models API and a key is configured, list it (OpenAI GET /v1/models, Anthropic GET /v1/models, xAI GET /v1/models, OpenRouter GET /api/v1/models, Google GET /v1beta/models).
 3. Cross-reference against the manifest and report findings in these groups, each item with its source cited:
    - models available upstream but absent from the manifest
@@ -16,7 +17,7 @@ Steps:
    - announced deprecations or retirements not recorded in lifecycle fields
    - recorded retirement_dates within 60 days or past
    - deprecated models whose replacement_key is itself deprecated, or with neither replacement_key nor migration_note
-   - models with unverified or stale capabilities (run `bin/smoke --stale 30 --list`-equivalent by checking verification blocks; do not hit live APIs for this)
+   - models with unverified or stale capabilities (per `bin/smoke --stale 30`'s selection logic: read `model_smoke_results/*.json` for missing or old successful observations against positively claimed, recordable capabilities; do not run bin/smoke or hit live APIs for this)
 4. Ask which findings to act on (AskUserQuestion, multiSelect).
 5. For each approved finding, ask: handle here sequentially, or write a handoff doc per concern to `docs/handoffs/` (Goal / Current State / Key Decisions / Next Steps format) for parallel sessions.
 6. Acting on a finding in-session:

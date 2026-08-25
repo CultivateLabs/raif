@@ -158,7 +158,7 @@ Raif.configure do |config|
 end
 ```
 
-Contributing a model to Raif itself is different: the models that ship with Raif are not registered by hand. They are defined in `model_manifest/*.yml` (one file per provider, recording each model's pricing, capabilities, and lifecycle status) and `bin/generate_llm_registry` regenerates `lib/raif/default_llms.rb`, the model name locale entries, the install generator's key list, and the setup documentation from that manifest. A spec fails the build if the generated files drift from the manifest, so contributors edit `model_manifest/*.yml` and rerun the generator rather than editing `lib/raif/default_llms.rb` directly.
+Contributing a model to Raif itself is different: the models that ship with Raif are not registered by hand. They are defined in `model_manifest/*.rb` (one file per provider, a constrained declarative Ruby DSL recording each model's pricing, capabilities, and lifecycle status) and `bin/generate_llm_registry` regenerates `lib/raif/default_llms.rb`, the model name locale entries, the install generator's key list, and the setup documentation from that manifest. Those generated files stay checked in and are never edited by hand: a spec fails the build if they drift from the manifest, so contributors edit `model_manifest/*.rb` and rerun the generator instead.
 
 ---
 

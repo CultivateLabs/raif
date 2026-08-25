@@ -81,7 +81,7 @@ end
 
 ### Diagnosing streaming issues
 
-`bin/smoke` is shipped with Raif for investigating suspected streaming problems with a given model, checking it against the streaming capabilities claimed for it in `model_manifest/*.yml`:
+`bin/smoke` is shipped with Raif for investigating suspected streaming problems with a given model, checking it against the streaming capabilities claimed for it in `model_manifest/*.rb`:
 
 - `bin/smoke bedrock_gpt_oss_120b --only streaming` runs the same prompt through the model in both streaming and non-streaming modes and reports whether the streamed response came through with deltas. Temporarily clears `streaming_unsupported_model_keys` so the streaming path is always exercised.
 - `bin/smoke bedrock_gpt_oss_120b --only streaming_tool_calls --iterations 5` runs a tool-call prompt through the model in both streaming and non-streaming modes across multiple iterations and reports per-iteration failures, useful for the intermittent tool_use corruption described above.

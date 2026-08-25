@@ -59,7 +59,7 @@ Raif.register_llm(Raif::Llms::Anthropic, key: :anthropic_claude_5_sonnet, ...)
 Raif.llm(:anthropic_claude_5_sonnet)  # Returns configured instance
 ```
 
-Model definitions live in `model_manifest/*.yml`; `bin/generate_llm_registry` regenerates `lib/raif/default_llms.rb`, locale names, the initializer template, and setup docs. Never edit generated files directly.
+Model definitions live in `model_manifest/*.rb`, a constrained declarative Ruby DSL (not a sandbox) that limits manifest files to a small set of declarations so they can't accidentally acquire capabilities like requires or global mutation; `bin/generate_llm_registry` regenerates `lib/raif/default_llms.rb`, locale names, the initializer template, and setup docs. Those generated files stay checked in and are never edited by hand.
 
 ### Key Design Patterns
 - **Isolated namespace**: All models/controllers under `Raif::`
