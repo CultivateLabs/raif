@@ -49,6 +49,10 @@ RSpec.describe Smoke::Terminal do
       expect(described_class.status_paint("NOTE", :note, enabled: true)).to eq("\e[36mNOTE\e[0m")
     end
 
+    it "paints consistent dim, distinct from pass (green) and fail (red)" do
+      expect(described_class.status_paint("CONSISTENT", :consistent, enabled: true)).to eq("\e[2mCONSISTENT\e[0m")
+    end
+
     it "leaves an unrecognized status plain even when enabled" do
       expect(described_class.status_paint("WEIRD", :weird, enabled: true)).to eq("WEIRD")
     end

@@ -36,12 +36,15 @@ module Smoke
     # embedding_entries - Raif::ModelManifest::EmbeddingEntry objects. Selected either by the
     #   "embeddings" selector (all of them, minus retired) or by an exact embedding key (an
     #   explicit selection, same as an exact LLM key). Kept as its own keyword rather than mixed
-    #   into `entries` because embedding entries don't share Entry's capability/verification
-    #   schema and drive a different check entirely (an embedding generation smoke test, not the
-    #   capability matrix).
+    #   into `entries` because embedding entries don't share Entry's capability schema and drive
+    #   a different check entirely (an embedding generation smoke test, not the capability matrix).
+    # observations - a Raif::ModelManifest::SmokeObservations store, consulted only for the
+    #   --stale sweep below (stale_days present): an entry or embedding entry is selected when
+    #   observations.stale_capabilities(entry, stale_after_days: stale_days) is non-empty. May be
+    #   omitted when stale_days is nil.
     #
     # Returns { entries:, embedding_entries:, explicit_keys:, unknown: }.
-    def self.resolve(argv_selectors, entries, stale_days: nil, embedding_entries: [])
+    def self.resolve(argv_selectors, entries, stale_days: nil, embedding_entries: [], observations: nil)
       live_entries = entries.reject(&:retired?)
       entries_by_key = live_entries.to_h { |entry| [entry.key.to_s, entry] }
 
@@ -77,7 +80,11 @@ module Smoke
 
       if stale_days
         live_entries.each do |entry|
-          selected[entry.key] = entry if entry.unverified_capabilities(stale_after_days: stale_days).any?
+          selected[entry.key] = entry if observations.stale_capabilities(entry, stale_after_days: stale_days).any?
+        end
+
+        live_embedding_entries.each do |entry|
+          selected_embeddings[entry.key] = entry if observations.stale_capabilities(entry, stale_after_days: stale_days).any?
         end
       end
 

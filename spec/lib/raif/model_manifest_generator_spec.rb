@@ -12,9 +12,9 @@ RSpec.describe Raif::ModelManifest::Generator do
   let(:manifest) { Raif::ModelManifest.load(dir: fixture_dir) }
 
   # The generated source starts with a top-level `module Raif`; eval'd as-is
-  # it would redefine the REAL ::Raif.default_llms for the rest of the suite
-  # (llm_registry.rb still hand-writes it at this point in the branch). We
-  # rename that line to a fresh top-level constant and eval at
+  # it would redefine the REAL ::Raif.default_llms for the rest of the suite,
+  # since lib/raif/default_llms.rb defines that same method. We rename that
+  # line to a fresh top-level constant and eval at
   # TOPLEVEL_BINDING rather than via Module#module_eval on an anonymous
   # module: an anonymous receiver would nest Module.nesting under itself, so
   # bare `Raif::Llms::Anthropic` / `Date` references inside the method
@@ -38,7 +38,7 @@ RSpec.describe Raif::ModelManifest::Generator do
     it "includes the generated file header" do
       expect(source).to include("# frozen_string_literal: true")
       expect(source).to include("# GENERATED FILE - DO NOT EDIT.")
-      expect(source).to include("# Source of truth: model_manifest/*.yml")
+      expect(source).to include("# Source of truth: model_manifest/*.rb")
       expect(source).to include("# Regenerate with: bin/generate_llm_registry")
     end
 
@@ -56,19 +56,18 @@ RSpec.describe Raif::ModelManifest::Generator do
         api_name: "integer-priced-test-1",
         display_name: "Integer Priced Test Model",
         max_completion_tokens: nil,
-        pricing: { "input_per_million" => 3, "output_per_million" => 15 },
+        pricing: { input_per_million: 3, output_per_million: 15 },
         capabilities: {
-          "temperature" => true,
-          "structured_outputs" => false,
-          "native_tool_use" => true,
-          "streaming" => true,
-          "batch_inference" => true,
-          "images" => false,
-          "pdfs" => false,
-          "provider_managed_tools" => []
+          temperature: true,
+          structured_outputs: false,
+          native_tool_use: true,
+          streaming: true,
+          batch_inference: true,
+          images: false,
+          pdfs: false,
+          provider_managed_tools: []
         },
-        lifecycle: { "status" => "active" },
-        verification: nil,
+        lifecycle: { status: :active },
         source_path: "spec/fixtures/model_manifest/anthropic.yml",
         key_base: "integer_priced_test_model"
       )
@@ -79,8 +78,6 @@ RSpec.describe Raif::ModelManifest::Generator do
       integer_source = described_class.default_llms_rb(integer_priced_manifest)
 
       expect(integer_source).to include("input_token_cost: 3.0 / 1_000_000,")
-      # No trailing comma: output_token_cost is the last field emitted for this fixture
-      # (no max_completion_tokens, provider settings, tools, or deprecation fields).
       expect(integer_source).to include("output_token_cost: 15.0 / 1_000_000")
     end
 
@@ -88,8 +85,6 @@ RSpec.describe Raif::ModelManifest::Generator do
       expect(source).to include("key: :anthropic_old_model,")
       expect(source).to include("deprecated: true,")
       expect(source).to include("retirement_date: Date.new(2026, 12, 1),")
-      # No trailing comma: migration_note is nil so it's omitted, making
-      # replacement_key the last field emitted for this hash literal.
       expect(source).to include("replacement_key: :anthropic_test_model")
       expect(source).not_to include("migration_note:")
     end
@@ -129,7 +124,6 @@ RSpec.describe Raif::ModelManifest::Generator do
     it "emits the fixture embedding model with its raw cost literal" do
       expect(source).to include("key: :open_ai_test_embedding,")
       expect(source).to include("input_token_cost: 0.02 / 1_000_000,")
-      # No trailing comma: default_output_vector_size is always the last field.
       expect(source).to include("default_output_vector_size: 1536")
     end
 
@@ -142,8 +136,7 @@ RSpec.describe Raif::ModelManifest::Generator do
         display_name: "Integer Priced Test Embedding",
         input_per_million: 2,
         default_output_vector_size: 1536,
-        lifecycle: { "status" => "active" },
-        verification: nil,
+        lifecycle: { status: :active },
         source_path: "spec/fixtures/model_manifest/embeddings.yml"
       )
       integer_priced_manifest = Raif::ModelManifest::Manifest.new(
@@ -267,10 +260,10 @@ RSpec.describe Raif::ModelManifest::Generator do
   end
 
   describe ".write_all!" do
-    # Must not run against the real repo files here: they don't get their
-    # markers until Task 6. These tmpdir stand-ins mimic just enough of the
-    # real file shapes (marker pairs / YAML sections) to exercise the
-    # rewriter logic, pointed at via write_all!'s `root:` kwarg.
+    # Runs against tmpdir stand-ins, not the real repo files, so the spec never
+    # mutates checked-in files on disk. These mimic just enough of the real
+    # file shapes (marker pairs / YAML sections) to exercise the rewriter
+    # logic, pointed at via write_all!'s `root:` kwarg.
     around do |example|
       Dir.mktmpdir("raif-generator-spec") do |dir|
         @tmp_root = dir

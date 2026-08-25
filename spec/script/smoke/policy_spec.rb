@@ -139,24 +139,45 @@ RSpec.describe Smoke::Policy do
   end
 
   describe ".recordable?" do
-    it "is recordable for pass" do
-      expect(described_class.recordable?(capability_result(:pass))).to eq(true)
+    it "records a hard-oracle pass for a recordable capability" do
+      expect(described_class.recordable?("streaming", { status: :pass })).to be(true)
     end
 
-    it "is recordable for fail" do
-      expect(described_class.recordable?(capability_result(:fail))).to eq(true)
+    it "never records fail, note, skip, or timeout" do
+      %i[fail note skip timeout].each do |status|
+        expect(described_class.recordable?("streaming", { status: status })).to be(false)
+      end
     end
 
-    it "is recordable for note" do
-      expect(described_class.recordable?(capability_result(:note))).to eq(true)
+    it "never records a result tagged recordable: false" do
+      expect(described_class.recordable?("structured_outputs", { status: :pass, recordable: false })).to be(false)
     end
 
-    it "is not recordable for skip, even on an explicitly selected model (skips must not masquerade as verification)" do
-      expect(described_class.recordable?(capability_result(:skip), explicit_keys: ["anthropic_test_model"])).to eq(false)
+    it "never records a non-recordable capability" do
+      expect(described_class.recordable?("temperature", { status: :pass })).to be(false)
     end
 
-    it "is not recordable for timeout, even on an explicitly selected model" do
-      expect(described_class.recordable?(capability_result(:timeout), explicit_keys: ["anthropic_test_model"])).to eq(false)
+    # :consistent means "the provider rejected a claimed-false capability as declared" -- a
+    # display-only verdict, never a recordable positive verification of the capability itself.
+    it "never records a :consistent result, even for a recordable capability name" do
+      expect(described_class.recordable?("temperature", { status: :consistent })).to be(false)
+      expect(described_class.recordable?("streaming", { status: :consistent })).to be(false)
+    end
+  end
+
+  # :consistent confirms the manifest's claimed-false claim is accurate -- the same kind of
+  # benign, non-alarming outcome as :note, so it must never trip the run's exit code.
+  describe ".exit_code with a :consistent capability" do
+    it "never fails the run on a :consistent result, explicit or not" do
+      results = [model_result("anthropic_test_model", explicit: true, temperature: :consistent)]
+
+      expect(described_class.exit_code(results, explicit_keys: ["anthropic_test_model"])).to eq(0)
+    end
+
+    it "never fails the run on a :consistent result in strict mode either" do
+      results = [model_result("bedrock_some_model", explicit: false, temperature: :consistent)]
+
+      expect(described_class.exit_code(results, explicit_keys: [], strict: true)).to eq(0)
     end
   end
 end

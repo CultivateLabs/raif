@@ -19,26 +19,29 @@ module Raif
         config = {
           key: entry.key,
           api_name: entry.api_name,
-          input_token_cost: entry.pricing.fetch("input_per_million").to_f / 1_000_000,
-          output_token_cost: entry.pricing.fetch("output_per_million").to_f / 1_000_000
+          input_token_cost: entry.pricing.fetch(:input_per_million).to_f / 1_000_000,
+          output_token_cost: entry.pricing.fetch(:output_per_million).to_f / 1_000_000
         }
         config[:max_completion_tokens] = entry.max_completion_tokens if entry.max_completion_tokens
 
         settings = provider_settings_for(entry)
         config[:model_provider_settings] = settings if settings.any?
 
-        tools = entry.capabilities.fetch("provider_managed_tools", [])
+        tools = entry.capabilities.fetch(:provider_managed_tools, [])
         if tools.any?
-          config[:supported_provider_managed_tools] = tools.map { |t| PROVIDER_MANAGED_TOOL_CLASSES.fetch(t).constantize }
+          # PROVIDER_MANAGED_TOOL_CLASSES stays string-keyed like the other
+          # lookup maps in ModelManifest; tool symbols convert at the
+          # lookup rather than the constant changing shape.
+          config[:supported_provider_managed_tools] = tools.map { |t| PROVIDER_MANAGED_TOOL_CLASSES.fetch(t.to_s).constantize }
         end
 
-        config[:supports_native_tool_use] = false unless entry.capabilities.fetch("native_tool_use")
+        config[:supports_native_tool_use] = false unless entry.capabilities.fetch(:native_tool_use)
 
         if entry.deprecated?
           config[:deprecated] = true
-          config[:retirement_date] = entry.lifecycle["retirement_date"]
-          config[:replacement_key] = entry.lifecycle["replacement_key"]&.to_sym
-          config[:migration_note] = entry.lifecycle["migration_note"]
+          config[:retirement_date] = entry.lifecycle[:retirement_date]
+          config[:replacement_key] = entry.lifecycle[:replacement_key]
+          config[:migration_note] = entry.lifecycle[:migration_note]
         end
 
         config
@@ -49,13 +52,13 @@ module Raif
         defaults = ADAPTER_DEFAULTS.fetch(entry.adapter_class_name)
         settings = {}
 
-        temperature = caps.fetch("temperature")
+        temperature = caps.fetch(:temperature)
         settings[:supports_temperature] = temperature if temperature != defaults.fetch("temperature")
 
-        structured_outputs = caps.fetch("structured_outputs")
+        structured_outputs = caps.fetch(:structured_outputs)
         settings[:supports_structured_outputs] = structured_outputs if structured_outputs != defaults.fetch("structured_outputs")
 
-        batch_inference = caps.fetch("batch_inference")
+        batch_inference = caps.fetch(:batch_inference)
         settings[:supports_batch_inference] = batch_inference if batch_inference != defaults.fetch("batch_inference")
 
         settings
@@ -91,7 +94,7 @@ module Raif
       end
 
       def self.streaming_unsupported_keys(manifest)
-        manifest.llm_entries.reject(&:retired?).reject { |e| e.capabilities.fetch("streaming") }.map { |e| e.key.to_s }
+        manifest.llm_entries.reject(&:retired?).reject { |e| e.capabilities.fetch(:streaming) }.map { |e| e.key.to_s }
       end
     end
   end

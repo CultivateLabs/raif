@@ -12,10 +12,39 @@ RSpec.describe "model_manifest validity" do
     expect(all_keys).to eq(all_keys.uniq)
   end
 
+  # These guard against the whole file going vacuously green: every describe block below is
+  # built by iterating these three collections at load time, so an empty manifest directory (or
+  # a loader regression that returns no entries) would otherwise produce zero per-entry examples
+  # and this spec would still report success.
+  it "loaded a nonempty set of llm entries" do
+    expect(entries).not_to be_empty
+  end
+
+  it "loaded a nonempty set of embedding entries" do
+    expect(manifest.embedding_entries).not_to be_empty
+  end
+
+  it "loaded a nonempty set of provider files" do
+    expect(manifest.provider_files).not_to be_empty
+  end
+
+  manifest.provider_files.each_key do |provider_name|
+    describe "#{provider_name} references" do
+      it "declares HTTPS URLs" do
+        refs = manifest.references_for(provider_name)
+        expect(refs).not_to be_empty
+
+        refs.each_value do |url|
+          expect(url).to start_with("https://")
+        end
+      end
+    end
+  end
+
   entries.each do |entry|
     describe entry.key.to_s do
       it "prefixes the key with its provider" do
-        prefix = if entry.provider_name == "open_ai"
+        prefix = if entry.provider_name == :open_ai
           Raif::ModelManifest::OPEN_AI_ENDPOINT_KEY_PREFIXES.fetch(entry.endpoint)
         else
           "#{entry.provider_name}_"
@@ -26,44 +55,50 @@ RSpec.describe "model_manifest validity" do
       it "has required fields" do
         expect(entry.api_name).to be_present
         expect(entry.display_name).to be_present
-        expect(Raif::ModelManifest::LIFECYCLE_STATUSES).to include(entry.status)
       end
 
-      it "has exactly the known capability keys" do
+      it "has exactly the known capability keys, each a known boolean or tool list, and a recognized lifecycle status" do
         expect(entry.capabilities.keys.sort).to eq(Raif::ModelManifest::CAPABILITY_KEYS.sort)
-        entry.capabilities.except("provider_managed_tools").each_value do |v|
-          expect([true, false]).to include(v)
+        entry.capabilities.except(:provider_managed_tools).each_value do |value|
+          expect(value).to be(true).or be(false)
         end
-        expect(entry.capabilities["provider_managed_tools"] - Raif::ModelManifest::PROVIDER_MANAGED_TOOL_CLASSES.keys).to be_empty
+        expect(Raif::ModelManifest::LIFECYCLE_STATUSES).to include(entry.lifecycle.fetch(:status))
       end
 
-      it "has pricing unless retired" do
+      it "declares only known provider-managed tools, as symbols" do
+        tools = entry.capabilities.fetch(:provider_managed_tools)
+        tools.each { |tool| expect(tool).to be_a(Symbol) }
+
+        unknown = tools.map(&:to_s) - Raif::ModelManifest::PROVIDER_MANAGED_TOOL_CLASSES.keys
+        expect(unknown).to be_empty
+      end
+
+      it "has positive numeric pricing unless retired" do
         next if entry.retired?
 
-        # Float, not Integer: RegistryData and the generator divide this by 1_000_000, and
-        # an Integer would silently floor the result to 0.
-        expect(entry.pricing["input_per_million"]).to be_a(Float)
-        expect(entry.pricing["output_per_million"]).to be_a(Float)
+        expect(entry.pricing.fetch(:input_per_million)).to be_a(Numeric)
+        expect(entry.pricing.fetch(:input_per_million)).to be > 0
+        expect(entry.pricing.fetch(:output_per_million)).to be_a(Numeric)
+        expect(entry.pricing.fetch(:output_per_million)).to be > 0
+      end
+
+      it "has Date objects for whichever lifecycle dates it declares" do
+        %i[added_on deprecated_on retirement_date].each do |field|
+          value = entry.lifecycle.fetch(field)
+          expect(value).to be_a(Date) if value
+        end
       end
 
       it "has coherent lifecycle fields" do
         if entry.deprecated?
-          expect(entry.lifecycle["retirement_date"]).to be_present
+          expect(entry.lifecycle.fetch(:retirement_date)).to be_present
         end
 
-        replacement = entry.lifecycle["replacement_key"]
+        replacement = entry.lifecycle.fetch(:replacement_key)
         if replacement
-          target = entries.find { |e| e.key.to_s == replacement.to_s }
+          target = entries.find { |e| e.key == replacement }
           expect(target).to be_present, "replacement_key #{replacement} not found in manifest"
           expect(target).to be_active, "replacement for a deprecated model must be active" if entry.deprecated?
-        end
-      end
-
-      it "has well-formed verification records when present" do
-        results = entry.verification&.dig("results") || {}
-        expect(results.keys - entry.smokable_capabilities).to be_empty
-        results.each_value do |record|
-          expect(record).to include("claimed", "result", "checked_at")
         end
       end
     end
@@ -75,15 +110,21 @@ RSpec.describe "model_manifest validity" do
         expect(entry.api_name).to be_present
         expect(entry.display_name).to be_present
         expect(entry.default_output_vector_size).to be_a(Integer)
-        expect(Raif::ModelManifest::LIFECYCLE_STATUSES).to include(entry.status)
+        expect(Raif::ModelManifest::LIFECYCLE_STATUSES).to include(entry.lifecycle.fetch(:status))
       end
 
-      it "has pricing unless retired" do
+      it "has positive numeric pricing unless retired" do
         next if entry.retired?
 
-        # Float, not Integer: RegistryData and the generator divide this by 1_000_000, and
-        # an Integer would silently floor the result to 0.
-        expect(entry.input_per_million).to be_a(Float)
+        expect(entry.input_per_million).to be_a(Numeric)
+        expect(entry.input_per_million).to be > 0
+      end
+
+      it "has Date objects for whichever lifecycle dates it declares" do
+        %i[added_on deprecated_on retirement_date].each do |field|
+          value = entry.lifecycle.fetch(field)
+          expect(value).to be_a(Date) if value
+        end
       end
     end
   end

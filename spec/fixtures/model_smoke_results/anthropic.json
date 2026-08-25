@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "models": {
+    "anthropic_test_model": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-08-15T14:02:11Z"
+      }
+    }
+  }
+}

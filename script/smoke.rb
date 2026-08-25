@@ -3,62 +3,37 @@
 # See bin/smoke for usage instructions.
 #
 # Runs the smoke capability checks (script/smoke/checks.rb) against the live models described in
-# model_manifest/*.yml, using script/smoke/selection.rb to resolve CLI selectors, script/smoke/credentials.rb
-# to gate providers on configured credentials, script/smoke/policy.rb to decide the process exit code,
-# script/smoke/recorder.rb (with --record) to write verified results back into the manifest, and
-# script/smoke/terminal.rb for colored output and the pre-run confirmation prompt.
+# model_manifest/*.rb, using script/smoke/selection.rb to resolve CLI selectors, script/smoke/credentials.rb
+# to gate providers on configured credentials, script/smoke/options.rb to validate CLI options,
+# script/smoke/policy.rb to decide the process exit code, script/smoke/observation_recorder.rb (with
+# --record) to record successful smoke observations in model_smoke_results/*.json, and
+# script/smoke/{terminal,report}.rb for colored output, the confirmation prompt, and the results matrix.
 
 require "optparse"
 require "json"
-require "pathname"
 require "raif/model_manifest"
+require "raif/model_manifest/smoke_observations"
 require_relative "smoke/selection"
 require_relative "smoke/credentials"
 require_relative "smoke/checks"
 require_relative "smoke/policy"
-require_relative "smoke/recorder"
+require_relative "smoke/observation_recorder"
 require_relative "smoke/terminal"
+require_relative "smoke/report"
+require_relative "smoke/options"
 
 # rails runner buffers stdout in blocks when it isn't a tty (e.g. piped to head or a log file),
 # which would otherwise hold back both the final matrix and anything printed along the way.
 $stdout.sync = true
 
-STATUS_LABELS = {
-  pass: "PASS",
-  fail: "FAIL",
-  skip: "SKIP",
-  timeout: "TIMEOUT",
-  note: "NOTE"
-}.freeze
-
-CAPABILITY_COLUMN_ORDER = %w[
-  completion temperature structured_outputs native_tool_use streaming
-  streaming_tool_calls batch_inference images pdfs provider_managed_tools embedding
-].freeze
-
 EMBEDDING_PROMPT = "hello smoke"
 
-# Worst-first: a model's summary-footer bucket is its single worst capability status.
-STATUS_PRIORITY = %i[fail timeout skip note pass].freeze
-
-# Repo root (script/smoke.rb lives at <repo_root>/script/smoke.rb); used to print manifest
-# paths relative to the repo in the --record confirmation preview.
-REPO_ROOT = File.expand_path("..", __dir__)
+# Where --record writes durable smoke observations; also the directory Raif::ModelManifest::SmokeObservations reads back.
+MODEL_SMOKE_RESULTS_DIR = Raif::Engine.root.join("model_smoke_results")
 
 # Guards the stderr progress lines emitted by provider threads in run_all so concurrent
 # writes don't interleave mid-line.
 PROGRESS_MUTEX = Mutex.new
-
-def status_label(status)
-  STATUS_LABELS.fetch(status, status.to_s.upcase)
-end
-
-def progress_summary(capabilities)
-  CAPABILITY_COLUMN_ORDER
-    .select { |cap| capabilities.key?(cap) }
-    .map { |cap| "#{cap}=#{Smoke::Terminal.status_paint(status_label(capabilities[cap][:status]), capabilities[cap][:status], stream: $stderr)}" }
-    .join(" ")
-end
 
 # Builds the single capability result representing "this model's provider has no credentials
 # configured" -- never an empty capabilities hash, since Smoke::Policy.exit_code treats an empty
@@ -95,12 +70,6 @@ def run_entry(entry, options, explicit_keys, missing_credentials:)
     entry, only: options[:only], skip: options[:skip], iterations: options[:iterations], batch_timeout: options[:batch_timeout]
   )
 
-  if options[:record]
-    ran_full_unskipped = options[:only].nil? && options[:skip].empty? &&
-      capabilities.values.none? { |result| %i[skip timeout].include?(result[:status]) }
-    Smoke::Recorder.record!(entry, capabilities, ran_full_unskipped: ran_full_unskipped, now: Time.now.utc)
-  end
-
   { key: key, explicit: explicit, capabilities: capabilities }
 end
 
@@ -122,89 +91,13 @@ def run_all(selection, options)
 
       group.map do |entry|
         result = run_entry(entry, options, selection[:explicit_keys], missing_credentials: missing_credentials)
-        PROGRESS_MUTEX.synchronize { warn "progress: #{result[:key]} #{progress_summary(result[:capabilities])}" }
+        PROGRESS_MUTEX.synchronize { warn "progress: #{result[:key]} #{Smoke::Report.progress_summary(result[:capabilities])}" }
         result
       end
     end
   end
 
   threads.flat_map(&:value).sort_by { |result| result[:key] }
-end
-
-def print_text_matrix(model_results)
-  return if model_results.empty?
-
-  columns = CAPABILITY_COLUMN_ORDER.select { |cap| model_results.any? { |result| result[:capabilities].key?(cap) } }
-  key_width = (["MODEL".length] + model_results.map { |result| result[:key].length }).max
-  column_widths = columns.to_h { |cap| [cap, [cap.length, 7].max] }
-
-  header = "MODEL".ljust(key_width) + "  " + columns.map { |cap| cap.upcase.ljust(column_widths[cap]) }.join("  ")
-  puts Smoke::Terminal.paint(header, :bold, stream: $stdout)
-
-  model_results.each do |result|
-    row = columns.map do |cap|
-      cell = result[:capabilities][cap]
-
-      if cell
-        label = status_label(cell[:status]).ljust(column_widths[cap])
-        Smoke::Terminal.status_paint(label, cell[:status], stream: $stdout)
-      else
-        Smoke::Terminal.paint("-".ljust(column_widths[cap]), :dim, stream: $stdout)
-      end
-    end.join("  ")
-
-    puts result[:key].ljust(key_width) + "  " + row
-  end
-
-  details = model_results.flat_map do |result|
-    result[:capabilities].filter_map do |cap, cell|
-      next if cell[:status] == :pass
-
-      label = Smoke::Terminal.status_paint(status_label(cell[:status]), cell[:status], stream: $stdout)
-      "  #{result[:key]} #{cap}: #{label} #{cell[:detail]}"
-    end
-  end
-
-  return if details.empty?
-
-  puts
-  puts "Details:"
-  details.each { |line| puts line }
-end
-
-# A model's worst capability status, fail > timeout > skip > note > pass -- an empty capabilities
-# hash (an unexecuted required check; see Smoke::Policy) counts as fail, since it's never a benign
-# outcome. Used only to bucket the summary footer's per-model counts.
-def worst_model_status(capabilities)
-  return :fail if capabilities.empty?
-
-  statuses = capabilities.values.map { |cell| cell[:status] }
-  STATUS_PRIORITY.find { |candidate| statuses.include?(candidate) } || :fail
-end
-
-def print_summary_footer(model_results, elapsed_seconds, exit_code)
-  return if model_results.empty?
-
-  counts = Hash.new(0)
-  model_results.each { |result| counts[worst_model_status(result[:capabilities])] += 1 }
-
-  line = "#{model_results.size} models: #{counts[:pass]} pass, #{counts[:fail]} fail, #{counts[:skip]} skip, " \
-    "#{counts[:timeout]} timeout, #{counts[:note]} note (#{Smoke::Terminal.format_duration(elapsed_seconds)})"
-
-  puts
-  puts Smoke::Terminal.paint(line, exit_code.zero? ? :green : :red, stream: $stdout)
-end
-
-def print_json_results(model_results)
-  payload = model_results.map do |result|
-    {
-      "key" => result[:key],
-      "explicit" => result[:explicit],
-      "capabilities" => result[:capabilities].transform_values { |cell| { "status" => cell[:status].to_s, "detail" => cell[:detail] } }
-    }
-  end
-
-  puts JSON.pretty_generate(payload)
 end
 
 # --only and --skip take the same precedence here as in Smoke::Checks.run_for: --only decides
@@ -221,10 +114,6 @@ def confirmation_needed?(entries, options)
   entries.size > 10 || batch_included?(options)
 end
 
-def relative_source_path(entry)
-  Pathname.new(entry.source_path.to_s).relative_path_from(Pathname.new(REPO_ROOT)).to_s
-end
-
 def print_confirmation_preview(entries, options)
   warn "#{entries.size} model(s) selected:"
   entries.group_by(&:provider_name).sort_by { |provider_name, _group| provider_name }.each do |provider_name, group|
@@ -235,8 +124,7 @@ def print_confirmation_preview(entries, options)
 
   return unless options[:record]
 
-  files = entries.map { |entry| relative_source_path(entry) }.uniq.sort
-  warn "--record will rewrite: #{files.join(", ")}"
+  warn "--record will record successful smoke observations in model_smoke_results/"
 end
 
 # Blocks on a [y/N] prompt before a large or batch_inference-including run, since both make real,
@@ -280,7 +168,7 @@ parser = OptionParser.new do |opts|
     options[:stale_days] = value
   end
 
-  opts.on("--record", "Write verified results back into model_manifest/*.yml") do
+  opts.on("--record", "Record successful smoke observations in model_smoke_results/") do
     options[:record] = true
   end
 
@@ -315,6 +203,8 @@ end
 
 selectors = parser.parse(ARGV).map(&:to_s).map(&:strip).reject(&:blank?)
 
+Smoke.validate_options!(options, parser)
+
 if options[:list]
   puts (Raif.available_llm_keys + Raif.available_embedding_model_keys).map(&:to_s).sort
   exit 0
@@ -329,8 +219,10 @@ Smoke::Credentials.configure_raif!
 Raif.config.streaming_unsupported_model_keys = []
 
 manifest = Raif::ModelManifest.load
+observations = Raif::ModelManifest::SmokeObservations.load
 selection = Smoke::Selection.resolve(
-  selectors, manifest.llm_entries, stale_days: options[:stale_days], embedding_entries: manifest.embedding_entries
+  selectors, manifest.llm_entries, stale_days: options[:stale_days], embedding_entries: manifest.embedding_entries,
+  observations: observations
 )
 
 if selection[:unknown].any?
@@ -358,13 +250,18 @@ run_started_at = Time.now
 model_results = run_all(selection, options)
 elapsed_seconds = Time.now - run_started_at
 
+if options[:record]
+  entries_by_key = (selection[:entries] + selection[:embedding_entries]).index_by { |entry| entry.key.to_s }
+  Smoke::ObservationRecorder.record_all!(model_results, entries_by_key: entries_by_key, dir: MODEL_SMOKE_RESULTS_DIR, now: Time.now.utc)
+end
+
 exit_code = Smoke::Policy.exit_code(model_results, explicit_keys: selection[:explicit_keys], strict: options[:strict])
 
 if options[:format] == "json"
-  print_json_results(model_results)
+  Smoke::Report.print_json_results(model_results)
 else
-  print_text_matrix(model_results)
-  print_summary_footer(model_results, elapsed_seconds, exit_code)
+  Smoke::Report.print_text_matrix(model_results)
+  Smoke::Report.print_summary_footer(model_results, elapsed_seconds, exit_code)
 end
 
 exit exit_code

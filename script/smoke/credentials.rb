@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
-# Credential configuration and checks for the smoke runner, consolidating logic that used to be
-# duplicated near-verbatim across script/smoke_llm_models.rb, script/smoke_embedding_models.rb, and
-# the probe_*.rb scripts. Provider dispatch is keyed by Raif::ModelManifest::Entry#provider_name
-# ("anthropic", "open_ai", "bedrock", "open_router", "google", "x_ai") since callers already have the
-# entry, rather than re-deriving a provider from a model key regex.
+# Credential configuration and checks for the smoke runner. Provider dispatch is keyed by
+# Raif::ModelManifest::Entry#provider_name ("anthropic", "open_ai", "bedrock", "open_router",
+# "google", "x_ai") since callers already have the entry, rather than re-deriving a provider
+# from a model key regex.
 #
 # Only references Raif.config and Aws inside method bodies, so it loads standalone; calling the
 # methods requires Raif (and, for Bedrock, the aws-sdk-bedrockruntime gem) already booted, which is

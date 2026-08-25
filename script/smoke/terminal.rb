@@ -28,7 +28,11 @@ module Smoke
       fail: :red,
       timeout: :red,
       skip: :yellow,
-      note: :cyan
+      note: :cyan,
+      # A claimed-false capability the provider rejected as declared: agreement with the
+      # manifest, not something to celebrate (pass/green) or worry about (fail/red) -- dim
+      # de-emphasizes it the way a benign, expected result should read.
+      consistent: :dim
     }.freeze
 
     # Set by --no-color. Sticky for the rest of the process -- there is no re-enable, since a

@@ -1,17 +1,19 @@
 # frozen_string_literal: true
 
-# Loads model_manifest/*.yml into plain structs. This file is intentionally
+# Loads model_manifest/*.rb into plain structs. This file is intentionally
 # NOT required by lib/raif.rb: the manifest is a maintenance-time artifact
 # consumed by bin/generate_llm_registry, bin/smoke, and specs. The runtime
 # registry is the generated lib/raif/default_llms.rb.
-require "yaml"
 require "date"
-require "time"
+require "raif/model_manifest/dsl"
 
 module Raif
   module ModelManifest
     MANIFEST_DIR = File.expand_path("../../model_manifest", __dir__)
 
+    # Provider and endpoint names are strings in these lookup maps even though
+    # an entry's provider_name is a symbol: the generator reuses them for its
+    # string-named setup.md sections.
     PROVIDER_ADAPTERS = {
       "anthropic" => "Raif::Llms::Anthropic",
       "bedrock" => "Raif::Llms::Bedrock",
@@ -40,12 +42,16 @@ module Raif
       "Raif::Llms::Google"
     ].freeze
 
-    CAPABILITY_KEYS = %w[
+    CAPABILITY_KEYS = %i[
       temperature structured_outputs native_tool_use streaming
       batch_inference images pdfs provider_managed_tools
     ].freeze
 
-    LIFECYCLE_STATUSES = %w[active deprecated retired].freeze
+    LIFECYCLE_STATUSES = %i[active deprecated retired].freeze
+
+    # Every entry's lifecycle carries all of these, defaulting to nil, so a
+    # caller never has to ask whether a model declared them.
+    LIFECYCLE_KEYS = %i[status added_on deprecated_on retirement_date replacement_key migration_note].freeze
 
     PROVIDER_MANAGED_TOOL_CLASSES = {
       "web_search" => "Raif::ModelTools::ProviderManaged::WebSearch",
@@ -55,67 +61,53 @@ module Raif
 
     # What each adapter class assumes when model_provider_settings says
     # nothing. The generator emits a settings entry only when the manifest
-    # value differs from these. Values below marked VERIFIED were confirmed in
-    # Task 1 Step 1; update if the grep said otherwise.
+    # value differs from these.
     ADAPTER_DEFAULTS = {
       "Raif::Llms::OpenAiCompletions" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true },
       "Raif::Llms::OpenAiResponses" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true },
       "Raif::Llms::Anthropic" => { "temperature" => true, "structured_outputs" => false, "batch_inference" => true },
       "Raif::Llms::Bedrock" => { "temperature" => true, "structured_outputs" => false, "batch_inference" => false },
-      # VERIFIED: mirrors OpenAI for structured outputs
+      # Mirrors OpenAI for structured outputs
       "Raif::Llms::OpenRouter" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => false },
-      # VERIFIED: mirrors OpenAI for structured outputs; includes XAi::BatchInference
+      # Mirrors OpenAI for structured outputs; includes XAi::BatchInference
       "Raif::Llms::XAi" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true },
-      # VERIFIED: native JSON schema support; includes Google::BatchInference
+      # Native JSON schema support; includes Google::BatchInference
       "Raif::Llms::Google" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true }
     }.freeze
 
     Entry = Struct.new(
       :key, :provider_name, :endpoint, :adapter_class_name, :api_name,
       :display_name, :max_completion_tokens, :pricing, :capabilities,
-      :lifecycle, :verification, :source_path, :key_base,
+      :lifecycle, :source_path, :key_base,
       keyword_init: true
     ) do
-      def status = lifecycle.fetch("status")
-      def active? = status == "active"
-      def deprecated? = status == "deprecated"
-      def retired? = status == "retired"
+      def status = lifecycle.fetch(:status)
+      def active? = status == :active
+      def deprecated? = status == :deprecated
+      def retired? = status == :retired
 
       # Capabilities the smoke runner would test for this entry: "completion"
       # always, plus every schema capability, plus the derived
       # streaming_tool_calls whenever native tool use is claimed (even if
       # streaming itself is claimed false, so --only streaming_tool_calls
       # still works as a diagnostic on a streaming-disabled model).
+      #
+      # Names are strings here and in claimed_value because that is what the
+      # smoke CLI passes around; the capabilities they read are symbol-keyed.
       def smokable_capabilities
         caps = ["completion"]
-        caps += CAPABILITY_KEYS.reject { |c| c == "provider_managed_tools" }
-        caps << "provider_managed_tools" if capabilities["provider_managed_tools"]&.any?
-        caps << "streaming_tool_calls" if capabilities["native_tool_use"]
+        caps += CAPABILITY_KEYS.reject { |c| c == :provider_managed_tools }.map(&:to_s)
+        caps << "provider_managed_tools" if capabilities[:provider_managed_tools]&.any?
+        caps << "streaming_tool_calls" if capabilities[:native_tool_use]
         caps
       end
 
       def claimed_value(capability)
-        case capability
+        case capability.to_s
         when "completion" then true
-        when "streaming_tool_calls" then capabilities["streaming"] && capabilities["native_tool_use"]
-        when "provider_managed_tools" then capabilities["provider_managed_tools"]
-        else capabilities[capability]
-        end
-      end
-
-      def unverified_capabilities(stale_after_days: nil)
-        results = verification&.dig("results") || {}
-        smokable_capabilities.select do |cap|
-          record = results[cap]
-          next true if record.nil?
-          next true if record["claimed"] != claimed_value(cap)
-
-          if stale_after_days
-            checked_at = Time.parse(record["checked_at"].to_s)
-            next true if checked_at < Time.now - (stale_after_days * 86_400)
-          end
-
-          false
+        when "streaming_tool_calls" then capabilities[:streaming] && capabilities[:native_tool_use]
+        when "provider_managed_tools" then capabilities[:provider_managed_tools]
+        else capabilities[capability.to_sym]
         end
       end
     end
@@ -123,13 +115,13 @@ module Raif
     EmbeddingEntry = Struct.new(
       :key, :provider_name, :adapter_class_name, :api_name, :display_name,
       :input_per_million, :default_output_vector_size, :lifecycle,
-      :verification, :source_path,
+      :source_path,
       keyword_init: true
     ) do
-      def status = lifecycle.fetch("status")
-      def active? = status == "active"
-      def deprecated? = status == "deprecated"
-      def retired? = status == "retired"
+      def status = lifecycle.fetch(:status)
+      def active? = status == :active
+      def deprecated? = status == :deprecated
+      def retired? = status == :retired
     end
 
     class Manifest
@@ -147,44 +139,50 @@ module Raif
       end
     end
 
+    # Each file is evaluated against its own Dsl::Context, so nothing a
+    # manifest file declares can leak into the next file or into a later load.
     def self.load(dir: MANIFEST_DIR)
       llm_entries = []
+      embedding_entries = []
       provider_references = {}
       provider_files = {}
 
-      Dir[File.join(dir, "*.yml")].sort.each do |path|
-        next if File.basename(path) == "embeddings.yml"
+      Dir[File.join(dir, "*.rb")].sort.each do |path|
+        context = Dsl::Context.new.evaluate(File.read(path), path)
 
-        data = YAML.safe_load_file(path, permitted_classes: [Date], aliases: true)
-        provider = data.fetch("provider")
-        provider_references[provider] = data["references"] || {}
-        provider_files[provider] = path
+        context.providers.each do |provider|
+          provider_references[provider.name] = provider.references
+          provider_files[provider.name] = provider.source_path
+          provider.models.each { |model| llm_entries.concat(entries_for_model(provider, model)) }
+        end
 
-        data.fetch("models").each do |model|
-          llm_entries.concat(entries_for_model(provider, model, path))
+        context.embedding_providers.each do |provider|
+          embedding_entries.concat(embedding_entries_for(provider))
         end
       end
 
       Manifest.new(
         llm_entries: llm_entries,
-        embedding_entries: load_embeddings(File.join(dir, "embeddings.yml")),
+        embedding_entries: embedding_entries,
         provider_references: provider_references,
         provider_files: provider_files
       )
     end
 
-    def self.entries_for_model(provider, model, path)
-      if provider == "open_ai"
-        model.fetch("endpoints").map do |endpoint, endpoint_data|
+    # A model that declares endpoints expands to one entry per endpoint: the
+    # endpoint picks the adapter and the key prefix (open_ai_ vs
+    # open_ai_responses_) that go in front of the model's key_base, and carries
+    # its own capabilities. Everything else is shared by all of its entries.
+    def self.entries_for_model(provider, model)
+      if model.endpoints
+        model.endpoints.map do |endpoint, capabilities|
           build_entry(
             provider: provider,
             model: model,
-            path: path,
-            key: :"#{OPEN_AI_ENDPOINT_KEY_PREFIXES.fetch(endpoint)}#{model.fetch("key_base")}",
+            key: :"#{OPEN_AI_ENDPOINT_KEY_PREFIXES.fetch(endpoint)}#{model.key_base}",
             endpoint: endpoint,
             adapter: OPEN_AI_ENDPOINT_ADAPTERS.fetch(endpoint),
-            capabilities: endpoint_data.fetch("capabilities"),
-            verification: endpoint_data["verification"]
+            capabilities: capabilities
           )
         end
       else
@@ -192,58 +190,49 @@ module Raif
           build_entry(
             provider: provider,
             model: model,
-            path: path,
-            key: model.fetch("key").to_sym,
+            key: model.key,
             endpoint: nil,
-            adapter: PROVIDER_ADAPTERS.fetch(provider),
-            capabilities: model.fetch("capabilities"),
-            verification: model["verification"]
+            adapter: PROVIDER_ADAPTERS.fetch(provider.name.to_s),
+            capabilities: model.capabilities
           )
         ]
       end
     end
     private_class_method :entries_for_model
 
-    def self.build_entry(provider:, model:, path:, key:, endpoint:, adapter:, capabilities:, verification:)
+    def self.build_entry(provider:, model:, key:, endpoint:, adapter:, capabilities:)
       Entry.new(
         key: key,
-        provider_name: provider,
+        provider_name: provider.name,
         endpoint: endpoint,
         adapter_class_name: adapter,
-        api_name: model.fetch("api_name"),
-        display_name: model.fetch("display_name"),
-        max_completion_tokens: model["max_completion_tokens"],
-        pricing: model.fetch("pricing"),
+        api_name: model.api_name,
+        display_name: model.display_name,
+        max_completion_tokens: model.max_completion_tokens,
+        pricing: model.pricing,
         capabilities: capabilities,
-        lifecycle: model.fetch("lifecycle"),
-        verification: verification,
-        source_path: path,
-        key_base: model["key_base"] || model["key"]
+        lifecycle: model.lifecycle,
+        source_path: model.source_path,
+        key_base: model.key_base
       )
     end
     private_class_method :build_entry
 
-    def self.load_embeddings(path)
-      return [] unless File.exist?(path)
-
-      data = YAML.safe_load_file(path, permitted_classes: [Date], aliases: true)
-      data.fetch("providers").flat_map do |provider_block|
-        provider_block.fetch("models").map do |model|
-          EmbeddingEntry.new(
-            key: model.fetch("key").to_sym,
-            provider_name: provider_block.fetch("provider"),
-            adapter_class_name: provider_block.fetch("adapter"),
-            api_name: model.fetch("api_name"),
-            display_name: model.fetch("display_name"),
-            input_per_million: model.fetch("input_per_million"),
-            default_output_vector_size: model.fetch("default_output_vector_size"),
-            lifecycle: model.fetch("lifecycle"),
-            verification: model["verification"],
-            source_path: path
-          )
-        end
+    def self.embedding_entries_for(provider)
+      provider.models.map do |model|
+        EmbeddingEntry.new(
+          key: model.key,
+          provider_name: provider.name,
+          adapter_class_name: provider.adapter_class_name,
+          api_name: model.api_name,
+          display_name: model.display_name,
+          input_per_million: model.input_per_million,
+          default_output_vector_size: model.default_output_vector_size,
+          lifecycle: model.lifecycle,
+          source_path: model.source_path
+        )
       end
     end
-    private_class_method :load_embeddings
+    private_class_method :embedding_entries_for
   end
 end

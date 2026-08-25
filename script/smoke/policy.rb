@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
+require "raif/model_manifest/smoke_observations"
+
 # Decides the process exit code for a bin/smoke run, and whether a single
-# capability result is trustworthy enough for `--record` to write back into
-# the manifest as a verification.
+# capability result is trustworthy enough for `--record` to write as a
+# durable smoke observation.
 module Smoke
   module Policy
     TOLERABLE_STATUSES = %i[skip timeout].freeze
-    RECORDABLE_STATUSES = %i[pass fail note].freeze
 
     # results - Array of model_result hashes: { key:, explicit:, capabilities: { name => { status:, detail: } } }.
     # explicit_keys - selector strings the caller named directly (Smoke::Selection.resolve's :explicit_keys);
@@ -23,7 +24,7 @@ module Smoke
 
     def self.failing?(model_result, explicit_keys:, strict:)
       capabilities = model_result[:capabilities] || {}
-      return true if capabilities.empty? # an unexecuted required check, never tolerated
+      return true if capabilities.empty?
 
       explicit = explicit?(model_result, explicit_keys)
       capabilities.each_value.any? { |result| failing_capability?(result, explicit: explicit, strict: strict) }
@@ -32,11 +33,11 @@ module Smoke
 
     def self.failing_capability?(result, explicit:, strict:)
       case result[:status]
-      when :pass, :note
+      when :pass, :note, :consistent
+        # :consistent means the provider rejected a claimed-false capability exactly as the
+        # manifest declares -- agreement, not a problem, so it never fails the run either.
         false
       when *TOLERABLE_STATUSES
-        # Tolerated only for a non-explicit (pattern) model outside --strict; --strict drops the
-        # tolerance so a full sweep also catches a stuck or uncredentialed provider.
         explicit || strict
       else
         true # :fail, or an unrecognized status, always fails the run
@@ -49,13 +50,18 @@ module Smoke
     end
     private_class_method :explicit?
 
-    # Whether a single capability result (e.g. { status: :pass, detail: "..." }) may be written back to
-    # the manifest by `--record`. explicit_keys exists only for interface symmetry with exit_code; the
-    # rule ignores it, since a SKIP (missing credentials) or TIMEOUT (a batch job that never finished)
-    # is never a completed verification, explicit selection or not, and recording one would let a
-    # skipped or incomplete check masquerade as a verified capability.
-    def self.recordable?(model_result, explicit_keys: [])
-      RECORDABLE_STATUSES.include?(model_result[:status])
+    # Whether a single capability result (e.g. { status: :pass, detail: "..." }) may be written as a
+    # durable smoke observation by `--record`. Only a hard-oracle pass on a capability in
+    # Raif::ModelManifest::SmokeObservations::RECORDABLE_POSITIVE_CAPABILITIES qualifies: a SKIP
+    # (missing credentials), TIMEOUT (a batch job that never finished), FAIL, NOTE, or CONSISTENT
+    # (the provider rejected a claimed-false capability exactly as the manifest declares) is never a
+    # completed positive verification, and a result explicitly tagged recordable: false (e.g. the
+    # structured_outputs JSON-tool fallback) is not trustworthy evidence of the claimed capability
+    # even though its status is :pass.
+    def self.recordable?(capability, result)
+      Raif::ModelManifest::SmokeObservations::RECORDABLE_POSITIVE_CAPABILITIES.include?(capability.to_sym) &&
+        result[:status] == :pass &&
+        result.fetch(:recordable, true)
     end
   end
 end

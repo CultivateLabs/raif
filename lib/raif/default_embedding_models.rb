@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # GENERATED FILE - DO NOT EDIT.
-# Source of truth: model_manifest/*.yml
+# Source of truth: model_manifest/*.rb
 # Regenerate with: bin/generate_llm_registry
 
 module Raif

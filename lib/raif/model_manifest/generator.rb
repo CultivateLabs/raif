@@ -8,14 +8,14 @@ module Raif
     # Turns RegistryData output into the checked-in artifacts: the two
     # generated Ruby registry files, the en.yml model name sections, the
     # initializer's "Available keys" comment block, and the setup.md
-    # provider key lists. Emitters here are pure string builders; write_all!
-    # is the only method that touches disk.
+    # provider key lists. Emitters here are pure string builders; only
+    # write_all! and its private write_*! helpers touch disk.
     module Generator
       GENERATED_HEADER = <<~RUBY.chomp
         # frozen_string_literal: true
 
         # GENERATED FILE - DO NOT EDIT.
-        # Source of truth: model_manifest/*.yml
+        # Source of truth: model_manifest/*.rb
         # Regenerate with: bin/generate_llm_registry
       RUBY
 
@@ -121,7 +121,8 @@ module Raif
         # Finds the line matching /^    #{section_key}:$/ (4-space indent) and
         # replaces it, and every immediately following line matching
         # /^      \S/ (6-space indent), with replacement_block (which already
-        # includes the header line). Also used directly by the freshness spec.
+        # includes the header line). Composed into locale_en below; the
+        # freshness spec calls that whole-file transform, not this primitive.
         def replace_yaml_section(file_content, section_key, replacement_block)
           lines = file_content.lines
           header_pattern = /^    #{Regexp.escape(section_key)}:$/
@@ -135,8 +136,9 @@ module Raif
         end
 
         # Replaces the content strictly between (not including) the lines
-        # containing begin_marker and end_marker. Also used directly by the
-        # freshness spec.
+        # containing begin_marker and end_marker. Composed into initializer
+        # and setup_md below; the freshness spec calls those whole-file
+        # transforms, not this primitive.
         def replace_between_markers(file_content, begin_marker, end_marker, replacement)
           lines = file_content.lines
           begin_index = lines.index { |line| line.include?(begin_marker) }
@@ -148,6 +150,44 @@ module Raif
           end_index = begin_index + 1 + offset
 
           (lines[0..begin_index] + block_lines(replacement) + lines[end_index..]).join
+        end
+
+        # Whole-file transforms: each takes a file's current content and
+        # returns it with its generated region(s) refreshed from the
+        # manifest, leaving everything else untouched. write_all! uses these
+        # to produce what it writes to disk, and the freshness spec uses them
+        # directly (source == transform(manifest, source) when nothing has
+        # drifted).
+        def locale_en(manifest, content)
+          content
+            .then { |text| replace_yaml_section(text, "model_names", model_names_yaml_block(manifest)) }
+            .then { |text| replace_yaml_section(text, "embedding_model_names", embedding_model_names_yaml_block(manifest)) }
+        end
+
+        def initializer(manifest, content)
+          content
+            .then do |text|
+              replace_between_markers(text, INITIALIZER_BEGIN_MARKER, INITIALIZER_END_MARKER, initializer_keys_block(manifest))
+            end
+            .then do |text|
+              replace_between_markers(
+                text,
+                INITIALIZER_EMBEDDING_BEGIN_MARKER,
+                INITIALIZER_EMBEDDING_END_MARKER,
+                initializer_embedding_keys_block(manifest)
+              )
+            end
+        end
+
+        def setup_md(manifest, content)
+          SETUP_MD_SECTIONS.reduce(content) do |text, section|
+            replace_between_markers(
+              text,
+              "<!-- BEGIN GENERATED MODEL KEYS: #{section} -->",
+              "<!-- END GENERATED MODEL KEYS: #{section} -->",
+              setup_md_keys_block(manifest, section)
+            )
+          end
         end
 
         def write_all!(manifest, root: Raif::Engine.root)
@@ -164,34 +204,17 @@ module Raif
 
         def write_locale_en!(manifest, root)
           path = File.join(root, LOCALE_EN_RELATIVE_PATH)
-          content = File.read(path)
-          content = replace_yaml_section(content, "model_names", model_names_yaml_block(manifest))
-          content = replace_yaml_section(content, "embedding_model_names", embedding_model_names_yaml_block(manifest))
-          File.write(path, content)
+          File.write(path, locale_en(manifest, File.read(path)))
         end
 
         def write_initializer!(manifest, root)
           path = File.join(root, INITIALIZER_RELATIVE_PATH)
-          content = File.read(path)
-          content = replace_between_markers(content, INITIALIZER_BEGIN_MARKER, INITIALIZER_END_MARKER, initializer_keys_block(manifest))
-          content = replace_between_markers(
-            content, INITIALIZER_EMBEDDING_BEGIN_MARKER, INITIALIZER_EMBEDDING_END_MARKER, initializer_embedding_keys_block(manifest)
-          )
-          File.write(path, content)
+          File.write(path, initializer(manifest, File.read(path)))
         end
 
         def write_setup_md!(manifest, root)
           path = File.join(root, SETUP_MD_RELATIVE_PATH)
-          content = File.read(path)
-          SETUP_MD_SECTIONS.each do |section|
-            content = replace_between_markers(
-              content,
-              "<!-- BEGIN GENERATED MODEL KEYS: #{section} -->",
-              "<!-- END GENERATED MODEL KEYS: #{section} -->",
-              setup_md_keys_block(manifest, section)
-            )
-          end
-          File.write(path, content)
+          File.write(path, setup_md(manifest, File.read(path)))
         end
 
         # An empty block yields no lines (an empty section collapses rather
@@ -238,8 +261,8 @@ module Raif
           case field
           when :key then "#{pad}key: :#{value},"
           when :api_name then "#{pad}api_name: #{value.inspect},"
-          when :input_token_cost then "#{pad}input_token_cost: #{entry.pricing.fetch("input_per_million").to_f} / 1_000_000,"
-          when :output_token_cost then "#{pad}output_token_cost: #{entry.pricing.fetch("output_per_million").to_f} / 1_000_000,"
+          when :input_token_cost then "#{pad}input_token_cost: #{entry.pricing.fetch(:input_per_million).to_f} / 1_000_000,"
+          when :output_token_cost then "#{pad}output_token_cost: #{entry.pricing.fetch(:output_per_million).to_f} / 1_000_000,"
           when :max_completion_tokens then "#{pad}max_completion_tokens: #{underscored_integer(value)},"
           when :model_provider_settings then "#{pad}model_provider_settings: { #{inline_settings(value)} },"
           when :supported_provider_managed_tools then supported_provider_managed_tools_field(value, pad)

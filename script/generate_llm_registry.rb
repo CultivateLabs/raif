@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Regenerates all artifacts derived from model_manifest/*.yml.
+# Regenerates all artifacts derived from model_manifest/*.rb.
 # See bin/generate_llm_registry.
 require "raif/model_manifest"
 require "raif/model_manifest/registry_data"
