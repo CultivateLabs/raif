@@ -33,6 +33,7 @@
 #  raif_archive_id                :bigint
 #  raif_model_completion_batch_id :bigint
 #  raif_model_completion_id       :bigint
+#  raif_task_archive_id           :bigint
 #  source_id                      :bigint
 #
 # Indexes
@@ -41,6 +42,7 @@
 #  index_raif_inference_cost_events_on_original_completion_id     (original_model_completion_id)
 #  index_raif_inference_cost_events_on_raif_archive_id            (raif_archive_id)
 #  index_raif_inference_cost_events_on_raif_model_completion_id   (raif_model_completion_id) UNIQUE
+#  index_raif_inference_cost_events_on_raif_task_archive_id       (raif_task_archive_id)
 #  index_raif_inference_cost_events_on_source_type_and_source_id  (source_type,source_id)
 #  index_raif_inference_cost_events_on_source_type_incurred_at    (source_type,incurred_at)
 #
@@ -66,6 +68,13 @@ class Raif::InferenceCostEvent < Raif::ApplicationRecord
     class_name: "Raif::Archive",
     optional: true,
     inverse_of: :raif_inference_cost_events
+
+  # The task-side twin of raif_archive, stamped by Raif::ArchiveTasksJob.
+  # source keeps pointing at the culled task id, so this stamp is what tells
+  # an archived task apart from one deleted some other way.
+  belongs_to :raif_task_archive,
+    class_name: "Raif::Archive",
+    optional: true
 
   validates :original_model_completion_id, presence: true
   validates :llm_model_key, presence: true

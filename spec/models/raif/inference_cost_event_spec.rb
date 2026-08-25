@@ -30,6 +30,7 @@ require "rails_helper"
 #  raif_archive_id                :bigint
 #  raif_model_completion_batch_id :bigint
 #  raif_model_completion_id       :bigint
+#  raif_task_archive_id           :bigint
 #  source_id                      :bigint
 #
 # Indexes
@@ -38,6 +39,7 @@ require "rails_helper"
 #  index_raif_inference_cost_events_on_original_completion_id     (original_model_completion_id)
 #  index_raif_inference_cost_events_on_raif_archive_id            (raif_archive_id)
 #  index_raif_inference_cost_events_on_raif_model_completion_id   (raif_model_completion_id) UNIQUE
+#  index_raif_inference_cost_events_on_raif_task_archive_id       (raif_task_archive_id)
 #  index_raif_inference_cost_events_on_source_type_and_source_id  (source_type,source_id)
 #  index_raif_inference_cost_events_on_source_type_incurred_at    (source_type,incurred_at)
 #

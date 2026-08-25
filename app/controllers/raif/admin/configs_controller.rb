@@ -62,6 +62,7 @@ module Raif
           { key: "request_write_timeout", value: @config.request_write_timeout },
           { key: "streaming_update_chunk_size_threshold", value: @config.streaming_update_chunk_size_threshold },
           { key: "task_creator_optional", value: @config.task_creator_optional },
+          { key: "task_retention_period", value: format_duration(@config.task_retention_period) },
           { key: "task_system_prompt_intro", value: truncate_text(@config.task_system_prompt_intro, 100) },
           { key: "user_tool_types", value: format_array(@config.user_tool_types) }
         ]

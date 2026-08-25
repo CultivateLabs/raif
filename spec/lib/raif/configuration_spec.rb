@@ -40,7 +40,8 @@ RSpec.describe Raif::Configuration do
         originals = {
           archive_enabled: Raif.config.archive_enabled,
           archive_storage: Raif.config.archive_storage,
-          model_completion_retention_period: Raif.config.model_completion_retention_period
+          model_completion_retention_period: Raif.config.model_completion_retention_period,
+          task_retention_period: Raif.config.task_retention_period
         }
         example.run
       ensure
@@ -55,6 +56,7 @@ RSpec.describe Raif::Configuration do
         expect(config.archive_enabled).to be(false)
         expect(config.archive_storage).to be_nil
         expect(config.model_completion_retention_period).to be_nil
+        expect(config.task_retention_period).to be_nil
       end
 
       it "allows a valid enabled configuration" do
@@ -109,6 +111,24 @@ RSpec.describe Raif::Configuration do
         Raif.config.archive_enabled = true
         Raif.config.archive_storage = storage
         Raif.config.model_completion_retention_period = 1.month
+
+        expect { Raif.config.validate! }.not_to raise_error
+      end
+
+      it "rejects a task retention period below 1 month, even when archiving is disabled" do
+        Raif.config.archive_enabled = false
+        Raif.config.task_retention_period = 3.weeks
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /task_retention_period must be at least 1 month/
+        )
+      end
+
+      it "accepts a task retention period of exactly 1 month" do
+        Raif.config.archive_enabled = true
+        Raif.config.archive_storage = storage
+        Raif.config.task_retention_period = 1.month
 
         expect { Raif.config.validate! }.not_to raise_error
       end

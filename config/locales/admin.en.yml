@@ -145,6 +145,7 @@ en:
         system_prompt: System Prompt
         system_prompt_archived_notice: Archived with the model completion.
         task: Task
+        task_archived_notice: The task row (prompt, system prompt, raw response and run settings) was archived to external storage and removed from the database. The cost and token data below survives on the task's inference cost event.
         tasks: Tasks
         tool_arguments: Tool Arguments
         tool_call: Tool Call
@@ -322,6 +323,9 @@ en:
           show_model_breakdown: Show model breakdown
           title: Task Stats
       tasks:
+        archived:
+          back_to_tasks: Back to Tasks
+          title: 'Task #%{id}'
         show:
           back_to_tasks: Back to Tasks
           title: "%{type} #%{id}"

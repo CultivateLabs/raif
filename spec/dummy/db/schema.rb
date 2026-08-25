@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_05_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_24_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -158,6 +158,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_000001) do
     t.bigint "raif_archive_id"
     t.bigint "raif_model_completion_batch_id"
     t.bigint "raif_model_completion_id"
+    t.bigint "raif_task_archive_id"
     t.integer "retry_count", default: 0, null: false
     t.string "source_class_name"
     t.bigint "source_id"
@@ -169,6 +170,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_05_000001) do
     t.index ["original_model_completion_id"], name: "index_raif_inference_cost_events_on_original_completion_id"
     t.index ["raif_archive_id"], name: "index_raif_inference_cost_events_on_raif_archive_id"
     t.index ["raif_model_completion_id"], name: "index_raif_inference_cost_events_on_raif_model_completion_id", unique: true
+    t.index ["raif_task_archive_id"], name: "index_raif_inference_cost_events_on_raif_task_archive_id"
     t.index ["source_type", "incurred_at"], name: "index_raif_inference_cost_events_on_source_type_incurred_at"
     t.index ["source_type", "source_id"], name: "index_raif_inference_cost_events_on_source_type_and_source_id"
   end
