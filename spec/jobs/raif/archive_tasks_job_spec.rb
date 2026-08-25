@@ -106,6 +106,17 @@ RSpec.describe Raif::ArchiveTasksJob, type: :job do
       expect(lines.drop(1).map { |line| JSON.parse(line)["prompt"] }).to match_array(old_tasks.map(&:prompt))
     end
 
+    it "archives a task whose STI class the host has since deleted, keeping its type in the object" do
+      orphan = create_task
+      orphan.update_columns(type: "Raif::Tasks::LongSinceDeleted")
+
+      expect { described_class.new.perform }.not_to raise_error
+
+      expect(Raif::Task.exists?(orphan.id)).to be(false)
+      line = read_archived_lines(task_archives.sole).drop(1).map { |l| JSON.parse(l) }.find { |r| r["id"] == orphan.id }
+      expect(line["type"]).to eq("Raif::Tasks::LongSinceDeleted")
+    end
+
     it "archives nonterminal tasks through the same path" do
       pending_task = create_task
       pending_task.update_columns(started_at: nil, completed_at: nil, failed_at: nil, updated_at: 14.months.ago)

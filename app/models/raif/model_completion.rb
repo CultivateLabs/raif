@@ -368,9 +368,23 @@ private
   # collapsing the event's grouping to the generic base class; fall back to
   # the stored source_type otherwise.
   def resolved_source_class_name
-    source&.class&.name || source_type
+    klass = source&.class
+    return source_type if klass.nil?
+    # A row that came back AS its own base class is not authoritative: since
+    # Raif::Task.find_sti_class resolves a subclass the host deleted to
+    # Raif::Task rather than raising, a stale row is indistinguishable here
+    # from a genuine base-class row. Ask the inheritance column, which still
+    # names the concrete class either way. Every other row answers from the
+    # class it instantiated as, with no extra query.
+    return stored_source_sti_type || klass.name if instantiated_as_sti_base?(klass)
+
+    klass.name
   rescue ActiveRecord::SubclassNotFound, NameError
     stored_source_sti_type || source_type
+  end
+
+  def instantiated_as_sti_base?(klass)
+    klass.name == source_type && klass.column_names.include?(klass.inheritance_column.to_s)
   end
 
   # Reads the concrete class name straight off the source row's inheritance

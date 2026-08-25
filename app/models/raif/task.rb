@@ -78,6 +78,17 @@ module Raif
     after_initialize -> { self.available_model_tools ||= [] }
     after_initialize -> { self.run_with ||= {} }
 
+    # A task's subclass lives in the host application and can be deleted while
+    # its rows remain. Reading such a row must not raise: it is the oldest
+    # rows that are most likely to name a class that is gone, and those are
+    # exactly the ones Raif::ArchiveTasksJob has to serialize and the admin
+    # has to list. The row's own columns are all that either path needs.
+    def self.find_sti_class(type_name)
+      super
+    rescue ActiveRecord::SubclassNotFound
+      Raif::Task
+    end
+
     def status
       if completed_at?
         :completed
