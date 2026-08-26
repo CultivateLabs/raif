@@ -82,6 +82,20 @@ RSpec.describe "model_manifest validity" do
         expect(entry.pricing.fetch(:output_per_million)).to be > 0
       end
 
+      # note documents promotional or otherwise unusual pricing; valid_until records when a
+      # documented rate is scheduled to end. A past valid_until is deliberately NOT a failure
+      # here: it is a /model-check finding for a human to re-verify, not a build break.
+      it "has well-typed optional pricing annotations" do
+        unknown = entry.pricing.keys - %i[input_per_million output_per_million note valid_until]
+        expect(unknown).to be_empty, "unknown pricing keys: #{unknown.inspect}"
+
+        note = entry.pricing[:note]
+        expect(note).to be_a(String).and be_present if note
+
+        valid_until = entry.pricing[:valid_until]
+        expect(valid_until).to be_a(Date) if valid_until
+      end
+
       it "has Date objects for whichever lifecycle dates it declares" do
         %i[added_on deprecated_on retirement_date].each do |field|
           value = entry.lifecycle.fetch(field)

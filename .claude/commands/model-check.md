@@ -14,6 +14,7 @@ Steps:
 3. Cross-reference against the manifest and report findings in these groups, each item with its source cited:
    - models available upstream but absent from the manifest
    - pricing differences (manifest per-million vs published)
+   - pricing annotations needing re-verification: entries whose `pricing[:valid_until]` is past or within 30 days, and entries whose `pricing[:note]` describes a promotion the provider no longer documents
    - announced deprecations or retirements not recorded in lifecycle fields
    - recorded retirement_dates within 60 days or past
    - deprecated models whose replacement_key is itself deprecated, or with neither replacement_key nor migration_note

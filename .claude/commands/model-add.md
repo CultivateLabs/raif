@@ -8,7 +8,7 @@ Provider documentation plus the user's approved proposal determines manifest tru
 
 Steps:
 1. Research the model from the argument plus the provider's `references` URLs in `model_manifest/<provider>.rb`: API name, per-million pricing, max output tokens, capabilities (temperature parameter support, structured outputs, tool calling, streaming, batch API availability, image/PDF input, provider-managed tools).
-2. Propose a complete manifest entry in chat: every field, with a source citation per fact and every unverifiable guess flagged as a guess (for example "no batch API documented, claiming batch_inference: false"). For OpenAI models, propose both endpoints (or responses-only). Ask for approval.
+2. Propose a complete manifest entry in chat: every field, with a source citation per fact and every unverifiable guess flagged as a guess (for example "no batch API documented, claiming batch_inference: false"). When the provider documents promotional, temporary, or threshold-dependent pricing, include the optional pricing keys: `note:` describing the situation and, when the provider states an end date, `valid_until: Date.new(...)`. For OpenAI models, propose both endpoints (or responses-only). Ask for approval.
 3. On approval:
    - if the session is on main or an unrelated branch, suggest `model-add-<key>` off main and create it once the user agrees; if already on a suitable branch, say so and continue
    - add the entry to `model_manifest/<provider>.rb` (status: active, added_on: today, display_name following the existing naming pattern for that provider)

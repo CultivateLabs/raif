@@ -211,6 +211,31 @@ RSpec.describe Raif::ModelManifest do
       expect(entry.capabilities.fetch(:provider_managed_tools)).to eq([:web_search])
     end
 
+    it "carries optional pricing note and valid_until through to the entry" do
+      manifest = load_manifest_source(<<~RUBY)
+        provider :x_ai do |p|
+          p.model(
+            key: :x_ai_discounted_model,
+            api_name: "grok-discounted-1",
+            display_name: "xAI Discounted Model",
+            pricing: {
+              input_per_million: 2.0,
+              output_per_million: 10.0,
+              note: "Launch discount; standard rate 5.00/25.00",
+              valid_until: Date.new(2026, 10, 1)
+            },
+            capabilities: { streaming: true },
+            lifecycle: { status: :active }
+          )
+        end
+      RUBY
+
+      pricing = manifest.llm_entries.sole.pricing
+      expect(pricing.fetch(:note)).to eq("Launch discount; standard rate 5.00/25.00")
+      expect(pricing.fetch(:valid_until)).to eq(Date.new(2026, 10, 1))
+      expect(pricing).to be_frozen
+    end
+
     it "keeps one file's declarations out of the next file's context" do
       File.write(File.join(@dsl_dir, "a_provider.rb"), "provider(:anthropic) { |p| p.references(pricing: \"https://a.example\") }\n")
       File.write(File.join(@dsl_dir, "b_provider.rb"), "provider(:x_ai) { |p| p.references(pricing: \"https://b.example\") }\n")
