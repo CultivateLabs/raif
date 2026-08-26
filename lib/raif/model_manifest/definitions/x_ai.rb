@@ -8,6 +8,27 @@ provider :x_ai do |p|
   )
 
   p.model(
+    key: :x_ai_grok_4_6,
+    api_name: "grok-4.6",
+    display_name: "xAI Grok 4.6",
+    pricing: { input_per_million: 2.0, output_per_million: 6.0 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
+    }
+  )
+
+  p.model(
     key: :x_ai_grok_4_5,
     api_name: "grok-4.5",
     display_name: "xAI Grok 4.5",
