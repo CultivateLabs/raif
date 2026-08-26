@@ -528,6 +528,27 @@ provider :open_router do |p|
   )
 
   p.model(
+    key: :open_router_grok_4_6,
+    api_name: "x-ai/grok-4.6",
+    display_name: "Grok 4.6 (via OpenRouter)",
+    pricing: { input_per_million: 2.0, output_per_million: 6.0 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
+    }
+  )
+
+  p.model(
     key: :open_router_google_gemma_4_31b_it,
     api_name: "google/gemma-4-31b-it",
     display_name: "Google Gemma 4 31B IT (via OpenRouter)",

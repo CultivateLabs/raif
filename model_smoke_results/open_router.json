@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "models": {
+    "open_router_grok_4_6": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-08-26T17:05:34Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-08-26T17:05:34Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-08-26T17:05:34Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-08-26T17:05:34Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-08-26T17:05:34Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-08-26T17:05:34Z"
+      }
+    }
+  }
+}
