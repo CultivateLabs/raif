@@ -531,7 +531,13 @@ provider :open_router do |p|
     key: :open_router_grok_4_6,
     api_name: "x-ai/grok-4.6",
     display_name: "Grok 4.6 (via OpenRouter)",
-    pricing: { input_per_million: 2.0, output_per_million: 6.0 },
+    pricing: {
+      input_per_million: 2.0,
+      output_per_million: 6.0,
+      note: "Rates are for OpenRouter default routing to the standard xAI endpoint. The xAI priority endpoint is $4.00 / $12.00 " \
+        "and the Amazon Bedrock endpoint is $2.20 / $6.60 per million. Prompts of 200K tokens or more bill at double rates on every endpoint. " \
+        "No promotional pricing was documented at launch."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
