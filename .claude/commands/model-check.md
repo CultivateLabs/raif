@@ -4,7 +4,7 @@ Patrol raif's model registry for drift against provider reality. Arguments (opti
 
 Rules that apply to every step:
 - Research first, report second, act only after explicit approval. Never edit files before the user picks items to act on.
-- One PR-sized branch per concern. NEVER push or open a PR without explicit approval of that specific branch.
+- One PR-sized branch per concern, suggested and created only with the user's agreement. NEVER run `git commit`, `git push`, or open a PR yourself: propose each commit (staged file list plus drafted message) and act only after the user approves it.
 - No em dashes or en dashes in anything you write (CHANGELOG, commits, docs). No AI attribution in commits. Keep wording generic to raif.
 - Provider documentation plus the user's approved proposal determines manifest truth. Smoke output is supporting runtime evidence. Never change a declared capability solely because a generic API request failed.
 
@@ -21,7 +21,7 @@ Steps:
 4. Ask which findings to act on (AskUserQuestion, multiSelect).
 5. For each approved finding, ask: handle here sequentially, or write a handoff doc per concern to `docs/handoffs/` (Goal / Current State / Key Decisions / Next Steps format) for parallel sessions.
 6. Acting on a finding in-session:
-   - pricing update: edit the manifest pricing, run `bin/generate_llm_registry`, run `bundle exec rspec spec/lib/raif/model_manifest_validity_spec.rb spec/lib/raif/generated_artifacts_spec.rb`, add a CHANGELOG bullet, commit on a `model-pricing-<provider>` branch
+   - pricing update: edit the manifest pricing, run `bin/generate_llm_registry`, run `bundle exec rspec spec/lib/raif/model_manifest_validity_spec.rb spec/lib/raif/generated_artifacts_spec.rb`, add a CHANGELOG bullet, suggest a `model-pricing-<provider>` branch, and propose the commit (diff, files to stage, drafted message) for the user to approve
    - new model: switch to the /model-add workflow with what you learned
    - deprecation/retirement: switch to the /model-retire workflow
    - if the user supplied a URL that proved useful, add it to that provider's `references` in the manifest
