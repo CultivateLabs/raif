@@ -229,7 +229,9 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5.3",
     pricing: { input_per_million: 1.75, output_per_million: 14.0 },
     lifecycle: {
-      status: :active
+      status: :retired,
+      replacement_key: :open_ai_gpt_5_6_sol,
+      migration_note: "No general-purpose gpt-5.3 API model was published; OpenAI only offered gpt-5.3-codex and the shut-down gpt-5.3-chat-latest."
     },
     endpoints: {
       completions: {
