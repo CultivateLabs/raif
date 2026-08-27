@@ -41,36 +41,39 @@ class Raif::StreamingResponses::Google
 
 private
 
+  # Parts are accumulated in arrival order, not by their index within a chunk:
+  # Gemini 3 sends a function call as parts[0] of one chunk and then a finish
+  # chunk whose parts[0] is an empty text delta, which would overwrite the call.
   def process_content_parts(parts)
     delta = nil
 
-    parts.each_with_index do |part, index|
+    parts.each do |part|
       if part.key?("text")
         delta = part["text"]
-        accumulate_text_part(part, index)
+        accumulate_text_part(part)
       else
-        # For non-text parts (e.g., functionCall), just store directly.
-        # Note: This works because we don't enable streamFunctionCallArguments in the API request.
-        # Without that opt-in flag, function calls arrive complete in a single chunk.
-        # If streaming function call arguments is enabled in the future (Gemini 3+ models),
-        # this would need to accumulate partialArgs similar to how we accumulate text.
-        @response_json["candidates"][0]["content"]["parts"][index] = part
+        # functionCall parts arrive complete in one chunk because the request does
+        # not opt into streamFunctionCallArguments; enabling that would require
+        # accumulating partialArgs the way text is accumulated.
+        accumulated_parts << part
       end
     end
 
     delta
   end
 
-  def accumulate_text_part(part, index)
-    existing_part = @response_json.dig("candidates", 0, "content", "parts", index)
+  def accumulate_text_part(part)
+    last_part = accumulated_parts.last
 
-    if existing_part.present? && existing_part.key?("text")
-      # Accumulate text from incremental chunks
-      existing_part["text"] += part["text"]
-    else
-      # First text chunk for this index
-      @response_json["candidates"][0]["content"]["parts"][index] = part.dup
+    if last_part.present? && last_part.key?("text")
+      last_part["text"] += part["text"]
+    elsif !part["text"].empty?
+      accumulated_parts << part.dup
     end
+  end
+
+  def accumulated_parts
+    @response_json["candidates"][0]["content"]["parts"]
   end
 
 end
