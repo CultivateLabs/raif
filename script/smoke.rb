@@ -78,21 +78,27 @@ def run_all(selection, options)
 
   threads = entries.group_by(&:provider_name).map do |provider_name, group|
     Thread.new do
-      PROGRESS_MUTEX.synchronize do
-        warn Smoke::Terminal.paint("progress: starting #{provider_name} (#{group.size} models)", :bold, stream: $stderr)
-      end
+      # Unlike Raif::Evals::WorkerPool, no connection_pool.with_connection here: that would pin a
+      # connection per provider for the whole run, and the manifest can hold more providers than
+      # the dummy app's default pool of 5. The short writes in Raif::Llm#chat check their
+      # connection back in after each query, so the pool is shared fine without it.
+      Rails.application.executor.wrap do
+        PROGRESS_MUTEX.synchronize do
+          warn Smoke::Terminal.paint("progress: starting #{provider_name} (#{group.size} models)", :bold, stream: $stderr)
+        end
 
-      missing_credentials = Smoke::Credentials.missing_for?(provider_name)
+        missing_credentials = Smoke::Credentials.missing_for?(provider_name)
 
-      if missing_credentials
-        instructions = Smoke::Credentials.instructions_for(provider_name)
-        PROGRESS_MUTEX.synchronize { warn "NOTE #{provider_name}: missing credentials, skipping #{group.size} model(s). #{instructions}" }
-      end
+        if missing_credentials
+          instructions = Smoke::Credentials.instructions_for(provider_name)
+          PROGRESS_MUTEX.synchronize { warn "NOTE #{provider_name}: missing credentials, skipping #{group.size} model(s). #{instructions}" }
+        end
 
-      group.map do |entry|
-        result = run_entry(entry, options, selection[:explicit_keys], missing_credentials: missing_credentials)
-        PROGRESS_MUTEX.synchronize { warn "progress: #{result[:key]} #{Smoke::Report.progress_summary(result[:capabilities])}" }
-        result
+        group.map do |entry|
+          result = run_entry(entry, options, selection[:explicit_keys], missing_credentials: missing_credentials)
+          PROGRESS_MUTEX.synchronize { warn "progress: #{result[:key]} #{Smoke::Report.progress_summary(result[:capabilities])}" }
+          result
+        end
       end
     end
   end
