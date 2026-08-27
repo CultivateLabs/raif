@@ -11,7 +11,7 @@ module Raif::Concerns::ProviderManagedToolCalls
     # completion's response payload is not mutated after first access.
     @provider_managed_tool_calls ||= begin
       tool_calls = extract_provider_managed_tool_calls
-      tool_calls = inferred_provider_managed_tool_calls if tool_calls.empty?
+      tool_calls += inferred_provider_managed_tool_calls if tool_calls.none? { |call| call["tool_name"] == "web_search" }
 
       tool_calls.map do |tool_call|
         next tool_call unless tool_call["tool_name"] == "web_search"
@@ -55,8 +55,39 @@ private
         # OpenAI Responses persists provider-managed calls as top-level typed
         # blocks like `web_search_call`, `code_interpreter`, etc.
         build_provider_managed_tool_call_from_type(block)
+      else
+        # Google has no `type`; its code execution shows up as an untyped
+        # `executableCode` part followed by a `codeExecutionResult` part.
+        build_provider_managed_code_execution_call(block, response_blocks) if block.key?("executableCode")
       end
     end
+  end
+
+  def build_provider_managed_code_execution_call(block, response_blocks)
+    return unless provider_managed_tool_available?("code_execution")
+
+    code = block["executableCode"]
+    result = google_code_execution_result_for(block, response_blocks)&.except("id")
+    {
+      "tool_name" => "code_execution",
+      "provider_tool_call_id" => code["id"],
+      "status" => result&.dig("outcome"),
+      "arguments" => code.except("id").presence,
+      "sources" => [],
+      "raw_result" => result.presence,
+      "inferred" => false
+    }
+  end
+
+  # Gemini 3 stamps a shared `id` on the code part and its result; older Gemini
+  # models omit it, so the nth result is paired with the nth code part instead.
+  def google_code_execution_result_for(block, response_blocks)
+    results = response_blocks.filter_map { |candidate| candidate["codeExecutionResult"] }
+    id = block.dig("executableCode", "id")
+    return results.find { |result| result["id"] == id } if id.present?
+
+    code_blocks = response_blocks.select { |candidate| candidate.key?("executableCode") }
+    results[code_blocks.index { |candidate| candidate.equal?(block) }]
   end
 
   def build_provider_managed_server_tool_call(block, result_blocks_by_tool_use_id)
