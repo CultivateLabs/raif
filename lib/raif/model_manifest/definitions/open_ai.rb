@@ -301,7 +301,11 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5",
     pricing: { input_per_million: 1.25, output_per_million: 10.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_gpt_5_6_sol,
+      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_sol."
     },
     endpoints: {
       completions: {
@@ -409,7 +413,11 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5 Mini",
     pricing: { input_per_million: 0.25, output_per_million: 2.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_gpt_5_6_terra,
+      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_terra."
     },
     endpoints: {
       completions: {
@@ -445,7 +453,11 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5 Nano",
     pricing: { input_per_million: 0.05, output_per_million: 0.4 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_gpt_5_6_luna,
+      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_luna."
     },
     endpoints: {
       completions: {
@@ -553,7 +565,11 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-3.5 Turbo",
     pricing: { input_per_million: 0.5, output_per_million: 1.5 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 4, 22),
+      retirement_date: Date.new(2026, 10, 23),
+      replacement_key: :open_ai_gpt_5_6_terra,
+      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_terra."
     },
     endpoints: {
       completions: {
@@ -661,7 +677,11 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-4.1 Nano",
     pricing: { input_per_million: 0.1, output_per_million: 0.4 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 4, 22),
+      retirement_date: Date.new(2026, 10, 23),
+      replacement_key: :open_ai_gpt_5_6_luna,
+      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_luna."
     },
     endpoints: {
       completions: {
@@ -697,7 +717,11 @@ provider :open_ai do |p|
     display_name: "OpenAI o1",
     pricing: { input_per_million: 15.0, output_per_million: 60.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 4, 22),
+      retirement_date: Date.new(2026, 10, 23),
+      replacement_key: :open_ai_gpt_5_6_sol,
+      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_sol."
     },
     endpoints: {
       completions: {
@@ -733,7 +757,11 @@ provider :open_ai do |p|
     display_name: "OpenAI o3",
     pricing: { input_per_million: 2.0, output_per_million: 8.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_gpt_5_6_sol,
+      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_sol."
     },
     endpoints: {
       completions: {
@@ -769,7 +797,11 @@ provider :open_ai do |p|
     display_name: "OpenAI o3 Mini",
     pricing: { input_per_million: 1.1, output_per_million: 4.4 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 4, 22),
+      retirement_date: Date.new(2026, 10, 23),
+      replacement_key: :open_ai_gpt_5_6_sol,
+      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_sol."
     },
     endpoints: {
       completions: {
@@ -805,7 +837,11 @@ provider :open_ai do |p|
     display_name: "OpenAI o4 Mini",
     pricing: { input_per_million: 1.1, output_per_million: 4.4 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 4, 22),
+      retirement_date: Date.new(2026, 10, 23),
+      replacement_key: :open_ai_gpt_5_6_terra,
+      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_terra."
     },
     endpoints: {
       completions: {
@@ -841,7 +877,11 @@ provider :open_ai do |p|
     display_name: "OpenAI o1 Pro",
     pricing: { input_per_million: 150.0, output_per_million: 600.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 4, 22),
+      retirement_date: Date.new(2026, 10, 23),
+      replacement_key: :open_ai_responses_gpt_5_6_sol,
+      migration_note: "OpenAI suggests gpt-5.6-sol with reasoning.mode: pro, a mode raif does not expose."
     },
     endpoints: {
       responses: {
@@ -865,7 +905,11 @@ provider :open_ai do |p|
     display_name: "OpenAI o3 Pro",
     pricing: { input_per_million: 20.0, output_per_million: 80.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_responses_gpt_5_6_sol,
+      migration_note: "OpenAI suggests gpt-5.6-sol with reasoning.mode: pro, a mode raif does not expose."
     },
     endpoints: {
       responses: {
@@ -889,7 +933,11 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5 Pro",
     pricing: { input_per_million: 15.0, output_per_million: 120.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_responses_gpt_5_6_sol,
+      migration_note: "OpenAI suggests gpt-5.6-sol with reasoning.mode: pro, a mode raif does not expose."
     },
     endpoints: {
       responses: {
