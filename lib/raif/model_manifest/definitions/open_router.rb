@@ -148,6 +148,59 @@ provider :open_router do |p|
   )
 
   p.model(
+    key: :open_router_gemini_3_7_flash,
+    api_name: "google/gemini-3.7-flash",
+    display_name: "Gemini 3.7 Flash (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.75,
+      output_per_million: 3.75,
+      note: "Mirrors Google's introductory rate through 2026-12-31 (standard rate 1.50 / 7.50 from 2027-01-01); " \
+        "OpenRouter's Vertex-backed endpoint is currently discounted a further 75% to 0.375 / 1.875 depending on routing",
+      valid_until: Date.new(2026, 12, 31)
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
+    }
+  )
+
+  p.model(
+    key: :open_router_gemini_3_6_flash,
+    api_name: "google/gemini-3.6-flash",
+    display_name: "Gemini 3.6 Flash (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.75,
+      output_per_million: 3.75,
+      note: "Mirrors Google's introductory rate through 2026-12-31; standard rate is 1.50 input / 7.50 output from 2027-01-01",
+      valid_until: Date.new(2026, 12, 31)
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
+    }
+  )
+
+  p.model(
     key: :open_router_gemini_3_5_flash,
     api_name: "google/gemini-3.5-flash",
     display_name: "Gemini 3.5 Flash (via OpenRouter)",
@@ -164,6 +217,27 @@ provider :open_router do |p|
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :open_router_gemini_3_5_flash_lite,
+    api_name: "google/gemini-3.5-flash-lite",
+    display_name: "Gemini 3.5 Flash-Lite (via OpenRouter)",
+    pricing: { input_per_million: 0.3, output_per_million: 2.5 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
     }
   )
 
