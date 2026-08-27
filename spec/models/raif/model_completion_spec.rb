@@ -987,6 +987,26 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       ])
     end
 
+    it "still infers google web search from citations when code execution was also reported" do
+      model_completion = described_class.new(
+        llm_model_key: "google_gemini_2_5_flash",
+        model_api_name: "gemini-2.5-flash",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch, Raif::ModelTools::ProviderManaged::CodeExecution],
+        response_array: [
+          { "executableCode" => { "language" => "PYTHON", "code" => "print(2024 - 1993)\n" } },
+          { "codeExecutionResult" => { "outcome" => "OUTCOME_OK", "output" => "31\n" } },
+          { "text" => "Ruby was released 31 years ago." }
+        ],
+        citations: [{ "title" => "wikipedia.org", "url" => "https://en.wikipedia.org/wiki/Ruby_(programming_language)" }]
+      )
+
+      expect(model_completion.provider_managed_tool_calls.map { |call| call.slice("tool_name", "inferred") }).to eq([
+        { "tool_name" => "code_execution", "inferred" => false },
+        { "tool_name" => "web_search", "inferred" => true }
+      ])
+      expect(model_completion.tool_call_summary).to eq("2: code_execution, web_search")
+    end
+
     it "ignores google code execution parts when the tool was not made available" do
       model_completion = described_class.new(
         llm_model_key: "google_gemini_2_5_flash",

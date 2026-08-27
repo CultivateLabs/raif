@@ -11,7 +11,7 @@ module Raif::Concerns::ProviderManagedToolCalls
     # completion's response payload is not mutated after first access.
     @provider_managed_tool_calls ||= begin
       tool_calls = extract_provider_managed_tool_calls
-      tool_calls = inferred_provider_managed_tool_calls if tool_calls.empty?
+      tool_calls += inferred_provider_managed_tool_calls if tool_calls.none? { |call| call["tool_name"] == "web_search" }
 
       tool_calls.map do |tool_call|
         next tool_call unless tool_call["tool_name"] == "web_search"
