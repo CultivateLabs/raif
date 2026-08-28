@@ -232,7 +232,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_145053) do
     t.integer "prompt_tokens"
     t.bigint "raif_model_completion_batch_id"
     t.text "raw_response"
-    t.jsonb "request_settings", default: {}, null: false
+    t.jsonb "request_settings"
     t.jsonb "response_array"
     t.string "response_finish_reason"
     t.integer "response_format", default: 0, null: false

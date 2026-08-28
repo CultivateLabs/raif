@@ -24,7 +24,7 @@
 #  prompt_token_cost              :decimal(10, 6)
 #  prompt_tokens                  :integer
 #  raw_response                   :text
-#  request_settings               :jsonb            not null
+#  request_settings               :jsonb
 #  response_array                 :jsonb
 #  response_finish_reason         :string
 #  response_format                :integer          default("text"), not null

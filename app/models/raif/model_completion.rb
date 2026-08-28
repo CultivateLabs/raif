@@ -24,7 +24,7 @@
 #  prompt_token_cost              :decimal(10, 6)
 #  prompt_tokens                  :integer
 #  raw_response                   :text
-#  request_settings               :jsonb            not null
+#  request_settings               :jsonb
 #  response_array                 :jsonb
 #  response_finish_reason         :string
 #  response_format                :integer          default("text"), not null
@@ -225,6 +225,7 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   after_initialize -> { self.available_model_tools ||= [] }
   after_initialize -> { self.response_array ||= [] }
   after_initialize -> { self.citations ||= [] }
+  after_initialize -> { self.request_settings ||= {} }
 
   def json_response_schema
     source.json_response_schema if source&.respond_to?(:json_response_schema)
