@@ -348,6 +348,10 @@ module Raif
       # response_array/raw provider data may still be present for debugging even when
       # the normalized response has no text or tool calls.
       return if model_completion.raw_response.present? || model_completion.response_tool_calls.present?
+      # A provider-managed tool result (an OpenAI image_generation_call, for example) can be the
+      # whole answer: some models return it with an empty text part, and retrying would only
+      # bill the tool call again.
+      return if model_completion.provider_managed_tool_calls.any? { |call| call["status"] == "completed" }
 
       raise Raif::Errors::BlankResponseError,
         "Model completion #{model_completion.id} returned no text response and no tool calls"

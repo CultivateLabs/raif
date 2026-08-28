@@ -241,6 +241,31 @@ RSpec.describe Raif::Llm, type: :model do
         expect(mc.failure_reason).to eq("Model completion #{mc.id} returned no text response and no tool calls")
         expect(mc.response_array).to eq([{ "text" => "" }])
       end
+
+      it "does not treat a response whose only content is a completed provider-managed tool call as blank" do
+        allow(Raif.config).to receive(:llm_request_max_retries).and_return(0)
+
+        image_generation = Raif::ModelTools::ProviderManaged::ImageGeneration
+        llm = Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api", supported_provider_managed_tools: [image_generation])
+
+        allow(llm).to receive(:perform_model_completion!) do |model_completion|
+          model_completion.raw_response = ""
+          model_completion.response_array = [
+            { "type" => "image_generation_call", "id" => "ig_123", "status" => "completed", "result" => "iVBORw0KGgo=" },
+            { "type" => "message", "role" => "assistant", "status" => "completed", "content" => [{ "type" => "output_text", "text" => "" }] }
+          ]
+          model_completion.prompt_tokens = 100
+          model_completion.completion_tokens = 10
+          model_completion.total_tokens = 110
+          model_completion.save!
+        end
+
+        mc = llm.chat(messages: messages, system_prompt: system_prompt, available_model_tools: [image_generation])
+
+        expect(mc.completed?).to be true
+        expect(mc.failed?).to be false
+        expect(mc.provider_managed_tool_calls.map { |call| call["tool_name"] }).to eq(["image_generation"])
+      end
     end
 
     context "with tool_choice: :required" do
