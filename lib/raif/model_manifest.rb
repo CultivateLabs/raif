@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 # Loads lib/raif/model_manifest/definitions/*.rb into plain structs. The
-# definitions ship in the gem and are read by bin/smoke and the manifest
-# specs.
+# definitions are the runtime registry: Raif.default_llms and
+# Raif.default_embedding_models (lib/raif/default_models.rb) are built from
+# them at boot, and bin/smoke and the manifest specs read the same files.
 require "date"
 require "raif/model_manifest/dsl"
 

@@ -265,8 +265,8 @@ module Raif
       # transparently falls back to the non-streaming path. Each entry may be
       # a String, Symbol, or Regexp matched against the model key.
       #
-      # Default is derived from model_manifest/ capability data (streaming:
-      # false) via the generated registry. It currently covers Bedrock
+      # Default is derived from the model manifest definitions: every model
+      # whose entry declares streaming: false. It currently covers Bedrock
       # gpt-oss, whose Converse streaming endpoint delivers corrupted/
       # truncated tool_use deltas. Set to [] to disable the workaround.
       @streaming_unsupported_model_keys = Raif.default_streaming_unsupported_model_keys.dup

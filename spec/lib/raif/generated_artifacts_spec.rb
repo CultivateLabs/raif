@@ -10,14 +10,6 @@ RSpec.describe "generated artifacts freshness" do
   generator = Raif::ModelManifest::Generator
   hint = "Artifacts are stale. Run bin/generate_llm_registry and commit the result."
 
-  it "lib/raif/default_llms.rb is current" do
-    expect(File.read(Raif::Engine.root.join("lib/raif/default_llms.rb"))).to eq(generator.default_llms_rb(manifest)), hint
-  end
-
-  it "lib/raif/default_embedding_models.rb is current" do
-    expect(File.read(Raif::Engine.root.join("lib/raif/default_embedding_models.rb"))).to eq(generator.default_embedding_models_rb(manifest)), hint
-  end
-
   # Exact round-trip rather than substring inclusion: an include check can't
   # catch a stale entry left behind in the generated region (the old block
   # would still be a substring of a file that also contains the new one). Only
@@ -73,18 +65,6 @@ RSpec.describe "generated artifacts freshness" do
 
       expect(generator.setup_md(manifest, stale)).not_to eq(stale)
       expect(generator.setup_md(manifest, stale)).not_to include("anthropic_retired_stale")
-    end
-  end
-
-  it "the loaded runtime registry matches RegistryData" do
-    expected = Raif::ModelManifest::RegistryData.llm_configs(manifest)
-    actual = Raif.default_llms.transform_keys(&:name)
-    expect(actual.keys).to eq(expected.keys)
-    actual.each do |adapter, configs|
-      configs.zip(expected.fetch(adapter)).each do |a, e|
-        expect(a[:key]).to eq(e[:key])
-        expect(a[:input_token_cost]).to be_within(1e-12).of(e[:input_token_cost])
-      end
     end
   end
 end

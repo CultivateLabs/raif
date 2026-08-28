@@ -5,7 +5,7 @@ require "raif/model_manifest"
 module Raif
   module ModelManifest
     # Builds the runtime registry data structures from manifest entries.
-    # Consumed by the generator (emitting them as Ruby literals) and by specs.
+    # Consumed by Raif.default_llms and friends (lib/raif/default_models.rb) and by specs.
     module RegistryData
       def self.llm_configs(manifest)
         grouped = manifest.llm_entries.reject(&:retired?).group_by(&:adapter_class_name)
