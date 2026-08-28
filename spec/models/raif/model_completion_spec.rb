@@ -1015,6 +1015,87 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         }
       ])
     end
+
+    it "extracts google-style provider-managed code execution details" do
+      model_completion = described_class.new(
+        llm_model_key: "google_gemini_2_5_flash",
+        model_api_name: "gemini-2.5-flash",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::CodeExecution],
+        response_array: [
+          {
+            "executableCode" => { "language" => "PYTHON", "code" => "print(7 * 6)\n", "id" => "call_261781" },
+            "thoughtSignature" => "sig-abc"
+          },
+          { "codeExecutionResult" => { "outcome" => "OUTCOME_OK", "output" => "42\n", "id" => "call_261781" } },
+          { "text" => "The result of 7 * 6 is 42.", "thoughtSignature" => "sig-def" }
+        ]
+      )
+
+      expect(model_completion.provider_managed_tool_calls).to eq([
+        {
+          "tool_name" => "code_execution",
+          "provider_tool_call_id" => "call_261781",
+          "status" => "OUTCOME_OK",
+          "arguments" => { "language" => "PYTHON", "code" => "print(7 * 6)\n" },
+          "sources" => [],
+          "raw_result" => { "outcome" => "OUTCOME_OK", "output" => "42\n" },
+          "inferred" => false
+        }
+      ])
+    end
+
+    it "pairs google code execution results with their preceding code part when no ids are present" do
+      model_completion = described_class.new(
+        llm_model_key: "google_gemini_2_5_flash",
+        model_api_name: "gemini-2.5-flash",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::CodeExecution],
+        response_array: [
+          { "executableCode" => { "language" => "PYTHON", "code" => "print(1)\n" } },
+          { "codeExecutionResult" => { "outcome" => "OUTCOME_OK", "output" => "1\n" } },
+          { "executableCode" => { "language" => "PYTHON", "code" => "print(2)\n" } },
+          { "codeExecutionResult" => { "outcome" => "OUTCOME_FAILED", "output" => "boom" } }
+        ]
+      )
+
+      expect(model_completion.provider_managed_tool_calls.map { |call| call.slice("provider_tool_call_id", "status", "raw_result") }).to eq([
+        { "provider_tool_call_id" => nil, "status" => "OUTCOME_OK", "raw_result" => { "outcome" => "OUTCOME_OK", "output" => "1\n" } },
+        { "provider_tool_call_id" => nil, "status" => "OUTCOME_FAILED", "raw_result" => { "outcome" => "OUTCOME_FAILED", "output" => "boom" } }
+      ])
+    end
+
+    it "still infers google web search from citations when code execution was also reported" do
+      model_completion = described_class.new(
+        llm_model_key: "google_gemini_2_5_flash",
+        model_api_name: "gemini-2.5-flash",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch, Raif::ModelTools::ProviderManaged::CodeExecution],
+        response_array: [
+          { "executableCode" => { "language" => "PYTHON", "code" => "print(2024 - 1993)\n" } },
+          { "codeExecutionResult" => { "outcome" => "OUTCOME_OK", "output" => "31\n" } },
+          { "text" => "Ruby was released 31 years ago." }
+        ],
+        citations: [{ "title" => "wikipedia.org", "url" => "https://en.wikipedia.org/wiki/Ruby_(programming_language)" }]
+      )
+
+      expect(model_completion.provider_managed_tool_calls.map { |call| call.slice("tool_name", "inferred") }).to eq([
+        { "tool_name" => "code_execution", "inferred" => false },
+        { "tool_name" => "web_search", "inferred" => true }
+      ])
+      expect(model_completion.tool_call_summary).to eq("2: code_execution, web_search")
+    end
+
+    it "ignores google code execution parts when the tool was not made available" do
+      model_completion = described_class.new(
+        llm_model_key: "google_gemini_2_5_flash",
+        model_api_name: "gemini-2.5-flash",
+        available_model_tools: [],
+        response_array: [
+          { "executableCode" => { "language" => "PYTHON", "code" => "print(7 * 6)\n" } },
+          { "codeExecutionResult" => { "outcome" => "OUTCOME_OK", "output" => "42\n" } }
+        ]
+      )
+
+      expect(model_completion.provider_managed_tool_calls).to eq([])
+    end
   end
 
   describe "#tool_call_summary" do
