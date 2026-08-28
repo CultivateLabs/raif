@@ -73,7 +73,8 @@ module Raif
 
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
       max_completion_tokens: nil, tool_choice: nil, allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
-      bedrock_prompt_caching_enabled: false, open_ai_store_responses: nil, open_router_data_collection: nil, &block)
+      bedrock_prompt_caching_enabled: false, open_ai_store_responses: nil, open_router_data_collection: nil,
+      open_router_zdr: nil, &block)
       unless response_format.is_a?(Symbol)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid response format: #{response_format}. Must be a symbol (you passed #{response_format.class}) and be one of: #{VALID_RESPONSE_FORMATS.join(", ")}" # rubocop:disable Layout/LineLength
@@ -151,7 +152,8 @@ module Raif
         anthropic_prompt_caching_enabled: anthropic_prompt_caching_enabled,
         bedrock_prompt_caching_enabled: bedrock_prompt_caching_enabled,
         open_ai_store_responses: open_ai_store_responses,
-        open_router_data_collection: open_router_data_collection
+        open_router_data_collection: open_router_data_collection,
+        open_router_zdr: open_router_zdr
       )
 
       model_completion.started!
@@ -191,7 +193,7 @@ module Raif
       system_prompt: nil, temperature: nil, max_completion_tokens: nil, tool_choice: nil,
       stream_response: false, allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
       bedrock_prompt_caching_enabled: false, open_ai_store_responses: nil, open_router_data_collection: nil,
-      raif_model_completion_batch: nil, batch_custom_id: nil)
+      open_router_zdr: nil, raif_model_completion_batch: nil, batch_custom_id: nil)
       temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
 
@@ -209,7 +211,8 @@ module Raif
         stream_response: stream_response,
         request_settings: {
           "open_ai_store_responses" => open_ai_store_responses,
-          "open_router_data_collection" => open_router_data_collection&.to_s.presence
+          "open_router_data_collection" => open_router_data_collection&.to_s.presence,
+          "open_router_zdr" => open_router_zdr
         }.compact,
         raif_model_completion_batch: raif_model_completion_batch,
         batch_custom_id: batch_custom_id

@@ -57,6 +57,7 @@ module Raif
       :open_router_api_key,
       :open_router_data_collection,
       :open_router_models_enabled,
+      :open_router_zdr,
       :open_router_app_name,
       :open_router_site_url,
       :request_open_timeout,
@@ -209,11 +210,18 @@ module Raif
       @open_ai_embedding_models_enabled = ENV["OPENAI_API_KEY"].present?
       @open_ai_models_enabled = ENV["OPENAI_API_KEY"].present?
       # Value of the `store` parameter on every OpenAI Responses API request.
-      # The provider defaults it to true and then retains the request, so the
-      # prompt becomes readable in the OpenAI dashboard and logs. Raif defaults
-      # to false, because an engine cannot know whether its host app is allowed
-      # to leave prompts with a processor. Set it to true to get dashboard
-      # visibility and provider-side response retrieval back.
+      # The provider defaults it to true and then keeps the response object for
+      # 30 days, so the prompt becomes readable in the OpenAI dashboard and
+      # retrievable by response id. Raif defaults to false, because an engine
+      # cannot know whether its host app is allowed to leave prompts with a
+      # processor. Set it to true to get that visibility and provider-side
+      # response retrieval back.
+      #
+      # false is not zero retention. OpenAI still generates abuse monitoring
+      # logs for all API usage and holds them for up to 30 days, unless the
+      # organization is approved for Zero Data Retention or Modified Abuse
+      # Monitoring. Under Zero Data Retention `store` is always treated as
+      # false, so setting this to true has no effect there.
       #
       # Only the Responses API is affected: `store` already defaults to false
       # on Chat Completions, so Raif::Llms::OpenAiCompletions sends nothing.
@@ -222,12 +230,29 @@ module Raif
       @open_router_api_key = default_disable_llm_api_requests? ? "placeholder-open-router-api-key" : open_router_api_key
       # Value of `provider.data_collection` on every OpenRouter request.
       # OpenRouter routes a request to an upstream inference provider, and some
-      # of those providers log prompts and train on them. Without the
-      # parameter the routing falls back to the account-level privacy setting
-      # on openrouter.ai, which the host app cannot see from its own code.
-      # "deny" (the default) restricts routing to providers that do not store
-      # prompts; "allow" permits any provider.
+      # of those providers store prompts non-transiently and train on them.
+      # OpenRouter defaults the parameter to "allow", which filters nothing, so
+      # the only thing standing between a prompt and such a provider is the
+      # account-level privacy setting on openrouter.ai, which the host app
+      # cannot see from its own code. "deny" (the Raif default) routes only to
+      # providers that do not collect user data.
+      #
+      # "deny" is about training and non-transient storage, not retention:
+      # OpenRouter states it has no routing rules based on provider retention
+      # policies, so a provider that holds prompts for a fixed window without
+      # training on them still qualifies. Use open_router_zdr below for
+      # retention.
       @open_router_data_collection = "deny"
+      # Value of `provider.zdr` on OpenRouter requests. true restricts routing
+      # to endpoints with a Zero Data Retention policy, which is the only
+      # OpenRouter control that stops an upstream provider retaining the
+      # prompt. Defaults to false, because it is a much narrower filter than
+      # data_collection and many models have no ZDR endpoint at all - a
+      # restrictive default would turn working models into 404s on upgrade.
+      # The parameter is only sent when true: OpenRouter documents false and
+      # absent as identical, and per-request ZDR is OR'd with the account-wide
+      # and guardrail settings, so it can only add enforcement.
+      @open_router_zdr = false
       @open_router_models_enabled = @open_router_api_key.present?
       @prompt_studio_runs_enabled = Rails.env.development?
       @open_router_app_name = nil
@@ -374,6 +399,11 @@ module Raif
       unless [true, false].include?(open_ai_store_responses)
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.open_ai_store_responses must be true or false (got #{open_ai_store_responses.inspect})"
+      end
+
+      unless [true, false].include?(open_router_zdr)
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.open_router_zdr must be true or false (got #{open_router_zdr.inspect})"
       end
 
       return if OPEN_ROUTER_DATA_COLLECTION_VALUES.include?(open_router_data_collection.to_s)

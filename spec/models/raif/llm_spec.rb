@@ -111,6 +111,7 @@ RSpec.describe Raif::Llm, type: :model do
 
         expect(result.open_ai_store_responses).to be(false)
         expect(result.open_router_data_collection).to eq("deny")
+        expect(result.open_router_zdr).to be(false)
       end
 
       it "accepts a per-call override of the provider data retention settings" do
@@ -118,11 +119,13 @@ RSpec.describe Raif::Llm, type: :model do
           messages: messages,
           system_prompt: system_prompt,
           open_ai_store_responses: true,
-          open_router_data_collection: "allow"
+          open_router_data_collection: "allow",
+          open_router_zdr: true
         )
 
         expect(result.open_ai_store_responses).to be(true)
         expect(result.open_router_data_collection).to eq("allow")
+        expect(result.open_router_zdr).to be(true)
       end
 
       it "sets the source if provided" do

@@ -8,6 +8,7 @@ require "rails_helper"
 class Raif::TestProviderRetentionTask < Raif::Task
   self.open_ai_store_responses = true
   self.open_router_data_collection = "allow"
+  self.open_router_zdr = false
 
   def build_prompt
     "Tell me a joke"
@@ -19,6 +20,7 @@ end
 class Raif::TestSensitiveRetentionTask < Raif::Task
   self.open_ai_store_responses = false
   self.open_router_data_collection = "deny"
+  self.open_router_zdr = true
 
   def build_prompt
     "Tell me a joke"
@@ -32,6 +34,7 @@ RSpec.describe Raif::Concerns::LlmDataRetention do
     it "is nil by default, so the class defers to Raif.config" do
       expect(Raif::TestTask.open_ai_store_responses).to be_nil
       expect(Raif::TestTask.open_router_data_collection).to be_nil
+      expect(Raif::TestTask.open_router_zdr).to be_nil
       expect(Raif::Conversation.open_ai_store_responses).to be_nil
       expect(Raif::Agent.open_router_data_collection).to be_nil
     end
@@ -39,6 +42,7 @@ RSpec.describe Raif::Concerns::LlmDataRetention do
     it "carries a per-class override" do
       expect(Raif::TestProviderRetentionTask.open_ai_store_responses).to be(true)
       expect(Raif::TestProviderRetentionTask.open_router_data_collection).to eq("allow")
+      expect(Raif::TestSensitiveRetentionTask.open_router_zdr).to be(true)
     end
   end
 
@@ -50,6 +54,7 @@ RSpec.describe Raif::Concerns::LlmDataRetention do
 
       expect(task.raif_model_completion.open_ai_store_responses).to be(false)
       expect(task.raif_model_completion.open_router_data_collection).to eq("deny")
+      expect(task.raif_model_completion.open_router_zdr).to be(false)
     end
 
     it "applies the task's override" do
@@ -78,6 +83,7 @@ RSpec.describe Raif::Concerns::LlmDataRetention do
     before do
       allow(Raif.config).to receive(:open_ai_store_responses).and_return(true)
       allow(Raif.config).to receive(:open_router_data_collection).and_return("allow")
+      allow(Raif.config).to receive(:open_router_zdr).and_return(false)
     end
 
     it "keeps a restrictive task override across the reload" do
@@ -91,6 +97,7 @@ RSpec.describe Raif::Concerns::LlmDataRetention do
 
       expect(reloaded.open_ai_store_responses).to be(false)
       expect(reloaded.open_router_data_collection).to eq("deny")
+      expect(reloaded.open_router_zdr).to be(true)
 
       parameters = Raif.llm(:open_ai_responses_gpt_4o).send(:build_request_parameters, reloaded)
       expect(parameters[:store]).to be(false)
@@ -107,6 +114,7 @@ RSpec.describe Raif::Concerns::LlmDataRetention do
 
       expect(reloaded.open_ai_store_responses).to be(true)
       expect(reloaded.open_router_data_collection).to eq("allow")
+      expect(reloaded.open_router_zdr).to be(false)
     end
   end
 end

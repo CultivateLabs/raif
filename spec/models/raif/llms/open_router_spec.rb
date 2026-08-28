@@ -438,7 +438,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
   end
 
   describe "#build_request_parameters" do
-    describe "the provider.data_collection parameter" do
+    describe "the provider data retention parameters" do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
@@ -449,7 +449,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
 
       let(:params) { llm.send(:build_request_parameters, model_completion) }
 
-      it "sends data_collection: deny, so OpenRouter avoids providers that log prompts" do
+      it "sends data_collection: deny, so OpenRouter avoids providers that train on prompts" do
         expect(params[:provider]).to eq({ data_collection: "deny" })
       end
 
@@ -463,6 +463,25 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         model_completion.open_router_data_collection = :allow
 
         expect(params[:provider]).to eq({ data_collection: "allow" })
+      end
+
+      # OpenRouter treats zdr: false and an absent zdr alike, so sending false
+      # would add a parameter that cannot change the routing.
+      it "omits zdr by default" do
+        expect(params[:provider]).to_not have_key(:zdr)
+      end
+
+      it "sends zdr: true when the host app enables it" do
+        allow(Raif.config).to receive(:open_router_zdr).and_return(true)
+
+        expect(params[:provider]).to eq({ data_collection: "deny", zdr: true })
+      end
+
+      it "prefers a request-scoped zdr override over the config value" do
+        allow(Raif.config).to receive(:open_router_zdr).and_return(true)
+        model_completion.open_router_zdr = false
+
+        expect(params[:provider]).to_not have_key(:zdr)
       end
     end
 

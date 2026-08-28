@@ -77,6 +77,7 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   #
   #   open_ai_store_responses      Raif::Llms::OpenAiResponses `store`
   #   open_router_data_collection  Raif::Llms::OpenRouter `provider.data_collection`
+  #   open_router_zdr              Raif::Llms::OpenRouter `provider.zdr`
   #
   # The prompt caching and parallel tool call flags below stay request-scoped.
   # Persisting Anthropic's would start sending `cache_control` on batched
@@ -88,6 +89,7 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   REQUEST_SETTING_KEYS = %w[
     open_ai_store_responses
     open_router_data_collection
+    open_router_zdr
   ].freeze
 
   # Request-scoped (not persisted): when true, the provider request permits the
@@ -145,6 +147,15 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   def open_router_data_collection=(value)
     write_request_setting("open_router_data_collection", value&.to_s.presence)
+  end
+
+  def open_router_zdr
+    value = request_settings["open_router_zdr"]
+    value.nil? ? Raif.config.open_router_zdr : value
+  end
+
+  def open_router_zdr=(value)
+    write_request_setting("open_router_zdr", value)
   end
 
   # Raw provider-reported finish/stop reasons that indicate the response was cut off
@@ -321,9 +332,11 @@ private
   end
 
   def request_settings_values_are_valid
-    store = request_settings["open_ai_store_responses"]
-    unless store.nil? || [true, false].include?(store)
-      errors.add(:request_settings, "open_ai_store_responses must be true or false (got #{store.inspect})")
+    %w[open_ai_store_responses open_router_zdr].each do |key|
+      value = request_settings[key]
+      next if value.nil? || [true, false].include?(value)
+
+      errors.add(:request_settings, "#{key} must be true or false (got #{value.inspect})")
     end
 
     collection = request_settings["open_router_data_collection"]

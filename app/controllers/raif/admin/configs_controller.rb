@@ -59,6 +59,7 @@ module Raif
           { key: "open_router_data_collection", value: @config.open_router_data_collection },
           { key: "open_router_models_enabled", value: @config.open_router_models_enabled },
           { key: "open_router_site_url", value: @config.open_router_site_url },
+          { key: "open_router_zdr", value: @config.open_router_zdr },
           { key: "request_open_timeout", value: @config.request_open_timeout },
           { key: "request_read_timeout", value: @config.request_read_timeout },
           { key: "request_write_timeout", value: @config.request_write_timeout },

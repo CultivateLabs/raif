@@ -39,7 +39,8 @@ RSpec.describe Raif::Configuration do
       around do |example|
         originals = {
           open_ai_store_responses: Raif.config.open_ai_store_responses,
-          open_router_data_collection: Raif.config.open_router_data_collection
+          open_router_data_collection: Raif.config.open_router_data_collection,
+          open_router_zdr: Raif.config.open_router_zdr
         }
         example.run
       ensure
@@ -51,9 +52,17 @@ RSpec.describe Raif::Configuration do
         expect(Raif.config.open_router_data_collection).to eq("deny")
       end
 
+      # ZDR routes to far fewer endpoints than data_collection filters out, so
+      # a restrictive default would turn working models into no-endpoints
+      # errors on upgrade.
+      it "defaults open_router_zdr to false" do
+        expect(Raif.config.open_router_zdr).to be(false)
+      end
+
       it "allows an explicit opt-in" do
         Raif.config.open_ai_store_responses = true
         Raif.config.open_router_data_collection = "allow"
+        Raif.config.open_router_zdr = true
 
         expect { Raif.config.validate! }.to_not raise_error
       end
@@ -70,6 +79,15 @@ RSpec.describe Raif::Configuration do
         expect { Raif.config.validate! }.to raise_error(
           Raif::Errors::InvalidConfigError,
           /open_ai_store_responses must be true or false/
+        )
+      end
+
+      it "raises when open_router_zdr is not a boolean" do
+        Raif.config.open_router_zdr = "yes"
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /open_router_zdr must be true or false/
         )
       end
 

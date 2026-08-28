@@ -812,6 +812,7 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       expect(model_completion.request_settings).to eq({})
       expect(model_completion.open_ai_store_responses).to be(false)
       expect(model_completion.open_router_data_collection).to eq("deny")
+      expect(model_completion.open_router_zdr).to be(false)
     end
 
     it "records only a setting a caller actually set" do
@@ -843,6 +844,13 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       expect(model_completion.open_router_data_collection).to eq("allow")
     end
 
+    it "records open_router_zdr" do
+      model_completion.open_router_zdr = true
+
+      expect(model_completion.request_settings).to eq({ "open_router_zdr" => true })
+      expect(model_completion.open_router_zdr).to be(true)
+    end
+
     it "rejects a key that is not declared in REQUEST_SETTING_KEYS" do
       model_completion.request_settings = { "store_everything" => true }
 
@@ -855,6 +863,13 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
       expect(model_completion).not_to be_valid
       expect(model_completion.errors[:request_settings].join).to include("must be true or false")
+    end
+
+    it "rejects a non-boolean open_router_zdr" do
+      model_completion.request_settings = { "open_router_zdr" => "yes" }
+
+      expect(model_completion).not_to be_valid
+      expect(model_completion.errors[:request_settings].join).to include("open_router_zdr must be true or false")
     end
 
     it "rejects an open_router_data_collection outside allow/deny" do

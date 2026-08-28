@@ -8,12 +8,13 @@
 #     self.open_ai_store_responses = true
 #   end
 #
-# Raif::Llm#chat takes the same two keyword arguments for a one-off override.
+# Raif::Llm#chat takes the same three keyword arguments for a one-off override.
 module Raif::Concerns::LlmDataRetention
   extend ActiveSupport::Concern
 
   included do
     class_attribute :open_ai_store_responses, instance_writer: false, default: nil
     class_attribute :open_router_data_collection, instance_writer: false, default: nil
+    class_attribute :open_router_zdr, instance_writer: false, default: nil
   end
 end

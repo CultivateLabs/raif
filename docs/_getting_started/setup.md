@@ -49,7 +49,7 @@ Use this adapter to utilize OpenAI's newer [Responses API](https://platform.open
 
 Note: OpenAI's [GPT-OSS models](https://openai.com/index/introducing-gpt-oss/){:target="_blank"} are not supported by OpenAI's API, but are available via [OpenRouter](#openrouter).
 
-Raif sends `store: false` on every Responses API request, so OpenAI does not retain the prompt. See [Provider Data Retention](../learn_more/provider_data_retention) to change that.
+Raif sends `store: false` on every Responses API request, so OpenAI does not keep the response object. See [Provider Data Retention](../learn_more/provider_data_retention) for what that does and does not cover.
 
 ```ruby
 Raif.configure do |config|
@@ -191,7 +191,7 @@ Currently supported Bedrock models:
 
 See [Adding LLM Models](customization#adding-llm-models) for more information on adding new OpenRouter models to your application.
 
-Raif sends `provider: { data_collection: "deny" }` on every OpenRouter request, so routing avoids providers that log prompts. See [Provider Data Retention](../learn_more/provider_data_retention) to change that.
+Raif sends `provider: { data_collection: "deny" }` on every OpenRouter request, so routing avoids providers that train on prompts. See [Provider Data Retention](../learn_more/provider_data_retention) for that setting and for zero data retention routing.
 
 ```ruby
 Raif.configure do |config|

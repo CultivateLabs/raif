@@ -170,6 +170,7 @@ module Raif
         bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
         open_ai_store_responses: self.class.open_ai_store_responses,
         open_router_data_collection: self.class.open_router_data_collection,
+        open_router_zdr: self.class.open_router_zdr,
         &streaming_block
       )
 
@@ -288,6 +289,7 @@ module Raif
         bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
         open_ai_store_responses: self.class.open_ai_store_responses,
         open_router_data_collection: self.class.open_router_data_collection,
+        open_router_zdr: self.class.open_router_zdr,
         raif_model_completion_batch: batch,
         batch_custom_id: effective_batch_custom_id
       )
