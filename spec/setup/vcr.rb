@@ -141,8 +141,8 @@ VCR.configure do |config|
   Rails.application.config.filter_parameters.each do |param|
     config.filter_sensitive_data("FILTERED_#{param.to_s.upcase}") do |interaction|
       uri = URI(interaction.request.uri)
-      params = CGI.parse(uri.query || "")
-      params[param.to_s]&.first
+      # Not CGI.parse: Ruby 4.0 dropped it from the bundled cgi gem.
+      URI.decode_www_form(uri.query || "").find{|name, _value| name == param.to_s }&.last
     end
   end
 end

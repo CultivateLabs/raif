@@ -438,6 +438,34 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
   end
 
   describe "#build_request_parameters" do
+    describe "the provider.data_collection parameter" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "open_router_claude_5_sonnet",
+          model_api_name: "anthropic/claude-sonnet-5"
+        )
+      end
+
+      let(:params) { llm.send(:build_request_parameters, model_completion) }
+
+      it "sends data_collection: deny, so OpenRouter avoids providers that log prompts" do
+        expect(params[:provider]).to eq({ data_collection: "deny" })
+      end
+
+      it "sends the configured value when the host app opts in" do
+        allow(Raif.config).to receive(:open_router_data_collection).and_return("allow")
+
+        expect(params[:provider]).to eq({ data_collection: "allow" })
+      end
+
+      it "prefers a request-scoped override over the config value" do
+        model_completion.open_router_data_collection = :allow
+
+        expect(params[:provider]).to eq({ data_collection: "allow" })
+      end
+    end
+
     context "with system prompt" do
       let(:model_completion) do
         Raif::ModelCompletion.new(
@@ -550,7 +578,7 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
 
       it "adds provider.require_parameters: true so OpenRouter only routes to providers honoring the parameter" do
         params = llm.send(:build_request_parameters, model_completion)
-        expect(params[:provider]).to eq({ require_parameters: true })
+        expect(params[:provider]).to eq({ data_collection: "deny", require_parameters: true })
       end
 
       it "does not add a json_response function tool to params[:tools]" do
@@ -603,9 +631,9 @@ RSpec.describe Raif::Llms::OpenRouter, type: :model do
         expect(params[:response_format]).to eq({ type: "json_object" })
       end
 
-      it "does not add a provider key" do
+      it "does not add provider.require_parameters" do
         params = llm.send(:build_request_parameters, model_completion)
-        expect(params).not_to have_key(:provider)
+        expect(params[:provider]).to eq({ data_collection: "deny" })
       end
 
       it "sets model_completion.response_format_parameter to 'json_object'" do

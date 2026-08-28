@@ -90,6 +90,10 @@ private
     parameters = {
       model: api_name,
       input: model_completion.messages,
+      # The Responses API defaults `store` to true and then retains the request,
+      # so the prompt is readable in the OpenAI dashboard and logs. Always sent
+      # explicitly, since the parameter's absence is not a neutral position.
+      store: model_completion.open_ai_store_responses,
     }
 
     if supports_temperature?

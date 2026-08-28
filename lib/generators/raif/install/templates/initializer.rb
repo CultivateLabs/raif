@@ -26,6 +26,14 @@ Raif.configure do |config|
   # Use :api_key for Azure OpenAI API (api-key: <token>)
   # config.open_ai_auth_header_style = :bearer
 
+  # Value of the `store` parameter on OpenAI Responses API requests. Defaults to false.
+  # OpenAI defaults it to true and then retains the request, which makes the prompt
+  # readable in the OpenAI dashboard and logs. Set it to true to get that visibility
+  # and provider-side response retrieval back.
+  # Override it per Raif::Task/Raif::Conversation/Raif::Agent subclass, or per
+  # Raif::Llm#chat call, with the open_ai_store_responses keyword.
+  # config.open_ai_store_responses = false
+
   # Your Anthropic API key. Defaults to ENV["ANTHROPIC_API_KEY"]
   # config.anthropic_api_key = ENV["ANTHROPIC_API_KEY"]
 
@@ -55,6 +63,14 @@ Raif.configure do |config|
 
   # The site URL to include in OpenRouter API requests headers. Optional.
   # config.open_router_site_url = "https://myapp.com"
+
+  # Value of `provider.data_collection` on OpenRouter requests. Defaults to "deny".
+  # OpenRouter routes each request to an upstream inference provider, and some of them
+  # log prompts and train on them. "deny" restricts routing to providers that do not
+  # store prompts; "allow" permits any provider.
+  # Override it per Raif::Task/Raif::Conversation/Raif::Agent subclass, or per
+  # Raif::Llm#chat call, with the open_router_data_collection keyword.
+  # config.open_router_data_collection = "deny"
 
   # Your Google AI API key. Defaults to ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
   # config.google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]

@@ -5,7 +5,7 @@ http_interactions:
     uri: https://openrouter.ai/api/v1/chat/completions
     body:
       encoding: UTF-8
-      string: '{"model":"meta-llama/llama-3.1-8b-instruct","messages":[{"role":"user","content":[{"type":"text","text":"Hello"}]}],"temperature":0.7,"max_tokens":null,"stream":true,"stream_options":{"include_usage":true}}'
+      string: '{"model":"meta-llama/llama-3.1-8b-instruct","messages":[{"role":"user","content":[{"type":"text","text":"Hello"}]}],"provider":{"data_collection":"deny"},"temperature":0.7,"max_tokens":null,"stream":true,"stream_options":{"include_usage":true}}'
     headers:
       Authorization:
       - "<PLACEHOLDER_AUTHORIZATION>"

@@ -9,7 +9,7 @@ http_interactions:
         are a helpful assistant who specializes in telling jokes. Your response should
         be a properly formatted JSON object containing a single `joke` key. Do not
         include any other text in your response outside the JSON object."},{"role":"user","content":[{"type":"text","text":"Can
-        you you tell me a joke? Respond in json."}]}],"temperature":0.7,"max_tokens":null,"stream":true,"stream_options":{"include_usage":true},"response_format":{"type":"json_object"}}'
+        you you tell me a joke? Respond in json."}]}],"provider":{"data_collection":"deny"},"temperature":0.7,"max_tokens":null,"stream":true,"stream_options":{"include_usage":true},"response_format":{"type":"json_object"}}'
     headers:
       Authorization:
       - "<PLACEHOLDER_AUTHORIZATION>"

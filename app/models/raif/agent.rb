@@ -44,6 +44,7 @@ module Raif
     include Raif::Concerns::InvokesModelTools
     include Raif::Concerns::AgentInferenceStats
     include Raif::Concerns::LlmPromptCaching
+    include Raif::Concerns::LlmDataRetention
     include Raif::Concerns::RunWith
 
     # Whether the agent may make multiple tool calls in a single iteration. When
@@ -139,7 +140,9 @@ module Raif
           tool_choice: tool_choice_for_iteration,
           allow_parallel_tool_calls: allow_parallel_tool_calls?,
           anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
-          bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled
+          bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
+          open_ai_store_responses: self.class.open_ai_store_responses,
+          open_router_data_collection: self.class.open_router_data_collection
         )
 
         logger.debug <<~DEBUG

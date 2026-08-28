@@ -50,6 +50,7 @@ module Raif
     include Raif::Concerns::LlmResponseParsing
     include Raif::Concerns::LlmTemperature
     include Raif::Concerns::LlmPromptCaching
+    include Raif::Concerns::LlmDataRetention
     include Raif::Concerns::JsonSchemaDefinition
     include Raif::Concerns::RunWith
 
@@ -167,6 +168,8 @@ module Raif
         temperature: self.class.temperature,
         anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
         bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
+        open_ai_store_responses: self.class.open_ai_store_responses,
+        open_router_data_collection: self.class.open_router_data_collection,
         &streaming_block
       )
 
@@ -283,6 +286,8 @@ module Raif
         temperature: self.class.temperature,
         anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
         bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
+        open_ai_store_responses: self.class.open_ai_store_responses,
+        open_router_data_collection: self.class.open_router_data_collection,
         raif_model_completion_batch: batch,
         batch_custom_id: effective_batch_custom_id
       )

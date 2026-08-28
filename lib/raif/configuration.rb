@@ -3,6 +3,7 @@
 module Raif
   class Configuration
     CAPTURE_MODEL_COMPLETION_MODES = ["full", "summary", "none"].freeze
+    OPEN_ROUTER_DATA_COLLECTION_VALUES = ["allow", "deny"].freeze
 
     attr_accessor :agent_types,
       :anthropic_api_key,
@@ -52,7 +53,9 @@ module Raif
       :open_ai_embedding_base_url,
       :open_ai_embedding_models_enabled,
       :open_ai_models_enabled,
+      :open_ai_store_responses,
       :open_router_api_key,
+      :open_router_data_collection,
       :open_router_models_enabled,
       :open_router_app_name,
       :open_router_site_url,
@@ -205,8 +208,26 @@ module Raif
       @open_ai_embedding_base_url = "https://api.openai.com/v1"
       @open_ai_embedding_models_enabled = ENV["OPENAI_API_KEY"].present?
       @open_ai_models_enabled = ENV["OPENAI_API_KEY"].present?
+      # Value of the `store` parameter on every OpenAI Responses API request.
+      # The provider defaults it to true and then retains the request, so the
+      # prompt becomes readable in the OpenAI dashboard and logs. Raif defaults
+      # to false, because an engine cannot know whether its host app is allowed
+      # to leave prompts with a processor. Set it to true to get dashboard
+      # visibility and provider-side response retrieval back.
+      #
+      # Only the Responses API is affected: `store` already defaults to false
+      # on Chat Completions, so Raif::Llms::OpenAiCompletions sends nothing.
+      @open_ai_store_responses = false
       open_router_api_key = ENV["OPEN_ROUTER_API_KEY"].presence || ENV["OPENROUTER_API_KEY"]
       @open_router_api_key = default_disable_llm_api_requests? ? "placeholder-open-router-api-key" : open_router_api_key
+      # Value of `provider.data_collection` on every OpenRouter request.
+      # OpenRouter routes a request to an upstream inference provider, and some
+      # of those providers log prompts and train on them. Without the
+      # parameter the routing falls back to the account-level privacy setting
+      # on openrouter.ai, which the host app cannot see from its own code.
+      # "deny" (the default) restricts routing to providers that do not store
+      # prompts; "allow" permits any provider.
+      @open_router_data_collection = "deny"
       @open_router_models_enabled = @open_router_api_key.present?
       @prompt_studio_runs_enabled = Rails.env.development?
       @open_router_app_name = nil
@@ -248,6 +269,11 @@ module Raif
       # misconfigured cron/worker box) must still have its archive settings
       # validated.
       validate_archive_config!
+
+      # Also before the early return: a typo in a data retention setting must
+      # fail loudly rather than silently fall back to the provider default,
+      # which is the permissive one for both providers.
+      validate_provider_data_retention_config!
 
       if Raif.llm_registry.blank?
         puts <<~EOS
@@ -343,6 +369,18 @@ module Raif
     end
 
   private
+
+    def validate_provider_data_retention_config!
+      unless [true, false].include?(open_ai_store_responses)
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.open_ai_store_responses must be true or false (got #{open_ai_store_responses.inspect})"
+      end
+
+      return if OPEN_ROUTER_DATA_COLLECTION_VALUES.include?(open_router_data_collection.to_s)
+
+      raise Raif::Errors::InvalidConfigError,
+        "Raif.config.open_router_data_collection must be one of: #{OPEN_ROUTER_DATA_COLLECTION_VALUES.join(", ")} (got #{open_router_data_collection.inspect})" # rubocop:disable Layout/LineLength
+    end
 
     def validate_archive_config!
       if archive_enabled && archive_storage.nil?

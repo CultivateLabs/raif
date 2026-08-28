@@ -74,6 +74,12 @@ private
     params = {
       model: model_completion.model_api_name,
       messages: model_completion.messages,
+      # OpenRouter routes to an upstream inference provider, and some of them
+      # log prompts and train on them. Without this the routing falls back to
+      # the account-level privacy setting on openrouter.ai, which is not
+      # visible from the host app's own code.
+      # See https://openrouter.ai/docs/guides/features/privacy-and-logging
+      provider: { data_collection: model_completion.open_router_data_collection },
     }
 
     # Models that deprecate temperature (Claude 5 generation) list it as
@@ -131,7 +137,7 @@ private
           schema: model_completion.json_response_schema,
         },
       }
-      params[:provider] = { require_parameters: true }
+      params[:provider] = params[:provider].merge(require_parameters: true)
       model_completion.response_format_parameter = "json_schema"
     elsif model_completion.response_format_json?
       # Fallback for `response_format: :json` callers without a schema.

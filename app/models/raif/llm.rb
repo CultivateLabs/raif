@@ -73,7 +73,7 @@ module Raif
 
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
       max_completion_tokens: nil, tool_choice: nil, allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
-      bedrock_prompt_caching_enabled: false, &block)
+      bedrock_prompt_caching_enabled: false, open_ai_store_responses: nil, open_router_data_collection: nil, &block)
       unless response_format.is_a?(Symbol)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid response format: #{response_format}. Must be a symbol (you passed #{response_format.class}) and be one of: #{VALID_RESPONSE_FORMATS.join(", ")}" # rubocop:disable Layout/LineLength
@@ -149,7 +149,9 @@ module Raif
         stream_response: stream_response,
         allow_parallel_tool_calls: allow_parallel_tool_calls,
         anthropic_prompt_caching_enabled: anthropic_prompt_caching_enabled,
-        bedrock_prompt_caching_enabled: bedrock_prompt_caching_enabled
+        bedrock_prompt_caching_enabled: bedrock_prompt_caching_enabled,
+        open_ai_store_responses: open_ai_store_responses,
+        open_router_data_collection: open_router_data_collection
       )
 
       model_completion.started!
@@ -188,7 +190,8 @@ module Raif
     def build_pending_model_completion(messages:, response_format: :text, available_model_tools: [], source: nil,
       system_prompt: nil, temperature: nil, max_completion_tokens: nil, tool_choice: nil,
       stream_response: false, allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
-      bedrock_prompt_caching_enabled: false, raif_model_completion_batch: nil, batch_custom_id: nil)
+      bedrock_prompt_caching_enabled: false, open_ai_store_responses: nil, open_router_data_collection: nil,
+      raif_model_completion_batch: nil, batch_custom_id: nil)
       temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
 
@@ -211,6 +214,8 @@ module Raif
       model_completion.allow_parallel_tool_calls = allow_parallel_tool_calls
       model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled
       model_completion.bedrock_prompt_caching_enabled = bedrock_prompt_caching_enabled
+      model_completion.open_ai_store_responses = open_ai_store_responses
+      model_completion.open_router_data_collection = open_router_data_collection
       model_completion
     end
 
