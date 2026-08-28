@@ -7,17 +7,16 @@ class Raif::EmbeddingModel
     :api_name,
     :display_name,
     :input_token_cost,
-    :default_output_vector_size,
-    :lifecycle,
-    :pricing
+    :default_output_vector_size
+
+  attr_writer :lifecycle, :pricing
 
   validates :default_output_vector_size, presence: true, numericality: { only_integer: true, greater_than: 0 }
   validates :api_name, presence: true
   validates :key, presence: true
 
-  def initialize(attributes = {})
-    super({ lifecycle: {}, pricing: {} }.merge(attributes))
-  end
+  def lifecycle = @lifecycle || {}
+  def pricing = @pricing || {}
 
   def lifecycle_status
     lifecycle[:status]

@@ -46,11 +46,11 @@ bundle exec guard
 
 ### Model Pricing Annotations
 
-A manifest entry's `pricing` hash accepts two optional keys alongside the required rates: `note` (a string documenting promotional or otherwise unusual pricing, for example a launch discount or a surcharge above a token threshold) and `valid_until` (a `Date` recording when a documented rate is scheduled to end). Neither affects the generated registry or runtime costs; they exist so `/model-check` can flag rates that need re-verification. A past `valid_until` is a review prompt, never a CI failure. Plain Ruby comments in manifest files are also welcome for anything the fields do not fit.
+A manifest entry's `pricing` hash accepts two optional keys alongside the required rates: `note` (a string documenting promotional or otherwise unusual pricing, for example a launch discount or a surcharge above a token threshold) and `valid_until` (a `Date` recording when a documented rate is scheduled to end). Neither affects runtime costs; both are exposed to host apps through `Raif::Llm#pricing`. A past `valid_until` is a review prompt, never a CI failure. Plain Ruby comments in manifest files are also welcome for anything the fields do not fit.
 
 ### Manual LLM Smoke Tests
 
-`bin/smoke` verifies live models against the capabilities claimed in `model_manifest/*.rb`:
+`bin/smoke` verifies live models against the capabilities claimed in `lib/raif/model_manifest/definitions/*.rb`:
 
 ```bash
 bin/smoke anthropic_claude_5_sonnet          # one model, full capability matrix

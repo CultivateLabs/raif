@@ -18,10 +18,12 @@ module Raif
       :deprecated,
       :retirement_date,
       :replacement_key,
-      :migration_note,
-      :lifecycle,
-      :pricing,
-      :capabilities
+      :migration_note
+
+    # capabilities is the manifest's claim for this endpoint, not the behavioral switch:
+    # supports_structured_outputs? and streaming_supported? consult provider settings and
+    # Raif.config.streaming_unsupported_model_keys, so read those to decide behavior.
+    attr_reader :lifecycle, :pricing, :capabilities
 
     validates :key, presence: true
     validates :api_name, presence: true
@@ -74,7 +76,10 @@ module Raif
 
     # Manifest lifecycle conveniences. status is :active or :deprecated for
     # models Raif ships (retired entries are never registered) and nil for a
-    # model a host app registered itself.
+    # model a host app registered itself. The flat deprecated/retirement_date/
+    # replacement_key/migration_note keyword arguments are what deprecated?
+    # and the warnings read; lifecycle is the manifest record and can be
+    # empty for a host-registered model.
     def lifecycle_status
       lifecycle[:status]
     end

@@ -587,6 +587,13 @@ RSpec.describe Raif::Llm, type: :model do
   end
 
   describe "manifest metadata readers" do
+    it "does not expose writers for lifecycle, pricing, or capabilities" do
+      llm = Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "t")
+      expect(llm).to_not respond_to(:lifecycle=)
+      expect(llm).to_not respond_to(:pricing=)
+      expect(llm).to_not respond_to(:capabilities=)
+    end
+
     it "default to empty hashes and nil conveniences" do
       llm = Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api")
       expect(llm.lifecycle).to eq({})

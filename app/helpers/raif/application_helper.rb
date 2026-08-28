@@ -31,8 +31,9 @@ module Raif
     end
 
     def llm_model_options(selected: nil)
-      options = Raif.available_llm_keys.map do |key|
-        [Raif.llm(key).name, key.to_s]
+      options = Raif.llm_registry.map do |key, config|
+        llm = config[:llm_class].new(**config.except(:llm_class))
+        [llm.name, key.to_s]
       end.sort_by(&:first)
 
       options_for_select(options, selected&.to_s)

@@ -26,7 +26,54 @@ RSpec.describe Raif::ModelManifest::RegistryData do
     it "carries per-million pricing with its annotations" do
       pricing = config_for.call(:open_ai_gpt_test)[:pricing]
       expect(pricing.keys).to eq(%i[input_per_million output_per_million note valid_until])
-      expect(pricing[:input_per_million]).to be > 0
+      expect(pricing[:input_per_million]).to eq(1.25)
+    end
+
+    it "converts integer pricing to a float per-token cost" do
+      entry = Raif::ModelManifest::Entry.new(
+        key: :integer_pricing_test_model,
+        provider_name: :open_ai,
+        endpoint: nil,
+        adapter_class_name: "Raif::Llms::OpenAiCompletions",
+        api_name: "integer-pricing-test-1",
+        display_name: "Integer Pricing Test Model",
+        max_completion_tokens: nil,
+        pricing: { input_per_million: 3, output_per_million: 15 },
+        capabilities: {
+          temperature: true,
+          structured_outputs: true,
+          native_tool_use: true,
+          streaming: true,
+          batch_inference: true,
+          images: false,
+          pdfs: false,
+          provider_managed_tools: []
+        },
+        lifecycle: { status: :active },
+        source_path: "model_manifest/open_ai.rb",
+        key_base: "integer_pricing_test_model"
+      )
+
+      expect(described_class.config_for(entry)[:input_token_cost]).to eq(3.0 / 1_000_000)
+    end
+
+    it "emits provider settings only where the manifest differs from the adapter default" do
+      # open_ai_gpt_test's completions endpoint declares temperature: false against an
+      # OpenAiCompletions adapter default of true, and matches the default on everything else.
+      expect(config_for.call(:open_ai_gpt_test)[:model_provider_settings]).to eq(supports_temperature: false)
+
+      # anthropic_old_model's capabilities equal the Anthropic adapter defaults on every field,
+      # so no settings entry is emitted at all.
+      expect(config_for.call(:anthropic_old_model)[:model_provider_settings]).to be_nil
+    end
+
+    it "omits retired entries" do
+      expect(llm_configs.map { |config| config[:key] }).to_not include(:open_ai_gpt_gone)
+
+      embedding_configs = described_class.embedding_configs(manifest).values.flatten
+      expect(embedding_configs.map { |config| config[:key] }).to_not include(:open_ai_test_embedding_gone)
+
+      expect(described_class.streaming_unsupported_keys(manifest)).to_not include("open_ai_gpt_gone")
     end
 
     it "carries the endpoint's declared capabilities" do

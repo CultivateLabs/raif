@@ -124,7 +124,7 @@ RSpec.describe Smoke::ObservationRecorder do
       expect(File.exist?(File.join(@tmp_dir, "anthropic.json"))).to be(false)
     end
 
-    it "never opens or writes any file under model_manifest/ (the manifest fixtures stay byte-identical)" do
+    it "never opens or writes any file under lib/raif/model_manifest/definitions/ (the manifest fixtures stay byte-identical)" do
       manifest_path = File.join(manifest_fixture_dir, "anthropic.rb")
       before_contents = File.read(manifest_path)
 

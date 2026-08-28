@@ -12,8 +12,8 @@ module Raif
     MANIFEST_DIR = File.expand_path("model_manifest/definitions", __dir__)
 
     # Provider and endpoint names are strings in these lookup maps even though
-    # an entry's provider_name is a symbol: the generator reuses them for its
-    # string-named setup.md sections.
+    # an entry's provider_name is a symbol: entries_for_model fetches by
+    # provider.name.to_s.
     PROVIDER_ADAPTERS = {
       "anthropic" => "Raif::Llms::Anthropic",
       "bedrock" => "Raif::Llms::Bedrock",
@@ -60,8 +60,8 @@ module Raif
     }.freeze
 
     # What each adapter class assumes when model_provider_settings says
-    # nothing. The generator emits a settings entry only when the manifest
-    # value differs from these.
+    # nothing. RegistryData.provider_settings_for emits a setting only when
+    # the manifest value differs from these.
     ADAPTER_DEFAULTS = {
       "Raif::Llms::OpenAiCompletions" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true },
       "Raif::Llms::OpenAiResponses" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true },

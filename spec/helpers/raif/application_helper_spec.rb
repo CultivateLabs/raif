@@ -20,5 +20,17 @@ RSpec.describe Raif::ApplicationHelper, type: :helper do
       key = Raif.available_llm_keys.first
       expect(helper.llm_model_options(selected: key)).to include(%(<option selected="selected" value="#{key}">))
     end
+
+    it "does not trigger the one time deprecation warning" do
+      Raif.register_llm(Raif::Llms::TestLlm, key: :raif_deprecated_helper_llm, api_name: "x", display_name: "Deprecated Helper",
+        deprecated: true, retirement_date: Date.new(2027, 1, 1), replacement_key: :raif_test_llm)
+      Raif.reset_deprecation_warnings!
+
+      expect(Raif.logger).to_not receive(:warn)
+
+      helper.llm_model_options
+    ensure
+      Raif.llm_registry.delete(:raif_deprecated_helper_llm)
+    end
   end
 end

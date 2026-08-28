@@ -224,7 +224,7 @@ Smoke::Credentials.configure_raif!
 # race each other's restore.
 Raif.config.streaming_unsupported_model_keys = []
 
-manifest = Raif::ModelManifest.load
+manifest = Raif.model_manifest
 observations = Raif::ModelManifest::SmokeObservations.load
 selection = Smoke::Selection.resolve(
   selectors, manifest.llm_entries, stale_days: options[:stale_days], embedding_entries: manifest.embedding_entries,
