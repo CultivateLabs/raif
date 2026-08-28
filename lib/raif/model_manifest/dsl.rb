@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# The declaration surface that model_manifest/*.rb files are evaluated against.
+# The declaration surface that lib/raif/model_manifest/definitions/*.rb files are evaluated against.
 #
 # Manifest files are plain Ruby so they can use Date objects, symbols, and
 # comments, but they are data, not scripts: each file is evaluated against a

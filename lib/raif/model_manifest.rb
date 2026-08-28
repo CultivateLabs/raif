@@ -1,15 +1,14 @@
 # frozen_string_literal: true
 
-# Loads model_manifest/*.rb into plain structs. This file is intentionally
-# NOT required by lib/raif.rb: the manifest is a maintenance-time artifact
-# consumed by bin/generate_llm_registry, bin/smoke, and specs. The runtime
-# registry is the generated lib/raif/default_llms.rb.
+# Loads lib/raif/model_manifest/definitions/*.rb into plain structs. The
+# definitions ship in the gem and are read by bin/smoke and the manifest
+# specs.
 require "date"
 require "raif/model_manifest/dsl"
 
 module Raif
   module ModelManifest
-    MANIFEST_DIR = File.expand_path("../../model_manifest", __dir__)
+    MANIFEST_DIR = File.expand_path("model_manifest/definitions", __dir__)
 
     # Provider and endpoint names are strings in these lookup maps even though
     # an entry's provider_name is a symbol: the generator reuses them for its

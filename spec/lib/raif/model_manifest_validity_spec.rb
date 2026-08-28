@@ -3,7 +3,7 @@
 require "rails_helper"
 require "raif/model_manifest"
 
-RSpec.describe "model_manifest validity" do
+RSpec.describe "model manifest definitions validity" do
   manifest = Raif::ModelManifest.load
   entries = manifest.llm_entries
   all_keys = entries.map(&:key)

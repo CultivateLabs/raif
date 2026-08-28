@@ -3,7 +3,7 @@
 # See bin/smoke for usage instructions.
 #
 # Runs the smoke capability checks (script/smoke/checks.rb) against the live models described in
-# model_manifest/*.rb, using script/smoke/selection.rb to resolve CLI selectors, script/smoke/credentials.rb
+# lib/raif/model_manifest/definitions/*.rb, using script/smoke/selection.rb to resolve CLI selectors, script/smoke/credentials.rb
 # to gate providers on configured credentials, script/smoke/options.rb to validate CLI options,
 # script/smoke/policy.rb to decide the process exit code, script/smoke/observation_recorder.rb (with
 # --record) to record successful smoke observations in model_smoke_results/*.json, and

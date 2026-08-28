@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 #
-# Smoke-test live models against the capabilities claimed in model_manifest/*.rb.
+# Smoke-test live models against the capabilities claimed in lib/raif/model_manifest/definitions/*.rb.
 #
 # Usage:
 #   bin/smoke <selectors...> [options]

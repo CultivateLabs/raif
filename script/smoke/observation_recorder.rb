@@ -9,7 +9,7 @@ require_relative "policy"
 # completes. Turns a run_all-shaped model_results array into the per-provider JSON files that
 # Raif::ModelManifest::SmokeObservations reads back.
 #
-# Only touches model_smoke_results/*.json; never opens or writes model_manifest/*.rb. A
+# Only touches model_smoke_results/*.json; never opens or writes lib/raif/model_manifest/definitions/*.rb. A
 # provider's existing file is merged, never replaced: a capability this run did not positively
 # re-observe keeps whatever was already on file, so a later run's failure never withdraws a
 # previously recorded pass. Withdrawing durable evidence is a human decision, not something an
