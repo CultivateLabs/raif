@@ -21,6 +21,23 @@ RSpec.describe Raif::EmbeddingModel, type: :model do
     end
   end
 
+  describe "manifest metadata readers" do
+    it "default to empty hashes" do
+      embedding_model = Raif::EmbeddingModel.new(key: :k, api_name: "a", default_output_vector_size: 8)
+      expect(embedding_model.lifecycle).to eq({})
+      expect(embedding_model.pricing).to eq({})
+      expect(embedding_model.lifecycle_status).to be_nil
+    end
+
+    it "are populated for every registered built in embedding model" do
+      Raif.default_embedding_models.values.flatten.each do |config|
+        embedding_model = Raif.embedding_model(config[:key])
+        expect(embedding_model.lifecycle_status).to eq(:active).or eq(:deprecated)
+        expect(embedding_model.pricing[:input_per_million]).to be > 0
+      end
+    end
+  end
+
   describe "#name" do
     context "when a host app provides an I18n translation" do
       it "prefers the translation over display_name" do

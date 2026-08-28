@@ -586,6 +586,45 @@ RSpec.describe Raif::Llm, type: :model do
     end
   end
 
+  describe "manifest metadata readers" do
+    it "default to empty hashes and nil conveniences" do
+      llm = Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api")
+      expect(llm.lifecycle).to eq({})
+      expect(llm.pricing).to eq({})
+      expect(llm.capabilities).to eq({})
+      expect(llm.lifecycle_status).to be_nil
+      expect(llm.added_on).to be_nil
+      expect(llm.deprecated_on).to be_nil
+    end
+
+    it "expose what the registry config passed in" do
+      lifecycle = {
+        status: :deprecated, added_on: Date.new(2026, 1, 5), deprecated_on: Date.new(2026, 6, 1),
+        retirement_date: Date.new(2026, 12, 1), replacement_key: :other, migration_note: nil
+      }
+      pricing = { input_per_million: 1.0, output_per_million: 4.0, note: "promo", valid_until: Date.new(2026, 11, 21) }
+      capabilities = { streaming: true, images: false }
+
+      llm = Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api", lifecycle: lifecycle, pricing: pricing, capabilities: capabilities)
+
+      expect(llm.lifecycle).to eq(lifecycle)
+      expect(llm.pricing).to eq(pricing)
+      expect(llm.capabilities).to eq(capabilities)
+      expect(llm.lifecycle_status).to eq(:deprecated)
+      expect(llm.added_on).to eq(Date.new(2026, 1, 5))
+      expect(llm.deprecated_on).to eq(Date.new(2026, 6, 1))
+    end
+
+    it "are populated for every registered built in model" do
+      Raif.default_llms.values.flatten.each do |llm_config|
+        llm = Raif.llm(llm_config[:key])
+        expect(llm.lifecycle_status).to eq(:active).or eq(:deprecated)
+        expect(llm.pricing[:input_per_million]).to be > 0
+        expect(llm.capabilities).to include(:streaming)
+      end
+    end
+  end
+
   describe "#chat streaming fallback" do
     let(:test_llm){ Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api") }
 

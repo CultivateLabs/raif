@@ -18,7 +18,10 @@ module Raif
       :deprecated,
       :retirement_date,
       :replacement_key,
-      :migration_note
+      :migration_note,
+      :lifecycle,
+      :pricing,
+      :capabilities
 
     validates :key, presence: true
     validates :api_name, presence: true
@@ -41,7 +44,10 @@ module Raif
       deprecated: false,
       retirement_date: nil,
       replacement_key: nil,
-      migration_note: nil
+      migration_note: nil,
+      lifecycle: {},
+      pricing: {},
+      capabilities: {}
     )
       @key = key
       @api_name = api_name
@@ -57,10 +63,28 @@ module Raif
       @retirement_date = retirement_date
       @replacement_key = replacement_key
       @migration_note = migration_note
+      @lifecycle = lifecycle
+      @pricing = pricing
+      @capabilities = capabilities
     end
 
     def deprecated?
       !!deprecated
+    end
+
+    # Manifest lifecycle conveniences. status is :active or :deprecated for
+    # models Raif ships (retired entries are never registered) and nil for a
+    # model a host app registered itself.
+    def lifecycle_status
+      lifecycle[:status]
+    end
+
+    def added_on
+      lifecycle[:added_on]
+    end
+
+    def deprecated_on
+      lifecycle[:deprecated_on]
     end
 
     def deprecation_message

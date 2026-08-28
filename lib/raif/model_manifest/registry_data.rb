@@ -38,6 +38,15 @@ module Raif
 
         config[:supports_native_tool_use] = false unless entry.capabilities.fetch(:native_tool_use)
 
+        config[:lifecycle] = entry.lifecycle
+        config[:pricing] = {
+          input_per_million: entry.pricing.fetch(:input_per_million),
+          output_per_million: entry.pricing.fetch(:output_per_million),
+          note: entry.pricing[:note],
+          valid_until: entry.pricing[:valid_until]
+        }.freeze
+        config[:capabilities] = entry.capabilities
+
         if entry.deprecated?
           config[:deprecated] = true
           config[:retirement_date] = entry.lifecycle[:retirement_date]
@@ -82,7 +91,9 @@ module Raif
               api_name: entry.api_name,
               display_name: entry.display_name,
               input_token_cost: entry.input_per_million.to_f / 1_000_000,
-              default_output_vector_size: entry.default_output_vector_size
+              default_output_vector_size: entry.default_output_vector_size,
+              lifecycle: entry.lifecycle,
+              pricing: { input_per_million: entry.input_per_million }.freeze
             }
           end
         end
