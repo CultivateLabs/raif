@@ -90,6 +90,12 @@ private
     parameters = {
       model: api_name,
       input: model_completion.messages,
+      # The Responses API defaults `store` to true and then keeps the response
+      # object for 30 days, readable in the OpenAI dashboard and retrievable by
+      # id. Always sent explicitly, since the parameter's absence is not a
+      # neutral position. false is not zero retention - OpenAI's abuse
+      # monitoring logs are separate and outlive it.
+      store: model_completion.open_ai_store_responses,
     }
 
     if supports_temperature?

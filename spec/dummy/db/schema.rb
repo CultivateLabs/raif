@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_28_145053) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -232,6 +232,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_000001) do
     t.integer "prompt_tokens"
     t.bigint "raif_model_completion_batch_id"
     t.text "raw_response"
+    t.jsonb "request_settings"
     t.jsonb "response_array"
     t.string "response_finish_reason"
     t.integer "response_format", default: 0, null: false

@@ -26,6 +26,16 @@ Raif.configure do |config|
   # Use :api_key for Azure OpenAI API (api-key: <token>)
   # config.open_ai_auth_header_style = :bearer
 
+  # Value of the `store` parameter on OpenAI Responses API requests. Defaults to false.
+  # OpenAI defaults it to true and then keeps the response object for 30 days, which
+  # makes the prompt readable in the OpenAI dashboard and retrievable by response id.
+  # Set it to true to get that visibility and provider-side response retrieval back.
+  # false is not zero retention: OpenAI's abuse monitoring logs are separate and are
+  # held for up to 30 days regardless.
+  # Override it per Raif::Task/Raif::Conversation/Raif::Agent subclass, or per
+  # Raif::Llm#chat call, with the open_ai_store_responses keyword.
+  # config.open_ai_store_responses = false
+
   # Your Anthropic API key. Defaults to ENV["ANTHROPIC_API_KEY"]
   # config.anthropic_api_key = ENV["ANTHROPIC_API_KEY"]
 
@@ -55,6 +65,23 @@ Raif.configure do |config|
 
   # The site URL to include in OpenRouter API requests headers. Optional.
   # config.open_router_site_url = "https://myapp.com"
+
+  # Value of `provider.data_collection` on OpenRouter requests. Defaults to "deny".
+  # OpenRouter routes each request to an upstream inference provider, and some of them
+  # store prompts non-transiently and train on them. "deny" routes only to providers
+  # that do not collect user data. OpenRouter's own default is "allow", which filters
+  # nothing.
+  # Override it per Raif::Task/Raif::Conversation/Raif::Agent subclass, or per
+  # Raif::Llm#chat call, with the open_router_data_collection keyword.
+  # config.open_router_data_collection = "deny"
+
+  # Value of `provider.zdr` on OpenRouter requests. Defaults to false.
+  # data_collection covers training and non-transient storage, not retention. Set this
+  # to true to restrict routing to endpoints with a Zero Data Retention policy. It is a
+  # much narrower filter - a model with no ZDR endpoint returns a no-endpoints error.
+  # Override it per Raif::Task/Raif::Conversation/Raif::Agent subclass, or per
+  # Raif::Llm#chat call, with the open_router_zdr keyword.
+  # config.open_router_zdr = false
 
   # Your Google AI API key. Defaults to ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
   # config.google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]

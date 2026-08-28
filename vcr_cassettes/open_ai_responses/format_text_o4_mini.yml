@@ -5,7 +5,7 @@ http_interactions:
     uri: https://api.openai.com/v1/responses
     body:
       encoding: UTF-8
-      string: '{"model":"o4-mini","input":[{"role":"user","content":[{"type":"input_text","text":"Hello"}]}],"instructions":"You
+      string: '{"model":"o4-mini","input":[{"role":"user","content":[{"type":"input_text","text":"Hello"}]}],"store":false,"instructions":"You
         are a helpful assistant"}'
     headers:
       Authorization:

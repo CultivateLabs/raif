@@ -74,7 +74,20 @@ private
     params = {
       model: model_completion.model_api_name,
       messages: model_completion.messages,
+      # OpenRouter routes to an upstream inference provider, and some of them
+      # store prompts non-transiently and train on them. The parameter defaults
+      # to "allow", which filters nothing, leaving only the account-level
+      # privacy setting on openrouter.ai - not visible from the host app's own
+      # code. See https://openrouter.ai/docs/features/privacy-and-logging
+      provider: { data_collection: model_completion.open_router_data_collection },
     }
+
+    # data_collection covers training and non-transient storage, not retention.
+    # zdr is the parameter that restricts routing to endpoints which do not
+    # retain the prompt. Only sent when true: OpenRouter treats false and
+    # absent alike, and OR's the per-request value with the account-wide and
+    # guardrail settings, so sending false could never relax anything.
+    params[:provider][:zdr] = true if model_completion.open_router_zdr
 
     # Models that deprecate temperature (Claude 5 generation) list it as
     # unsupported on their OpenRouter endpoints. Since schema'd JSON requests
@@ -131,7 +144,7 @@ private
           schema: model_completion.json_response_schema,
         },
       }
-      params[:provider] = { require_parameters: true }
+      params[:provider] = params[:provider].merge(require_parameters: true)
       model_completion.response_format_parameter = "json_schema"
     elsif model_completion.response_format_json?
       # Fallback for `response_format: :json` callers without a schema.

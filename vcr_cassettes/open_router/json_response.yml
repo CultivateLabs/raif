@@ -7,7 +7,7 @@ http_interactions:
       encoding: UTF-8
       string: '{"model":"meta-llama/llama-3.1-8b-instruct","messages":[{"role":"user","content":[{"type":"text","text":"Can
         you you tell me a joke? Respond in JSON format. Include nothing outside of
-        the JSON."}]}],"temperature":0.7,"max_tokens":null,"response_format":{"type":"json_object"}}'
+        the JSON."}]}],"provider":{"data_collection":"deny"},"temperature":0.7,"max_tokens":null,"response_format":{"type":"json_object"}}'
     headers:
       Authorization:
       - "<PLACEHOLDER_AUTHORIZATION>"

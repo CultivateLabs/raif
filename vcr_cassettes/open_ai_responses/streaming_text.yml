@@ -5,7 +5,7 @@ http_interactions:
     uri: https://api.openai.com/v1/responses
     body:
       encoding: UTF-8
-      string: '{"model":"gpt-4o","input":[{"role":"user","content":[{"type":"input_text","text":"Hello"}]}],"temperature":0.7,"stream":true}'
+      string: '{"model":"gpt-4o","input":[{"role":"user","content":[{"type":"input_text","text":"Hello"}]}],"store":false,"temperature":0.7,"stream":true}'
     headers:
       Authorization:
       - "<PLACEHOLDER_AUTHORIZATION>"

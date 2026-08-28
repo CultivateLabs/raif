@@ -6,7 +6,7 @@ http_interactions:
     body:
       encoding: UTF-8
       string: '{"model":"gpt-4.1-mini","input":[{"role":"user","content":[{"type":"input_text","text":"Can
-        you please write me a 1 paragraph poem about forecasting?"}]}],"temperature":0.7,"stream":true,"instructions":"You
+        you please write me a 1 paragraph poem about forecasting?"}]}],"store":false,"temperature":0.7,"stream":true,"instructions":"You
         are a helpful assistant who is collaborating with a teammate."}'
     headers:
       Authorization:

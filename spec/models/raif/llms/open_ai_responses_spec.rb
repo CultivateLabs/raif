@@ -419,6 +419,41 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
   describe "#build_request_parameters" do
     let(:parameters) { llm.send(:build_request_parameters, model_completion) }
 
+    describe "the store parameter" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "open_ai_responses_gpt_4o",
+          model_api_name: "gpt-4o",
+          response_format: "text"
+        )
+      end
+
+      it "sends store: false, so OpenAI does not retain the prompt" do
+        expect(parameters[:store]).to be(false)
+      end
+
+      it "sends the configured value when the host app opts in" do
+        allow(Raif.config).to receive(:open_ai_store_responses).and_return(true)
+
+        expect(parameters[:store]).to be(true)
+      end
+
+      it "prefers a request-scoped override over the config value" do
+        allow(Raif.config).to receive(:open_ai_store_responses).and_return(false)
+        model_completion.open_ai_store_responses = true
+
+        expect(parameters[:store]).to be(true)
+      end
+
+      it "treats an override of false as an override rather than as unset" do
+        allow(Raif.config).to receive(:open_ai_store_responses).and_return(true)
+        model_completion.open_ai_store_responses = false
+
+        expect(parameters[:store]).to be(false)
+      end
+    end
+
     context "for text response format" do
       let(:model_completion) do
         Raif::ModelCompletion.new(

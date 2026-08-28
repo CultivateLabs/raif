@@ -35,6 +35,72 @@ RSpec.describe Raif::Configuration do
       end
     end
 
+    describe "provider data retention settings" do
+      around do |example|
+        originals = {
+          open_ai_store_responses: Raif.config.open_ai_store_responses,
+          open_router_data_collection: Raif.config.open_router_data_collection,
+          open_router_zdr: Raif.config.open_router_zdr
+        }
+        example.run
+      ensure
+        originals.each { |setting, value| Raif.config.public_send("#{setting}=", value) }
+      end
+
+      it "defaults to the restrictive value for each provider" do
+        expect(Raif.config.open_ai_store_responses).to be(false)
+        expect(Raif.config.open_router_data_collection).to eq("deny")
+      end
+
+      # ZDR routes to far fewer endpoints than data_collection filters out, so
+      # a restrictive default would turn working models into no-endpoints
+      # errors on upgrade.
+      it "defaults open_router_zdr to false" do
+        expect(Raif.config.open_router_zdr).to be(false)
+      end
+
+      it "allows an explicit opt-in" do
+        Raif.config.open_ai_store_responses = true
+        Raif.config.open_router_data_collection = "allow"
+        Raif.config.open_router_zdr = true
+
+        expect { Raif.config.validate! }.to_not raise_error
+      end
+
+      it "accepts a symbol for open_router_data_collection" do
+        Raif.config.open_router_data_collection = :allow
+
+        expect { Raif.config.validate! }.to_not raise_error
+      end
+
+      it "raises when open_ai_store_responses is not a boolean" do
+        Raif.config.open_ai_store_responses = nil
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /open_ai_store_responses must be true or false/
+        )
+      end
+
+      it "raises when open_router_zdr is not a boolean" do
+        Raif.config.open_router_zdr = "yes"
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /open_router_zdr must be true or false/
+        )
+      end
+
+      it "raises when open_router_data_collection is not allow or deny" do
+        Raif.config.open_router_data_collection = "sometimes"
+
+        expect { Raif.config.validate! }.to raise_error(
+          Raif::Errors::InvalidConfigError,
+          /open_router_data_collection must be one of: allow, deny/
+        )
+      end
+    end
+
     describe "archive settings" do
       around do |example|
         originals = {

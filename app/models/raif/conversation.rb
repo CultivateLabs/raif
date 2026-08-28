@@ -41,6 +41,7 @@ class Raif::Conversation < Raif::ApplicationRecord
   include Raif::Concerns::HasAvailableModelTools
   include Raif::Concerns::LlmResponseParsing
   include Raif::Concerns::LlmPromptCaching
+  include Raif::Concerns::LlmDataRetention
 
   belongs_to :creator, polymorphic: true
   belongs_to :source, polymorphic: true, optional: true
@@ -125,6 +126,9 @@ class Raif::Conversation < Raif::ApplicationRecord
       available_model_tools: available_model_tools,
       anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
       bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
+      open_ai_store_responses: self.class.open_ai_store_responses,
+      open_router_data_collection: self.class.open_router_data_collection,
+      open_router_zdr: self.class.open_router_zdr,
       &block
     )
 
