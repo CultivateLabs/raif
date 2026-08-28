@@ -563,7 +563,7 @@ provider :open_ai do |p|
           native_tool_use: true,
           streaming: true,
           batch_inference: true,
-          images: true,
+          images: false,
           pdfs: false,
           provider_managed_tools: []
         }
@@ -575,7 +575,7 @@ provider :open_ai do |p|
           native_tool_use: true,
           streaming: true,
           batch_inference: true,
-          images: true,
+          images: false,
           pdfs: true,
           provider_managed_tools: %i[web_search code_execution image_generation]
         }
@@ -779,7 +779,7 @@ provider :open_ai do |p|
           native_tool_use: true,
           streaming: true,
           batch_inference: true,
-          images: true,
+          images: false,
           pdfs: false,
           provider_managed_tools: []
         }
@@ -791,7 +791,7 @@ provider :open_ai do |p|
           native_tool_use: true,
           streaming: true,
           batch_inference: true,
-          images: true,
+          images: false,
           pdfs: true,
           provider_managed_tools: %i[web_search code_execution image_generation]
         }
@@ -949,7 +949,7 @@ provider :open_ai do |p|
           batch_inference: true,
           images: true,
           pdfs: true,
-          provider_managed_tools: []
+          provider_managed_tools: %i[web_search image_generation]
         }
       }
     }
@@ -973,7 +973,7 @@ provider :open_ai do |p|
           batch_inference: true,
           images: true,
           pdfs: true,
-          provider_managed_tools: []
+          provider_managed_tools: %i[web_search code_execution image_generation]
         }
       }
     }
