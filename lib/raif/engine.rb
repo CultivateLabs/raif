@@ -139,7 +139,7 @@ module Raif
       Raif.config.agent_types += ["Raif::TestTemplateAgent"]
 
       require "#{Raif::Engine.root}/spec/support/test_llm"
-      Raif.register_llm(Raif::Llms::TestLlm, key: :raif_test_llm, api_name: "raif-test-llm")
+      Raif.register_llm(Raif::Llms::TestLlm, key: :raif_test_llm, api_name: "raif-test-llm", display_name: "Raif Test LLM")
 
       require "#{Raif::Engine.root}/spec/support/test_embedding_model"
       Raif.register_embedding_model(

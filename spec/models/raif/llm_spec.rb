@@ -513,25 +513,29 @@ RSpec.describe Raif::Llm, type: :model do
     end
   end
 
-  it "has model names for all built in LLMs" do
-    expect(Raif.available_llm_keys.sort).to eq(I18n.t("raif.model_names").keys.sort)
-
+  it "names every built in LLM from its manifest display_name" do
     Raif.default_llms.values.flatten.each do |llm_config|
       llm = Raif.llm(llm_config[:key])
+      expect(llm.name).to eq(llm_config[:display_name])
       expect(llm.name).to_not include("Translation missing")
     end
   end
 
   describe "#name" do
-    context "when I18n translation exists" do
-      it "returns the I18n translation" do
+    context "when a host app provides an I18n translation" do
+      it "prefers the translation over display_name" do
         llm = Raif::Llms::TestLlm.new(
           key: :open_ai_gpt_4o,
           api_name: "gpt-4o",
           display_name: "Custom Display Name"
         )
 
-        expect(llm.name).to eq(I18n.t("raif.model_names.open_ai_gpt_4o"))
+        I18n.with_locale(:en) do
+          I18n.backend.store_translations(:en, raif: { model_names: { open_ai_gpt_4o: "Host App Name" } })
+          expect(llm.name).to eq("Host App Name")
+        ensure
+          I18n.backend.reload!
+        end
       end
     end
 

@@ -19,6 +19,7 @@ module Raif
         config = {
           key: entry.key,
           api_name: entry.api_name,
+          display_name: display_name_for(entry),
           input_token_cost: entry.pricing.fetch(:input_per_million).to_f / 1_000_000,
           output_token_cost: entry.pricing.fetch(:output_per_million).to_f / 1_000_000
         }
@@ -64,33 +65,27 @@ module Raif
         settings
       end
 
+      # The manifest stores open_ai display_name without a "(Responses API)"
+      # suffix; append it for responses endpoint entries so the two keys for
+      # one model are distinguishable wherever names are shown.
+      def self.display_name_for(entry)
+        return entry.display_name unless entry.endpoint == "responses"
+
+        "#{entry.display_name} (Responses API)"
+      end
+
       def self.embedding_configs(manifest)
         manifest.embedding_entries.reject(&:retired?).group_by(&:adapter_class_name).transform_values do |entries|
           entries.map do |entry|
             {
               key: entry.key,
               api_name: entry.api_name,
+              display_name: entry.display_name,
               input_token_cost: entry.input_per_million.to_f / 1_000_000,
               default_output_vector_size: entry.default_output_vector_size
             }
           end
         end
-      end
-
-      # The manifest stores open_ai display_name without a "(Responses API)"
-      # suffix; re-append it here for responses endpoint entries.
-      def self.model_names(manifest)
-        names = manifest.llm_entries.reject(&:retired?).to_h do |e|
-          name = e.display_name
-          name = "#{name} (Responses API)" if e.endpoint == "responses"
-          [e.key.to_s, name]
-        end
-        names["raif_test_llm"] = "Raif Test LLM"
-        names.sort.to_h
-      end
-
-      def self.embedding_model_names(manifest)
-        manifest.embedding_entries.reject(&:retired?).to_h { |e| [e.key.to_s, e.display_name] }.sort.to_h
       end
 
       def self.streaming_unsupported_keys(manifest)

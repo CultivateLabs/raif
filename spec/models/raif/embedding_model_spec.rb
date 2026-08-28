@@ -14,16 +14,16 @@ RSpec.describe Raif::EmbeddingModel, type: :model do
     expect(Raif.default_embedding_model_key).to eq(:raif_test_embedding_model)
   end
 
-  it "has model names for all built in embedding models" do
+  it "names every built in embedding model from its manifest display_name" do
     Raif.default_embedding_models.values.flatten.each do |embedding_model_config|
       embedding_model = Raif.embedding_model(embedding_model_config[:key])
-      expect(embedding_model.name).to_not include("Translation missing")
+      expect(embedding_model.name).to eq(embedding_model_config[:display_name])
     end
   end
 
   describe "#name" do
-    context "when I18n translation exists" do
-      it "returns the I18n translation" do
+    context "when a host app provides an I18n translation" do
+      it "prefers the translation over display_name" do
         embedding_model = Raif::EmbeddingModel.new(
           key: :open_ai_text_embedding_3_large,
           api_name: "text-embedding-3-large",
@@ -31,7 +31,10 @@ RSpec.describe Raif::EmbeddingModel, type: :model do
           default_output_vector_size: 3072
         )
 
-        expect(embedding_model.name).to eq(I18n.t("raif.embedding_model_names.open_ai_text_embedding_3_large"))
+        I18n.backend.store_translations(:en, raif: { embedding_model_names: { open_ai_text_embedding_3_large: "Host App Name" } })
+        expect(embedding_model.name).to eq("Host App Name")
+      ensure
+        I18n.backend.reload!
       end
     end
 

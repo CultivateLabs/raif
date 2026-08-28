@@ -15,11 +15,6 @@ RSpec.describe "generated artifacts freshness" do
   # would still be a substring of a file that also contains the new one). Only
   # eq against the whole-file transform proves the checked-in file has no
   # leftover keys the manifest no longer declares.
-  it "en.yml model name sections are current" do
-    content = File.read(Raif::Engine.root.join("config/locales/en.yml"))
-    expect(content).to eq(generator.locale_en(manifest, content)), hint
-  end
-
   it "initializer template key lists are current" do
     content = File.read(Raif::Engine.root.join("lib/generators/raif/install/templates/initializer.rb"))
     expect(content).to eq(generator.initializer(manifest, content)), hint
@@ -34,17 +29,6 @@ RSpec.describe "generated artifacts freshness" do
   # whole-file transforms actually strip a stale key out of the generated
   # region rather than merely tolerating it (which is all `include` checked).
   describe "stale entries" do
-    it "are removed from the en.yml model_names section" do
-      current = File.read(Raif::Engine.root.join("config/locales/en.yml"))
-      stale = current.sub(
-        "    model_names:\n",
-        "    model_names:\n      anthropic_retired_stale: Anthropic Retired Stale\n"
-      )
-
-      expect(generator.locale_en(manifest, stale)).not_to eq(stale)
-      expect(generator.locale_en(manifest, stale)).not_to include("anthropic_retired_stale")
-    end
-
     it "are removed from the initializer's generated model keys block" do
       current = File.read(Raif::Engine.root.join("lib/generators/raif/install/templates/initializer.rb"))
       stale = current.sub(
