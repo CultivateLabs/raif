@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_24_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_28_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -227,6 +227,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_24_000001) do
     t.integer "max_completion_tokens"
     t.jsonb "messages", null: false
     t.string "model_api_name", null: false
+    t.boolean "open_ai_store_responses"
+    t.string "open_router_data_collection"
     t.decimal "output_token_cost", precision: 10, scale: 6
     t.decimal "prompt_token_cost", precision: 10, scale: 6
     t.integer "prompt_tokens"

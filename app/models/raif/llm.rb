@@ -207,6 +207,8 @@ module Raif
         available_model_tools: available_model_tools,
         tool_choice: tool_choice&.to_s,
         stream_response: stream_response,
+        open_ai_store_responses: open_ai_store_responses,
+        open_router_data_collection: open_router_data_collection&.to_s,
         raif_model_completion_batch: raif_model_completion_batch,
         batch_custom_id: batch_custom_id
       )
@@ -214,8 +216,6 @@ module Raif
       model_completion.allow_parallel_tool_calls = allow_parallel_tool_calls
       model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled
       model_completion.bedrock_prompt_caching_enabled = bedrock_prompt_caching_enabled
-      model_completion.open_ai_store_responses = open_ai_store_responses
-      model_completion.open_router_data_collection = open_router_data_collection
       model_completion
     end
 

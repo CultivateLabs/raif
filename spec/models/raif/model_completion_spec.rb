@@ -20,6 +20,8 @@
 #  max_completion_tokens          :integer
 #  messages                       :jsonb            not null
 #  model_api_name                 :string           not null
+#  open_ai_store_responses        :boolean
+#  open_router_data_collection    :string
 #  output_token_cost              :decimal(10, 6)
 #  prompt_token_cost              :decimal(10, 6)
 #  prompt_tokens                  :integer

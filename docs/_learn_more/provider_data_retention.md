@@ -68,4 +68,4 @@ Raif.llm(:open_ai_responses_gpt_4o).chat(
 )
 ```
 
-An override is request-scoped and is not persisted on the `Raif::ModelCompletion`. Batch submission reloads its completions from the database, so a batched request always uses the global config value.
+An override is persisted on the `Raif::ModelCompletion`, in the `open_ai_store_responses` and `open_router_data_collection` columns. A NULL column means "use the `Raif.config` value", so only a deliberate override is recorded. Persisting matters for batch inference: submission reloads its completions from the database, in a later process, and builds the provider request from what it finds there.

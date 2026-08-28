@@ -14,7 +14,20 @@ class Raif::TestProviderRetentionTask < Raif::Task
   end
 end
 
+# The inverse: a task whose prompts must not be retained, on an app whose
+# global settings are permissive.
+class Raif::TestSensitiveRetentionTask < Raif::Task
+  self.open_ai_store_responses = false
+  self.open_router_data_collection = "deny"
+
+  def build_prompt
+    "Tell me a joke"
+  end
+end
+
 RSpec.describe Raif::Concerns::LlmDataRetention do
+  let(:creator) { FB.create(:raif_test_user) }
+
   describe "the class attributes" do
     it "is nil by default, so the class defers to Raif.config" do
       expect(Raif::TestTask.open_ai_store_responses).to be_nil
@@ -29,34 +42,71 @@ RSpec.describe Raif::Concerns::LlmDataRetention do
     end
   end
 
-  # The settings are request-scoped rather than persisted, and Raif::Task
-  # #process_completion! hands back a `becomes`-copy that does not carry them,
-  # so these assert on the completion the adapter itself received.
-  describe "the settings the adapter receives" do
-    let(:dispatched) { [] }
-
-    def run(task_class)
-      stub_raif_task(task_class) do |_messages, model_completion, _source|
-        dispatched << model_completion
-        "a joke"
-      end
-
-      task_class.run(creator: FB.create(:raif_test_user))
-      dispatched.last
-    end
+  describe "the settings on the model completion" do
+    before { stub_raif_task(Raif::TestTask){ "a joke" } }
 
     it "leaves a task without an override on the config value" do
-      model_completion = run(Raif::TestTask)
+      task = Raif::TestTask.run(creator: creator)
 
-      expect(model_completion.open_ai_store_responses).to be(false)
-      expect(model_completion.open_router_data_collection).to eq("deny")
+      expect(task.raif_model_completion.open_ai_store_responses).to be(false)
+      expect(task.raif_model_completion.open_router_data_collection).to eq("deny")
     end
 
     it "applies the task's override" do
-      model_completion = run(Raif::TestProviderRetentionTask)
+      stub_raif_task(Raif::TestProviderRetentionTask){ "a joke" }
+      task = Raif::TestProviderRetentionTask.run(creator: creator)
 
-      expect(model_completion.open_ai_store_responses).to be(true)
-      expect(model_completion.open_router_data_collection).to eq("allow")
+      expect(task.raif_model_completion.open_ai_store_responses).to be(true)
+      expect(task.raif_model_completion.open_router_data_collection).to eq("allow")
+    end
+  end
+
+  # Batch submission reloads its completions from the database, in a later
+  # process, and builds the provider request from what it finds. An override
+  # held only in memory would be lost there, and the loss is not symmetric: a
+  # permissive global setting would then retain the prompts of a task that
+  # explicitly said not to.
+  describe "a batched completion, reloaded" do
+    let(:batch) do
+      Raif::ModelCompletionBatches::OpenAi.create!(
+        llm_model_key: "open_ai_responses_gpt_4o",
+        model_api_name: "gpt-4o",
+        completion_handler_class_name: "Raif::TaskBatchCompletionHandler"
+      )
+    end
+
+    before do
+      allow(Raif.config).to receive(:open_ai_store_responses).and_return(true)
+      allow(Raif.config).to receive(:open_router_data_collection).and_return("allow")
+    end
+
+    it "keeps a restrictive task override across the reload" do
+      task = Raif::TestSensitiveRetentionTask.build_for_batch(
+        batch: batch,
+        creator: creator,
+        llm_model_key: "open_ai_responses_gpt_4o"
+      )
+
+      reloaded = Raif::ModelCompletion.find(task.raif_model_completion.id)
+
+      expect(reloaded.open_ai_store_responses).to be(false)
+      expect(reloaded.open_router_data_collection).to eq("deny")
+
+      parameters = Raif.llm(:open_ai_responses_gpt_4o).send(:build_request_parameters, reloaded)
+      expect(parameters[:store]).to be(false)
+    end
+
+    it "still defers to the config value for a task with no override" do
+      task = Raif::TestTask.build_for_batch(
+        batch: batch,
+        creator: creator,
+        llm_model_key: "open_ai_responses_gpt_4o"
+      )
+
+      reloaded = Raif::ModelCompletion.find(task.raif_model_completion.id)
+
+      expect(reloaded.open_ai_store_responses).to be(true)
+      expect(reloaded.open_router_data_collection).to eq("allow")
     end
   end
 end

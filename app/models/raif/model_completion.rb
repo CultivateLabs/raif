@@ -20,6 +20,8 @@
 #  max_completion_tokens          :integer
 #  messages                       :jsonb            not null
 #  model_api_name                 :string           not null
+#  open_ai_store_responses        :boolean
+#  open_router_data_collection    :string
 #  output_token_cost              :decimal(10, 6)
 #  prompt_token_cost              :decimal(10, 6)
 #  prompt_tokens                  :integer
@@ -69,13 +71,6 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   attr_accessor :anthropic_prompt_caching_enabled, :bedrock_prompt_caching_enabled
 
-  # Request-scoped (not persisted) provider data retention overrides. nil means
-  # "use the Raif.config value", which is what an instance built outside
-  # Raif::Llm#chat carries. Batch submission reloads its completions from the
-  # database, so a batched request always uses the config value - the safe
-  # direction, since both config defaults are the restrictive ones.
-  attr_writer :open_ai_store_responses, :open_router_data_collection
-
   # Request-scoped (not persisted): when true, the provider request permits the
   # model to return multiple tool calls. Adapters that can disable parallel tool
   # use map this onto their provider parameter. Any value other than true
@@ -111,12 +106,18 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     started_at.nil? && completed_at.nil? && failed_at.nil?
   end
 
+  # Provider data retention settings, resolved. A NULL column means "use the
+  # Raif.config value"; read the raw attribute to tell an unset one from an
+  # explicit false. Persisted rather than request-scoped because batch
+  # submission reloads its completions from the database, in a later process,
+  # and builds the provider request from what it finds there.
   def open_ai_store_responses
-    @open_ai_store_responses.nil? ? Raif.config.open_ai_store_responses : @open_ai_store_responses
+    value = super
+    value.nil? ? Raif.config.open_ai_store_responses : value
   end
 
   def open_router_data_collection
-    (@open_router_data_collection.presence || Raif.config.open_router_data_collection).to_s
+    (super.presence || Raif.config.open_router_data_collection).to_s
   end
 
   # Raw provider-reported finish/stop reasons that indicate the response was cut off
