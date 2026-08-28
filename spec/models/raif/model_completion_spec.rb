@@ -20,12 +20,11 @@
 #  max_completion_tokens          :integer
 #  messages                       :jsonb            not null
 #  model_api_name                 :string           not null
-#  open_ai_store_responses        :boolean
-#  open_router_data_collection    :string
 #  output_token_cost              :decimal(10, 6)
 #  prompt_token_cost              :decimal(10, 6)
 #  prompt_tokens                  :integer
 #  raw_response                   :text
+#  request_settings               :jsonb            not null
 #  response_array                 :jsonb
 #  response_finish_reason         :string
 #  response_format                :integer          default("text"), not null
@@ -803,6 +802,66 @@ RSpec.describe Raif::ModelCompletion, type: :model do
           expect(model_completion.failure_response_body).to be_nil
         end
       end
+    end
+  end
+
+  describe "request_settings" do
+    let(:model_completion) { FB.build(:raif_model_completion) }
+
+    it "starts empty, so every setting defers to Raif.config" do
+      expect(model_completion.request_settings).to eq({})
+      expect(model_completion.open_ai_store_responses).to be(false)
+      expect(model_completion.open_router_data_collection).to eq("deny")
+    end
+
+    it "records only a setting a caller actually set" do
+      model_completion.open_ai_store_responses = true
+
+      expect(model_completion.request_settings).to eq({ "open_ai_store_responses" => true })
+    end
+
+    it "treats false as a setting rather than as unset" do
+      allow(Raif.config).to receive(:open_ai_store_responses).and_return(true)
+      model_completion.open_ai_store_responses = false
+
+      expect(model_completion.request_settings).to eq({ "open_ai_store_responses" => false })
+      expect(model_completion.open_ai_store_responses).to be(false)
+    end
+
+    it "clears a setting back to the config default when assigned nil" do
+      model_completion.open_ai_store_responses = true
+      model_completion.open_ai_store_responses = nil
+
+      expect(model_completion.request_settings).to eq({})
+      expect(model_completion.open_ai_store_responses).to be(false)
+    end
+
+    it "stores open_router_data_collection as a string" do
+      model_completion.open_router_data_collection = :allow
+
+      expect(model_completion.request_settings).to eq({ "open_router_data_collection" => "allow" })
+      expect(model_completion.open_router_data_collection).to eq("allow")
+    end
+
+    it "rejects a key that is not declared in REQUEST_SETTING_KEYS" do
+      model_completion.request_settings = { "store_everything" => true }
+
+      expect(model_completion).not_to be_valid
+      expect(model_completion.errors[:request_settings].join).to include("undeclared key: store_everything")
+    end
+
+    it "rejects a non-boolean open_ai_store_responses" do
+      model_completion.request_settings = { "open_ai_store_responses" => "yes" }
+
+      expect(model_completion).not_to be_valid
+      expect(model_completion.errors[:request_settings].join).to include("must be true or false")
+    end
+
+    it "rejects an open_router_data_collection outside allow/deny" do
+      model_completion.request_settings = { "open_router_data_collection" => "sometimes" }
+
+      expect(model_completion).not_to be_valid
+      expect(model_completion.errors[:request_settings].join).to include("must be one of: allow, deny")
     end
   end
 

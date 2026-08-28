@@ -20,12 +20,11 @@
 #  max_completion_tokens          :integer
 #  messages                       :jsonb            not null
 #  model_api_name                 :string           not null
-#  open_ai_store_responses        :boolean
-#  open_router_data_collection    :string
 #  output_token_cost              :decimal(10, 6)
 #  prompt_token_cost              :decimal(10, 6)
 #  prompt_tokens                  :integer
 #  raw_response                   :text
+#  request_settings               :jsonb            not null
 #  response_array                 :jsonb
 #  response_finish_reason         :string
 #  response_format                :integer          default("text"), not null
@@ -71,6 +70,22 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   attr_accessor :anthropic_prompt_caching_enabled, :bedrock_prompt_caching_enabled
 
+  # Every key request_settings may carry, with the provider parameter each one
+  # controls. Validated, so the bag stays a declared set rather than a place
+  # anything can be stashed. Each has a Raif.config default of the same name,
+  # and an absent key defers to it.
+  #
+  #   open_ai_store_responses      Raif::Llms::OpenAiResponses `store`
+  #   open_router_data_collection  Raif::Llms::OpenRouter `provider.data_collection`
+  #
+  # The prompt caching and parallel tool call flags below are deliberately not
+  # in here. They are request-scoped, and persisting them would change what a
+  # batched request sends - a cost and behavior change that belongs on its own.
+  REQUEST_SETTING_KEYS = %w[
+    open_ai_store_responses
+    open_router_data_collection
+  ].freeze
+
   # Request-scoped (not persisted): when true, the provider request permits the
   # model to return multiple tool calls. Adapters that can disable parallel tool
   # use map this onto their provider parameter. Any value other than true
@@ -99,6 +114,8 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   validates :llm_model_key, presence: true, inclusion: { in: ->{ Raif.available_llm_keys.map(&:to_s) } }
   validates :model_api_name, presence: true
+  validate :request_settings_keys_are_declared
+  validate :request_settings_values_are_valid
 
   scope :pending, -> { where(started_at: nil, completed_at: nil, failed_at: nil) }
 
@@ -106,18 +123,24 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     started_at.nil? && completed_at.nil? && failed_at.nil?
   end
 
-  # Provider data retention settings, resolved. A NULL column means "use the
-  # Raif.config value"; read the raw attribute to tell an unset one from an
-  # explicit false. Persisted rather than request-scoped because batch
-  # submission reloads its completions from the database, in a later process,
-  # and builds the provider request from what it finds there.
+  # Provider data retention settings, resolved against Raif.config. An absent
+  # key means "use the config value", so read request_settings directly to tell
+  # an unset setting from an explicit false.
   def open_ai_store_responses
-    value = super
+    value = request_settings["open_ai_store_responses"]
     value.nil? ? Raif.config.open_ai_store_responses : value
   end
 
+  def open_ai_store_responses=(value)
+    write_request_setting("open_ai_store_responses", value)
+  end
+
   def open_router_data_collection
-    (super.presence || Raif.config.open_router_data_collection).to_s
+    (request_settings["open_router_data_collection"].presence || Raif.config.open_router_data_collection).to_s
+  end
+
+  def open_router_data_collection=(value)
+    write_request_setting("open_router_data_collection", value&.to_s.presence)
   end
 
   # Raw provider-reported finish/stop reasons that indicate the response was cut off
@@ -266,6 +289,48 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   ].freeze
 
 private
+
+  # nil clears the key rather than storing a null, so "unset" has exactly one
+  # representation and an absent key is the only thing that means "defer to
+  # Raif.config".
+  def write_request_setting(key, value)
+    self.request_settings = if value.nil?
+      request_settings.except(key)
+    else
+      request_settings.merge(key => value)
+    end
+
+    value
+  end
+
+  def request_settings_keys_are_declared
+    return if request_settings.blank?
+
+    undeclared = request_settings.keys.map(&:to_s) - REQUEST_SETTING_KEYS
+    return if undeclared.empty?
+
+    errors.add(
+      :request_settings,
+      "contains undeclared #{"key".pluralize(undeclared.size)}: #{undeclared.sort.join(", ")}. " \
+        "Add it to Raif::ModelCompletion::REQUEST_SETTING_KEYS if it is a real provider request setting."
+    )
+  end
+
+  def request_settings_values_are_valid
+    store = request_settings["open_ai_store_responses"]
+    unless store.nil? || [true, false].include?(store)
+      errors.add(:request_settings, "open_ai_store_responses must be true or false (got #{store.inspect})")
+    end
+
+    collection = request_settings["open_router_data_collection"]
+    return if collection.nil? || Raif::Configuration::OPEN_ROUTER_DATA_COLLECTION_VALUES.include?(collection.to_s)
+
+    errors.add(
+      :request_settings,
+      "open_router_data_collection must be one of: " \
+        "#{Raif::Configuration::OPEN_ROUTER_DATA_COLLECTION_VALUES.join(", ")} (got #{collection.inspect})"
+    )
+  end
 
   # Streaming saves this row per-chunk mid-flight, so gate on the terminal
   # transition (or a post-terminal change to a copied column) to get exactly

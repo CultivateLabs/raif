@@ -207,8 +207,10 @@ module Raif
         available_model_tools: available_model_tools,
         tool_choice: tool_choice&.to_s,
         stream_response: stream_response,
-        open_ai_store_responses: open_ai_store_responses,
-        open_router_data_collection: open_router_data_collection&.to_s,
+        request_settings: {
+          "open_ai_store_responses" => open_ai_store_responses,
+          "open_router_data_collection" => open_router_data_collection&.to_s.presence
+        }.compact,
         raif_model_completion_batch: raif_model_completion_batch,
         batch_custom_id: batch_custom_id
       )

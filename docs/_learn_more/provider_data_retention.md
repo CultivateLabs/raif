@@ -68,4 +68,6 @@ Raif.llm(:open_ai_responses_gpt_4o).chat(
 )
 ```
 
-An override is persisted on the `Raif::ModelCompletion`, in the `open_ai_store_responses` and `open_router_data_collection` columns. A NULL column means "use the `Raif.config` value", so only a deliberate override is recorded. Persisting matters for batch inference: submission reloads its completions from the database, in a later process, and builds the provider request from what it finds there.
+An override is persisted on the `Raif::ModelCompletion`, in its `request_settings` jsonb column. An absent key means "use the `Raif.config` value", so only a deliberate override is recorded. `Raif::ModelCompletion::REQUEST_SETTING_KEYS` lists every key the column may carry, and both keys and values are validated.
+
+Persisting matters for batch inference: submission reloads its completions from the database, in a later process, and builds the provider request from what it finds there.
