@@ -78,9 +78,13 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
   #   open_ai_store_responses      Raif::Llms::OpenAiResponses `store`
   #   open_router_data_collection  Raif::Llms::OpenRouter `provider.data_collection`
   #
-  # The prompt caching and parallel tool call flags below are deliberately not
-  # in here. They are request-scoped, and persisting them would change what a
-  # batched request sends - a cost and behavior change that belongs on its own.
+  # The prompt caching and parallel tool call flags below stay request-scoped.
+  # Persisting Anthropic's would start sending `cache_control` on batched
+  # requests that omit it today, moving the bill in a direction that depends on
+  # prefix reuse against a 5-minute cache TTL - a cost change that belongs on
+  # its own. The other two have no batched request to change: Bedrock has no
+  # batch API, and every parallel-tool-call read sits behind a tool_choice that
+  # Raif::Task#prepare_for_batch! never sets.
   REQUEST_SETTING_KEYS = %w[
     open_ai_store_responses
     open_router_data_collection
