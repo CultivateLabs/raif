@@ -2,6 +2,18 @@
 
 require "rails_helper"
 
+# Defined here rather than in spec/support: lib/raif/rspec.rb exports that file
+# to host apps, and a class that opts out of the app-wide retention posture is
+# exactly what a host app's own guard against opting out would trip over.
+class Raif::TestProviderRetentionTask < Raif::Task
+  self.open_ai_store_responses = true
+  self.open_router_data_collection = "allow"
+
+  def build_prompt
+    "Tell me a joke"
+  end
+end
+
 RSpec.describe Raif::Concerns::LlmDataRetention do
   describe "the class attributes" do
     it "is nil by default, so the class defers to Raif.config" do

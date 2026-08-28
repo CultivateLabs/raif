@@ -52,12 +52,3 @@ class Raif::TestHtmlTask < Raif::Task
     super + "\nYou are also good at telling jokes. Your response should be an HTML snippet that is formatted with basic HTML tags."
   end
 end
-
-class Raif::TestProviderRetentionTask < Raif::Task
-  self.open_ai_store_responses = true
-  self.open_router_data_collection = "allow"
-
-  def build_prompt
-    "Tell me a joke"
-  end
-end
