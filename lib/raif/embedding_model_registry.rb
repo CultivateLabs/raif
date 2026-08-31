@@ -21,8 +21,9 @@ module Raif
       raise ArgumentError, "The embedding model you tried to register is invalid: #{embedding_model.errors.full_messages.join(", ")}"
     end
 
+    key = embedding_model.key.to_sym
     @embedding_model_registry ||= {}
-    @embedding_model_registry[embedding_model.key] = embedding_model_config.merge(embedding_model_class: embedding_model_class)
+    @embedding_model_registry[key] = embedding_model_config.merge(embedding_model_class: embedding_model_class, key: key)
   end
 
   def self.embedding_model(model_key)

@@ -43,6 +43,21 @@ RSpec.describe Raif::EmbeddingModel, type: :model do
       expect(Raif.embedding_model("raif_test_embedding_model").key).to eq(:raif_test_embedding_model)
       expect(Raif.embedding_model(:raif_test_embedding_model).key).to eq(:raif_test_embedding_model)
     end
+
+    it "finds a model registered with a String key via String or Symbol lookup" do
+      Raif.register_embedding_model(
+        Raif::EmbeddingModels::Test,
+        key: "raif_string_key_test_embedding_model",
+        api_name: "raif-string-key-test-embedding-model",
+        default_output_vector_size: 8
+      )
+
+      expect(Raif.embedding_model("raif_string_key_test_embedding_model").key).to eq(:raif_string_key_test_embedding_model)
+      expect(Raif.embedding_model(:raif_string_key_test_embedding_model).key).to eq(:raif_string_key_test_embedding_model)
+    ensure
+      Raif.embedding_model_registry.delete(:raif_string_key_test_embedding_model)
+      Raif.embedding_model_registry.delete("raif_string_key_test_embedding_model")
+    end
   end
 
   describe "#name" do

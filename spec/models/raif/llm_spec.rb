@@ -58,6 +58,16 @@ RSpec.describe Raif::Llm, type: :model do
       expect(Raif.llm("raif_test_llm").key).to eq(:raif_test_llm)
       expect(Raif.llm(:raif_test_llm).key).to eq(:raif_test_llm)
     end
+
+    it "finds a model registered with a String key via String or Symbol lookup" do
+      Raif.register_llm(Raif::Llms::TestLlm, key: "raif_string_key_test_llm", api_name: "raif-string-key-test-llm")
+
+      expect(Raif.llm("raif_string_key_test_llm").key).to eq(:raif_string_key_test_llm)
+      expect(Raif.llm(:raif_string_key_test_llm).key).to eq(:raif_string_key_test_llm)
+    ensure
+      Raif.llm_registry.delete(:raif_string_key_test_llm)
+      Raif.llm_registry.delete("raif_string_key_test_llm")
+    end
   end
 
   describe "#chat" do
