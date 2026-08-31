@@ -52,6 +52,11 @@
   .totals div { min-width: 120px; }
   .totals .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .totals .v { font-size: 19px; font-weight: 600; }
+  /* The header carries names and timestamps rather than figures, so it takes the same
+     label-above-value shape at a size a 30-character model key can live at. */
+  .totals.meta .v { font-size: 15px; }
+  .totals.meta > div { min-width: 150px; }
+  .selection { margin: 14px 0 0; font-size: 13px; }
   details { border-top: 1px solid var(--border); padding: 8px 0; }
   details:first-of-type { border-top: none; }
   summary { cursor: pointer; font-size: 14px; }
@@ -84,49 +89,58 @@
   <h1>Raif eval run</h1>
   <p class="muted">One run, in full. Every expectation is listed under its eval set; failures are collected at the top.</p>
 
-  <div class="card scroll">
-    <table>
-      <tr><th>Model</th><th>Judge</th><th>When</th><th>Shape</th><th>Cost</th></tr>
-      <tr>
-        <td class="mono"><%= h model %></td>
-        <td class="mono"><%= h judge || "none configured" %></td>
-        <td class="mono"><%= h run_at %></td>
-        <td>
+  <div class="card">
+    <div class="totals meta">
+      <div>
+        <div class="k">Model</div>
+        <div class="v mono"><%= h model %></div>
+      </div>
+      <div>
+        <div class="k">Judge</div>
+        <div class="v mono"><%= h judge || "none configured" %></div>
+      </div>
+      <div>
+        <div class="k">When</div>
+        <div class="v mono"><%= h run_at %></div>
+      </div>
+      <div>
+        <div class="k">Shape</div>
+        <div class="v">
           <%= h summary["total_evals"] %> evals
           <% if repeats.to_i > 1 -%>
             &times; <%= h repeats %> repeats
           <% end -%>
           across <%= h summary["total_eval_sets"] %> sets
-        </td>
-        <td class="mono"><%= format_cost(total_cost) %></td>
-      </tr>
-      <tr>
-        <td>code</td>
-        <td colspan="4" class="mono"><%= h describe_code %></td>
-      </tr>
+        </div>
+      </div>
+      <div>
+        <div class="k">Cost</div>
+        <div class="v"><%= format_cost(total_cost) %></div>
+      </div>
+      <div>
+        <div class="k">Code</div>
+        <div class="v mono"><%= h describe_code %></div>
+      </div>
+      <div>
+        <div class="k">Capture</div>
+        <div class="v mono"><%= h capture_mode %></div>
+      </div>
       <% if label -%>
-      <tr>
-        <td>file</td>
-        <td colspan="4" class="mono muted"><%= h label %></td>
-      </tr>
+      <div>
+        <div class="k">File</div>
+        <div class="v mono muted"><%= h label %></div>
+      </div>
       <% end -%>
-      <% if configuration["cases"] || configuration["sample"] -%>
-      <tr>
-        <td>selection</td>
-        <td colspan="4" class="mono">
-          <%= h Array(configuration["cases"]).join(", ") if configuration["cases"] %>
-          <% if configuration["sample"] -%>
-            sample <%= h configuration["sample"] %><%= " seed #{h configuration["seed"]}" if configuration["seed"] %>
-          <% end -%>
-          <span class="muted">- a partial run, so the totals below cover only what was selected.</span>
-        </td>
-      </tr>
-      <% end -%>
-      <tr>
-        <td>capture</td>
-        <td colspan="4" class="mono"><%= h capture_mode %></td>
-      </tr>
-    </table>
+    </div>
+    <% if configuration["cases"] || configuration["sample"] -%>
+    <p class="muted selection">
+      <span class="mono"><%
+        %><%= h Array(configuration["cases"]).join(", ") if configuration["cases"] %><%
+        %><%= "sample #{h configuration["sample"]}" if configuration["sample"] %><%
+        %><%= " seed #{h configuration["seed"]}" if configuration["sample"] && configuration["seed"] %></span>
+      - a partial run, so the totals below cover only what was selected.
+    </p>
+    <% end -%>
   </div>
 
   <h2>Totals</h2>
