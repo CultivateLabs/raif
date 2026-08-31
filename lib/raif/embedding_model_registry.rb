@@ -26,7 +26,7 @@ module Raif
   end
 
   def self.embedding_model(model_key)
-    embedding_model_config = embedding_model_registry[model_key]
+    embedding_model_config = embedding_model_registry[model_key&.to_sym]
 
     if embedding_model_config.nil?
       raise ArgumentError, "No embedding model found for model key: #{model_key}. Available models: #{available_embedding_model_keys.join(", ")}"
@@ -45,6 +45,6 @@ module Raif
   end
 
   def self.embedding_model_config(model_key)
-    embedding_model_registry[model_key]
+    embedding_model_registry[model_key&.to_sym]
   end
 end

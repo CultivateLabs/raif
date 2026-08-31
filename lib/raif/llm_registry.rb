@@ -17,7 +17,7 @@ module Raif
   end
 
   def self.llm(model_key)
-    llm_config = llm_registry[model_key]
+    llm_config = llm_registry[model_key&.to_sym]
 
     if llm_config.nil?
       raise ArgumentError, "No LLM found for model key: #{model_key}. Available models: #{available_llm_keys.join(", ")}"
@@ -52,6 +52,6 @@ module Raif
   end
 
   def self.llm_config(model_key)
-    llm_registry[model_key]
+    llm_registry[model_key&.to_sym]
   end
 end

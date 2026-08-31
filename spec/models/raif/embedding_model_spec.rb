@@ -38,6 +38,13 @@ RSpec.describe Raif::EmbeddingModel, type: :model do
     end
   end
 
+  describe ".embedding_model" do
+    it "accepts a String key as well as a Symbol" do
+      expect(Raif.embedding_model("raif_test_embedding_model").key).to eq(:raif_test_embedding_model)
+      expect(Raif.embedding_model(:raif_test_embedding_model).key).to eq(:raif_test_embedding_model)
+    end
+  end
+
   describe "#name" do
     context "when a host app provides an I18n translation" do
       it "prefers the translation over display_name" do
