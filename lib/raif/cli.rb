@@ -3,6 +3,7 @@
 require_relative "cli/base"
 require_relative "cli/evals"
 require_relative "cli/evals_compare"
+require_relative "cli/evals_report"
 require_relative "cli/evals_setup"
 
 module Raif
@@ -10,6 +11,7 @@ module Raif
     COMMANDS = {
       "evals" => "Run Raif evaluation sets",
       "evals:compare" => "Diff two eval run results files",
+      "evals:report" => "Render one eval run results file as HTML",
       "evals:setup" => "Setup Raif evals directory structure",
       "version" => "Show Raif version",
       "help" => "Show this help message"
@@ -27,6 +29,8 @@ module Raif
           Evals.new(@args).run
         when "evals:compare"
           EvalsCompare.new(@args).run
+        when "evals:report"
+          EvalsReport.new(@args).run
         when "evals:setup"
           EvalsSetup.new(@args).run
         when "version", "--version", "-v"
@@ -66,6 +70,7 @@ module Raif
         puts "  raif evals -e development         # Run evals in development environment"
         puts "  raif evals --sample 5 --seed 42   # Run a reproducible sample of each dataset"
         puts "  raif evals:compare a.json b.json  # Diff two eval runs"
+        puts "  raif evals:report run.json        # Render one eval run as HTML"
         puts "  raif version                      # Show Raif version"
       end
     end
