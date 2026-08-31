@@ -52,8 +52,7 @@
   .totals div { min-width: 120px; }
   .totals .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
   .totals .v { font-size: 19px; font-weight: 600; }
-  /* The header carries names and timestamps rather than figures, so it takes the same
-     label-above-value shape at a size a 30-character model key can live at. */
+  /* Header values are model keys and timestamps, not figures, so they need a smaller size. */
   .totals.meta .v { font-size: 15px; }
   .totals.meta > div { min-width: 150px; }
   .selection { margin: 14px 0 0; font-size: 13px; }
@@ -75,11 +74,10 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12px;
     white-space: pre-wrap;
-    /* anywhere rather than break-word: a narrow column should break a long token, not every word. */
+    /* anywhere, not break-word: break long unbroken tokens, not every word. */
     overflow-wrap: anywhere;
   }
-  /* The metadata row carries pretty-printed JSON, so it spans the table rather than sharing a
-     row with three text columns that would squeeze it to a character wide. */
+  /* The metadata row spans the table, so it joins the row above it. */
   .failures tr.head td { border-bottom: none; }
   .failures tr.detail td { padding-top: 0; }
 </style>
