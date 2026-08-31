@@ -4,6 +4,16 @@ require "rails_helper"
 require Raif::Engine.root.join("script/smoke/terminal")
 
 RSpec.describe Smoke::Terminal do
+  # Scopes environment changes to the block (a nil value removes the variable), so examples
+  # that need NO_COLOR absent still pass when the developer or CI environment exports it.
+  def with_env(vars)
+    previous = vars.keys.to_h { |key| [key, ENV[key]] }
+    vars.each { |key, value| ENV[key] = value }
+    yield
+  ensure
+    previous.each { |key, value| ENV[key] = value }
+  end
+
   describe ".paint" do
     it "wraps text in the color's ANSI code and a reset when enabled" do
       expect(described_class.paint("hi", :green, enabled: true)).to eq("\e[32mhi\e[0m")
@@ -24,7 +34,9 @@ RSpec.describe Smoke::Terminal do
     it "derives enabled from colors_enabled?(stream) when not given explicitly" do
       tty_stream = instance_double(IO, tty?: true)
 
-      expect(described_class.paint("hi", :green, stream: tty_stream)).to eq("\e[32mhi\e[0m")
+      with_env("NO_COLOR" => nil) do
+        expect(described_class.paint("hi", :green, stream: tty_stream)).to eq("\e[32mhi\e[0m")
+      end
     end
   end
 
@@ -68,7 +80,9 @@ RSpec.describe Smoke::Terminal do
     it "is true for a tty stream with NO_COLOR unset and colors not disabled" do
       tty_stream = instance_double(IO, tty?: true)
 
-      expect(described_class.colors_enabled?(tty_stream)).to eq(true)
+      with_env("NO_COLOR" => nil) do
+        expect(described_class.colors_enabled?(tty_stream)).to eq(true)
+      end
     end
 
     it "is false for a non-tty stream" do
@@ -90,14 +104,6 @@ RSpec.describe Smoke::Terminal do
       described_class.disable_colors!
 
       expect(described_class.colors_enabled?(tty_stream)).to eq(false)
-    end
-
-    def with_env(vars)
-      previous = vars.keys.to_h { |key| [key, ENV[key]] }
-      vars.each { |key, value| ENV[key] = value }
-      yield
-    ensure
-      previous.each { |key, value| ENV[key] = value }
     end
   end
 
