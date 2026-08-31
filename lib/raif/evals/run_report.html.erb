@@ -218,15 +218,20 @@
       <% pass_rate_rows.each do |row| -%>
       <tr>
         <td><%= h row["eval_set"] %><br><span class="muted"><%= h row["description"] %></span></td>
-        <td class="mono"><%= h row["passed"] %>/<%= h row["runs"] %></td>
-        <td class="mono <%= row["pass_rate"].to_f >= 1.0 ? "good" : "bad" %>"><%= format_rate(row["pass_rate"]) %></td>
+        <td class="mono"><%= h row["passed"] %>/<%= h measured(row) %><%
+          %><%= " (#{h row["errored"]} errored)" if row["errored"].to_i.positive? %></td>
+        <td class="mono <%= rate_class(row["pass_rate"]) %>"><%= format_rate(row["pass_rate"]) %></td>
         <td>
-          <% failing = (row["per_case"] || []).reject { |c| c["pass_rate"].to_f >= 1.0 } -%>
-          <% if failing.empty? -%>
+          <% failing = failing_cases(row) -%>
+          <% errored = errored_cases(row) -%>
+          <% if failing.empty? && errored.empty? -%>
             <span class="muted">-</span>
           <% else -%>
             <% failing.each do |c| -%>
               <div><span class="mono bad"><%= format_rate(c["pass_rate"]) %></span> <span class="mono"><%= h c["case_id"] %></span></div>
+            <% end -%>
+            <% errored.each do |c| -%>
+              <div><span class="mono warn">errored</span> <span class="mono"><%= h c["case_id"] %></span></div>
             <% end -%>
           <% end -%>
         </td>
@@ -267,19 +272,19 @@
   <% eval_sets.each do |eval_set_name, results| -%>
   <div class="card">
     <h3><%= h eval_set_name %>
-      <span class="pill <%= results.all? { |r| r["passed"] } ? "good" : "bad" %>">
-        <%= results.count { |r| r["passed"] } %>/<%= results.count %>
+      <% errored = results.count { |r| r["errored"] } -%>
+      <span class="pill <%= eval_set_class(results) %>">
+        <%= results.count { |r| r["passed"] } %>/<%= results.count - errored %><%
+          %><%= " (#{errored} errored)" if errored.positive? %>
       </span>
     </h3>
     <% results.each do |result| -%>
     <details>
       <summary>
-        <span class="<%= result["passed"] ? "good" : "bad" %>"><%= result["passed"] ? "PASS" : "FAIL" %></span>
+        <% label, label_class = result_status(result) -%>
+        <span class="<%= label_class %>"><%= label %></span>
         <span class="mono"><%= h result["case_id"] || "-" %></span>
         <%= h result["description"] %>
-        <% if result["errored"] -%>
-          <span class="pill warn">errored</span>
-        <% end -%>
       </summary>
 
       <ul class="exp">
@@ -307,7 +312,7 @@
             <% if score["passed"].nil? -%>
               <span class="muted">not gated</span>
             <% else -%>
-              <span class="<%= score["passed"] ? "good" : "bad" %>">min <%= h score["min"] %></span>
+              <span class="<%= score["passed"] ? "good" : "bad" %>"><%= h gate_description(score) %></span>
             <% end -%>
           </td>
         </tr>

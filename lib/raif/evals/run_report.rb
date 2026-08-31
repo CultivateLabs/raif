@@ -137,8 +137,63 @@ module Raif
         end
       end
 
+      # nil rather than 0.0 when every run of an eval or a case errored: Raif::Evals::Run leaves
+      # the rate unset there, and a zero would report an outage as a total quality failure.
       def format_rate(rate)
+        return "-" if rate.nil?
+
         format("%.2f", rate.to_f)
+      end
+
+      def rate_class(rate)
+        return "warn" if rate.nil?
+
+        rate.to_f >= 1.0 ? "good" : "bad"
+      end
+
+      # What `passed` is out of: errored runs leave the denominator, so a row that ran 4 times,
+      # passed 3 and errored once is 3/3.
+      def measured(row)
+        row["runs"].to_i - row["errored"].to_i
+      end
+
+      # Cases that measured something and did not pass every run. A case with no rate measured
+      # nothing, so it is reported as errored rather than as the weakest case in the eval.
+      def failing_cases(row)
+        (row["per_case"] || []).reject { |c| c["pass_rate"].nil? || c["pass_rate"].to_f >= 1.0 }
+      end
+
+      def errored_cases(row)
+        (row["per_case"] || []).select { |c| c["pass_rate"].nil? }
+      end
+
+      # An eval that raised produced no measurement, so it is neither a pass nor a fail. Raif
+      # keeps the three apart everywhere else, and a red FAIL on a provider timeout reads as a
+      # quality regression.
+      def result_status(result)
+        return ["ERROR", "warn"] if result["errored"]
+
+        result["passed"] ? ["PASS", "good"] : ["FAIL", "bad"]
+      end
+
+      # An eval set whose only shortfall is errors is not a failing eval set: nothing it ran
+      # measured worse, so it reads as a warning rather than as red.
+      def eval_set_class(results)
+        measured_results = results.reject { |result| result["errored"] }
+        return "bad" unless measured_results.all? { |result| result["passed"] }
+
+        measured_results.count == results.count ? "good" : "warn"
+      end
+
+      # The bounds the score was actually gated on, in the shape Raif::Evals::ScoreResult states
+      # them: a max: gate is the supported form for a lower-is-better metric, and a score can
+      # carry both bounds.
+      def gate_description(score)
+        bounds = []
+        bounds << ">= #{score["min"]}" unless score["min"].nil?
+        bounds << "<= #{score["max"]}" unless score["max"].nil?
+
+        bounds.join(" and ")
       end
 
       def format_cost(cost)

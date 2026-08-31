@@ -72,6 +72,81 @@ RSpec.describe Raif::Evals::RunReport do
     expect(described_class.new(symbolized).html).to include("gpt_a")
   end
 
+  # Raif::Evals::Run writes pass_rate: null when every run of an eval or a case errored. Nothing
+  # was measured, and 0.00 would claim it all failed.
+  describe "an eval whose runs all errored" do
+    let(:payload) do
+      base = cli_results_payload(model: "gpt_a", passed: true, score_value: 5.0,
+        case_ids: ["press-release", "memo"], errored_case_ids: ["memo"])
+
+      base["summary"]["eval_pass_rates"] = [{
+        "eval_set" => "SummarizationEvalSet",
+        "description" => "produces expected output",
+        "runs" => 2,
+        "errored" => 1,
+        "passed" => 1,
+        "pass_rate" => 1.0,
+        "per_case" => [
+          { "case_id" => "press-release", "runs" => 1, "errored" => 0, "passed" => 1, "pass_rate" => 1.0 },
+          { "case_id" => "memo", "runs" => 1, "errored" => 1, "passed" => 0, "pass_rate" => nil }
+        ]
+      }]
+
+      base
+    end
+
+    it "renders an unknown rate as - rather than 0.00" do
+      expect(described_class.new(payload).format_rate(nil)).to eq("-")
+      expect(described_class.new(payload).rate_class(nil)).to eq("warn")
+    end
+
+    it "keeps a case that measured nothing out of the weakest cases" do
+      report = described_class.new(payload)
+      row = report.pass_rate_rows.first
+
+      expect(report.failing_cases(row)).to be_empty
+      expect(report.errored_cases(row).map { |c| c["case_id"] }).to eq(["memo"])
+    end
+
+    # The rate is passed out of what was measured, so the fraction beside it has to be too.
+    it "leaves errored runs out of the passed fraction" do
+      report = described_class.new(payload)
+
+      expect(report.measured(report.pass_rate_rows.first)).to eq(1)
+      expect(report.html).to include("1/1")
+      expect(report.html).to include("(1 errored)")
+    end
+
+    # An eval can pass, fail, or raise. A red FAIL on a provider timeout reads as a quality drop.
+    it "labels an errored execution ERROR rather than FAIL" do
+      html = described_class.new(payload).html
+
+      expect(described_class.new(payload).result_status({ "errored" => true, "passed" => false })).to eq(["ERROR", "warn"])
+      expect(html).to include("ERROR")
+      expect(html).not_to include(">FAIL<")
+    end
+  end
+
+  # A max: gate is the supported form for a lower-is-better metric, and a score can carry both
+  # bounds. Printing "min" unconditionally omits the bound that decided passed.
+  describe "#gate_description" do
+    it "names whichever bounds the score carries" do
+      report = described_class.new(payload)
+
+      expect(report.gate_description({ "min" => 4 })).to eq(">= 4")
+      expect(report.gate_description({ "max" => 2.5 })).to eq("<= 2.5")
+      expect(report.gate_description({ "min" => 1, "max" => 5 })).to eq(">= 1 and <= 5")
+    end
+
+    it "renders the gate a max-only score was measured against" do
+      payload["results"]["SummarizationEvalSet"].first["scores"] = [
+        { "name" => "latency", "value" => 4.0, "higher_is_better" => false, "max" => 2.5, "passed" => false }
+      ]
+
+      expect(described_class.new(payload).html).to include("&lt;= 2.5")
+    end
+  end
+
   describe "#capture_mode" do
     it "reports the mode the run recorded" do
       payload["configuration"]["capture_model_completions"] = "full"
