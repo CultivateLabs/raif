@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raif eval run</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --border: #e2e5ea;
+    --text: #23272f;
+    --muted: #6b7280;
+    --good: #1f7a4d;
+    --good-bg: #e8f5ee;
+    --bad: #b3261e;
+    --bad-bg: #fdeceb;
+    --warn: #8a5a00;
+    --warn-bg: #fdf3e2;
+    --neutral-bg: #f1f3f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 20px 64px;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 32px 0 10px; }
+  h3 { font-size: 14px; margin: 18px 0 6px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .card + .card { margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  .scroll { overflow-x: auto; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .bad { color: var(--bad); font-weight: 600; }
+  .warn { color: var(--warn); font-weight: 600; }
+  .good { color: var(--good); font-weight: 600; }
+  .muted { color: var(--muted); }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--neutral-bg); }
+  .pill.bad { background: var(--bad-bg); color: var(--bad); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .pill.good { background: var(--good-bg); color: var(--good); }
+  .empty { color: var(--muted); font-style: italic; }
+  .totals { display: flex; flex-wrap: wrap; gap: 10px 28px; }
+  .totals div { min-width: 120px; }
+  .totals .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .totals .v { font-size: 19px; font-weight: 600; }
+  /* Header values are model keys and timestamps, not figures, so they need a smaller size. */
+  .totals.meta .v { font-size: 15px; }
+  .totals.meta > div { min-width: 150px; }
+  .selection { margin: 14px 0 0; font-size: 13px; }
+  details { border-top: 1px solid var(--border); padding: 8px 0; }
+  details:first-of-type { border-top: none; }
+  summary { cursor: pointer; font-size: 14px; }
+  summary::marker { color: var(--muted); }
+  .exp { margin: 8px 0 0 18px; font-size: 14px; }
+  .exp li { margin-bottom: 5px; list-style: none; }
+  .exp li::before { content: "\2717"; color: var(--bad); margin-right: 7px; }
+  .exp li.ok::before { content: "\2713"; color: var(--good); }
+  .exp li.err::before { content: "\26A0"; color: var(--warn); }
+  pre {
+    margin: 5px 0 0;
+    padding: 8px 10px;
+    background: var(--neutral-bg);
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    /* anywhere, not break-word: break long unbroken tokens, not every word. */
+    overflow-wrap: anywhere;
+  }
+  /* The metadata row spans the table, so it joins the row above it. */
+  .failures tr.head td { border-bottom: none; }
+  .failures tr.detail td { padding-top: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Raif eval run</h1>
+  <p class="muted">One run, in full. Every expectation is listed under its eval set; failures are collected at the top.</p>
+
+  <div class="card">
+    <div class="totals meta">
+      <div>
+        <div class="k">Model</div>
+        <div class="v mono"><%= h model %></div>
+      </div>
+      <div>
+        <div class="k">Judge</div>
+        <div class="v mono"><%= h judge || "none configured" %></div>
+      </div>
+      <div>
+        <div class="k">When</div>
+        <div class="v mono"><%= h run_at %></div>
+      </div>
+      <div>
+        <div class="k">Shape</div>
+        <div class="v">
+          <%= h summary["total_evals"] %> evals
+          <% if repeats.to_i > 1 -%>
+            &times; <%= h repeats %> repeats
+          <% end -%>
+          across <%= h summary["total_eval_sets"] %> sets
+        </div>
+      </div>
+      <div>
+        <div class="k">Cost</div>
+        <div class="v"><%= format_cost(total_cost) %></div>
+      </div>
+      <div>
+        <div class="k">Code</div>
+        <div class="v mono"><%= h describe_code %></div>
+      </div>
+      <div>
+        <div class="k">Capture</div>
+        <div class="v mono"><%= h capture_mode %></div>
+      </div>
+      <% if label -%>
+      <div>
+        <div class="k">File</div>
+        <div class="v mono muted"><%= h label %></div>
+      </div>
+      <% end -%>
+    </div>
+    <% if configuration["cases"] || configuration["sample"] -%>
+    <p class="muted selection">
+      <span class="mono"><%
+        %><%= h Array(configuration["cases"]).join(", ") if configuration["cases"] %><%
+        %><%= "sample #{h configuration["sample"]}" if configuration["sample"] %><%
+        %><%= " seed #{h configuration["seed"]}" if configuration["sample"] && configuration["seed"] %></span>
+      - a partial run, so the totals below cover only what was selected.
+    </p>
+    <% end -%>
+  </div>
+
+  <h2>Totals</h2>
+  <div class="card">
+    <div class="totals">
+      <div>
+        <div class="k">Evals passed</div>
+        <div class="v <%= summary["passed_evals"] == summary["total_evals"] ? "good" : "bad" %>">
+          <%= h summary["passed_evals"] %> / <%= h summary["total_evals"] %>
+        </div>
+      </div>
+      <div>
+        <div class="k">Expectations passed</div>
+        <div class="v <%= summary["passed_expectations"] == summary["total_expectations"] ? "good" : "bad" %>">
+          <%= h summary["passed_expectations"] %> / <%= h summary["total_expectations"] %>
+        </div>
+      </div>
+      <div>
+        <div class="k">Errored evals</div>
+        <div class="v <%= summary["errored_evals"].to_i.zero? ? "" : "warn" %>"><%= h summary["errored_evals"].to_i %></div>
+      </div>
+      <div>
+        <div class="k">Model completions</div>
+        <div class="v"><%= format_number(summary["total_model_completions"]) %></div>
+      </div>
+      <div>
+        <div class="k">Tokens</div>
+        <div class="v"><%= format_number(summary["total_tokens"]) %></div>
+      </div>
+      <div>
+        <div class="k">Judge cost</div>
+        <div class="v"><%= format_cost(summary["total_judge_cost"]) %></div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Failures (<%= failures.count %>)</h2>
+  <div class="card scroll">
+    <% if failures.empty? -%>
+      <p class="empty">None. Every expectation passed.</p>
+    <% else -%>
+    <table class="failures">
+      <tr><th>Eval set</th><th>Case</th><th>Expectation</th></tr>
+      <% failures.each do |row| -%>
+      <tr class="head">
+        <td><%= h row["eval_set"] %><br><span class="muted"><%= h row["description"] %></span></td>
+        <td class="mono"><%= h row["case_id"] || "-" %></td>
+        <td>
+          <span class="pill <%= status_class(row["expectation"]["status"]) %>"><%= h row["expectation"]["status"] %></span>
+          <%= h row["expectation"]["description"] %>
+        </td>
+      </tr>
+      <tr class="detail">
+        <td colspan="3">
+          <% if row["expectation"]["error"] -%>
+            <pre><%= h row["expectation"]["error"] %></pre>
+          <% end -%>
+          <% if row["expectation"]["metadata"] -%>
+            <pre><%= h pretty(row["expectation"]["metadata"]) %></pre>
+          <% elsif row["expectation"]["error"].nil? -%>
+            <span class="muted">no metadata recorded</span>
+          <% end -%>
+        </td>
+      </tr>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
+  <h2>Pass rates</h2>
+  <div class="card scroll">
+    <% if pass_rate_rows.empty? -%>
+      <p class="empty">None recorded.</p>
+    <% else -%>
+    <table>
+      <tr><th>Eval</th><th>Passed</th><th>Rate</th><th>Weakest cases</th></tr>
+      <% pass_rate_rows.each do |row| -%>
+      <tr>
+        <td><%= h row["eval_set"] %><br><span class="muted"><%= h row["description"] %></span></td>
+        <td class="mono"><%= h row["passed"] %>/<%= h measured(row) %><%
+          %><%= " (#{h row["errored"]} errored)" if row["errored"].to_i.positive? %></td>
+        <td class="mono <%= rate_class(row["pass_rate"]) %>"><%= format_rate(row["pass_rate"]) %></td>
+        <td>
+          <% failing = failing_cases(row) -%>
+          <% errored = errored_cases(row) -%>
+          <% if failing.empty? && errored.empty? -%>
+            <span class="muted">-</span>
+          <% else -%>
+            <% failing.each do |c| -%>
+              <div><span class="mono bad"><%= format_rate(c["pass_rate"]) %></span> <span class="mono"><%= h c["case_id"] %></span></div>
+            <% end -%>
+            <% errored.each do |c| -%>
+              <div><span class="mono warn">errored</span> <span class="mono"><%= h c["case_id"] %></span></div>
+            <% end -%>
+          <% end -%>
+        </td>
+      </tr>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
+  <h2>Scores</h2>
+  <div class="card scroll">
+    <% if score_rows.empty? -%>
+      <p class="empty">None recorded.</p>
+    <% else -%>
+    <table>
+      <tr><th>Score</th><th>Eval</th><th>Mean</th><th>Median</th><th>Spread</th></tr>
+      <% score_rows.each do |row| -%>
+      <tr>
+        <td><%= h row["name"] %><br><span class="muted"><%= row["higher_is_better"] ? "higher is better" : "lower is better" %></span></td>
+        <td class="muted"><%= h row["eval_set"] %></td>
+        <td class="mono"><%= h row["mean"] %></td>
+        <td class="mono"><%= h row["median"] %></td>
+        <td class="mono muted">
+          n <%= h row["n"] %><%= " over #{h row["spread_n"]} cases" if row["spread_n"] && row["spread_n"] != row["n"] %><br>
+          <%= row["stddev"] ? "sd #{h row["stddev"]}" : "sd -" %>,
+          range <%= h row["min"] %>-<%= h row["max"] %>
+          <% if row["ci95_omitted"] -%>
+            <br><%= h row["ci95_omitted"] %>
+          <% end -%>
+        </td>
+      </tr>
+      <% end -%>
+    </table>
+    <% end -%>
+  </div>
+
+  <h2>Every eval</h2>
+  <% eval_sets.each do |eval_set_name, results| -%>
+  <div class="card">
+    <h3><%= h eval_set_name %>
+      <% errored = results.count { |r| r["errored"] } -%>
+      <span class="pill <%= eval_set_class(results) %>">
+        <%= results.count { |r| r["passed"] } %>/<%= results.count - errored %><%
+          %><%= " (#{errored} errored)" if errored.positive? %>
+      </span>
+    </h3>
+    <% results.each do |result| -%>
+    <details>
+      <summary>
+        <% label, label_class = result_status(result) -%>
+        <span class="<%= label_class %>"><%= label %></span>
+        <span class="mono"><%= h result["case_id"] || "-" %></span>
+        <%= h result["description"] %>
+      </summary>
+
+      <ul class="exp">
+        <% (result["expectation_results"] || []).each do |expectation| -%>
+        <li class="<%= expectation["status"].to_s == "passed" ? "ok" : (expectation["status"].to_s == "error" ? "err" : "") %>">
+          <%= h expectation["description"] %>
+          <% if expectation["error"] -%>
+            <pre><%= h expectation["error"] %></pre>
+          <% end -%>
+          <% if expectation["metadata"] -%>
+            <pre><%= h pretty(expectation["metadata"]) %></pre>
+          <% end -%>
+        </li>
+        <% end -%>
+      </ul>
+
+      <% if (result["scores"] || []).any? -%>
+      <table>
+        <tr><th>Score</th><th>Value</th><th>Gate</th></tr>
+        <% result["scores"].each do |score| -%>
+        <tr>
+          <td><%= h score["name"] %></td>
+          <td class="mono"><%= h score["value"] %><%= " (#{h score["scale"]})" if score["scale"] %></td>
+          <td class="mono">
+            <% if score["passed"].nil? -%>
+              <span class="muted">not gated</span>
+            <% else -%>
+              <span class="<%= score["passed"] ? "good" : "bad" %>"><%= h gate_description(score) %></span>
+            <% end -%>
+          </td>
+        </tr>
+        <% end -%>
+      </table>
+      <% end -%>
+
+      <% if result["usage"] -%>
+      <p class="muted mono">
+        <%= h result["usage"]["model_completions"] %> completions,
+        <%= format_number(result["usage"]["total_tokens"]) %> tokens,
+        <%= format_cost(result["usage"]["total_cost"]) %><%
+          %><%= ", judge #{format_cost(result["judge_usage"]["total_cost"])}" if result["judge_usage"] %>
+      </p>
+      <% end -%>
+
+      <% if (result["model_completions"] || []).any? -%>
+      <table>
+        <tr><th>Model</th><th>Source</th><th>Finish</th><th>Tokens</th><th>Cost</th></tr>
+        <% result["model_completions"].each do |completion| -%>
+        <tr>
+          <td class="mono"><%= h completion["llm_model_key"] %></td>
+          <td class="mono muted"><%= h completion["source_type"] %></td>
+          <td class="mono"><%= h completion["response_finish_reason"] %><%= " (#{h completion["retry_count"]} retries)" if completion["retry_count"].to_i.positive? %></td>
+          <td class="mono"><%= format_number(completion["total_tokens"]) %></td>
+          <td class="mono"><%= format_cost(completion["total_cost"]) %></td>
+        </tr>
+        <% if completion_text(completion).any? -%>
+        <tr>
+          <td colspan="5">
+            <% completion_text(completion).each do |field, value| -%>
+            <details>
+              <summary class="muted"><%= h field %></summary>
+              <pre><%= h value.is_a?(String) ? value : pretty(value) %></pre>
+            </details>
+            <% end -%>
+          </td>
+        </tr>
+        <% end -%>
+        <% end -%>
+      </table>
+      <% end -%>
+    </details>
+    <% end -%>
+  </div>
+  <% end -%>
+
+  <% if dataset_rows.any? -%>
+  <h2>Datasets</h2>
+  <div class="card scroll">
+    <table>
+      <tr><th>Dataset</th><th>Eval set</th><th>Cases</th><th>Digest</th></tr>
+      <% dataset_rows.each do |row| -%>
+      <tr>
+        <td class="mono"><%= h row["name"] %></td>
+        <td class="muted"><%= h row["eval_set"] %></td>
+        <td class="mono"><%= h row["count"] %></td>
+        <td class="mono muted"><%= h row["digest"] %></td>
+      </tr>
+      <% end -%>
+    </table>
+  </div>
+  <% end -%>
+
+  <p class="muted" style="margin-top: 28px;">
+    <% if capture_mode == "full" -%>
+      Captured in full: the prompts and responses above are in this file. Treat it as you would the
+      model's own inputs before sending it anywhere.
+    <% elsif capture_mode == "summary" -%>
+      Captured as a summary: model, token counts and cost, with no prompt or response text.
+    <% else -%>
+      No model completions were captured, so only usage totals are shown.
+    <% end -%>
+  </p>
+</div>
+</body>
+</html>

@@ -195,7 +195,7 @@ Alongside `run_at` and `configuration`, the file has two more top-level keys:
 - `results` - one entry per eval set, each an array with one result per execution of an eval block. A result carries its `description`, [`eval_id`](#eval-ids), `eval_index`, `passed`, `expectation_results`, any [`scores`](#scores), its [`usage` and `model_completions`](#captured-llm-calls), plus a `run_index` for [repeats](#repeating-evals) and a `case_id` for [dataset](#dataset-results) cases. A result that raised also carries `errored: true` - see [Errors Are Not Failures](#errors-are-not-failures).
 - `summary` - run-wide totals across every eval, plus an `eval_pass_rates` array with one row per eval and a `score_summaries` array with one row per score name per eval.
 
-This file is what [`evals:compare`](#comparing-runs) reads, so keep the runs you want to diff against.
+This file is what [`evals:compare`](#comparing-runs) and [`evals:report`](#reading-one-run) read, so keep the runs you want to diff against or read back later.
 
 ### Eval Ids
 
@@ -1285,6 +1285,37 @@ eval "invokes the WikipediaSearch tool" do
   expect_tool_invocation(conversation_entry, "Raif::ModelTools::WikipediaSearch", with: { "query" => "moon" })
 end
 ```
+
+
+# Reading One Run
+
+`evals:compare` answers what moved between two runs, and needs a baseline to do it. To read a single run, `evals:report` renders one [results file](#results) as a self-contained HTML page:
+
+```bash
+bundle exec raif evals:report \
+  raif_evals/results/eval_run_20260804_180216_open_ai_responses_gpt_5_4.json
+```
+
+It writes `eval_run_20260804_180216_open_ai_responses_gpt_5_4.html` beside the results file, or wherever `--output` points:
+
+```bash
+# Write somewhere else
+--output tmp/last_run.html
+
+# Output format. html is the default and, for now, the only one.
+--format html
+```
+
+The page opens with the run's header - the model, the judge that actually graded, when it started, its shape, its cost, the host app's commit, and the [capture mode](#limiting-what-is-captured) - then the run-wide totals, then:
+
+- **Failures.** Every expectation that did not pass, with the [`result_metadata`](#adding-result-metadata-to-expectations) it recorded. This is first because it is what you came for; a full drill-down you have to scroll is not a report. A [gated score](#scored-evaluations) records both a failed expectation and a score whose `passed` is false, and appears here once, through its expectation.
+- **Pass rates**, one row per eval, naming the cases that did not pass every run.
+- **Scores**, one row per score name per eval, with the mean, the median, and the [spread](#scored-evaluations) it was measured over.
+- **Every eval**, as collapsed blocks carrying each execution's expectations, its scores against their gates, its usage, and its [captured LLM calls](#captured-llm-calls).
+
+Two things to know before you forward the file. Under the default `full` capture the results file holds prompts and responses, so the page renders them and its footer says which capture mode produced it - a page of prompts is a different thing to pass around than a page of token counts. Set `Raif.config.evals_capture_model_completions` to `:summary` for a report carrying model, token counts, and cost alone.
+
+A run that stopped early writes no results file at all, only its `.partial.jsonl` log. `evals:report` recognizes the log and points you at [`--resume`](#resuming-an-interrupted-run), which finishes the run and writes the file this command reads.
 
 
 # Comparing Runs

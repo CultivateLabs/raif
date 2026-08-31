@@ -75,7 +75,7 @@ module Raif
           "passed" => passed && !errored,
           "expectation_results" => [{ "description" => expectation_description, "status" => status }],
           "scores" => errored ? [] : [clarity]
-        }
+        }.merge(errored ? { "errored" => true } : {})
       end
 
       configuration = {
