@@ -347,11 +347,11 @@ provider :bedrock do |p|
     key: :bedrock_deepseek_v3_2,
     api_name: "deepseek.v3.2",
     display_name: "DeepSeek v3.2 (via AWS Bedrock)",
-    max_completion_tokens: 32_768,
+    max_completion_tokens: 8192,
     pricing: { input_per_million: 0.62, output_per_million: 1.85 },
     capabilities: {
       temperature: true,
-      structured_outputs: false,
+      structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -366,14 +366,14 @@ provider :bedrock do |p|
 
   p.model(
     key: :bedrock_deepseek_r1,
-    api_name: "deepseek.r1-v1:0",
+    api_name: "us.deepseek.r1-v1:0",
     display_name: "DeepSeek R1 (via AWS Bedrock)",
-    max_completion_tokens: 32_768,
+    max_completion_tokens: 8192,
     pricing: { input_per_million: 1.35, output_per_million: 5.4 },
     capabilities: {
       temperature: true,
       structured_outputs: false,
-      native_tool_use: true,
+      native_tool_use: false,
       streaming: true,
       batch_inference: false,
       images: false,
@@ -381,7 +381,13 @@ provider :bedrock do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 9, 1),
+      retirement_date: Date.new(2026, 9, 30),
+      replacement_key: :bedrock_deepseek_v3_2,
+      migration_note: "AWS documents DeepSeek-R1's EOL as no sooner than 2026-03-10, a date now passed, so AWS may " \
+        "retire it with notice at any time. Raif removes this entry on 2026-09-30. DeepSeek v3.2 on Bedrock is " \
+        "newer, cheaper, and supports tool calling and structured outputs."
     }
   )
 

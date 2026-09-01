@@ -48,9 +48,9 @@ module Smoke
     # Each matcher receives the *parsed* JSON error body and returns true/false.
     #
     # Only ever reached for Faraday-backed providers (Anthropic, OpenAI, x.ai, OpenRouter,
-    # Google): Bedrock's adapter raises Aws::BedrockRuntime::Client service errors, not
-    # Faraday::ClientError, so a claimed-false Bedrock capability can never be classified here
-    # and always stays :fail -- a correct but structurally invisible limitation.
+    # Google): Bedrock's adapter raises Aws::BedrockRuntime service errors, not
+    # Faraday::ClientError, so its rejections are classified separately by exception message
+    # via BEDROCK_CLAIMED_FALSE_REJECTION_SIGNATURES below.
     #
     # Scoped to these two probes only: run_check dispatches every other claimed-false-eligible
     # capability (native_tool_use, streaming, images, pdfs, batch_inference, provider_managed_tools)
@@ -84,6 +84,24 @@ module Smoke
         lambda do |parsed|
           error = openai_unsupported_parameter_error(parsed)
           error && (error["param"].to_s.match?(/response_format/i) || error["message"].to_s.match?(/response_format|json_schema/i))
+        end
+      ]
+    }.freeze
+
+    # Bedrock's counterpart to CLAIMED_FALSE_REJECTION_SIGNATURES: matchers receive the
+    # exception message, since Aws::BedrockRuntime service errors carry no JSON body. Only
+    # ValidationException is eligible (see bedrock_validation_error?), the class Bedrock uses
+    # when a request names a feature the model lacks. Production wordings as of 2026-09-01:
+    # "This model doesn't support the outputConfig field. Remove outputConfig and try again."
+    # and "This model doesn't support tool use." Same narrowness contract: the message must
+    # name the probed feature and say it is unsupported.
+    BEDROCK_CLAIMED_FALSE_REJECTION_SIGNATURES = {
+      "temperature" => [
+        ->(message) { message.match?(/temperature/i) && message.match?(/doesn't support|not support|unsupported/i) }
+      ],
+      "structured_outputs" => [
+        lambda do |message|
+          message.match?(/outputConfig|structured output|response format/i) && message.match?(/doesn't support|not support|unsupported/i)
         end
       ]
     }.freeze
@@ -545,6 +563,7 @@ module Smoke
     # whether the claim is accurate. Exclusion is by status/type, not by absence of a content
     # match, so an auth failure or timeout can never be misread as "claim confirmed."
     def self.classify_claimed_false_error(probe, exception)
+      return classify_bedrock_claimed_false_error(probe, exception) if bedrock_validation_error?(exception)
       return fail_result(exception) unless exception.is_a?(Faraday::ClientError)
 
       status = exception.response_status
@@ -558,6 +577,21 @@ module Smoke
       { status: :consistent, detail: "rejected by provider as declared: #{api_message}".first(180) }
     end
     private_class_method :classify_claimed_false_error
+
+    def self.bedrock_validation_error?(exception)
+      defined?(Aws::BedrockRuntime::Errors::ValidationException) &&
+        exception.is_a?(Aws::BedrockRuntime::Errors::ValidationException)
+    end
+    private_class_method :bedrock_validation_error?
+
+    def self.classify_bedrock_claimed_false_error(probe, exception)
+      matchers = BEDROCK_CLAIMED_FALSE_REJECTION_SIGNATURES[probe] || []
+      message = exception.message.to_s
+      return fail_result(exception) unless matchers.any? { |matcher| matcher.call(message) }
+
+      { status: :consistent, detail: "rejected by provider as declared: #{message}".first(180) }
+    end
+    private_class_method :classify_bedrock_claimed_false_error
 
     def self.fail_result(exception)
       { status: :fail, detail: fail_detail(exception) }
