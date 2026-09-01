@@ -53,6 +53,13 @@ RSpec.describe Raif::Llm, type: :model do
     end
   end
 
+  describe ".llm" do
+    it "accepts a String key as well as a Symbol" do
+      expect(Raif.llm("raif_test_llm").key).to eq(:raif_test_llm)
+      expect(Raif.llm(:raif_test_llm).key).to eq(:raif_test_llm)
+    end
+  end
+
   describe "#chat" do
     let(:messages) { [{ role: "user", content: "Hello" }] }
     let(:system_prompt) { "You are a helpful assistant." }
