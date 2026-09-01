@@ -418,8 +418,8 @@ provider :open_router do |p|
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
-      images: false,
-      pdfs: false,
+      images: true,
+      pdfs: true,
       provider_managed_tools: []
     },
     lifecycle: {
@@ -428,17 +428,59 @@ provider :open_router do |p|
   )
 
   p.model(
-    key: :open_router_mistral_small_3_2_24b,
-    api_name: "mistralai/mistral-small-3.2-24b-instruct",
-    display_name: "Mistral Small 3.2 24B (via OpenRouter)",
-    pricing: { input_per_million: 0.06, output_per_million: 0.18 },
+    key: :open_router_mistral_medium_3_5,
+    api_name: "mistralai/mistral-medium-3-5",
+    display_name: "Mistral Medium 3.5 (via OpenRouter)",
+    pricing: { input_per_million: 1.5, output_per_million: 7.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
-      images: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
+    key: :open_router_mistral_small_4,
+    api_name: "mistralai/mistral-small-2603",
+    display_name: "Mistral Small 4 (via OpenRouter)",
+    pricing: { input_per_million: 0.15, output_per_million: 0.6 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
+    key: :open_router_mistral_small_3_2_24b,
+    api_name: "mistralai/mistral-small-3.2-24b-instruct",
+    display_name: "Mistral Small 3.2 24B (via OpenRouter)",
+    pricing: { input_per_million: 0.075, output_per_million: 0.2 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
       pdfs: false,
       provider_managed_tools: []
     },
