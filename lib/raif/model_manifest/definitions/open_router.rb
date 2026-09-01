@@ -228,6 +228,81 @@ provider :open_router do |p|
   )
 
   p.model(
+    key: :open_router_glm_5_2,
+    api_name: "z-ai/glm-5.2",
+    display_name: "GLM 5.2 (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.4186,
+      output_per_million: 1.316,
+      note: "70% off promotional price shown on openrouter.ai as of 2026-09-01 (base 1.19 in / 3.74 out); no end date documented"
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
+    key: :open_router_glm_5_3,
+    api_name: "z-ai/glm-5.3",
+    display_name: "GLM 5.3 (via OpenRouter)",
+    pricing: {
+      input_per_million: 1.17,
+      output_per_million: 3.96,
+      note: "10% off promotional price shown on openrouter.ai as of 2026-09-01 (base 1.40 in / 4.40 out); no end date documented"
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
+    key: :open_router_glm_5_3_flash,
+    api_name: "z-ai/glm-5.3-flash",
+    display_name: "GLM 5.3 Flash (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.075,
+      output_per_million: 0.25,
+      note: "50% off promotional price shown on openrouter.ai as of 2026-09-01; no end date documented"
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
     key: :open_router_kimi_k2_thinking,
     api_name: "moonshotai/kimi-k2-thinking",
     display_name: "Kimi K2 Thinking (via OpenRouter)",
