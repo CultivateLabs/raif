@@ -128,6 +128,48 @@ provider :open_router do |p|
   )
 
   p.model(
+    key: :open_router_deepseek_v4_flash,
+    api_name: "deepseek/deepseek-v4-flash-0731",
+    display_name: "DeepSeek V4 Flash (via OpenRouter)",
+    pricing: { input_per_million: 0.065, output_per_million: 0.18 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
+    key: :open_router_deepseek_v4_pro,
+    api_name: "deepseek/deepseek-v4-pro-0813",
+    display_name: "DeepSeek V4 Pro (via OpenRouter)",
+    pricing: { input_per_million: 0.66, output_per_million: 1.98 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
     key: :open_router_gemini_2_5_flash,
     api_name: "google/gemini-2.5-flash",
     display_name: "Gemini 2.5 Flash (via OpenRouter)",
