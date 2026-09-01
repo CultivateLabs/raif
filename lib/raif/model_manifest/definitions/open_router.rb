@@ -71,7 +71,7 @@ provider :open_router do |p|
     key: :open_router_deepseek_chat_v3,
     api_name: "deepseek/deepseek-chat-v3-0324",
     display_name: "DeepSeek Chat v3 (via OpenRouter)",
-    pricing: { input_per_million: 0.2, output_per_million: 0.77 },
+    pricing: { input_per_million: 0.24, output_per_million: 0.9 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -91,7 +91,7 @@ provider :open_router do |p|
     key: :open_router_deepseek_v3_1,
     api_name: "deepseek/deepseek-chat-v3.1",
     display_name: "DeepSeek v3.1 (via OpenRouter)",
-    pricing: { input_per_million: 0.25, output_per_million: 1.0 },
+    pricing: { input_per_million: 0.25, output_per_million: 0.95 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -111,7 +111,11 @@ provider :open_router do |p|
     key: :open_router_deepseek_v3_2,
     api_name: "deepseek/deepseek-v3.2",
     display_name: "DeepSeek v3.2 (via OpenRouter)",
-    pricing: { input_per_million: 0.26, output_per_million: 0.38 },
+    pricing: {
+      input_per_million: 0.2088,
+      output_per_million: 0.3096,
+      note: "28% off promotional price shown on openrouter.ai as of 2026-09-01; no end date documented"
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -131,7 +135,11 @@ provider :open_router do |p|
     key: :open_router_deepseek_v4_flash,
     api_name: "deepseek/deepseek-v4-flash-0731",
     display_name: "DeepSeek V4 Flash (via OpenRouter)",
-    pricing: { input_per_million: 0.065, output_per_million: 0.18 },
+    pricing: {
+      input_per_million: 0.04998,
+      output_per_million: 0.09996,
+      note: "64% off promotional price shown on openrouter.ai as of 2026-09-01 (base approximately 0.14 in / 0.28 out); no end date documented"
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -152,7 +160,7 @@ provider :open_router do |p|
     key: :open_router_deepseek_v4_pro,
     api_name: "deepseek/deepseek-v4-pro-0813",
     display_name: "DeepSeek V4 Pro (via OpenRouter)",
-    pricing: { input_per_million: 0.66, output_per_million: 1.98 },
+    pricing: { input_per_million: 0.5808, output_per_million: 1.742 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
