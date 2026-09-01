@@ -1,0 +1,772 @@
+{
+  "schema_version": 1,
+  "models": {
+    "open_router_claude_4_8_opus": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_claude_5_fable": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_claude_5_sonnet": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_deepseek_chat_v3": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_deepseek_v3_1": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_deepseek_v3_2": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_gemini_2_5_flash": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_gemini_2_5_pro": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_gemini_3_1_flash_lite_preview": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_gemini_3_1_pro_preview": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_gemini_3_5_flash": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_google_gemma_4_31b_it": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_grok_4_20": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_grok_4_5": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_kimi_k2_5": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_llama_3_1_8b_instruct": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_llama_3_3_70b_instruct": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_llama_4_maverick": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_llama_4_scout": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_minimax_m2": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_minimax_m2_1": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_minimax_m2_5": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_mistral_large_3_2512": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_mistral_small_3_2_24b": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_open_ai_gpt_oss_120b": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    },
+    "open_router_open_ai_gpt_oss_20b": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T22:03:23Z"
+      }
+    }
+  }
+}

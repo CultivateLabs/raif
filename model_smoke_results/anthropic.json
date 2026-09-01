@@ -5,22 +5,22 @@
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -28,44 +28,44 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       }
     },
     "anthropic_claude_4_5_opus": {
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -73,44 +73,44 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       }
     },
     "anthropic_claude_4_5_sonnet": {
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -118,44 +118,44 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       }
     },
     "anthropic_claude_4_6_opus": {
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -163,44 +163,44 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       }
     },
     "anthropic_claude_4_6_sonnet": {
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -208,44 +208,44 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       }
     },
     "anthropic_claude_4_7_opus": {
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -253,44 +253,44 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       }
     },
     "anthropic_claude_4_8_opus": {
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -298,44 +298,44 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       }
     },
     "anthropic_claude_5_fable": {
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -343,44 +343,44 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       }
     },
     "anthropic_claude_5_sonnet": {
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -388,22 +388,22 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-25T19:22:36Z"
+        "checked_at": "2026-09-01T22:02:00Z"
       }
     }
   }
