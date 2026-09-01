@@ -231,7 +231,11 @@ provider :open_router do |p|
     key: :open_router_kimi_k2_thinking,
     api_name: "moonshotai/kimi-k2-thinking",
     display_name: "Kimi K2 Thinking (via OpenRouter)",
-    pricing: { input_per_million: 0.45, output_per_million: 2.35 },
+    # Explicit cap because OpenRouter's default for this model (its advertised 100352 max
+    # output) exceeds what its current endpoints actually enforce (98304/102400 as of
+    # 2026-09-01), so requests without max_tokens are rejected upstream.
+    max_completion_tokens: 98_304,
+    pricing: { input_per_million: 0.6, output_per_million: 2.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -251,19 +255,65 @@ provider :open_router do |p|
     key: :open_router_kimi_k2_5,
     api_name: "moonshotai/kimi-k2.5",
     display_name: "Kimi K2.5 (via OpenRouter)",
-    pricing: { input_per_million: 0.45, output_per_million: 2.2 },
+    pricing: { input_per_million: 0.45, output_per_million: 2.25 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
-      images: false,
+      images: true,
       pdfs: false,
       provider_managed_tools: []
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :open_router_kimi_k2_6,
+    api_name: "moonshotai/kimi-k2.6",
+    display_name: "Kimi K2.6 (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.5292,
+      output_per_million: 2.228,
+      note: "44% off promotional price shown on openrouter.ai as of 2026-09-01; no end date documented"
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
+    key: :open_router_kimi_k3,
+    api_name: "moonshotai/kimi-k3",
+    display_name: "Kimi K3 (via OpenRouter)",
+    pricing: { input_per_million: 2.55, output_per_million: 12.75 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
     }
   )
 

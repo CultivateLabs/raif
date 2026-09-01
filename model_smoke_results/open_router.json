@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "models": {
+    "open_router_kimi_k2_5": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      }
+    },
+    "open_router_kimi_k2_6": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:14:14Z"
+      }
+    },
+    "open_router_kimi_k2_thinking": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:18:52Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:18:52Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:18:52Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:18:52Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:18:52Z"
+      }
+    },
+    "open_router_kimi_k3": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:08:33Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:08:33Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:08:33Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:08:33Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:08:33Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-01T17:08:33Z"
+      }
+    }
+  }
+}
