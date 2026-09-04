@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+#
+# Smoke-test live models against the capabilities claimed in lib/raif/model_manifest/definitions/*.rb.
+#
+# Usage:
+#   bin/smoke <selectors...> [options]
+
+set -eu
+
+bundle exec spec/dummy/bin/rails runner script/smoke.rb "$@"

@@ -59,6 +59,8 @@ Raif.register_llm(Raif::Llms::Anthropic, key: :anthropic_claude_5_sonnet, ...)
 Raif.llm(:anthropic_claude_5_sonnet)  # Returns configured instance
 ```
 
+Model definitions live in `lib/raif/model_manifest/definitions/*.rb`, a constrained declarative Ruby DSL (not a sandbox) that limits manifest files to a small set of declarations so they can't accidentally acquire capabilities like requires or global mutation. They are the runtime registry: `Raif.default_llms` and `Raif.default_embedding_models` are built from them at boot, so a manifest edit is live on the next process start with nothing to regenerate. `spec/lib/raif/model_manifest_validity_spec.rb` checks the definitions are coherent.
+
 ### Key Design Patterns
 - **Isolated namespace**: All models/controllers under `Raif::`
 - **Concern-based composition**: HasLlm, InvokesModelTools, LlmResponseParsing
@@ -96,6 +98,7 @@ rails g raif:views             # Copy views for customization
 - Migration checker warns in development if Raif migrations are missing
 - Provider configuration validates that default model keys match registered models
 - Test environment automatically registers test LLMs and embedding models
+- Model changes are made in `lib/raif/model_manifest/definitions/` and verified with `bundle exec rspec spec/lib/raif/model_manifest_validity_spec.rb`; there is no generated registry to refresh. Smoke models with `bin/smoke <key> --record`.
 
 ## File Structure
 

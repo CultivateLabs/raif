@@ -265,10 +265,11 @@ module Raif
       # transparently falls back to the non-streaming path. Each entry may be
       # a String, Symbol, or Regexp matched against the model key.
       #
-      # Default covers Bedrock gpt-oss, whose Converse streaming endpoint
-      # delivers corrupted/truncated tool_use deltas. Set to [] to disable
-      # the workaround.
-      @streaming_unsupported_model_keys = [/\Abedrock_gpt_oss_/]
+      # Default is derived from the model manifest definitions: every model
+      # whose entry declares streaming: false. It currently covers Bedrock
+      # gpt-oss, whose Converse streaming endpoint delivers corrupted/
+      # truncated tool_use deltas. Set to [] to disable the workaround.
+      @streaming_unsupported_model_keys = Raif.default_streaming_unsupported_model_keys.dup
       @streaming_update_chunk_size_threshold = 25
       @task_creator_optional = true
       # How long Raif::Task rows are retained before Raif::ArchiveTasksJob
@@ -317,6 +318,15 @@ module Raif
       unless Raif.available_llm_keys.include?(default_llm_model_key.to_sym)
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.default_llm_model_key was set to #{default_llm_model_key}, but must be one of: #{Raif.available_llm_keys.join(", ")}"
+      end
+
+      default_llm_config = Raif.llm_config(default_llm_model_key.to_sym)
+      if default_llm_config && default_llm_config[:deprecated]
+        Raif.logger.warn(
+          "Raif.config.default_llm_model_key is set to :#{default_llm_model_key}, which is deprecated" \
+            "#{default_llm_config[:retirement_date] ? " and will be removed after #{default_llm_config[:retirement_date]}" : ""}." \
+            "#{default_llm_config[:replacement_key] ? " Use :#{default_llm_config[:replacement_key]} instead." : ""}"
+        )
       end
 
       if default_embedding_model_key.present? &&

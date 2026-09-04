@@ -139,7 +139,7 @@ module Raif
       Raif.config.agent_types += ["Raif::TestTemplateAgent"]
 
       require "#{Raif::Engine.root}/spec/support/test_llm"
-      Raif.register_llm(Raif::Llms::TestLlm, key: :raif_test_llm, api_name: "raif-test-llm")
+      Raif.register_llm(Raif::Llms::TestLlm, key: :raif_test_llm, api_name: "raif-test-llm", display_name: "Raif Test LLM")
 
       require "#{Raif::Engine.root}/spec/support/test_embedding_model"
       Raif.register_embedding_model(
@@ -160,8 +160,11 @@ module Raif
       next unless Rails.env.development?
       next if File.basename($PROGRAM_NAME) == "rake"
 
-      # Skip if we're running inside the engine's own dummy app
-      next if Rails.root.to_s.include?("raif/spec/dummy")
+      # Skip if we're running inside the engine's own dummy app. Compare real paths
+      # rather than a path substring so the guard also holds in git worktrees and
+      # checkouts not named raif.
+      dummy_root = Raif::Engine.root.join("spec", "dummy").to_s
+      next if File.exist?(dummy_root) && File.identical?(Rails.root.to_s, dummy_root)
 
       Raif::MigrationChecker.check_and_warn!
     end

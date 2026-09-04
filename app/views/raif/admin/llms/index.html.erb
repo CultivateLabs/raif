@@ -70,7 +70,14 @@
                 <% output_cost = llm.output_token_cost.present? && llm.output_token_cost > 0 ? llm.output_token_cost * 1_000_000 : 0 %>
                 <tr data-raif--table-search-target="row"
                     data-searchable="<%= "#{llm.name} #{llm.class.name.demodulize} #{llm.api_name}".downcase %>">
-                  <td><%= llm.name %></td>
+                  <td>
+                    <%= llm.name %>
+                    <% if llm.deprecated? %>
+                      <span class="badge bg-warning text-dark ms-1" title="<%= llm.deprecation_message %>">
+                        <%= t("raif.admin.llms.index.deprecated_badge") %><%= " (until #{llm.retirement_date})" if llm.retirement_date %>
+                      </span>
+                    <% end %>
+                  </td>
                   <td><code><%= llm.class.name.demodulize %></code></td>
                   <td><code><%= llm.api_name %></code></td>
                   <td class="text-end" data-sort-value="<%= input_cost %>">

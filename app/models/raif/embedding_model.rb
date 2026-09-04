@@ -9,9 +9,18 @@ class Raif::EmbeddingModel
     :input_token_cost,
     :default_output_vector_size
 
+  attr_writer :lifecycle, :pricing
+
   validates :default_output_vector_size, presence: true, numericality: { only_integer: true, greater_than: 0 }
   validates :api_name, presence: true
   validates :key, presence: true
+
+  def lifecycle = @lifecycle || {}
+  def pricing = @pricing || {}
+
+  def lifecycle_status
+    lifecycle[:status]
+  end
 
   def name
     I18n.t("raif.embedding_model_names.#{key}", default: display_name || key.to_s.humanize)

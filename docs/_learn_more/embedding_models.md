@@ -63,13 +63,11 @@ embedding = model.generate_embedding!("Your text here")
 
 ## Smoke Testing Embedding Models
 
-Use `bin/smoke_embedding_models` to verify credentials and connectivity for the embedding models you have enabled. The script skips providers that do not have credentials configured.
+Use `bin/smoke embeddings` to verify credentials and connectivity for the embedding models you have enabled. Providers that do not have credentials configured are skipped.
 
 ```bash
-bin/smoke_embedding_models --list
-bin/smoke_embedding_models google
-bin/smoke_embedding_models google_gemini_embedding_2
-bin/smoke_embedding_models ALL
+bin/smoke --list
+bin/smoke embeddings
 ```
 
 ---

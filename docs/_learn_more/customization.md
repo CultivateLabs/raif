@@ -144,6 +144,8 @@ Raif.register_llm(Raif::Llms::OpenRouter, {
   api_name: "google/gemini-flash-1.5-8b", # name of the model to be used in API calls - needs to match the provider's API name
   input_token_cost: 0.038 / 1_000_000, # the cost per input token
   output_token_cost: 0.15 / 1_000_000, # the cost per output token
+  model_provider_settings: { supports_temperature: false }, # per-model overrides of provider-level defaults, e.g. models that reject the temperature param
+  supported_provider_managed_tools: [Raif::ModelTools::ProviderManaged::WebSearch] # provider-hosted tools this model supports, if any
 })
 
 # Then use the model
@@ -155,6 +157,8 @@ Raif.configure do |config|
   config.default_llm_model_key = "open_router_gemini_flash_1_5_8b"
 end
 ```
+
+Contributing a model to Raif itself is different: the models that ship with Raif are not registered by hand. They are defined in `lib/raif/model_manifest/definitions/*.rb` (one file per provider, a constrained declarative Ruby DSL recording each model's pricing, capabilities, and lifecycle status) and Raif builds its registry from those files at boot. Editing a definition is the whole change; `spec/lib/raif/model_manifest_validity_spec.rb` checks it is coherent and `bin/smoke <key> --record` records live evidence for its capability claims.
 
 ---
 

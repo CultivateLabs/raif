@@ -44,26 +44,33 @@ bundle exec rspec
 bundle exec guard
 ```
 
+### Model Pricing Annotations
+
+A manifest entry's `pricing` hash accepts two optional keys alongside the required rates: `note` (a string documenting promotional or otherwise unusual pricing, for example a launch discount or a surcharge above a token threshold) and `valid_until` (a `Date` recording when a documented rate is scheduled to end). Neither affects runtime costs; both are exposed to host apps through `Raif::Llm#pricing`. A past `valid_until` is a review prompt, never a CI failure. Plain Ruby comments in manifest files are also welcome for anything the fields do not fit.
+
 ### Manual LLM Smoke Tests
-Use this helper to quickly verify live model calls from the dummy app:
+
+`bin/smoke` verifies live models against the capabilities claimed in `lib/raif/model_manifest/definitions/*.rb`:
 
 ```bash
-bin/smoke_llm_models ALL
-bin/smoke_llm_models anthropic bedrock
-bin/smoke_llm_models anthropic_claude_4_6_opus bedrock_claude_4_6_opus
-AWS_PROFILE=your-profile AWS_REGION=us-east-1 bin/smoke_llm_models bedrock
-bin/smoke_llm_models open_ai_responses --prompt "Reply with exactly: ping"
+bin/smoke anthropic_claude_5_sonnet          # one model, full capability matrix
+bin/smoke anthropic bedrock                  # provider sweeps
+bin/smoke ALL                                # all LLM models with credentials available (use `embeddings` for embedding models)
+bin/smoke --stale 30                         # models with missing or stale successful observations
+bin/smoke x_ai --only batch_inference        # one capability
+bin/smoke bedrock_claude_5_sonnet --only streaming_tool_calls --iterations 5
+bin/smoke anthropic_claude_5_sonnet --record # record hard-oracle passes to model_smoke_results/
 ```
 
 Notes:
-- Anthropic requires `ANTHROPIC_API_KEY`.
-- OpenAI requires `OPENAI_API_KEY`.
-- OpenRouter requires `OPEN_ROUTER_API_KEY` (or `OPENROUTER_API_KEY`).
-- Google requires `GOOGLE_AI_API_KEY` (or `GOOGLE_API_KEY`).
-- Bedrock requires valid AWS credentials and model access.
-- To avoid metadata lookup delays locally, `bin/smoke_llm_models` sets `AWS_EC2_METADATA_DISABLED=true` if not already set.
-- Use `bin/smoke_llm_models --list` to print all registered model keys.
-- `RAIF_SMOKE_MODELS` can still be used as a comma-separated fallback list when no positional selectors are provided.
+- Explicitly selected models fail (nonzero exit) on SKIP or TIMEOUT; provider sweeps skip providers without credentials.
+- Credentials: ANTHROPIC_API_KEY, OPENAI_API_KEY, OPEN_ROUTER_API_KEY (or OPENROUTER_API_KEY), GOOGLE_AI_API_KEY (or GOOGLE_API_KEY), XAI_API_KEY (or X_AI_API_KEY), AWS credentials plus AWS_REGION for Bedrock.
+- `--record` stores only successful observations from checks with concrete pass criteria in `model_smoke_results/`. It never changes declared capabilities and never records FAIL, NOTE, SKIP, TIMEOUT, or CONSISTENT. A CONSISTENT cell means the provider rejected a claimed-false capability's forced parameter exactly as the manifest declares (agreement with the manifest, not a probe result to record). A later failure does not remove a previously recorded success; withdrawing or acting on evidence is a maintainer decision. Provider documentation and reviewed manifest changes remain authoritative. Commit the updated `model_smoke_results/*.json` files.
+- `--stale DAYS` selects models whose positively claimed, recordable capabilities have missing or old successful observations.
+- `bin/smoke --list` prints all model keys. `--format json` emits machine-readable results.
+- `embeddings` selects all embedding models; an exact embedding key (e.g. `bin/smoke open_ai_text_embedding_3_small`) works too.
+- A full `bin/smoke ALL` run makes live calls for every model, and batch_inference checks can poll for up to 10 minutes per model, so sweeps commonly add `--skip batch_inference`; per-model progress streams to stderr as each one finishes, with the final matrix printed at the end.
+- On a terminal, a run selecting more than 10 models or including batch_inference checks asks for confirmation before it starts; pass `--yes` to skip the prompt (e.g. in scripts) and `--no-color` to disable colored output.
 
 ### Linting
 
