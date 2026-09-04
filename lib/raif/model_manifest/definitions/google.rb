@@ -8,6 +8,58 @@ provider :google do |p|
   )
 
   p.model(
+    key: :google_gemini_3_7_flash,
+    api_name: "gemini-3.7-flash",
+    display_name: "Google Gemini 3.7 Flash",
+    pricing: {
+      input_per_million: 0.75,
+      output_per_million: 3.75,
+      note: "Introductory rate through 2026-12-31; standard rate is 1.50 input / 7.50 output from 2027-01-01",
+      valid_until: Date.new(2026, 12, 31)
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: true,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: %i[web_search code_execution]
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
+    }
+  )
+
+  p.model(
+    key: :google_gemini_3_6_flash,
+    api_name: "gemini-3.6-flash",
+    display_name: "Google Gemini 3.6 Flash",
+    pricing: {
+      input_per_million: 0.75,
+      output_per_million: 3.75,
+      note: "Introductory rate through 2026-12-31; standard rate is 1.50 input / 7.50 output from 2027-01-01",
+      valid_until: Date.new(2026, 12, 31)
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: true,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: %i[web_search code_execution]
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
+    }
+  )
+
+  p.model(
     key: :google_gemini_3_5_flash,
     api_name: "gemini-3.5-flash",
     display_name: "Google Gemini 3.5 Flash",
@@ -24,6 +76,27 @@ provider :google do |p|
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :google_gemini_3_5_flash_lite,
+    api_name: "gemini-3.5-flash-lite",
+    display_name: "Google Gemini 3.5 Flash-Lite",
+    pricing: { input_per_million: 0.3, output_per_million: 2.5 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: true,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: %i[web_search code_execution]
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
     }
   )
 

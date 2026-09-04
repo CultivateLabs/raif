@@ -568,6 +568,63 @@ RSpec.describe Smoke::Checks do
       expect(result[:status]).to eq(:fail)
     end
 
+    # Bedrock's adapter raises Aws::BedrockRuntime service errors rather than Faraday errors,
+    # so its claimed-false rejections are matched on the exception message instead of a parsed
+    # JSON body. Wordings pinned from production Bedrock rejections as of 2026-09-01
+    # (bedrock_deepseek_r1).
+    describe "Bedrock ValidationException classification" do
+      def bedrock_validation_exception(message)
+        Aws::BedrockRuntime::Errors::ValidationException.new(nil, message)
+      end
+
+      it "classifies the production outputConfig rejection as :consistent for structured_outputs" do
+        stub_forced_llm_raising(bedrock_validation_exception(
+          "This model doesn't support the outputConfig field. Remove outputConfig and try again."
+        ))
+
+        result = described_class.run_for(claimed_false_entry, only: "structured_outputs")
+
+        expect(result.fetch("structured_outputs")).to include(status: :consistent, detail: include("outputConfig"))
+      end
+
+      it "classifies a ValidationException naming temperature as unsupported as :consistent" do
+        stub_forced_llm_raising(bedrock_validation_exception("This model doesn't support the temperature parameter."))
+
+        result = described_class.run_for(claimed_false_entry, only: "temperature")
+
+        expect(result.fetch("temperature")).to include(status: :consistent, detail: include("temperature"))
+      end
+
+      it "does not classify a ValidationException with an unrelated message (stays :fail)" do
+        result = described_class.send(
+          :classify_claimed_false_error, "structured_outputs",
+          bedrock_validation_exception("Invocation of model ID deepseek.r1-v1:0 with on-demand throughput isn't supported.")
+        )
+
+        expect(result[:status]).to eq(:fail)
+      end
+
+      it "does not classify a ValidationException naming a different feature than the probe (stays :fail)" do
+        result = described_class.send(
+          :classify_claimed_false_error, "temperature",
+          bedrock_validation_exception("This model doesn't support tool use.")
+        )
+
+        expect(result[:status]).to eq(:fail)
+      end
+
+      it "never classifies a claimed-true structured_outputs ValidationException, even with a matching message" do
+        allow(llm).to receive(:chat).and_raise(bedrock_validation_exception(
+          "This model doesn't support the outputConfig field. Remove outputConfig and try again."
+        ))
+
+        result = described_class.check_structured_outputs(entry, claimed: true)
+
+        expect(result[:status]).to eq(:fail)
+        expect(result[:detail]).not_to include("rejected by provider as declared")
+      end
+    end
+
     it "never classifies a claimed-true temperature failure, even with a matching rejection body" do
       allow(llm).to receive(:chat).and_raise(bad_request_error(anthropic_rejection_body("temperature is not supported for this model")))
 
