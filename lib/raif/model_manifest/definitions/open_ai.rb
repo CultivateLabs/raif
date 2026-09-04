@@ -11,7 +11,12 @@ provider :open_ai do |p|
     key_base: :gpt_5_6_sol,
     api_name: "gpt-5.6-sol",
     display_name: "OpenAI GPT-5.6 Sol",
-    pricing: { input_per_million: 5.0, output_per_million: 30.0 },
+    pricing: {
+      input_per_million: 4.0,
+      output_per_million: 20.0,
+      note: "Promotional short-context rate; list rate 5.00 / 30.00, long context (272K+) bills 8.00 / 30.00.",
+      valid_until: Date.new(2026, 11, 21)
+    },
     lifecycle: {
       status: :active
     },
