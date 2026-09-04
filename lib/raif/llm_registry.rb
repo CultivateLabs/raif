@@ -12,8 +12,9 @@ module Raif
       raise ArgumentError, "The LLM you tried to register is invalid: #{llm.errors.full_messages.join(", ")}"
     end
 
+    key = llm.key.to_sym
     @llm_registry ||= {}
-    @llm_registry[llm.key] = llm_config.merge(llm_class: llm_class)
+    @llm_registry[key] = llm_config.merge(llm_class: llm_class, key: key)
   end
 
   def self.llm(model_key)
