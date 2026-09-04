@@ -10,6 +10,66 @@ RSpec.describe Raif::Llm, type: :model do
     end
   end
 
+  describe "deprecation" do
+    let(:llm) do
+      Raif::Llms::TestLlm.new(
+        key: :raif_test_llm, api_name: "raif-test-llm",
+        deprecated: true, retirement_date: Date.new(2026, 12, 1),
+        replacement_key: :anthropic_claude_5_sonnet
+      )
+    end
+
+    it "builds the full message with a replacement" do
+      expect(llm.deprecation_message).to eq(
+        "Raif model :raif_test_llm is deprecated and will be removed after 2026-12-01. Use :anthropic_claude_5_sonnet instead."
+      )
+    end
+
+    it "uses the migration note when there is no replacement" do
+      llm = Raif::Llms::TestLlm.new(
+        key: :raif_test_llm, api_name: "raif-test-llm",
+        deprecated: true, retirement_date: Date.new(2026, 12, 1),
+        migration_note: "No direct replacement."
+      )
+      expect(llm.deprecation_message).to eq(
+        "Raif model :raif_test_llm is deprecated and will be removed after 2026-12-01. No direct replacement."
+      )
+    end
+
+    it "warns once per process per key when instantiated through Raif.llm" do
+      Raif.register_llm(Raif::Llms::TestLlm, key: :deprecated_test_llm, api_name: "dep-test",
+        deprecated: true, retirement_date: Date.new(2026, 12, 1))
+      Raif.reset_deprecation_warnings!
+      expect(Raif.logger).to receive(:warn).with(/deprecated_test_llm is deprecated/).once
+      2.times { Raif.llm(:deprecated_test_llm) }
+    ensure
+      Raif.llm_registry.delete(:deprecated_test_llm)
+    end
+
+    it "does not warn for active models" do
+      Raif.reset_deprecation_warnings!
+      expect(Raif.logger).not_to receive(:warn)
+      Raif.llm(:raif_test_llm)
+    end
+  end
+
+  describe ".llm" do
+    it "accepts a String key as well as a Symbol" do
+      expect(Raif.llm("raif_test_llm").key).to eq(:raif_test_llm)
+      expect(Raif.llm(:raif_test_llm).key).to eq(:raif_test_llm)
+    end
+
+    it "finds a model registered with a String key via String or Symbol lookup" do
+      Raif.register_llm(Raif::Llms::TestLlm, key: "raif_string_key_test_llm", api_name: "raif-string-key-test-llm")
+
+      expect(Raif.llm("raif_string_key_test_llm").key).to eq(:raif_string_key_test_llm)
+      expect(Raif.llm(:raif_string_key_test_llm).key).to eq(:raif_string_key_test_llm)
+    ensure
+      Raif.llm_registry.delete(:raif_string_key_test_llm)
+      Raif.llm_registry.delete("raif_string_key_test_llm")
+    end
+  end
+
   describe "#chat" do
     let(:messages) { [{ role: "user", content: "Hello" }] }
     let(:system_prompt) { "You are a helpful assistant." }
@@ -470,25 +530,29 @@ RSpec.describe Raif::Llm, type: :model do
     end
   end
 
-  it "has model names for all built in LLMs" do
-    expect(Raif.available_llm_keys.sort).to eq(I18n.t("raif.model_names").keys.sort)
-
+  it "names every built in LLM from its manifest display_name" do
     Raif.default_llms.values.flatten.each do |llm_config|
       llm = Raif.llm(llm_config[:key])
+      expect(llm.name).to eq(llm_config[:display_name])
       expect(llm.name).to_not include("Translation missing")
     end
   end
 
   describe "#name" do
-    context "when I18n translation exists" do
-      it "returns the I18n translation" do
+    context "when a host app provides an I18n translation" do
+      it "prefers the translation over display_name" do
         llm = Raif::Llms::TestLlm.new(
           key: :open_ai_gpt_4o,
           api_name: "gpt-4o",
           display_name: "Custom Display Name"
         )
 
-        expect(llm.name).to eq(I18n.t("raif.model_names.open_ai_gpt_4o"))
+        I18n.with_locale(:en) do
+          I18n.backend.store_translations(:en, raif: { model_names: { open_ai_gpt_4o: "Host App Name" } })
+          expect(llm.name).to eq("Host App Name")
+        ensure
+          I18n.backend.reload!
+        end
       end
     end
 
@@ -536,6 +600,52 @@ RSpec.describe Raif::Llm, type: :model do
     it "returns true for every model key when the config list is empty" do
       allow(Raif.config).to receive(:streaming_unsupported_model_keys).and_return([])
       expect(described_class.streaming_supported_for_key?(:bedrock_gpt_oss_120b)).to eq(true)
+    end
+  end
+
+  describe "manifest metadata readers" do
+    it "does not expose writers for lifecycle, pricing, or capabilities" do
+      llm = Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "t")
+      expect(llm).to_not respond_to(:lifecycle=)
+      expect(llm).to_not respond_to(:pricing=)
+      expect(llm).to_not respond_to(:capabilities=)
+    end
+
+    it "default to empty hashes and nil conveniences" do
+      llm = Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api")
+      expect(llm.lifecycle).to eq({})
+      expect(llm.pricing).to eq({})
+      expect(llm.capabilities).to eq({})
+      expect(llm.lifecycle_status).to be_nil
+      expect(llm.added_on).to be_nil
+      expect(llm.deprecated_on).to be_nil
+    end
+
+    it "expose what the registry config passed in" do
+      lifecycle = {
+        status: :deprecated, added_on: Date.new(2026, 1, 5), deprecated_on: Date.new(2026, 6, 1),
+        retirement_date: Date.new(2026, 12, 1), replacement_key: :other, migration_note: nil
+      }
+      pricing = { input_per_million: 1.0, output_per_million: 4.0, note: "promo", valid_until: Date.new(2026, 11, 21) }
+      capabilities = { streaming: true, images: false }
+
+      llm = Raif::Llms::TestLlm.new(key: :raif_test_llm, api_name: "test_api", lifecycle: lifecycle, pricing: pricing, capabilities: capabilities)
+
+      expect(llm.lifecycle).to eq(lifecycle)
+      expect(llm.pricing).to eq(pricing)
+      expect(llm.capabilities).to eq(capabilities)
+      expect(llm.lifecycle_status).to eq(:deprecated)
+      expect(llm.added_on).to eq(Date.new(2026, 1, 5))
+      expect(llm.deprecated_on).to eq(Date.new(2026, 6, 1))
+    end
+
+    it "are populated for every registered built in model" do
+      Raif.default_llms.values.flatten.each do |llm_config|
+        llm = Raif.llm(llm_config[:key])
+        expect(llm.lifecycle_status).to eq(:active).or eq(:deprecated)
+        expect(llm.pricing[:input_per_million]).to be > 0
+        expect(llm.capabilities).to include(:streaming)
+      end
     end
   end
 

@@ -99,137 +99,17 @@ Raif.configure do |config|
   # config.x_ai_models_enabled = ENV["XAI_API_KEY"].present? || ENV["X_AI_API_KEY"].present?
 
   # The default LLM model to use. Defaults to "open_ai_gpt_4o"
-  # Available keys:
-  #   open_ai_gpt_5_6_sol
-  #   open_ai_gpt_5_6_terra
-  #   open_ai_gpt_5_6_luna
-  #   open_ai_gpt_5_5
-  #   open_ai_gpt_5_4
-  #   open_ai_gpt_5_4_mini
-  #   open_ai_gpt_5_4_nano
-  #   open_ai_gpt_5_3
-  #   open_ai_gpt_5_2
-  #   open_ai_gpt_5_1
-  #   open_ai_gpt_5
-  #   open_ai_gpt_5_mini
-  #   open_ai_gpt_5_nano
-  #   open_ai_gpt_4_1
-  #   open_ai_gpt_4_1_mini
-  #   open_ai_gpt_4_1_nano
-  #   open_ai_gpt_4o
-  #   open_ai_gpt_4o_mini
-  #   open_ai_gpt_3_5_turbo
-  #   open_ai_o4_mini
-  #   open_ai_o3
-  #   open_ai_o3_mini
-  #   open_ai_o1
-  #   open_ai_responses_gpt_5_6_sol
-  #   open_ai_responses_gpt_5_6_terra
-  #   open_ai_responses_gpt_5_6_luna
-  #   open_ai_responses_gpt_5_5
-  #   open_ai_responses_gpt_5_5_pro
-  #   open_ai_responses_gpt_5_4
-  #   open_ai_responses_gpt_5_4_pro
-  #   open_ai_responses_gpt_5_4_mini
-  #   open_ai_responses_gpt_5_4_nano
-  #   open_ai_responses_gpt_5_3
-  #   open_ai_responses_gpt_5_2
-  #   open_ai_responses_gpt_5_2_pro
-  #   open_ai_responses_gpt_5_1
-  #   open_ai_responses_gpt_5
-  #   open_ai_responses_gpt_5_pro
-  #   open_ai_responses_gpt_5_mini
-  #   open_ai_responses_gpt_5_nano
-  #   open_ai_responses_gpt_4_1
-  #   open_ai_responses_gpt_4_1_mini
-  #   open_ai_responses_gpt_4_1_nano
-  #   open_ai_responses_gpt_4o
-  #   open_ai_responses_gpt_4o_mini
-  #   open_ai_responses_gpt_3_5_turbo
-  #   open_ai_responses_o4_mini
-  #   open_ai_responses_o3
-  #   open_ai_responses_o3_pro
-  #   open_ai_responses_o3_mini
-  #   open_ai_responses_o1
-  #   open_ai_responses_o1_pro
-  #   anthropic_claude_5_fable
-  #   anthropic_claude_5_sonnet
-  #   anthropic_claude_4_8_opus
-  #   anthropic_claude_4_7_opus
-  #   anthropic_claude_4_6_opus
-  #   anthropic_claude_4_6_sonnet
-  #   anthropic_claude_4_5_opus
-  #   anthropic_claude_4_5_sonnet
-  #   anthropic_claude_4_5_haiku
-  #   anthropic_claude_4_1_opus
-  #   bedrock_claude_5_fable
-  #   bedrock_claude_5_sonnet
-  #   bedrock_claude_4_8_opus
-  #   bedrock_claude_4_7_opus
-  #   bedrock_claude_4_6_opus
-  #   bedrock_claude_4_6_sonnet
-  #   bedrock_claude_4_5_opus
-  #   bedrock_claude_4_5_sonnet
-  #   bedrock_claude_4_5_haiku
-  #   bedrock_claude_4_1_opus
-  #   bedrock_claude_4_sonnet
-  #   bedrock_claude_3_7_sonnet
-  #   bedrock_claude_3_5_sonnet
-  #   bedrock_amazon_nova_micro
-  #   bedrock_amazon_nova_lite
-  #   bedrock_amazon_nova_pro
-  #   bedrock_deepseek_v3_2
-  #   bedrock_deepseek_r1
-  #   bedrock_gpt_oss_120b
-  #   bedrock_gpt_oss_20b
-  #   open_router_claude_5_fable
-  #   open_router_claude_5_sonnet
-  #   open_router_claude_4_8_opus
-  #   open_router_deepseek_chat_v3
-  #   open_router_deepseek_v3_1
-  #   open_router_deepseek_v3_2
-  #   open_router_gemini_3_5_flash
-  #   open_router_gemini_3_1_pro_preview
-  #   open_router_gemini_3_1_flash_lite_preview
-  #   open_router_gemini_2_5_flash
-  #   open_router_gemini_2_5_pro
-  #   open_router_grok_4_20
-  #   open_router_grok_4_5
-  #   open_router_kimi_k2_thinking
-  #   open_router_kimi_k2_5
-  #   open_router_llama_3_1_8b_instruct
-  #   open_router_llama_3_3_70b_instruct
-  #   open_router_llama_4_maverick
-  #   open_router_llama_4_scout
-  #   open_router_minimax_m2
-  #   open_router_minimax_m2_1
-  #   open_router_minimax_m2_5
-  #   open_router_mistral_large_3_2512
-  #   open_router_mistral_small_3_2_24b
-  #   open_router_open_ai_gpt_oss_120b
-  #   open_router_open_ai_gpt_oss_20b
-  #   open_router_google_gemma_4_31b_it
-  #   x_ai_grok_4_5
-  #   x_ai_grok_4_3
-  #   x_ai_grok_4_20_reasoning
-  #   x_ai_grok_4_20_non_reasoning
-  #   google_gemini_3_5_flash
-  #   google_gemini_3_1_pro
-  #   google_gemini_3_1_flash_lite
-  #   google_gemini_3_0_flash
-  #   google_gemini_2_5_pro
-  #   google_gemini_2_5_flash
+  # Available keys: run `Raif.available_llm_keys` in a console, or read the
+  # model definitions in lib/raif/model_manifest/definitions/ in the Raif
+  # repository for each model's pricing and capabilities.
   #
   # config.default_llm_model_key = "open_ai_gpt_4o"
 
   # The default embedding model to use when calling Raif.generate_embedding!
   # Defaults to "open_ai_text_embedding_3_small"
-  # Available keys:
-  #   open_ai_text_embedding_3_small
-  #   open_ai_text_embedding_3_large
-  #   open_ai_text_embedding_ada_002
-  #   bedrock_titan_embed_text_v2
-  #   google_gemini_embedding_2
+  # Available keys: run `Raif.available_embedding_model_keys` in a console, or
+  # read lib/raif/model_manifest/definitions/embeddings.rb in the Raif
+  # repository.
   #
   # config.default_embedding_model_key = "open_ai_text_embedding_3_small"
 

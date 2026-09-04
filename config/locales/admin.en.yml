@@ -185,6 +185,7 @@ en:
           api_name: API Name
           cost_note: Costs shown are per 1,000,000 tokens.
           default_badge: default
+          deprecated_badge: Deprecated
           input_cost: Input Cost (per 1M tokens)
           name: Name
           no_llms: No LLMs are currently registered.

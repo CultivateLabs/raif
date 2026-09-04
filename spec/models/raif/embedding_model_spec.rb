@@ -14,16 +14,55 @@ RSpec.describe Raif::EmbeddingModel, type: :model do
     expect(Raif.default_embedding_model_key).to eq(:raif_test_embedding_model)
   end
 
-  it "has model names for all built in embedding models" do
+  it "names every built in embedding model from its manifest display_name" do
     Raif.default_embedding_models.values.flatten.each do |embedding_model_config|
       embedding_model = Raif.embedding_model(embedding_model_config[:key])
-      expect(embedding_model.name).to_not include("Translation missing")
+      expect(embedding_model.name).to eq(embedding_model_config[:display_name])
+    end
+  end
+
+  describe "manifest metadata readers" do
+    it "default to empty hashes" do
+      embedding_model = Raif::EmbeddingModel.new(key: :k, api_name: "a", default_output_vector_size: 8)
+      expect(embedding_model.lifecycle).to eq({})
+      expect(embedding_model.pricing).to eq({})
+      expect(embedding_model.lifecycle_status).to be_nil
+    end
+
+    it "are populated for every registered built in embedding model" do
+      Raif.default_embedding_models.values.flatten.each do |config|
+        embedding_model = Raif.embedding_model(config[:key])
+        expect(embedding_model.lifecycle_status).to eq(:active).or eq(:deprecated)
+        expect(embedding_model.pricing[:input_per_million]).to be > 0
+      end
+    end
+  end
+
+  describe ".embedding_model" do
+    it "accepts a String key as well as a Symbol" do
+      expect(Raif.embedding_model("raif_test_embedding_model").key).to eq(:raif_test_embedding_model)
+      expect(Raif.embedding_model(:raif_test_embedding_model).key).to eq(:raif_test_embedding_model)
+    end
+
+    it "finds a model registered with a String key via String or Symbol lookup" do
+      Raif.register_embedding_model(
+        Raif::EmbeddingModels::Test,
+        key: "raif_string_key_test_embedding_model",
+        api_name: "raif-string-key-test-embedding-model",
+        default_output_vector_size: 8
+      )
+
+      expect(Raif.embedding_model("raif_string_key_test_embedding_model").key).to eq(:raif_string_key_test_embedding_model)
+      expect(Raif.embedding_model(:raif_string_key_test_embedding_model).key).to eq(:raif_string_key_test_embedding_model)
+    ensure
+      Raif.embedding_model_registry.delete(:raif_string_key_test_embedding_model)
+      Raif.embedding_model_registry.delete("raif_string_key_test_embedding_model")
     end
   end
 
   describe "#name" do
-    context "when I18n translation exists" do
-      it "returns the I18n translation" do
+    context "when a host app provides an I18n translation" do
+      it "prefers the translation over display_name" do
         embedding_model = Raif::EmbeddingModel.new(
           key: :open_ai_text_embedding_3_large,
           api_name: "text-embedding-3-large",
@@ -31,7 +70,10 @@ RSpec.describe Raif::EmbeddingModel, type: :model do
           default_output_vector_size: 3072
         )
 
-        expect(embedding_model.name).to eq(I18n.t("raif.embedding_model_names.open_ai_text_embedding_3_large"))
+        I18n.backend.store_translations(:en, raif: { embedding_model_names: { open_ai_text_embedding_3_large: "Host App Name" } })
+        expect(embedding_model.name).to eq("Host App Name")
+      ensure
+        I18n.backend.reload!
       end
     end
 

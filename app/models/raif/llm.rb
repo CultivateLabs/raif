@@ -14,7 +14,16 @@ module Raif
       :provider_settings,
       :input_token_cost,
       :output_token_cost,
-      :supported_provider_managed_tools
+      :supported_provider_managed_tools,
+      :deprecated,
+      :retirement_date,
+      :replacement_key,
+      :migration_note
+
+    # capabilities is the manifest's claim for this endpoint, not the behavioral switch:
+    # supports_structured_outputs? and streaming_supported? consult provider settings and
+    # Raif.config.streaming_unsupported_model_keys, so read those to decide behavior.
+    attr_reader :lifecycle, :pricing, :capabilities
 
     validates :key, presence: true
     validates :api_name, presence: true
@@ -33,7 +42,14 @@ module Raif
       temperature: nil,
       max_completion_tokens: nil,
       input_token_cost: nil,
-      output_token_cost: nil
+      output_token_cost: nil,
+      deprecated: false,
+      retirement_date: nil,
+      replacement_key: nil,
+      migration_note: nil,
+      lifecycle: {},
+      pricing: {},
+      capabilities: {}
     )
       @key = key
       @api_name = api_name
@@ -45,6 +61,47 @@ module Raif
       @input_token_cost = input_token_cost
       @output_token_cost = output_token_cost
       @supported_provider_managed_tools = supported_provider_managed_tools.map(&:to_s)
+      @deprecated = deprecated
+      @retirement_date = retirement_date
+      @replacement_key = replacement_key
+      @migration_note = migration_note
+      @lifecycle = lifecycle
+      @pricing = pricing
+      @capabilities = capabilities
+    end
+
+    def deprecated?
+      !!deprecated
+    end
+
+    # Manifest lifecycle conveniences. status is :active or :deprecated for
+    # models Raif ships (retired entries are never registered) and nil for a
+    # model a host app registered itself. The flat deprecated/retirement_date/
+    # replacement_key/migration_note keyword arguments are what deprecated?
+    # and the warnings read; lifecycle is the manifest record and can be
+    # empty for a host-registered model.
+    def lifecycle_status
+      lifecycle[:status]
+    end
+
+    def added_on
+      lifecycle[:added_on]
+    end
+
+    def deprecated_on
+      lifecycle[:deprecated_on]
+    end
+
+    def deprecation_message
+      message = +"Raif model :#{key} is deprecated"
+      message << " and will be removed after #{retirement_date}" if retirement_date
+      message << "."
+      if replacement_key
+        message << " Use :#{replacement_key} instead."
+      elsif migration_note
+        message << " #{migration_note}"
+      end
+      message
     end
 
     def name
