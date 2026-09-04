@@ -1,0 +1,53 @@
+name: Model Manifest Check
+
+on:
+  schedule:
+    - cron: "0 13 * * 1" # Mondays 13:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: model-manifest-check
+  cancel-in-progress: false
+
+jobs:
+  model-manifest-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Check model manifest for drift
+        uses: anthropics/claude-code-action@v1.0.210
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are running a scheduled, report-only drift check of raif's model manifest.
+
+            Run steps 1 through 3 of .claude/commands/model-check.md as a general sweep (no user hint), with these adjustments for CI:
+            - Report-only. Never edit files, never commit, never open pull requests.
+            - No provider API keys are configured here. Skip list-models calls that require credentials. OpenRouter's GET https://openrouter.ai/api/v1/models is public and must be checked; for Bedrock use its models_doc reference page.
+            - For the smoke-observations group, read model_smoke_results/*.json from the checkout; never run bin/smoke or hit provider APIs for this. Report one aggregate finding per provider, not per model, covering: manifest models with claimed, recordable capabilities that have no recorded observation at all (always report, including providers with no results file yet), and observations whose checked_at is older than 90 days (the tighter 30 day staleness lens stays local to /model-check). List the affected models and the oldest checked_at in the finding.
+            - When another finding concerns a capability a smoke observation covers, cite the most recent checked_at for it (for example "last smoked pass 2026-08-25") so the reader knows whether a local re-smoke should accompany the fix.
+
+            Then, instead of step 4 onward, file GitHub issues for the findings:
+            - One issue per distinct finding. Title format: "Model drift: <provider> <category>: <model or topic>", worded so the same finding produces the same title on every run. Smoke coverage findings use the fixed title "Model drift: <provider> smoke coverage: stale or missing observations" so each provider has one rolling issue; comment on it only when the affected set materially changes.
+            - Before filing anything, list existing issues: gh issue list --label model-drift --state all --limit 200. An open issue with a matching title means the finding is already tracked: add a comment only if the finding materially changed (for example a different published price or a new retirement date), otherwise leave it alone. A closed issue with a matching title means the finding was already decided: do not refile unless the finding materially changed after it was closed.
+            - Also check open pull requests before filing (gh pr list --state open --limit 100, plus gh pr view or gh pr diff on candidates). If an open PR already addresses the finding (for example a branch adding the model or recording its retirement), do not file an issue for it; mention the PR in the run summary instead.
+            - Ensure the model-drift label exists before first use (gh label list; if missing: gh label create model-drift --description "Model manifest drift detected by scheduled check" --color D93F0B).
+            - Issue body must contain: the finding itself; a source URL citation for every claim; and which local command handles it (/model-add for new models and carrier availability, /model-retire for deprecations, retirements, and due retirement dates, /model-check for pricing and reference updates, /model-check with a local bin/smoke --record run for smoke coverage).
+            - For carrier availability findings, state that the carrier lists the model per the cited source and that account and region access must be verified locally with /model-add and bin/smoke. Do not assert that the model is invokable.
+            - Only state what the cited source supports. No em dashes or en dashes anywhere. Keep wording generic to raif.
+            - A quiet run files nothing: no issues, no comments, no "nothing to report" artifacts.
+
+            Finish by printing a short summary: findings found, issues filed, issues commented on, findings skipped as already tracked or already decided.
+          claude_args: |
+            --max-turns 80
+            --allowedTools "Read,Glob,Grep,WebFetch,WebSearch,Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh label create:*),Bash(gh search issues:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*)"

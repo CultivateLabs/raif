@@ -13,6 +13,7 @@ Steps:
 2. Gather, scoped by the user's hint when given: fetch the reference URLs (WebFetch), search the web for announcements since the newest `added_on`, and where a provider has a public list-models API and a key is configured, list it (OpenAI GET /v1/models, Anthropic GET /v1/models, xAI GET /v1/models, OpenRouter GET /api/v1/models, Google GET /v1beta/models).
 3. Cross-reference against the manifest and report findings in these groups, each item with its source cited:
    - models available upstream but absent from the manifest
+   - carrier availability gaps: a model family in the manifest under a direct provider that Bedrock or OpenRouter now lists (per that carrier's models_doc reference or public list-models API) with no corresponding manifest entry, and the reverse: a Bedrock or OpenRouter entry whose direct provider is integrated in the manifest but lacks the model. A carrier listing shows the model is offered, not that a given account or region can invoke it; verification happens locally via /model-add and bin/smoke
    - pricing differences (manifest per-million vs published)
    - pricing annotations needing re-verification: entries whose `pricing[:valid_until]` is past or within 30 days, and entries whose `pricing[:note]` describes a promotion the provider no longer documents
    - announced deprecations or retirements not recorded in lifecycle fields
