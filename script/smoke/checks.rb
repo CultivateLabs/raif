@@ -150,6 +150,21 @@ module Smoke
       results
     end
 
+    # Applies run_for's --only/--skip semantics to an embedding entry's single "embedding"
+    # capability, yielding to the caller's live check only when it should run. An only-list
+    # that excludes embedding returns an empty hash, which Smoke::Policy fails as an unexecuted
+    # required check, just as it does for an LLM entry whose only-list matches none of its
+    # capabilities.
+    def self.run_for_embedding(only: nil, skip: [])
+      only_list = only.nil? ? nil : Array(only).map(&:to_s)
+      skip_list = Array(skip).map(&:to_s)
+
+      return {} if only_list && !only_list.include?("embedding")
+      return { "embedding" => { status: :skip, detail: "skipped via --skip" } } if skip_list.include?("embedding")
+
+      { "embedding" => yield }
+    end
+
     # Converts a raw check result into a claim-aware verdict. A claimed-false capability that
     # passes is downgraded to :note rather than :pass: whether the check ran because it's cheap
     # enough to probe anyway (temperature, structured_outputs) or because it was explicitly
