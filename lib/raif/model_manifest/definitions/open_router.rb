@@ -71,7 +71,7 @@ provider :open_router do |p|
     key: :open_router_deepseek_chat_v3,
     api_name: "deepseek/deepseek-chat-v3-0324",
     display_name: "DeepSeek Chat v3 (via OpenRouter)",
-    pricing: { input_per_million: 0.2, output_per_million: 0.77 },
+    pricing: { input_per_million: 0.24, output_per_million: 0.9 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -91,7 +91,7 @@ provider :open_router do |p|
     key: :open_router_deepseek_v3_1,
     api_name: "deepseek/deepseek-chat-v3.1",
     display_name: "DeepSeek v3.1 (via OpenRouter)",
-    pricing: { input_per_million: 0.25, output_per_million: 1.0 },
+    pricing: { input_per_million: 0.25, output_per_million: 0.95 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -111,7 +111,11 @@ provider :open_router do |p|
     key: :open_router_deepseek_v3_2,
     api_name: "deepseek/deepseek-v3.2",
     display_name: "DeepSeek v3.2 (via OpenRouter)",
-    pricing: { input_per_million: 0.26, output_per_million: 0.38 },
+    pricing: {
+      input_per_million: 0.2088,
+      output_per_million: 0.3096,
+      note: "28% off promotional price shown on openrouter.ai as of 2026-09-01; no end date documented"
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -124,6 +128,52 @@ provider :open_router do |p|
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :open_router_deepseek_v4_flash,
+    api_name: "deepseek/deepseek-v4-flash-0731",
+    display_name: "DeepSeek V4 Flash (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.04998,
+      output_per_million: 0.09996,
+      note: "64% off promotional price shown on openrouter.ai as of 2026-09-01 (base approximately 0.14 in / 0.28 out); no end date documented"
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
+    key: :open_router_deepseek_v4_pro,
+    api_name: "deepseek/deepseek-v4-pro-0813",
+    display_name: "DeepSeek V4 Pro (via OpenRouter)",
+    pricing: { input_per_million: 0.5808, output_per_million: 1.742 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
     }
   )
 
@@ -148,6 +198,59 @@ provider :open_router do |p|
   )
 
   p.model(
+    key: :open_router_gemini_3_7_flash,
+    api_name: "google/gemini-3.7-flash",
+    display_name: "Gemini 3.7 Flash (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.75,
+      output_per_million: 3.75,
+      note: "Mirrors Google's introductory rate through 2026-12-31 (standard rate 1.50 / 7.50 from 2027-01-01); " \
+        "OpenRouter's Vertex-backed endpoint is currently discounted a further 75% to 0.375 / 1.875 depending on routing",
+      valid_until: Date.new(2026, 12, 31)
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
+    }
+  )
+
+  p.model(
+    key: :open_router_gemini_3_6_flash,
+    api_name: "google/gemini-3.6-flash",
+    display_name: "Gemini 3.6 Flash (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.75,
+      output_per_million: 3.75,
+      note: "Mirrors Google's introductory rate through 2026-12-31; standard rate is 1.50 input / 7.50 output from 2027-01-01",
+      valid_until: Date.new(2026, 12, 31)
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
+    }
+  )
+
+  p.model(
     key: :open_router_gemini_3_5_flash,
     api_name: "google/gemini-3.5-flash",
     display_name: "Gemini 3.5 Flash (via OpenRouter)",
@@ -164,6 +267,27 @@ provider :open_router do |p|
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :open_router_gemini_3_5_flash_lite,
+    api_name: "google/gemini-3.5-flash-lite",
+    display_name: "Gemini 3.5 Flash-Lite (via OpenRouter)",
+    pricing: { input_per_million: 0.3, output_per_million: 2.5 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
     }
   )
 
@@ -228,10 +352,89 @@ provider :open_router do |p|
   )
 
   p.model(
+    key: :open_router_glm_5_2,
+    api_name: "z-ai/glm-5.2",
+    display_name: "GLM 5.2 (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.4186,
+      output_per_million: 1.316,
+      note: "70% off promotional price shown on openrouter.ai as of 2026-09-01 (base 1.19 in / 3.74 out); no end date documented"
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
+    key: :open_router_glm_5_3,
+    api_name: "z-ai/glm-5.3",
+    display_name: "GLM 5.3 (via OpenRouter)",
+    pricing: {
+      input_per_million: 1.17,
+      output_per_million: 3.96,
+      note: "10% off promotional price shown on openrouter.ai as of 2026-09-01 (base 1.40 in / 4.40 out); no end date documented"
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
+    key: :open_router_glm_5_3_flash,
+    api_name: "z-ai/glm-5.3-flash",
+    display_name: "GLM 5.3 Flash (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.075,
+      output_per_million: 0.25,
+      note: "50% off promotional price shown on openrouter.ai as of 2026-09-01; no end date documented"
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
     key: :open_router_kimi_k2_thinking,
     api_name: "moonshotai/kimi-k2-thinking",
     display_name: "Kimi K2 Thinking (via OpenRouter)",
-    pricing: { input_per_million: 0.45, output_per_million: 2.35 },
+    # Explicit cap because OpenRouter's default for this model (its advertised 100352 max
+    # output) exceeds what its current endpoints actually enforce (98304/102400 as of
+    # 2026-09-01), so requests without max_tokens are rejected upstream.
+    max_completion_tokens: 98_304,
+    pricing: { input_per_million: 0.6, output_per_million: 2.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -251,19 +454,65 @@ provider :open_router do |p|
     key: :open_router_kimi_k2_5,
     api_name: "moonshotai/kimi-k2.5",
     display_name: "Kimi K2.5 (via OpenRouter)",
-    pricing: { input_per_million: 0.45, output_per_million: 2.2 },
+    pricing: { input_per_million: 0.45, output_per_million: 2.25 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
-      images: false,
+      images: true,
       pdfs: false,
       provider_managed_tools: []
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :open_router_kimi_k2_6,
+    api_name: "moonshotai/kimi-k2.6",
+    display_name: "Kimi K2.6 (via OpenRouter)",
+    pricing: {
+      input_per_million: 0.5292,
+      output_per_million: 2.228,
+      note: "44% off promotional price shown on openrouter.ai as of 2026-09-01; no end date documented"
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
+    }
+  )
+
+  p.model(
+    key: :open_router_kimi_k3,
+    api_name: "moonshotai/kimi-k3",
+    display_name: "Kimi K3 (via OpenRouter)",
+    pricing: { input_per_million: 2.55, output_per_million: 12.75 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 1)
     }
   )
 
@@ -566,6 +815,33 @@ provider :open_router do |p|
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :open_router_grok_4_6,
+    api_name: "x-ai/grok-4.6",
+    display_name: "Grok 4.6 (via OpenRouter)",
+    pricing: {
+      input_per_million: 2.0,
+      output_per_million: 6.0,
+      note: "Rates are for OpenRouter default routing to the standard xAI endpoint. The xAI priority endpoint is $4.00 / $12.00 " \
+        "and the Amazon Bedrock endpoint is $2.20 / $6.60 per million. Prompts of 200K tokens or more bill at double rates on every endpoint. " \
+        "No promotional pricing was documented at launch."
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 8, 26)
     }
   )
 
