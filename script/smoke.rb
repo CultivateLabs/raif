@@ -63,7 +63,8 @@ def run_entry(entry, options, explicit_keys, missing_credentials:)
   end
 
   if entry.is_a?(Raif::ModelManifest::EmbeddingEntry)
-    return { key: key, explicit: explicit, capabilities: { "embedding" => run_embedding_check(entry) } }
+    capabilities = Smoke::Checks.run_for_embedding(only: options[:only], skip: options[:skip]) { run_embedding_check(entry) }
+    return { key: key, explicit: explicit, capabilities: capabilities }
   end
 
   capabilities = Smoke::Checks.run_for(

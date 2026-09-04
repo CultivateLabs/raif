@@ -940,4 +940,36 @@ RSpec.describe Smoke::Checks do
       described_class.send(:check_provider_managed_tool, llm, "web_search", only_list: nil)
     end
   end
+
+  describe ".run_for_embedding" do
+    it "runs the check and wraps its result under the embedding capability when no filters are given" do
+      result = described_class.run_for_embedding { { status: :pass, detail: "vector_size=8 expected=8" } }
+
+      expect(result).to eq({ "embedding" => { status: :pass, detail: "vector_size=8 expected=8" } })
+    end
+
+    it "runs the check when only includes embedding" do
+      result = described_class.run_for_embedding(only: ["embedding"]) { { status: :pass, detail: "ok" } }
+
+      expect(result.fetch("embedding")[:status]).to eq(:pass)
+    end
+
+    it "omits the capability without running the check when only excludes embedding" do
+      check_ran = false
+
+      result = described_class.run_for_embedding(only: ["completion"]) { check_ran = true }
+
+      expect(result).to eq({})
+      expect(check_ran).to eq(false)
+    end
+
+    it "reports a skip without running the check when skip includes embedding" do
+      check_ran = false
+
+      result = described_class.run_for_embedding(skip: ["embedding"]) { check_ran = true }
+
+      expect(result).to eq({ "embedding" => { status: :skip, detail: "skipped via --skip" } })
+      expect(check_ran).to eq(false)
+    end
+  end
 end
