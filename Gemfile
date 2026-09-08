@@ -26,5 +26,5 @@ gem "yard"
 # Pinned below 4.24: its ModelWrapper#column_defaults prefers the raw DB default over
 # the model's, which strips the label off every enum-backed integer column
 # (`default("text")` becomes `default(0)`).
-gem "annotaterb", "~> 4.23.0"
+gem "annotaterb", "~> 4.24.0"
 gem "openssl", "4.0.2"
