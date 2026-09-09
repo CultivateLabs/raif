@@ -81,11 +81,19 @@ jobs:
         run: |
           if [ -n "$LOG" ] && [ -f "$LOG" ]; then
             SUMMARY=$(jq -rs '[.. | objects | select(.type == "result") | .result // empty] | last // empty' "$LOG" 2>/dev/null)
+            DENIALS=$(jq -rs '[.. | objects | select(.type == "result") | .permission_denials // empty] | last | length' "$LOG" 2>/dev/null)
           fi
           if [ -n "${SUMMARY:-}" ]; then
             printf '%s\n' "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No summary was recovered from the execution log. Treat this run as inconclusive and read the claude-execution-output artifact." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # The check has been observed reporting "no denied tool calls" on a run
+          # that had one, so take the count from the log rather than its summary.
+          # A denial means the sweep worked around something or skipped it.
+          if [ "${DENIALS:-0}" -gt 0 ]; then
+            printf '\n---\n\n%s tool call(s) were denied by the allowlist, counted from the execution log rather than self-reported. The commands are in the claude-execution-output artifact under permission_denials.\n' \
+              "$DENIALS" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       # --verbose puts the transcript in the job log, but job logs expire and are
