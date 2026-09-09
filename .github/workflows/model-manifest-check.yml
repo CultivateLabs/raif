@@ -29,6 +29,11 @@ jobs:
         uses: anthropics/claude-code-action@v1.0.216
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Supplying a token skips the OIDC exchange, and with it the check that
+          # this file matches the default branch, so this workflow can be dispatched
+          # from a branch. Safe only because schedule and workflow_dispatch both
+          # require write access: do not copy into a workflow a fork can trigger.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             You are running a scheduled, report-only drift check of raif's model manifest.
 
@@ -47,10 +52,11 @@ jobs:
             - Issue body must contain: the finding itself; a source URL citation for every claim; and which local command handles it (/model-add for new models and carrier availability, /model-retire for deprecations, retirements, and due retirement dates, /model-check for pricing and reference updates, /model-check with a local bin/smoke --record run for smoke coverage).
             - For carrier availability findings, state that the carrier lists the model per the cited source and that account and region access must be verified locally with /model-add and bin/smoke. Do not assert that the model is invokable.
             - Only state what the cited source supports. No em dashes or en dashes anywhere. Keep wording generic to raif.
-            - A quiet run files nothing: no issues, no comments, no "nothing to report" artifacts.
+            - A quiet run files no issues and no comments. It still ends with the summary described below.
 
-            Finish by printing a short summary: findings found, issues filed, issues commented on, findings skipped as already tracked or already decided. If any tool call was denied by the permission allowlist, list the exact denied commands in the summary so the allowlist can be corrected.
+            Always end your final message with a short summary, whether or not there were findings: what you swept, findings found, issues filed, issues commented on, and findings skipped as already tracked or already decided. For a quiet run, say what you checked and found clean. If any tool call was denied by the permission allowlist, list the exact denied commands so the allowlist can be corrected. This final message is published to the job summary, so a run that reports no findings stays distinguishable from a run that did no work.
           claude_args: |
+            --verbose
             --max-turns 80
             --allowedTools "Read,Glob,Grep,WebFetch,WebSearch,Bash(jq:*),Bash(cat:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh label create:*),Bash(gh search issues:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
 
@@ -63,8 +69,25 @@ jobs:
           echo "::error title=Model manifest check did not run::claude-code-action produced no execution log. Most likely this workflow file differs from the version on the default branch, which makes the action skip itself. Nothing was checked and no issues were filed."
           exit 1
 
-      # The action streams only init and result events to the job log, so this
-      # artifact is the only record of the run's tool calls, denials, and summary.
+      # Parse the summary out of the execution log rather than having the check
+      # write a file: only a bare Write rule works, which this allowlist withholds.
+      # Runs on quiet sweeps too, so "no findings" stays distinct from "did not look".
+      - name: Publish run summary
+        if: always()
+        env:
+          LOG: ${{ steps.drift_check.outputs.execution_file }}
+        run: |
+          if [ -n "$LOG" ] && [ -f "$LOG" ]; then
+            SUMMARY=$(jq -rs '[.. | objects | select(.type == "result") | .result // empty] | last // empty' "$LOG" 2>/dev/null)
+          fi
+          if [ -n "${SUMMARY:-}" ]; then
+            printf '%s\n' "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No summary was recovered from the execution log. Treat this run as inconclusive and read the claude-execution-output artifact." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # --verbose puts the transcript in the job log, but job logs expire and are
+      # awkward to parse. Keep the structured record as a downloadable artifact.
       - name: Upload Claude execution log
         if: always()
         uses: actions/upload-artifact@v7
