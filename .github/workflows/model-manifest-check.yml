@@ -26,6 +26,10 @@ jobs:
 
       - name: Check model manifest for drift
         id: drift_check
+        # Below the job timeout on purpose. A job-level timeout cancels the run
+        # and the steps below never execute, so a runaway sweep would report
+        # nothing at all. A step timeout fails this step and lets them run.
+        timeout-minutes: 25
         uses: anthropics/claude-code-action@v1.0.216
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -57,7 +61,6 @@ jobs:
 
             Always end your final message with a short summary, whether or not there were findings: what you swept, findings found, issues filed, issues commented on, and findings skipped as already tracked or already decided. For a quiet run, say what you checked and found clean. If any tool call was denied by the permission allowlist, list the exact denied commands so the allowlist can be corrected. This final message is published to the job summary, so a run that reports no findings stays distinguishable from a run that did no work.
           claude_args: |
-            --verbose
             --max-turns 80
             --disallowedTools "Agent"
             --allowedTools "Read,Glob,Grep,WebFetch,WebSearch,Bash(script/drift/manifest_coverage.rb:*),Bash(ruby script/drift/manifest_coverage.rb:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh label create:*),Bash(gh search issues:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
@@ -96,11 +99,14 @@ jobs:
               "$DENIALS" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # --verbose puts the transcript in the job log, but job logs expire and are
-      # awkward to parse. Keep the structured record as a downloadable artifact.
+      # The only way to read a run. The action hides tool calls and the final
+      # response from the job log unless show_full_output is set, which would
+      # publish every tool result to a publicly visible log. To get that detail
+      # for one run, re-run with debug logging, which the action also honors.
       - name: Upload Claude execution log
         if: always()
         uses: actions/upload-artifact@v7
+        continue-on-error: true
         with:
           name: claude-execution-output
           path: ${{ steps.drift_check.outputs.execution_file || format('{0}/claude-execution-output.json', runner.temp) }}
