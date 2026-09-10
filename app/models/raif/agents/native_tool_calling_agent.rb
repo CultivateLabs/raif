@@ -238,7 +238,8 @@ module Raif
             self.final_answer = tool_invocation.result
             break
           else
-            add_conversation_history_entry(tool_invocation.as_tool_call_result_message)
+            result = tool_invocation.format_result_for_llm.presence || tool_invocation.result
+            add_conversation_history_entry(tool_invocation.as_tool_call_result_message(result: result))
           end
         end
       end

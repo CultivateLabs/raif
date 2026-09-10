@@ -177,32 +177,7 @@ http_interactions:
       encoding: UTF-8
       string: '{"messages":[{"role":"user","content":[{"text":"Tell me some interesting
         facts from the James Webb Space Telescope''s Wikipedia page"}]},{"role":"assistant","content":[{"toolUse":{"toolUseId":"tooluse_abc123","name":"wikipedia_search","input":{"query":"James
-        Webb Space Telescope"}}}]},{"role":"user","content":[{"toolResult":{"toolUseId":"tooluse_abc123","content":[{"json":{"results":[{"title":"James
-        Webb Space Telescope","snippet":"The <span class=\"searchmatch\">James</span>
-        <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span>
-        <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span>
-        <span class=\"searchmatch\">telescope</span> designed to conduct infrared
-        astronomy. It is the largest <span class=\"searchmatch\">telescope</span>
-        in <span class=\"searchmatch\">space</span>, and is equipped","page_id":434221,"url":"https://en.wikipedia.org/wiki/James_Webb_Space_Telescope"},{"title":"James
-        E. Webb","snippet":"studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span>
-        <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span>
-        <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span>
-        <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>.
-        <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in","page_id":525237,"url":"https://en.wikipedia.org/wiki/James_E._Webb"},{"title":"Timeline
-        of the James Webb Space Telescope","snippet":"The <span class=\"searchmatch\">James</span>
-        <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span>
-        <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century
-        <span class=\"searchmatch\">space</span> observatory that was launched on
-        25 December 2021. It is intended to be the","page_id":52380879,"url":"https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope"},{"title":"James
-        Webb Space Telescope sunshield","snippet":"The <span class=\"searchmatch\">James</span>
-        <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span>
-        <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive
-        thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span>
-        and instrumentation from","page_id":52495051,"url":"https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield"},{"title":"Space
-        telescope","snippet":"A <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span>
-        (also known as <span class=\"searchmatch\">space</span> observatory) is a
-        <span class=\"searchmatch\">telescope</span> in outer <span class=\"searchmatch\">space</span>
-        used to observe astronomical objects. Suggested by Lyman Spitzer in","page_id":29006,"url":"https://en.wikipedia.org/wiki/Space_telescope"}]}}]}}]}],"system":[{"text":"You
+        Webb Space Telescope"}}}]},{"role":"user","content":[{"toolResult":{"toolUseId":"tooluse_abc123","content":[{"text":"{\n  \"results\": [\n    {\n      \"title\": \"James Webb Space Telescope\",\n      \"snippet\": \"The <span class=\\\"searchmatch\\\">James</span> <span class=\\\"searchmatch\\\">Webb</span> <span class=\\\"searchmatch\\\">Space</span> <span class=\\\"searchmatch\\\">Telescope</span> (JWST) is a <span class=\\\"searchmatch\\\">space</span> <span class=\\\"searchmatch\\\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\\\"searchmatch\\\">telescope</span> in <span class=\\\"searchmatch\\\">space</span>, and is equipped\",\n      \"page_id\": 434221,\n      \"url\": \"https://en.wikipedia.org/wiki/James_Webb_Space_Telescope\"\n    },\n    {\n      \"title\": \"James E. Webb\",\n      \"snippet\": \"studies. In 2002, the Next Generation <span class=\\\"searchmatch\\\">Space</span> <span class=\\\"searchmatch\\\">Telescope</span> was renamed the <span class=\\\"searchmatch\\\">James</span> <span class=\\\"searchmatch\\\">Webb</span> <span class=\\\"searchmatch\\\">Space</span> <span class=\\\"searchmatch\\\">Telescope</span> as a tribute to <span class=\\\"searchmatch\\\">Webb</span>. <span class=\\\"searchmatch\\\">Webb</span> was born in 1906 in Tally Ho in\",\n      \"page_id\": 525237,\n      \"url\": \"https://en.wikipedia.org/wiki/James_E._Webb\"\n    },\n    {\n      \"title\": \"Timeline of the James Webb Space Telescope\",\n      \"snippet\": \"The <span class=\\\"searchmatch\\\">James</span> <span class=\\\"searchmatch\\\">Webb</span> <span class=\\\"searchmatch\\\">Space</span> <span class=\\\"searchmatch\\\">Telescope</span> (JWST) is an international 21st-century <span class=\\\"searchmatch\\\">space</span> observatory that was launched on 25 December 2021. It is intended to be the\",\n      \"page_id\": 52380879,\n      \"url\": \"https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope\"\n    },\n    {\n      \"title\": \"James Webb Space Telescope sunshield\",\n      \"snippet\": \"The <span class=\\\"searchmatch\\\">James</span> <span class=\\\"searchmatch\\\">Webb</span> <span class=\\\"searchmatch\\\">Space</span> <span class=\\\"searchmatch\\\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\\\"searchmatch\\\">telescope</span> and instrumentation from\",\n      \"page_id\": 52495051,\n      \"url\": \"https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield\"\n    },\n    {\n      \"title\": \"Space telescope\",\n      \"snippet\": \"A <span class=\\\"searchmatch\\\">space</span> <span class=\\\"searchmatch\\\">telescope</span> (also known as <span class=\\\"searchmatch\\\">space</span> observatory) is a <span class=\\\"searchmatch\\\">telescope</span> in outer <span class=\\\"searchmatch\\\">space</span> used to observe astronomical objects. Suggested by Lyman Spitzer in\",\n      \"page_id\": 29006,\n      \"url\": \"https://en.wikipedia.org/wiki/Space_telescope\"\n    }\n  ]\n}"}]}}]}],"system":[{"text":"You
         are an AI agent that follows the ReAct (Reasoning + Acting) framework to complete
         tasks step by step using tool/function calls.\n\nAt each step, you must:\n1.
         Think about what to do next.\n2. Choose and invoke one or more tool/function
@@ -403,32 +378,7 @@ http_interactions:
       encoding: UTF-8
       string: '{"messages":[{"role":"user","content":[{"text":"Tell me some interesting
         facts from the James Webb Space Telescope''s Wikipedia page"}]},{"role":"assistant","content":[{"toolUse":{"toolUseId":"tooluse_abc123","name":"wikipedia_search","input":{"query":"James
-        Webb Space Telescope"}}}]},{"role":"user","content":[{"toolResult":{"toolUseId":"tooluse_abc123","content":[{"json":{"results":[{"title":"James
-        Webb Space Telescope","snippet":"The <span class=\"searchmatch\">James</span>
-        <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span>
-        <span class=\"searchmatch\">Telescope</span> (JWST) is a <span class=\"searchmatch\">space</span>
-        <span class=\"searchmatch\">telescope</span> designed to conduct infrared
-        astronomy. It is the largest <span class=\"searchmatch\">telescope</span>
-        in <span class=\"searchmatch\">space</span>, and is equipped","page_id":434221,"url":"https://en.wikipedia.org/wiki/James_Webb_Space_Telescope"},{"title":"James
-        E. Webb","snippet":"studies. In 2002, the Next Generation <span class=\"searchmatch\">Space</span>
-        <span class=\"searchmatch\">Telescope</span> was renamed the <span class=\"searchmatch\">James</span>
-        <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span>
-        <span class=\"searchmatch\">Telescope</span> as a tribute to <span class=\"searchmatch\">Webb</span>.
-        <span class=\"searchmatch\">Webb</span> was born in 1906 in Tally Ho in","page_id":525237,"url":"https://en.wikipedia.org/wiki/James_E._Webb"},{"title":"Timeline
-        of the James Webb Space Telescope","snippet":"The <span class=\"searchmatch\">James</span>
-        <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span>
-        <span class=\"searchmatch\">Telescope</span> (JWST) is an international 21st-century
-        <span class=\"searchmatch\">space</span> observatory that was launched on
-        25 December 2021. It is intended to be the","page_id":52380879,"url":"https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope"},{"title":"James
-        Webb Space Telescope sunshield","snippet":"The <span class=\"searchmatch\">James</span>
-        <span class=\"searchmatch\">Webb</span> <span class=\"searchmatch\">Space</span>
-        <span class=\"searchmatch\">Telescope</span> (JWST) sunshield is a passive
-        thermal control system deployed post-launch to shield the <span class=\"searchmatch\">telescope</span>
-        and instrumentation from","page_id":52495051,"url":"https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield"},{"title":"Space
-        telescope","snippet":"A <span class=\"searchmatch\">space</span> <span class=\"searchmatch\">telescope</span>
-        (also known as <span class=\"searchmatch\">space</span> observatory) is a
-        <span class=\"searchmatch\">telescope</span> in outer <span class=\"searchmatch\">space</span>
-        used to observe astronomical objects. Suggested by Lyman Spitzer in","page_id":29006,"url":"https://en.wikipedia.org/wiki/Space_telescope"}]}}]}}]},{"role":"assistant","content":[{"toolUse":{"toolUseId":"tooluse_abc123","name":"fetch_url","input":{"url":"https://en.wikipedia.org/wiki/James_Webb_Space_Telescope"}}}]},{"role":"user","content":[{"toolResult":{"toolUseId":"tooluse_abc123","content":[{"json":{"status":200,"content":"#
+        Webb Space Telescope"}}}]},{"role":"user","content":[{"toolResult":{"toolUseId":"tooluse_abc123","content":[{"text":"{\n  \"results\": [\n    {\n      \"title\": \"James Webb Space Telescope\",\n      \"snippet\": \"The <span class=\\\"searchmatch\\\">James</span> <span class=\\\"searchmatch\\\">Webb</span> <span class=\\\"searchmatch\\\">Space</span> <span class=\\\"searchmatch\\\">Telescope</span> (JWST) is a <span class=\\\"searchmatch\\\">space</span> <span class=\\\"searchmatch\\\">telescope</span> designed to conduct infrared astronomy. It is the largest <span class=\\\"searchmatch\\\">telescope</span> in <span class=\\\"searchmatch\\\">space</span>, and is equipped\",\n      \"page_id\": 434221,\n      \"url\": \"https://en.wikipedia.org/wiki/James_Webb_Space_Telescope\"\n    },\n    {\n      \"title\": \"James E. Webb\",\n      \"snippet\": \"studies. In 2002, the Next Generation <span class=\\\"searchmatch\\\">Space</span> <span class=\\\"searchmatch\\\">Telescope</span> was renamed the <span class=\\\"searchmatch\\\">James</span> <span class=\\\"searchmatch\\\">Webb</span> <span class=\\\"searchmatch\\\">Space</span> <span class=\\\"searchmatch\\\">Telescope</span> as a tribute to <span class=\\\"searchmatch\\\">Webb</span>. <span class=\\\"searchmatch\\\">Webb</span> was born in 1906 in Tally Ho in\",\n      \"page_id\": 525237,\n      \"url\": \"https://en.wikipedia.org/wiki/James_E._Webb\"\n    },\n    {\n      \"title\": \"Timeline of the James Webb Space Telescope\",\n      \"snippet\": \"The <span class=\\\"searchmatch\\\">James</span> <span class=\\\"searchmatch\\\">Webb</span> <span class=\\\"searchmatch\\\">Space</span> <span class=\\\"searchmatch\\\">Telescope</span> (JWST) is an international 21st-century <span class=\\\"searchmatch\\\">space</span> observatory that was launched on 25 December 2021. It is intended to be the\",\n      \"page_id\": 52380879,\n      \"url\": \"https://en.wikipedia.org/wiki/Timeline_of_the_James_Webb_Space_Telescope\"\n    },\n    {\n      \"title\": \"James Webb Space Telescope sunshield\",\n      \"snippet\": \"The <span class=\\\"searchmatch\\\">James</span> <span class=\\\"searchmatch\\\">Webb</span> <span class=\\\"searchmatch\\\">Space</span> <span class=\\\"searchmatch\\\">Telescope</span> (JWST) sunshield is a passive thermal control system deployed post-launch to shield the <span class=\\\"searchmatch\\\">telescope</span> and instrumentation from\",\n      \"page_id\": 52495051,\n      \"url\": \"https://en.wikipedia.org/wiki/James_Webb_Space_Telescope_sunshield\"\n    },\n    {\n      \"title\": \"Space telescope\",\n      \"snippet\": \"A <span class=\\\"searchmatch\\\">space</span> <span class=\\\"searchmatch\\\">telescope</span> (also known as <span class=\\\"searchmatch\\\">space</span> observatory) is a <span class=\\\"searchmatch\\\">telescope</span> in outer <span class=\\\"searchmatch\\\">space</span> used to observe astronomical objects. Suggested by Lyman Spitzer in\",\n      \"page_id\": 29006,\n      \"url\": \"https://en.wikipedia.org/wiki/Space_telescope\"\n    }\n  ]\n}"}]}}]},{"role":"assistant","content":[{"toolUse":{"toolUseId":"tooluse_abc123","name":"fetch_url","input":{"url":"https://en.wikipedia.org/wiki/James_Webb_Space_Telescope"}}}]},{"role":"user","content":[{"toolResult":{"toolUseId":"tooluse_abc123","content":[{"text":"Result Status: 200\nResult Content:\n#
         James Webb Space Telescope\n\nFrom Wikipedia, the free encyclopedia\n\nNASA/ESA/CSA
         space telescope launched in 2021\n\nJames Webb Space Telescope| \nRendering
         of the fully deployed James Webb Space Telescope\n |\n| Names | Next Generation
@@ -1975,7 +1925,7 @@ http_interactions:
         with the † sign. Payloads deployed from other spacecraft are (enclosed in
         parentheses).\n |\n\n| International |\n| --- |\n| National |\n| --- |\n|
         Other |\n| --- |\n\n:\n\nRetrieved from \"\"\n\n: \n\nHidden categories: \n\nJames
-        Webb Space Telescope\n\n"}}]}}]}],"system":[{"text":"You are an AI agent that
+        Webb Space Telescope\n\n\n"}]}}]}],"system":[{"text":"You are an AI agent that
         follows the ReAct (Reasoning + Acting) framework to complete tasks step by
         step using tool/function calls.\n\nAt each step, you must:\n1. Think about
         what to do next.\n2. Choose and invoke one or more tool/function calls based
