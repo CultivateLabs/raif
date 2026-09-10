@@ -25,16 +25,28 @@ jobs:
           fetch-depth: 1
 
       - name: Check model manifest for drift
+        id: drift_check
+        # Below the job timeout on purpose. A job-level timeout cancels the run
+        # and the steps below never execute, so a runaway sweep would report
+        # nothing at all. A step timeout fails this step and lets them run.
+        timeout-minutes: 25
         uses: anthropics/claude-code-action@v1.0.216
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Supplying a token skips the OIDC exchange, and with it the check that
+          # this file matches the default branch, so this workflow can be dispatched
+          # from a branch. Safe only because schedule and workflow_dispatch both
+          # require write access: do not copy into a workflow a fork can trigger.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             You are running a scheduled, report-only drift check of raif's model manifest.
 
             Run steps 1 through 3 of .claude/commands/model-check.md as a general sweep (no user hint), with these adjustments for CI:
             - Report-only. Never edit files, never commit, never open pull requests.
-            - No provider API keys are configured here. Skip list-models calls that require credentials. OpenRouter's GET https://openrouter.ai/api/v1/models is public and must be checked; for Bedrock use its models_doc reference page.
-            - For the smoke-observations group, read model_smoke_results/*.json from the checkout; never run bin/smoke or hit provider APIs for this. Report one aggregate finding per provider, not per model, covering: manifest models with claimed, recordable capabilities that have no recorded observation at all (always report, including providers with no results file yet), and observations whose checked_at is older than 90 days (the tighter 30 day staleness lens stays local to /model-check). List the affected models and the oldest checked_at in the finding.
+            - No provider API keys are configured here. Skip list-models calls that require credentials. OpenRouter's GET https://openrouter.ai/api/v1/models is public and must be checked; fetch it with WebFetch, since curl is not allowlisted. For Bedrock use its models_doc reference page.
+            - Do not delegate any part of this to subagents. Do the sweep yourself, in this session. Delegating and then waiting for results burns the turn budget without producing findings.
+            - For the smoke-observations group, never run bin/smoke or hit provider APIs, and do not reconcile the JSON by hand or with shell pipelines. Run script/drift/manifest_coverage.rb with no flags. It is read-only and prints a per-provider summary: the unobserved and stale counts, the oldest checked_at, the capabilities no entry has an observation for, the models with no observation at all, and every affected model with its unobserved and stale capabilities. Use those per-model lines to list affected models and detect changes to the affected set, even when provider totals stay the same. Add --json only if you need machine-readable output. Do not redirect it to a file and do not pipe it into another interpreter, both of which the allowlist denies. Report one aggregate finding per provider, not per model, covering: manifest models with claimed, recordable capabilities that have no recorded observation at all (always report, including providers with no results file yet), and observations whose checked_at is older than 90 days (the tighter 30 day staleness lens stays local to /model-check). List the affected models and the oldest checked_at in the finding.
+            - Note that open_ai.rb declares models with key_base plus an endpoints block, so its manifest keys are derived rather than literal. Account for that when cross-referencing manifest keys against recorded observations.
             - When another finding concerns a capability a smoke observation covers, cite the most recent checked_at for it (for example "last smoked pass 2026-08-25") so the reader knows whether a local re-smoke should accompany the fix.
 
             Then, instead of step 4 onward, file GitHub issues for the findings:
@@ -45,9 +57,58 @@ jobs:
             - Issue body must contain: the finding itself; a source URL citation for every claim; and which local command handles it (/model-add for new models and carrier availability, /model-retire for deprecations, retirements, and due retirement dates, /model-check for pricing and reference updates, /model-check with a local bin/smoke --record run for smoke coverage).
             - For carrier availability findings, state that the carrier lists the model per the cited source and that account and region access must be verified locally with /model-add and bin/smoke. Do not assert that the model is invokable.
             - Only state what the cited source supports. No em dashes or en dashes anywhere. Keep wording generic to raif.
-            - A quiet run files nothing: no issues, no comments, no "nothing to report" artifacts.
+            - A quiet run files no issues and no comments. It still ends with the summary described below.
 
-            Finish by printing a short summary: findings found, issues filed, issues commented on, findings skipped as already tracked or already decided.
+            Always end your final message with a short summary, whether or not there were findings: what you swept, findings found, issues filed, issues commented on, and findings skipped as already tracked or already decided. For a quiet run, say what you checked and found clean. If any tool call was denied by the permission allowlist, list the exact denied commands so the allowlist can be corrected. This final message is published to the job summary, so a run that reports no findings stays distinguishable from a run that did no work.
           claude_args: |
             --max-turns 80
-            --allowedTools "Read,Glob,Grep,WebFetch,WebSearch,Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh label create:*),Bash(gh search issues:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
+            --disallowedTools "Agent"
+            --allowedTools "Read,Glob,Grep,WebFetch,WebSearch,Bash(script/drift/manifest_coverage.rb:*),Bash(ruby script/drift/manifest_coverage.rb:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh label create:*),Bash(gh search issues:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
+
+      # The action skips itself and reports success when this file differs from
+      # the default branch. Its skip flag is not a declared output, so an empty
+      # execution_file is the only readable signal of that.
+      - name: Fail if the check did not run
+        if: success() && steps.drift_check.outputs.execution_file == ''
+        run: |
+          echo "::error title=Model manifest check did not run::claude-code-action produced no execution log. Most likely this workflow file differs from the version on the default branch, which makes the action skip itself. Nothing was checked and no issues were filed."
+          exit 1
+
+      # Parse the summary out of the execution log rather than having the check
+      # write a file: only a bare Write rule works, which this allowlist withholds.
+      # Runs on quiet sweeps too, so "no findings" stays distinct from "did not look".
+      - name: Publish run summary
+        if: always()
+        env:
+          LOG: ${{ steps.drift_check.outputs.execution_file }}
+        run: |
+          if [ -n "$LOG" ] && [ -f "$LOG" ]; then
+            SUMMARY=$(jq -rs '[.. | objects | select(.type == "result") | .result // empty] | last // empty' "$LOG" 2>/dev/null)
+            DENIALS=$(jq -rs '[.. | objects | select(.type == "result") | .permission_denials // empty] | last | length' "$LOG" 2>/dev/null)
+          fi
+          if [ -n "${SUMMARY:-}" ]; then
+            printf '%s\n' "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No summary was recovered from the execution log. Treat this run as inconclusive and read the claude-execution-output artifact." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # The check has been observed reporting "no denied tool calls" on a run
+          # that had one, so take the count from the log rather than its summary.
+          # A denial means the sweep worked around something or skipped it.
+          if [ "${DENIALS:-0}" -gt 0 ]; then
+            printf '\n---\n\n%s tool call(s) were denied by the allowlist, counted from the execution log rather than self-reported. The commands are in the claude-execution-output artifact under permission_denials.\n' \
+              "$DENIALS" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # The only way to read a run. The action hides tool calls and the final
+      # response from the job log unless show_full_output is set, which would
+      # publish every tool result to a publicly visible log. To get that detail
+      # for one run, re-run with debug logging, which the action also honors.
+      - name: Upload Claude execution log
+        if: always()
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: claude-execution-output
+          path: ${{ steps.drift_check.outputs.execution_file || format('{0}/claude-execution-output.json', runner.temp) }}
+          if-no-files-found: warn
+          retention-days: 30
