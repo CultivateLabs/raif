@@ -36,4 +36,27 @@ jobs:
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
+          # --verbose puts the transcript in the job log; without it the action
+          # logs only its init and result events, so a run cannot be inspected.
+          claude_args: '--verbose'
+
+      # This trigger runs the pull request's own copy of this file, so a PR that
+      # edits it makes the action refuse its token exchange and skip, reporting
+      # success in seconds. That is expected here, so say so rather than failing:
+      # an empty execution_file is the only signal the action exposes for it.
+      - name: Note if the review did not run
+        if: always() && steps.claude-review.outputs.execution_file == ''
+        run: |
+          echo "::warning title=Claude review did not run::The action produced no execution log. If this pull request edits .github/workflows/claude-code-review.yml, that is expected: the action only runs when the file matches the version on the default branch, and it will work once merged. Otherwise, download the claude-execution-output artifact to see what happened."
+
+      # The transcript is otherwise unrecoverable once the job log expires, and
+      # the log is awkward to parse. Keep the structured record downloadable.
+      - name: Upload Claude execution log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: claude-execution-output
+          path: ${{ steps.claude-review.outputs.execution_file || format('{0}/claude-execution-output.json', runner.temp) }}
+          if-no-files-found: warn
+          retention-days: 30
 

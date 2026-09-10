@@ -46,5 +46,18 @@ jobs:
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr:*)'
+          # --verbose puts the transcript in the job log; without it the action
+          # logs only its init and result events, so a run cannot be inspected.
+          claude_args: '--verbose'
+
+      # The transcript is otherwise unrecoverable once the job log expires, and
+      # the log is awkward to parse. Keep the structured record downloadable.
+      - name: Upload Claude execution log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: claude-execution-output
+          path: ${{ steps.claude.outputs.execution_file || format('{0}/claude-execution-output.json', runner.temp) }}
+          if-no-files-found: warn
+          retention-days: 30
 
