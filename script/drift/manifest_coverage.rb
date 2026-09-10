@@ -152,6 +152,12 @@ else
     unless data[:models_with_no_observations].empty?
       puts "  no observation at all: #{data[:models_with_no_observations].join(", ")}"
     end
+    data[:models].each do |key, model|
+      gaps = []
+      gaps << "unobserved: #{model[:unobserved].join(", ")}" unless model[:unobserved].empty?
+      gaps << "stale: #{model[:stale].join(", ")}" unless model[:stale].empty?
+      puts "  #{key}: #{gaps.join("; ")}"
+    end
     puts
   end
 end
