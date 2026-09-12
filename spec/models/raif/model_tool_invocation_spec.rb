@@ -131,6 +131,30 @@ RSpec.describe Raif::ModelToolInvocation, type: :model do
     end
   end
 
+  describe "#format_result_for_llm" do
+    let(:source) { FB.create(:raif_test_task) }
+    let(:invocation) do
+      described_class.create!(
+        source: source,
+        tool_type: "Raif::TestModelTool",
+        tool_arguments: { "items" => [{ "title" => "foo", "description" => "bar" }] },
+        result: { "status" => "success", "data" => "some data" }
+      ).tap(&:completed!)
+    end
+
+    it "returns the tool's formatted result" do
+      expect(invocation.format_result_for_llm).to eq("Mock Formatted Result for #{invocation.id}. Result was: success")
+    end
+
+    it "returns nil and logs when the formatter raises, so callers fall back to the raw result" do
+      allow(Raif::TestModelTool).to receive(:format_result_for_llm).and_raise(StandardError, "data not found")
+      expect(Raif.logger).to receive(:error)
+        .with("Raif::ModelToolInvocation##{invocation.id}: Raif::TestModelTool formatter failed: StandardError: data not found")
+
+      expect(invocation.format_result_for_llm).to be_nil
+    end
+  end
+
   describe "admin formatted result display" do
     let(:source) { FB.create(:raif_test_task) }
     let(:invocation) do

@@ -38,6 +38,12 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
   # Lets tools decide per-invocation rather than at the class level.
   def format_result_for_llm
     tool.format_result_for_llm(self)
+  rescue StandardError => e
+    # A formatter that raises must not fail the conversation or agent run that was only
+    # trying to build a message. Returning nil lets callers fall back to the raw persisted
+    # result, which is always sendable.
+    Raif.logger.error("Raif::ModelToolInvocation##{id}: #{tool_type} formatter failed: #{e.class}: #{e.message}")
+    nil
   end
 
   def triggers_immediate_llm_follow_up?

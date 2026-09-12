@@ -70,11 +70,14 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       let(:formatted_result) { "Retrieved evidence: Paris is the capital of France." }
       let(:expected_result) { formatted_result }
 
+      let(:formatter_error) { nil }
+
       before do
         stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
           .to_return(status: 200, body: { query: { search: [] } }.to_json)
-        expect(Raif::ModelTools::WikipediaSearch).to receive(:format_result_for_llm)
-          .with(an_instance_of(Raif::ModelToolInvocation)).once.and_return(formatted_result)
+        formatter = expect(Raif::ModelTools::WikipediaSearch).to receive(:format_result_for_llm)
+          .with(an_instance_of(Raif::ModelToolInvocation)).once
+        formatter_error ? formatter.and_raise(formatter_error) : formatter.and_return(formatted_result)
         expect(Raif::ModelTools::AgentFinalAnswer).not_to receive(:format_result_for_llm)
       end
 
@@ -153,6 +156,15 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
 
           include_examples "a replayed tool result"
         end
+      end
+
+      context "when the formatter raises" do
+        let(:formatter_error) { StandardError.new("data not found") }
+        let(:expected_result) { raw_result }
+
+        before { allow(Raif.logger).to receive(:error) }
+
+        include_examples "a replayed tool result"
       end
     end
 
