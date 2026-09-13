@@ -95,7 +95,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
               "type" => "tool_call_result",
               "provider_tool_call_id" => "call_search",
               "name" => "wikipedia_search",
-              "result" => expected_result
+              "result" => raw_result
             }
           ]
           replayed = false
@@ -166,6 +166,55 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
 
         include_examples "a replayed tool result"
       end
+    end
+
+    it "re-formats a stored tool result on every iteration" do
+      stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
+        .to_return(status: 200, body: { query: { search: [] } }.to_json)
+
+      allow(Raif::ModelTools::WikipediaSearch).to receive(:format_result_for_llm)
+        .and_return("snapshot 1", "snapshot 2")
+
+      replayed_outputs = []
+
+      stub_raif_agent(agent) do |messages, model_completion|
+        replayed_outputs += messages.select{ |message| message["type"] == "function_call_output" }.map{ |message| message["output"] }
+
+        case messages.length
+        when 1
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_search",
+              "name" => "wikipedia_search",
+              "arguments" => { "query" => "capital of France" }
+            }
+          ]
+
+          "Let me search for that."
+        when 3
+          model_completion.response_tool_calls = nil
+
+          "Still thinking about it."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_answer",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+
+          "The answer is Paris."
+        end
+      end
+
+      agent.run!
+
+      # The formatter renders live state, so each iteration must send its current
+      # value rather than the snapshot taken when the tool ran.
+      expect(replayed_outputs).to eq(["snapshot 1", "snapshot 2"])
+      invocation = agent.raif_model_tool_invocations.find_by!(tool_type: "Raif::ModelTools::WikipediaSearch")
+      expect(agent.conversation_history[2]["result"]).to eq(invocation.result)
     end
 
     it "handles a tool call with an unavailable tool" do
