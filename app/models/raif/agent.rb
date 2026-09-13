@@ -132,8 +132,10 @@ module Raif
         # Hook for subclasses to perform actions before the LLM chat (e.g., add warnings)
         before_iteration_llm_chat
 
+        messages = messages_for_llm
+
         model_completion = llm.chat(
-          messages: conversation_history,
+          messages: messages,
           source: self,
           system_prompt: system_prompt,
           available_model_tools: native_model_tools,
@@ -150,7 +152,7 @@ module Raif
           --------------------------------
           Agent iteration #{iteration_count}
           Messages:
-          #{JSON.pretty_generate(conversation_history)}
+          #{JSON.pretty_generate(messages)}
 
           Response:
           #{model_completion.raw_response}
@@ -255,6 +257,16 @@ module Raif
     # @return [Class, nil] A model tool class, or nil if no specific tool is required.
     def required_tool_for_iteration
       nil
+    end
+
+    # The messages sent to the provider for this iteration. Defaults to the
+    # persisted conversation history. Subclasses override it when an entry's
+    # model-facing content must be re-derived on every turn rather than read
+    # back from storage.
+    #
+    # @return [Array<Hash>] Message hashes in provider-agnostic form.
+    def messages_for_llm
+      conversation_history
     end
 
     def add_conversation_history_entry(entry)

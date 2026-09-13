@@ -65,6 +65,158 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       )
     end
 
+    describe "tool result formatting" do
+      let(:raw_result) { { "results" => [] } }
+      let(:formatted_result) { "Retrieved evidence: Paris is the capital of France." }
+      let(:expected_result) { formatted_result }
+
+      let(:formatter_error) { nil }
+
+      before do
+        stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
+          .to_return(status: 200, body: { query: { search: [] } }.to_json)
+        formatter = expect(Raif::ModelTools::WikipediaSearch).to receive(:format_result_for_llm)
+          .with(an_instance_of(Raif::ModelToolInvocation)).once
+        formatter_error ? formatter.and_raise(formatter_error) : formatter.and_return(formatted_result)
+        expect(Raif::ModelTools::AgentFinalAnswer).not_to receive(:format_result_for_llm)
+      end
+
+      shared_examples "a replayed tool result" do
+        it "replays the expected content with its call ID and preserves the stored result" do
+          expected_messages = [
+            {
+              "type" => "tool_call",
+              "provider_tool_call_id" => "call_search",
+              "name" => "wikipedia_search",
+              "arguments" => { "query" => "capital of France" },
+              "assistant_message" => "Let me search for that."
+            },
+            {
+              "type" => "tool_call_result",
+              "provider_tool_call_id" => "call_search",
+              "name" => "wikipedia_search",
+              "result" => raw_result
+            }
+          ]
+          replayed = false
+
+          stub_raif_agent(agent) do |messages, model_completion|
+            if messages.length == 1
+              model_completion.response_tool_calls = [
+                {
+                  "provider_tool_call_id" => "call_search",
+                  "name" => "wikipedia_search",
+                  "arguments" => { "query" => "capital of France" }
+                }
+              ]
+              "Let me search for that."
+            else
+              expect(messages[1, 2]).to eq([
+                {
+                  "type" => "function_call",
+                  "call_id" => "call_search",
+                  "name" => "wikipedia_search",
+                  "arguments" => { "query" => "capital of France" }.to_json
+                },
+                {
+                  "type" => "function_call_output",
+                  "call_id" => "call_search",
+                  "output" => expected_result.is_a?(String) ? expected_result : expected_result.to_json
+                }
+              ])
+              replayed = true
+              model_completion.response_tool_calls = [
+                {
+                  "provider_tool_call_id" => "call_answer",
+                  "name" => "agent_final_answer",
+                  "arguments" => { "final_answer" => "Paris is the capital of France." }
+                }
+              ]
+              "The answer is Paris."
+            end
+          end
+
+          agent.run!
+
+          expect(replayed).to be(true)
+          expect(agent.reload).to be_completed
+          expect(agent.final_answer).to eq("Paris is the capital of France.")
+          expect(agent.conversation_history[1, 2]).to eq(expected_messages)
+          invocation = agent.raif_model_tool_invocations.find_by!(tool_type: "Raif::ModelTools::WikipediaSearch")
+          expect(invocation.result).to eq(raw_result)
+        end
+      end
+
+      include_examples "a replayed tool result"
+
+      [nil, "", " "].each do |blank_result|
+        context "when the formatter returns #{blank_result.inspect}" do
+          let(:formatted_result) { blank_result }
+          let(:expected_result) { raw_result }
+
+          include_examples "a replayed tool result"
+        end
+      end
+
+      context "when the formatter raises" do
+        let(:formatter_error) { StandardError.new("data not found") }
+        let(:expected_result) { raw_result }
+
+        before { allow(Raif.logger).to receive(:error) }
+
+        include_examples "a replayed tool result"
+      end
+    end
+
+    it "re-formats a stored tool result on every iteration" do
+      stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
+        .to_return(status: 200, body: { query: { search: [] } }.to_json)
+
+      allow(Raif::ModelTools::WikipediaSearch).to receive(:format_result_for_llm)
+        .and_return("snapshot 1", "snapshot 2")
+
+      replayed_outputs = []
+
+      stub_raif_agent(agent) do |messages, model_completion|
+        replayed_outputs += messages.select{ |message| message["type"] == "function_call_output" }.map{ |message| message["output"] }
+
+        case messages.length
+        when 1
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_search",
+              "name" => "wikipedia_search",
+              "arguments" => { "query" => "capital of France" }
+            }
+          ]
+
+          "Let me search for that."
+        when 3
+          model_completion.response_tool_calls = nil
+
+          "Still thinking about it."
+        else
+          model_completion.response_tool_calls = [
+            {
+              "provider_tool_call_id" => "call_answer",
+              "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." }
+            }
+          ]
+
+          "The answer is Paris."
+        end
+      end
+
+      agent.run!
+
+      # The formatter renders live state, so each iteration must send its current
+      # value rather than the snapshot taken when the tool ran.
+      expect(replayed_outputs).to eq(["snapshot 1", "snapshot 2"])
+      invocation = agent.raif_model_tool_invocations.find_by!(tool_type: "Raif::ModelTools::WikipediaSearch")
+      expect(agent.conversation_history[2]["result"]).to eq(invocation.result)
+    end
+
     it "handles a tool call with an unavailable tool" do
       stub_raif_agent(agent) do |messages, model_completion|
         if messages.length == 1

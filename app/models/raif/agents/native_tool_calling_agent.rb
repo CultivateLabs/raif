@@ -238,8 +238,37 @@ module Raif
             self.final_answer = tool_invocation.result
             break
           else
+            # Store the raw result. `messages_for_llm` formats it on every turn.
             add_conversation_history_entry(tool_invocation.as_tool_call_result_message)
           end
+        end
+      end
+
+      # Build each tool result on every turn rather than replaying the stored value.
+      # `format_result_for_llm` is documented as a lazy, per-turn call, so an override
+      # that renders live state (a follow-on record's status, say) stays current across
+      # a multi-iteration run. Mirrors Raif::Conversation, which formats at
+      # message-build time and persists only the raw invocation result.
+      def messages_for_llm
+        history = conversation_history
+        return history unless history.any?{ |entry| entry["type"] == "tool_call_result" }
+
+        # Pair by position rather than by provider_tool_call_id: a provider may reuse an
+        # ID across calls, and every result entry is appended right after the invocation
+        # that produced it. The tool name check makes a mismatch fall back to the stored
+        # value instead of sending another tool's result.
+        invocations = raif_model_tool_invocations.order(:id).to_a
+        result_index = -1
+
+        history.map do |entry|
+          next entry unless entry["type"] == "tool_call_result"
+
+          result_index += 1
+          invocation = invocations[result_index]
+          next entry if invocation.nil? || invocation.tool_name != entry["name"]
+
+          result = invocation.format_result_for_llm.presence || invocation.result
+          entry.merge("result" => strip_null_bytes(result))
         end
       end
 
