@@ -44,10 +44,6 @@ private
     Raif::StreamingResponses::OpenAiCompletions
   end
 
-  def supports_temperature?
-    provider_settings.key?(:supports_temperature) ? provider_settings[:supports_temperature] : true
-  end
-
   def update_model_completion(model_completion, response_json)
     return if response_json.nil?
 

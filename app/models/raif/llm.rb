@@ -152,17 +152,24 @@ module Raif
       # Normalize :required / "required" to the symbol form for validation
       tool_choice = :required if tool_choice.to_s == "required"
 
+      # The adapters' build_*_tool_choice methods validate support again for callers that
+      # bypass chat; checking here keeps the failure ahead of the ModelCompletion record
+      # and the authorizer call.
       if tool_choice == :required
         if available_model_tools.blank?
           raise ArgumentError,
             "Raif::Llm#chat - tool_choice: :required requires at least one available model tool"
         end
-      elsif tool_choice.present? && !available_model_tools.map(&:to_s).include?(tool_choice.to_s)
-        raise ArgumentError,
-          "Raif::Llm#chat - Invalid tool choice: #{tool_choice} is not included in the available model tools: #{available_model_tools.join(", ")}"
-      end
 
-      validate_tool_choice_support!(tool_choice == :required ? :required : :forced) if tool_choice.present?
+        validate_tool_choice_support!(:required)
+      elsif tool_choice.present?
+        unless available_model_tools.map(&:to_s).include?(tool_choice.to_s)
+          raise ArgumentError,
+            "Raif::Llm#chat - Invalid tool choice: #{tool_choice} is not included in the available model tools: #{available_model_tools.join(", ")}"
+        end
+
+        validate_tool_choice_support!(:forced)
+      end
 
       # Runs before the ModelCompletion is created or any provider call is made,
       # and before the llm_api_requests_enabled guard so authorization applies
@@ -357,6 +364,18 @@ module Raif
 
     def supports_required_tool_choice?
       supports_native_tool_use? && provider_settings.fetch(:supports_required_tool_choice, true)
+    end
+
+    # Provider settings come from the manifest (model_provider_settings) or a host's
+    # register_llm call. Without a setting a model is assumed to accept a temperature
+    # and native structured outputs. Adapters override these when the answer depends
+    # on more than settings (Anthropic and Bedrock default structured outputs to false).
+    def supports_temperature?
+      provider_settings.fetch(:supports_temperature, true)
+    end
+
+    def supports_structured_outputs?
+      provider_settings.fetch(:supports_structured_outputs, true)
     end
 
     def validate_tool_choice_support!(choice)

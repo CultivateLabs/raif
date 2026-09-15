@@ -357,10 +357,11 @@ provider :bedrock do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :deprecated,
+      status: :retired,
       retirement_date: Date.new(2026, 7, 30),
       replacement_key: :bedrock_claude_5_sonnet,
-      migration_note: "AWS lists US-profile EOL on 2026-07-30; other regions still list support. Migrate to Claude Sonnet 5."
+      migration_note: "Retired from Raif on 2026-09-14 after the US inference-profile end-of-life on 2026-07-30, the removal " \
+        "date announced in the v1.5.0 changelog; a few non-US regions still list the model. Migrate to Claude Sonnet 5."
     }
   )
 
@@ -381,10 +382,11 @@ provider :bedrock do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :deprecated,
+      status: :retired,
       retirement_date: Date.new(2026, 7, 30),
       replacement_key: :bedrock_claude_5_sonnet,
-      migration_note: "AWS lists US-profile EOL on 2026-07-30; other regions still list support. Migrate to Claude Sonnet 5."
+      migration_note: "Retired from Raif on 2026-09-14 after the US inference-profile end-of-life on 2026-07-30, the removal " \
+        "date announced in the v1.5.0 changelog; a few non-US regions still list the model. Migrate to Claude Sonnet 5."
     }
   )
 
@@ -489,13 +491,12 @@ provider :bedrock do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :retired,
+      status: :deprecated,
       deprecated_on: Date.new(2026, 9, 1),
       retirement_date: Date.new(2026, 9, 30),
       replacement_key: :bedrock_deepseek_v3_2,
       migration_note: "AWS documents DeepSeek-R1's EOL as no sooner than 2026-03-10, a date now passed, so AWS may " \
-        "retire it with notice at any time. Raif retired this entry on 2026-09-14 ahead of its planned 2026-09-30 removal. " \
-        "DeepSeek v3.2 on Bedrock is " \
+        "retire it with notice at any time. Raif removes this entry on 2026-09-30. DeepSeek v3.2 on Bedrock is " \
         "newer, cheaper, and supports tool calling and structured outputs."
     }
   )

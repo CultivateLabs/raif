@@ -108,7 +108,13 @@ RSpec.describe "model manifest definitions validity" do
 
       it "has coherent lifecycle fields" do
         if entry.deprecated?
-          expect(entry.lifecycle.fetch(:retirement_date)).to be_present
+          retirement_date = entry.lifecycle.fetch(:retirement_date)
+          expect(retirement_date).to be_present
+
+          deprecated_on = entry.lifecycle.fetch(:deprecated_on)
+          if deprecated_on
+            expect(retirement_date).to be >= deprecated_on, "retirement_date #{retirement_date} precedes deprecated_on #{deprecated_on}"
+          end
         end
 
         replacement = entry.lifecycle.fetch(:replacement_key)

@@ -59,6 +59,11 @@ module Raif
     # caller never has to ask whether a model declared them.
     LIFECYCLE_KEYS = %i[status added_on deprecated_on retirement_date replacement_key migration_note].freeze
 
+    # The only lifecycle fields an OpenAI endpoint declaration may override, so a
+    # deprecated model can point each endpoint at a replacement on the same API.
+    # Status and dates stay model-level so one endpoint cannot retire ahead of the other.
+    ENDPOINT_LIFECYCLE_KEYS = %i[replacement_key migration_note].freeze
+
     PROVIDER_MANAGED_TOOL_CLASSES = {
       "web_search" => "Raif::ModelTools::ProviderManaged::WebSearch",
       "code_execution" => "Raif::ModelTools::ProviderManaged::CodeExecution",
@@ -181,8 +186,14 @@ module Raif
     # open_ai_responses_) that go in front of the model's key_base, and carries
     # its own capabilities and optional lifecycle overrides. Other attributes are shared.
     def self.entries_for_model(provider, model)
-      if model.adapter && (provider.name != :bedrock || model.endpoints)
-        raise ArgumentError, "#{model.source_path}: adapter: is only supported for single Bedrock entries"
+      if model.adapter
+        unless provider.name == :bedrock && model.endpoints.nil?
+          raise ArgumentError, "#{model.source_path}: adapter: is only supported for single Bedrock entries"
+        end
+        unless BEDROCK_ADAPTERS.key?(model.adapter)
+          raise ArgumentError,
+            "#{model.source_path}: unknown adapter #{model.adapter.inspect}; expected one of #{BEDROCK_ADAPTERS.keys.map(&:inspect).join(", ")}"
+        end
       end
       if model.endpoints
         model.endpoints.map do |endpoint, attributes|
@@ -193,7 +204,7 @@ module Raif
             endpoint: endpoint,
             adapter: OPEN_AI_ENDPOINT_ADAPTERS.fetch(endpoint),
             capabilities: attributes.fetch(:capabilities),
-            lifecycle: Dsl.normalize_lifecycle(model.lifecycle.merge(attributes.fetch(:lifecycle)))
+            lifecycle: Dsl.deep_freeze(model.lifecycle.merge(attributes.fetch(:lifecycle)))
           )
         end
       else

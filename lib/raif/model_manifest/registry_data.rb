@@ -39,15 +39,14 @@ module Raif
         config[:supports_native_tool_use] = false unless entry.capabilities.fetch(:native_tool_use)
 
         config[:lifecycle] = entry.lifecycle
-        config[:pricing] = {
+        pricing = {
           input_per_million: entry.pricing.fetch(:input_per_million),
           output_per_million: entry.pricing.fetch(:output_per_million),
           note: entry.pricing[:note],
           valid_until: entry.pricing[:valid_until]
-        }.freeze
-        if entry.pricing.key?(:cache_read_per_million)
-          config[:pricing] = config[:pricing].merge(cache_read_per_million: entry.pricing[:cache_read_per_million]).freeze
-        end
+        }
+        pricing[:cache_read_per_million] = entry.pricing[:cache_read_per_million] if entry.pricing.key?(:cache_read_per_million)
+        config[:pricing] = pricing.freeze
         config[:capabilities] = entry.capabilities
 
         if entry.deprecated?

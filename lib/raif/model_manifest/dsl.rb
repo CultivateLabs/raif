@@ -87,9 +87,24 @@ module Raif
 
             [endpoint.to_s, deep_freeze({
               capabilities: normalize_capabilities(attributes.fetch(:capabilities)),
-              lifecycle: attributes.fetch(:lifecycle, {}).transform_keys(&:to_sym)
+              lifecycle: normalize_endpoint_lifecycle(attributes.fetch(:lifecycle, {}), endpoint: endpoint, source_path: source_path)
             })]
           end.freeze
+        end
+
+        # Endpoint lifecycle overrides are merged over the model-level lifecycle by
+        # ModelManifest.entries_for_model, so they are normalized to the same shape here
+        # (symbol keys, symbol replacement_key) but limited to ENDPOINT_LIFECYCLE_KEYS.
+        def normalize_endpoint_lifecycle(lifecycle, endpoint:, source_path:)
+          normalized = lifecycle.transform_keys(&:to_sym)
+          unknown = normalized.keys - ENDPOINT_LIFECYCLE_KEYS
+          unless unknown.empty?
+            raise ArgumentError, "#{source_path}: endpoint #{endpoint.inspect} lifecycle may only override " \
+              "#{ENDPOINT_LIFECYCLE_KEYS.join(", ")}; got #{unknown.join(", ")}"
+          end
+
+          normalized[:replacement_key] &&= normalized[:replacement_key].to_sym
+          normalized
         end
 
         def deep_freeze(value)

@@ -23,7 +23,7 @@ RSpec.describe Raif::Llms::BedrockMantle, type: :model do
       aws_bedrock_region: "us-west-2",
       bedrock_mantle_base_url: "https://bedrock-mantle.us-west-2.api.aws/openai/v1"
     )
-    allow(Aws::CredentialProviderChain).to receive(:new).and_return(double(resolve: credentials))
+    allow(llm).to receive(:aws_credentials_provider).and_return(credentials)
   end
 
   it "signs the transmitted JSON with AWS credentials and uses the unprefixed model ID" do
@@ -53,16 +53,16 @@ RSpec.describe Raif::Llms::BedrockMantle, type: :model do
   end
 
   it "fails locally when AWS credentials are absent" do
-    allow(Aws::CredentialProviderChain).to receive(:new).and_return(double(resolve: nil))
+    allow(llm).to receive(:aws_credentials_provider).and_return(nil)
     expect { llm.chat(message: "Hello") }.to raise_error(Aws::Errors::MissingCredentialsError)
     expect(WebMock).not_to have_requested(:post, url)
   end
 
   it "uses refreshed credentials on subsequent requests through the same connection" do
-    provider = double("refreshing credentials", set?: true)
+    provider = double("refreshing credentials")
     refreshed = Aws::Credentials.new("refreshed-access-key", "refreshed-secret-key", "refreshed-session-token")
     allow(provider).to receive(:credentials).and_return(credentials)
-    allow(Aws::CredentialProviderChain).to receive(:new).and_return(double(resolve: provider))
+    allow(llm).to receive(:aws_credentials_provider).and_return(provider)
     request = stub_request(:post, url)
       .to_return(status: 200, body: response_body.to_json, headers: { "Content-Type" => "application/json" })
 
@@ -91,6 +91,39 @@ RSpec.describe Raif::Llms::BedrockMantle, type: :model do
     expect(params.dig(:response_format, :json_schema, :strict)).to be(true)
     expect(params.dig(:response_format, :json_schema, :schema)).to eq(completion.json_response_schema)
     expect(completion.response_format_parameter).to eq("json_schema")
+  end
+
+  describe "#build_request_parameters" do
+    let(:completion) do
+      Raif::ModelCompletion.new(
+        llm_model_key: llm.key, model_api_name: llm.api_name, messages: [], temperature: 0.4, response_format: :text
+      )
+    end
+
+    it "omits temperature when the model does not support it" do
+      allow(llm).to receive(:supports_temperature?).and_return(false)
+      expect(llm.send(:build_request_parameters, completion)).not_to have_key(:temperature)
+    end
+
+    it "falls back to json_object when structured outputs are unsupported" do
+      allow(llm).to receive(:supports_structured_outputs?).and_return(false)
+      completion.response_format = :json
+      completion.source = Raif::TestJsonTask.new
+
+      params = llm.send(:build_request_parameters, completion)
+
+      expect(params[:response_format]).to eq({ type: "json_object" })
+      expect(completion.response_format_parameter).to eq("json_object")
+    end
+
+    it "sends no response_format for a text completion whose source defines a schema" do
+      completion.source = Raif::TestJsonTask.new
+
+      params = llm.send(:build_request_parameters, completion)
+
+      expect(params).not_to have_key(:response_format)
+      expect(completion.response_format_parameter).to be_nil
+    end
   end
 
   it "streams content and usage through the shared Chat Completions parser" do

@@ -278,6 +278,31 @@ RSpec.describe Raif::ModelManifest do
       end.to raise_error(ArgumentError, /only supported for single Bedrock entries/)
     end
 
+    it "rejects an unknown adapter and names the source path" do
+      expect do
+        load_manifest_source(<<~RUBY)
+          provider :bedrock do |p|
+            p.model(key: :bedrock_typo, api_name: "typo", display_name: "Typo", adapter: :mantel,
+              pricing: {}, capabilities: {}, lifecycle: { status: :active })
+          end
+        RUBY
+      end.to raise_error(ArgumentError, /unknown adapter :mantel; expected one of :mantle/)
+    end
+
+    it "rejects endpoint lifecycle overrides other than replacement_key and migration_note" do
+      expect do
+        load_manifest_source(<<~RUBY)
+          provider :open_ai do |p|
+            p.model(
+              key_base: :old, api_name: "old", display_name: "Old", pricing: {},
+              lifecycle: { status: :deprecated, retirement_date: Date.new(2026, 12, 11) },
+              endpoints: { completions: { capabilities: {}, lifecycle: { status: :retired } } }
+            )
+          end
+        RUBY
+      end.to raise_error(ArgumentError, /lifecycle may only override replacement_key, migration_note; got status/)
+    end
+
     it "carries optional pricing note and valid_until through to the entry" do
       manifest = load_manifest_source(<<~RUBY)
         provider :x_ai do |p|
