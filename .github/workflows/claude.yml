@@ -48,3 +48,17 @@ jobs:
           # or https://code.claude.com/docs/en/cli-reference for available options
           # claude_args: '--allowed-tools Bash(gh pr:*)'
 
+      # The only way to read a run. The action hides tool calls and the final
+      # response from the job log unless show_full_output is set, which would
+      # publish every tool result to a publicly visible log. To get that detail
+      # for one run, re-run with debug logging, which the action also honors.
+      - name: Upload Claude execution log
+        if: always()
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: claude-execution-output
+          path: ${{ steps.claude.outputs.execution_file || format('{0}/claude-execution-output.json', runner.temp) }}
+          if-no-files-found: warn
+          retention-days: 30
+
