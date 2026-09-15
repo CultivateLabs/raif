@@ -30,7 +30,7 @@ jobs:
         # and the steps below never execute, so a runaway sweep would report
         # nothing at all. A step timeout fails this step and lets them run.
         timeout-minutes: 25
-        uses: anthropics/claude-code-action@v1.0.216
+        uses: anthropics/claude-code-action@v1.0.223
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Supplying a token skips the OIDC exchange, and with it the check that
