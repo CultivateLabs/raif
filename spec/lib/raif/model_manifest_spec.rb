@@ -81,6 +81,26 @@ RSpec.describe Raif::ModelManifest do
     end
   end
 
+  describe "tool choice capabilities" do
+    it "defaults omitted choices to native tool support, for each endpoint" do
+      manifest.llm_entries.each do |entry|
+        expect(entry.capabilities.fetch(:forced_tool_choice)).to eq(entry.capabilities.fetch(:native_tool_use))
+        expect(entry.capabilities.fetch(:required_tool_choice)).to eq(entry.capabilities.fetch(:native_tool_use))
+      end
+    end
+
+    it "keeps explicitly declared choices independent" do
+      caps = described_class::Dsl.normalize_capabilities(native_tool_use: true, forced_tool_choice: false, required_tool_choice: true)
+      expect(caps).to include(forced_tool_choice: false, required_tool_choice: true)
+    end
+
+    it "does not advertise standalone smoke probes for tool-choice constraints" do
+      manifest.llm_entries.each do |entry|
+        expect(entry.smokable_capabilities).not_to include("forced_tool_choice", "required_tool_choice")
+      end
+    end
+  end
+
   describe "Entry#smokable_capabilities and Entry#claimed_value for streaming_tool_calls" do
     # native_tool_use: true, streaming: false -- e.g. a model whose streaming path is broken
     # (see docs/_learn_more/streaming.md), where bin/smoke --only streaming_tool_calls should
@@ -209,6 +229,53 @@ RSpec.describe Raif::ModelManifest do
       expect(entry.status).to eq(:deprecated)
       expect(entry.lifecycle.fetch(:replacement_key)).to eq(:anthropic_test_model)
       expect(entry.capabilities.fetch(:provider_managed_tools)).to eq([:web_search])
+    end
+
+    it "merges endpoint lifecycle overrides without losing shared retirement dates" do
+      manifest = load_manifest_source(<<~RUBY)
+        provider :open_ai do |p|
+          p.model(
+            key_base: :old, api_name: "old", display_name: "Old", pricing: {},
+            lifecycle: { status: :deprecated, retirement_date: Date.new(2026, 12, 11) },
+            endpoints: {
+              completions: { capabilities: {}, lifecycle: { replacement_key: "open_ai_new" } },
+              responses: { capabilities: {}, lifecycle: { replacement_key: :open_ai_responses_new } }
+            }
+          )
+        end
+      RUBY
+
+      completions, responses = manifest.llm_entries
+      expect(completions.lifecycle[:replacement_key]).to eq(:open_ai_new)
+      expect(responses.lifecycle[:replacement_key]).to eq(:open_ai_responses_new)
+      expect(completions.lifecycle[:retirement_date]).to eq(Date.new(2026, 12, 11))
+      expect(responses).to be_deprecated
+      expect(responses.lifecycle).to be_frozen
+    end
+
+    it "selects the Mantle adapter only for an explicitly declared Bedrock entry" do
+      manifest = load_manifest_source(<<~RUBY)
+        provider :bedrock do |p|
+          p.model(key: :bedrock_default, api_name: "default", display_name: "Default",
+            pricing: {}, capabilities: {}, lifecycle: { status: :active })
+          p.model(key: :bedrock_mantle, api_name: "mantle", display_name: "Mantle", adapter: :mantle,
+            pricing: {}, capabilities: {}, lifecycle: { status: :active })
+        end
+      RUBY
+
+      expect(manifest.llm_entries.map(&:adapter_class_name)).to eq(["Raif::Llms::Bedrock", "Raif::Llms::BedrockMantle"])
+      expect(manifest.llm_entries.map(&:provider_name)).to eq([:bedrock, :bedrock])
+    end
+
+    it "rejects adapter overrides on providers other than Bedrock" do
+      expect do
+        load_manifest_source(<<~RUBY)
+          provider :anthropic do |p|
+            p.model(key: :anthropic_invalid, api_name: "invalid", display_name: "Invalid", adapter: :mantle,
+              pricing: {}, capabilities: {}, lifecycle: { status: :active })
+          end
+        RUBY
+      end.to raise_error(ArgumentError, /only supported for single Bedrock entries/)
     end
 
     it "carries optional pricing note and valid_until through to the entry" do

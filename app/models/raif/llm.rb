@@ -162,6 +162,8 @@ module Raif
           "Raif::Llm#chat - Invalid tool choice: #{tool_choice} is not included in the available model tools: #{available_model_tools.join(", ")}"
       end
 
+      validate_tool_choice_support!(tool_choice == :required ? :required : :forced) if tool_choice.present?
+
       # Runs before the ModelCompletion is created or any provider call is made,
       # and before the llm_api_requests_enabled guard so authorization applies
       # even when API requests are disabled. Vetoes by raising. Any raised
@@ -349,11 +351,26 @@ module Raif
       raise NotImplementedError, "#{self.class.name} must implement #build_required_tool_choice"
     end
 
+    def supports_forced_tool_choice?
+      supports_native_tool_use? && provider_settings.fetch(:supports_forced_tool_choice, true)
+    end
+
+    def supports_required_tool_choice?
+      supports_native_tool_use? && provider_settings.fetch(:supports_required_tool_choice, true)
+    end
+
+    def validate_tool_choice_support!(choice)
+      supported = choice == :required ? supports_required_tool_choice? : supports_forced_tool_choice?
+      return if supported
+
+      raise Raif::Errors::UnsupportedFeatureError, "#{name} does not support #{choice} tool choice."
+    end
+
     # Whether the provider can faithfully enforce tool_choice: :required for
     # the given tool set. Override in subclasses when a provider can only
     # enforce required tool use for some tool types.
     def supports_faithful_required_tool_choice?(available_model_tools)
-      available_model_tools.present?
+      supports_required_tool_choice? && available_model_tools.present?
     end
 
     # Whether this model can handle being asked to make multiple tool calls in a

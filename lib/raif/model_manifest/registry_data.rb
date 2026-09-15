@@ -45,6 +45,9 @@ module Raif
           note: entry.pricing[:note],
           valid_until: entry.pricing[:valid_until]
         }.freeze
+        if entry.pricing.key?(:cache_read_per_million)
+          config[:pricing] = config[:pricing].merge(cache_read_per_million: entry.pricing[:cache_read_per_million]).freeze
+        end
         config[:capabilities] = entry.capabilities
 
         if entry.deprecated?
@@ -70,6 +73,10 @@ module Raif
 
         batch_inference = caps.fetch(:batch_inference)
         settings[:supports_batch_inference] = batch_inference if batch_inference != defaults.fetch("batch_inference")
+
+        TOOL_CHOICE_CAPABILITY_KEYS.each do |capability|
+          settings[:"supports_#{capability}"] = false unless caps.fetch(capability)
+        end
 
         settings
       end

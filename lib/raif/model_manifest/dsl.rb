@@ -28,7 +28,7 @@ module Raif
       # endpoint (see ProviderBuilder#model).
       ModelDeclaration = Struct.new(
         :key, :key_base, :api_name, :display_name, :max_completion_tokens,
-        :pricing, :capabilities, :endpoints, :lifecycle, :source_path,
+        :pricing, :capabilities, :endpoints, :lifecycle, :source_path, :adapter,
         keyword_init: true
       )
 
@@ -48,6 +48,11 @@ module Raif
           normalized = capabilities.transform_keys(&:to_sym)
           if normalized.key?(:provider_managed_tools)
             normalized[:provider_managed_tools] = Array(normalized[:provider_managed_tools]).map(&:to_sym)
+          end
+
+          # Existing declarations inherit tool-choice support from native tool use.
+          TOOL_CHOICE_CAPABILITY_KEYS.each do |key|
+            normalized[key] = normalized.fetch(:native_tool_use, false) unless normalized.key?(key)
           end
 
           deep_freeze(normalized)
@@ -70,17 +75,20 @@ module Raif
         end
 
         # Endpoint names become strings because that is what the adapter and
-        # key-prefix maps in ModelManifest are keyed by. Capabilities are the
-        # only per-endpoint attribute; everything else is model level.
+        # key-prefix maps in ModelManifest are keyed by. Lifecycle overrides
+        # keep migration targets on the same API as the deprecated entry.
         def normalize_endpoints(endpoints, source_path:)
           endpoints.to_h do |endpoint, declaration|
             attributes = declaration.transform_keys(&:to_sym)
-            unknown = attributes.keys - [:capabilities]
+            unknown = attributes.keys - [:capabilities, :lifecycle]
             unless unknown.empty?
-              raise ArgumentError, "#{source_path}: endpoint #{endpoint.inspect} declares #{unknown.join(", ")}; only capabilities: is supported"
+              raise ArgumentError, "#{source_path}: endpoint #{endpoint.inspect} declares unknown attributes: #{unknown.join(", ")}"
             end
 
-            [endpoint.to_s, normalize_capabilities(attributes.fetch(:capabilities))]
+            [endpoint.to_s, deep_freeze({
+              capabilities: normalize_capabilities(attributes.fetch(:capabilities)),
+              lifecycle: attributes.fetch(:lifecycle, {}).transform_keys(&:to_sym)
+            })]
           end.freeze
         end
 
@@ -155,7 +163,7 @@ module Raif
         # OpenAI models reach both the completions and responses adapters).
         def model(
           api_name:, display_name:, pricing:, lifecycle:,
-          key: nil, key_base: nil, max_completion_tokens: nil, capabilities: nil, endpoints: nil
+          key: nil, key_base: nil, max_completion_tokens: nil, capabilities: nil, endpoints: nil, adapter: nil
         )
           single_entry = !key.nil? && !capabilities.nil? && key_base.nil? && endpoints.nil?
           per_endpoint = !key_base.nil? && !endpoints.nil? && key.nil? && capabilities.nil?
@@ -164,6 +172,7 @@ module Raif
           end
 
           @models << ModelDeclaration.new(
+            adapter: adapter&.to_sym,
             key: key&.to_sym,
             key_base: (key_base || key).to_s,
             api_name: api_name,

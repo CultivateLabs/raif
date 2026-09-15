@@ -8,6 +8,33 @@ provider :google do |p|
   )
 
   p.model(
+    key: :google_gemini_3_8_flash,
+    api_name: "gemini-3.8-flash",
+    display_name: "Google Gemini 3.8 Flash",
+    max_completion_tokens: 65_536,
+    pricing: {
+      input_per_million: 0.75,
+      output_per_million: 3.75,
+      note: "Introductory rate through 2026-12-31; standard rate is 1.50 input / 7.50 output from 2027-01-01",
+      valid_until: Date.new(2026, 12, 31)
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: true,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: %i[web_search code_execution]
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 14)
+    }
+  )
+
+  p.model(
     key: :google_gemini_3_7_flash,
     api_name: "gemini-3.7-flash",
     display_name: "Google Gemini 3.7 Flash",

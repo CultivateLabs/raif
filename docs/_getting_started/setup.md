@@ -103,6 +103,24 @@ end
 
 The Bedrock models Raif ships are defined in [`bedrock.rb`](https://github.com/CultivateLabs/raif/blob/main/lib/raif/model_manifest/definitions/bedrock.rb).
 
+### Bedrock Mantle
+
+`bedrock_grok_4_3` and `bedrock_grok_4_6` use the OpenAI-compatible Chat Completions API on Bedrock Mantle. They use the same AWS SDK credential chain and `aws_bedrock_region` setting as the Converse adapter:
+
+```ruby
+Raif.configure do |config|
+  config.bedrock_models_enabled = true
+  config.aws_bedrock_region = "us-west-2"
+  config.default_llm_model_key = "bedrock_grok_4_6"
+end
+```
+
+Requests are signed with AWS SigV4 using credentials from the AWS SDK, including environment variables, profiles, and IAM roles. No separate Mantle API key is needed. The IAM identity must have Mantle inference permissions, including `bedrock-mantle:CreateInference`; Converse permissions alone do not grant Mantle access. See [AWS's Mantle authentication and permissions example](https://aws.amazon.com/blogs/machine-learning/run-minimax-models-on-amazon-bedrock/).
+
+The Mantle base URL is derived from `aws_bedrock_region` when read. An explicit `config.bedrock_mantle_base_url` overrides it; setting that override to `nil` restores the derived URL. The signing region remains `aws_bedrock_region`, so any endpoint override must match that region.
+
+Grok 4.6's documented Mantle region is `us-west-2`; configure that region explicitly, or use `AWS_REGION=us-west-2` with `bin/smoke`. Mantle uses regional model IDs without the Converse inference-profile prefix. This adapter supports streaming, function tools, images, and native JSON schemas. It does not implement batch inference, PDFs, or provider-managed tools. See the [AWS Grok 4.6 model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-6.html) and [Mantle API documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions-mantle.html).
+
 ## OpenRouter
 [OpenRouter](https://openrouter.ai/){:target="_blank"} is a unified API that provides access to multiple AI models from different providers including Anthropic, Meta, Google, and more.
 

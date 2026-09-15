@@ -160,6 +160,10 @@ end
 
 Contributing a model to Raif itself is different: the models that ship with Raif are not registered by hand. They are defined in `lib/raif/model_manifest/definitions/*.rb` (one file per provider, a constrained declarative Ruby DSL recording each model's pricing, capabilities, and lifecycle status) and Raif builds its registry from those files at boot. Editing a definition is the whole change; `spec/lib/raif/model_manifest_validity_spec.rb` checks it is coherent and `bin/smoke <key> --record` records live evidence for its capability claims.
 
+Tool-choice support can vary independently of native tool use. Manifest capabilities `forced_tool_choice` (select a specific tool) and `required_tool_choice` (require any tool) default to the entry's `native_tool_use` value when omitted. Set either to `false` for a model that only supports automatic selection. The registry translates these declarations into `model_provider_settings[:supports_forced_tool_choice]` and `[:supports_required_tool_choice]`; custom registrations can set those settings directly, and otherwise retain support when native tool use is enabled.
+
+Use `llm.supports_forced_tool_choice?` and `llm.supports_required_tool_choice?` to inspect these settings. Agents also consult `supports_faithful_required_tool_choice?(tools)` for provider restrictions tied to the available tool types. Unsupported explicit choices raise `Raif::Errors::UnsupportedFeatureError` before a request is sent. Agents use automatic selection when neither constraint is supported and still validate that the expected tool was called.
+
 ---
 
 **Read next:** [Testing](testing)

@@ -512,12 +512,13 @@ private
     input_cost = llm_config[:input_token_cost]
     llm_class = llm_config[:llm_class]
     cache_read_multiplier = llm_class&.cache_read_input_token_cost_multiplier
+    cache_read_rate = llm_config.dig(:pricing, :cache_read_per_million)
     cache_creation_multiplier = llm_class&.cache_creation_input_token_cost_multiplier
     cached_reads = cache_read_input_tokens.to_i
     cached_writes = cache_creation_input_tokens.to_i
 
-    if cached_reads > 0 && cache_read_multiplier.present?
-      cache_read_cost = input_cost * cache_read_multiplier
+    if cached_reads > 0 && (cache_read_rate.present? || cache_read_multiplier.present?)
+      cache_read_cost = cache_read_rate ? cache_read_rate / 1_000_000.0 : input_cost * cache_read_multiplier
 
       if llm_class.prompt_tokens_include_cached_tokens?
         # OpenAI / Google / OpenRouter: cached tokens are a subset of prompt_tokens

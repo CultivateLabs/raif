@@ -42,10 +42,14 @@ module Raif::Concerns::Llms::OpenAiResponses::ToolFormatting
   end
 
   def build_forced_tool_choice(tool_name)
+    validate_tool_choice_support!(:forced)
+
     { "type" => "function", "name" => tool_name }
   end
 
   def build_required_tool_choice
+    validate_tool_choice_support!(:required)
+
     "required"
   end
 end

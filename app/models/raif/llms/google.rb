@@ -153,6 +153,7 @@ private
     if model_completion.response_format_json? && model_completion.json_response_schema.present?
       config[:responseMimeType] = "application/json"
       config[:responseSchema] = sanitize_schema_for_google(model_completion.json_response_schema)
+      model_completion.response_format_parameter = "json_schema"
     end
 
     config

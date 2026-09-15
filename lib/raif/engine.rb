@@ -85,8 +85,10 @@ module Raif
 
       require "aws-sdk-bedrockruntime"
 
-      Raif.default_llms[Raif::Llms::Bedrock].each do |llm_config|
-        Raif.register_llm(Raif::Llms::Bedrock, **llm_config)
+      [Raif::Llms::Bedrock, Raif::Llms::BedrockMantle].each do |adapter|
+        Raif.default_llms.fetch(adapter, []).each do |llm_config|
+          Raif.register_llm(adapter, **llm_config)
+        end
       end
     end
 

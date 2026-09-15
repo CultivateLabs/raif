@@ -128,7 +128,7 @@ module Raif
       end
 
       def tool_choice_for_iteration
-        return current_iteration_required_tool if current_iteration_required_tool.present?
+        return current_iteration_required_tool if current_iteration_required_tool.present? && llm.supports_forced_tool_choice?
         return :required if llm.supports_faithful_required_tool_choice?(native_model_tools)
 
         log_required_tool_choice_fallback_once!
@@ -391,7 +391,7 @@ module Raif
         @logged_required_tool_choice_fallback = true
         Raif.logger.warn(
           "NativeToolCallingAgent is falling back to runtime tool-call validation because #{llm.key} " \
-            "cannot faithfully enforce tool_choice: :required for tools: #{available_model_tools_map.keys.join(", ")}"
+            "cannot enforce the requested tool choice for tools: #{available_model_tools_map.keys.join(", ")}"
         )
       end
 

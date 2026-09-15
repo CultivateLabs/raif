@@ -265,6 +265,24 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       end
 
       context "with cached tokens (provider where prompt_tokens excludes cached)" do
+        it "uses Fable 5.1's model-specific cache rate instead of the Anthropic default" do
+          completion = described_class.new(
+            llm_model_key: "anthropic_claude_5_1_fable", model_api_name: "claude-fable-5-1",
+            prompt_tokens: 400, cache_read_input_tokens: 600, cache_creation_input_tokens: 200
+          )
+          completion.save(validate: false)
+          expect(completion.prompt_token_cost).to be_within(1e-10).of((400 * 10.0 + 600 * 0.25 + 200 * 12.5) / 1_000_000)
+        end
+
+        it "subtracts cached tokens from Mantle's inclusive prompt count before applying its cache rate" do
+          completion = described_class.new(
+            llm_model_key: "bedrock_grok_4_6", model_api_name: "xai.grok-4.6",
+            prompt_tokens: 1000, cache_read_input_tokens: 600
+          )
+          completion.save(validate: false)
+          expect(completion.prompt_token_cost).to be_within(1e-10).of((400 * 2.2 + 600 * 0.55) / 1_000_000)
+        end
+
         it "adds cache read and creation costs for Anthropic models" do
           # Anthropic: prompt_tokens does NOT include cached tokens
           # Cache read multiplier is 0.1x, cache creation multiplier is 1.25x

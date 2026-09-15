@@ -46,10 +46,14 @@ module Raif::Concerns::Llms::Bedrock::ToolFormatting
   end
 
   def build_forced_tool_choice(tool_name)
+    validate_tool_choice_support!(:forced)
+
     { tool: { name: tool_name } }
   end
 
   def build_required_tool_choice
+    validate_tool_choice_support!(:required)
+
     { any: {} }
   end
 end

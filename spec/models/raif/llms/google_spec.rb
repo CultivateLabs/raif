@@ -429,6 +429,7 @@ RSpec.describe Raif::Llms::Google, type: :model do
         it "includes responseSchema in generationConfig" do
           expect(parameters[:generationConfig][:responseMimeType]).to eq("application/json")
           expect(parameters[:generationConfig][:responseSchema]).to be_present
+          expect(model_completion.response_format_parameter).to eq("json_schema")
         end
 
         it "sanitizes additionalProperties from responseSchema" do
@@ -445,6 +446,7 @@ RSpec.describe Raif::Llms::Google, type: :model do
         it "does not include responseSchema" do
           expect(model_completion.json_response_schema).to be_nil
           expect(parameters[:generationConfig]).not_to have_key(:responseSchema)
+          expect(model_completion.response_format_parameter).to be_nil
         end
 
         it "does not include responseMimeType in generationConfig" do

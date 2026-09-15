@@ -779,6 +779,45 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(tool_choices.first).to eq("required")
     end
 
+    context "when the manifest disables forced and required tool choices" do
+      let(:llm_model_key){ "anthropic_claude_5_1_fable" }
+
+      before do
+        agent.max_iterations = 1
+      end
+
+      it "accepts an automatically selected final-answer tool" do
+        stub_raif_agent(agent) do |_messages, model_completion|
+          expect(model_completion.tool_choice).to be_nil
+          model_completion.response_tool_calls = [
+            { "provider_tool_call_id" => "call_final", "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." } }
+          ]
+          "The answer is Paris."
+        end
+
+        agent.run!
+
+        expect(agent).to be_completed
+        expect(agent.final_answer).to eq("Paris is the capital of France.")
+      end
+
+      it "still rejects a response that misses the required final-answer tool" do
+        stub_raif_agent(agent) do |_messages, model_completion|
+          expect(model_completion.tool_choice).to be_nil
+          model_completion.response_tool_calls = [
+            { "provider_tool_call_id" => "call_search", "name" => "wikipedia_search", "arguments" => { "query" => "Paris" } }
+          ]
+          "Let me search."
+        end
+
+        agent.run!
+
+        expect(agent).to be_failed
+        expect(agent.failure_reason).to include("required the tool 'agent_final_answer'")
+      end
+    end
+
     it "falls back from :required for Google when provider-managed tools are present" do
       tool_choices = []
       agent = described_class.new(
