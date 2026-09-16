@@ -759,9 +759,9 @@ provider :open_router do |p|
 
   p.model(
     key: :open_router_open_ai_gpt_oss_120b,
-    api_name: "gpt-oss-120b",
+    api_name: "openai/gpt-oss-120b",
     display_name: "OpenAI GPT-OSS 120B (via OpenRouter)",
-    pricing: { input_per_million: 0.15, output_per_million: 0.6 },
+    pricing: { input_per_million: 0.037, output_per_million: 0.17 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -868,7 +868,7 @@ provider :open_router do |p|
     key: :open_router_google_gemma_4_31b_it,
     api_name: "google/gemma-4-31b-it",
     display_name: "Google Gemma 4 31B IT (via OpenRouter)",
-    pricing: { input_per_million: 0.14, output_per_million: 0.4 },
+    pricing: { input_per_million: 0.09, output_per_million: 0.34 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -881,6 +881,50 @@ provider :open_router do |p|
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :open_router_qwen_qwen3_8_27b,
+    api_name: "qwen/qwen3.8-27b",
+    display_name: "Qwen3.8 27B (via OpenRouter)",
+    max_completion_tokens: 32_768,
+    pricing: { input_per_million: 0.214, output_per_million: 2.55 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 15)
+    }
+  )
+
+  p.model(
+    key: :open_router_meta_muse_glimmer_30b,
+    api_name: "meta/muse-glimmer-30b",
+    display_name: "Meta Muse Glimmer 30B (via OpenRouter)",
+    max_completion_tokens: 32_768,
+    pricing: { input_per_million: 0.35, output_per_million: 1.5 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 15)
     }
   )
 end
