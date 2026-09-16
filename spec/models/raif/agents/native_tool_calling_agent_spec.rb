@@ -779,6 +779,67 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       expect(tool_choices.first).to eq("required")
     end
 
+    it "logs once when a required tool downgrades to :required because forced choice is unsupported" do
+      tool_choices = []
+      allow_any_instance_of(Raif::Llm).to receive(:supports_forced_tool_choice?).and_return(false)
+      allow(Raif.logger).to receive(:warn).and_call_original
+
+      stub_raif_agent(agent) do |_messages, model_completion|
+        tool_choices << model_completion.tool_choice
+        model_completion.response_tool_calls = [
+          { "provider_tool_call_id" => "call_final", "name" => "agent_final_answer",
+            "arguments" => { "final_answer" => "Paris is the capital of France." } }
+        ]
+        "The answer is Paris."
+      end
+
+      agent.max_iterations = 1
+      agent.run!
+
+      expect(agent).to be_completed
+      expect(tool_choices).to eq(["required"])
+      expect(Raif.logger).to have_received(:warn).with(/cannot force Raif::ModelTools::AgentFinalAnswer on /).once
+    end
+
+    context "when the manifest disables forced and required tool choices" do
+      let(:llm_model_key){ "anthropic_claude_5_1_fable" }
+
+      before do
+        agent.max_iterations = 1
+      end
+
+      it "accepts an automatically selected final-answer tool" do
+        stub_raif_agent(agent) do |_messages, model_completion|
+          expect(model_completion.tool_choice).to be_nil
+          model_completion.response_tool_calls = [
+            { "provider_tool_call_id" => "call_final", "name" => "agent_final_answer",
+              "arguments" => { "final_answer" => "Paris is the capital of France." } }
+          ]
+          "The answer is Paris."
+        end
+
+        agent.run!
+
+        expect(agent).to be_completed
+        expect(agent.final_answer).to eq("Paris is the capital of France.")
+      end
+
+      it "still rejects a response that misses the required final-answer tool" do
+        stub_raif_agent(agent) do |_messages, model_completion|
+          expect(model_completion.tool_choice).to be_nil
+          model_completion.response_tool_calls = [
+            { "provider_tool_call_id" => "call_search", "name" => "wikipedia_search", "arguments" => { "query" => "Paris" } }
+          ]
+          "Let me search."
+        end
+
+        agent.run!
+
+        expect(agent).to be_failed
+        expect(agent.failure_reason).to include("required the tool 'agent_final_answer'")
+      end
+    end
+
     it "falls back from :required for Google when provider-managed tools are present" do
       tool_choices = []
       agent = described_class.new(

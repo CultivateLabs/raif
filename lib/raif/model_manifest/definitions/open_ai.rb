@@ -8,6 +8,49 @@ provider :open_ai do |p|
   )
 
   p.model(
+    key_base: :gpt_6_astra,
+    api_name: "gpt-6-astra",
+    display_name: "OpenAI GPT-6 Astra",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 1.0,
+      input_per_million: 10.0,
+      output_per_million: 50.0,
+      note: "Above 272K input tokens, the full request costs 20.00 input / 75.00 output per million tokens."
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 14)
+    },
+    endpoints: {
+      completions: {
+        capabilities: {
+          temperature: false,
+          structured_outputs: true,
+          native_tool_use: true,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: false,
+          provider_managed_tools: []
+        }
+      },
+      responses: {
+        capabilities: {
+          temperature: false,
+          structured_outputs: true,
+          native_tool_use: true,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: true,
+          provider_managed_tools: %i[web_search code_execution image_generation]
+        }
+      }
+    }
+  )
+
+  p.model(
     key_base: :gpt_5_6_sol,
     api_name: "gpt-5.6-sol",
     display_name: "OpenAI GPT-5.6 Sol",
@@ -306,10 +349,15 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5",
     pricing: { input_per_million: 1.25, output_per_million: 10.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_responses_gpt_5_6_sol,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_5_6_sol },
         capabilities: {
           temperature: false,
           structured_outputs: true,
@@ -414,10 +462,15 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5 Mini",
     pricing: { input_per_million: 0.25, output_per_million: 2.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_responses_gpt_5_6_terra,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-terra."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_5_6_terra },
         capabilities: {
           temperature: false,
           structured_outputs: true,
@@ -450,10 +503,15 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5 Nano",
     pricing: { input_per_million: 0.05, output_per_million: 0.4 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_responses_gpt_5_6_luna,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-luna."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_5_6_luna },
         capabilities: {
           temperature: false,
           structured_outputs: true,
@@ -568,7 +626,7 @@ provider :open_ai do |p|
           native_tool_use: true,
           streaming: true,
           batch_inference: true,
-          images: true,
+          images: false,
           pdfs: false,
           provider_managed_tools: []
         }
@@ -580,7 +638,7 @@ provider :open_ai do |p|
           native_tool_use: true,
           streaming: true,
           batch_inference: true,
-          images: true,
+          images: false,
           pdfs: true,
           provider_managed_tools: %i[web_search code_execution image_generation]
         }
@@ -738,10 +796,15 @@ provider :open_ai do |p|
     display_name: "OpenAI o3",
     pricing: { input_per_million: 2.0, output_per_million: 8.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_responses_gpt_5_6_sol,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_5_6_sol },
         capabilities: {
           temperature: false,
           structured_outputs: true,
@@ -870,7 +933,11 @@ provider :open_ai do |p|
     display_name: "OpenAI o3 Pro",
     pricing: { input_per_million: 20.0, output_per_million: 80.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_responses_gpt_5_6_sol,
+      migration_note: "Use gpt-5.6-sol on the Responses API with reasoning.mode set to pro."
     },
     endpoints: {
       responses: {
@@ -894,7 +961,11 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5 Pro",
     pricing: { input_per_million: 15.0, output_per_million: 120.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 6, 11),
+      retirement_date: Date.new(2026, 12, 11),
+      replacement_key: :open_ai_responses_gpt_5_6_sol,
+      migration_note: "Use gpt-5.6-sol on the Responses API with reasoning.mode set to pro."
     },
     endpoints: {
       responses: {

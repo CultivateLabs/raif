@@ -327,6 +327,13 @@
         "result": "pass",
         "checked_at": "2026-08-27T14:56:56Z"
       }
+    },
+    "google_gemini_3_8_flash": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-15T18:04:21Z"
+      }
     }
   }
 }

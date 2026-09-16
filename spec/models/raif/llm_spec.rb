@@ -10,6 +10,41 @@ RSpec.describe Raif::Llm, type: :model do
     end
   end
 
+  describe "tool choice capabilities" do
+    let(:llm){ described_class.new(key: :custom, api_name: "custom-model", display_name: "Custom Model") }
+    let(:tools){ [Raif::ModelTools::WikipediaSearch] }
+
+    it "preserves tool-choice support for manually registered models with no settings" do
+      expect(llm.supports_forced_tool_choice?).to be(true)
+      expect(llm.supports_required_tool_choice?).to be(true)
+      expect(llm.supports_faithful_required_tool_choice?(tools)).to be(true)
+      expect(llm.supports_faithful_required_tool_choice?([])).to be(false)
+    end
+
+    it "allows requiring any tool independently of forcing a specific tool" do
+      llm.provider_settings[:supports_forced_tool_choice] = false
+      expect(llm.supports_forced_tool_choice?).to be(false)
+      expect(llm.supports_faithful_required_tool_choice?(tools)).to be(true)
+      expect { llm.validate_tool_choice_support!(:forced) }
+        .to raise_error(Raif::Errors::UnsupportedFeatureError, "Custom Model does not support forced tool choice.")
+      expect { llm.validate_tool_choice_support!(:required) }.not_to raise_error
+    end
+
+    it "allows forcing a specific tool independently of requiring any tool" do
+      llm.provider_settings[:supports_required_tool_choice] = false
+      expect(llm.supports_forced_tool_choice?).to be(true)
+      expect(llm.supports_faithful_required_tool_choice?(tools)).to be(false)
+      expect { llm.validate_tool_choice_support!(:required) }
+        .to raise_error(Raif::Errors::UnsupportedFeatureError, "Custom Model does not support required tool choice.")
+    end
+
+    it "disables both choices when native tool use is unavailable" do
+      llm.supports_native_tool_use = false
+      expect(llm.supports_forced_tool_choice?).to be(false)
+      expect(llm.supports_required_tool_choice?).to be(false)
+    end
+  end
+
   describe "deprecation" do
     let(:llm) do
       Raif::Llms::TestLlm.new(

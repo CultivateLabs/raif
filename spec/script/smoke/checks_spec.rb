@@ -136,6 +136,7 @@ RSpec.describe Smoke::Checks do
     instance_double(
       Raif::Llms::Anthropic,
       chat: model_completion,
+      supports_forced_tool_choice?: true,
       create_batch: batch,
       build_pending_model_completion: instance_double(Raif::ModelCompletion),
       submit_batch!: batch,
@@ -753,6 +754,16 @@ RSpec.describe Smoke::Checks do
     end
 
     describe ".check_native_tool_use" do
+      it "uses automatic selection when the model cannot enforce tool choice" do
+        allow(llm).to receive(:supports_forced_tool_choice?).and_return(false)
+        expect(llm).to receive(:chat).with(
+          message: described_class::TOOL_CALL_PROMPT,
+          available_model_tools: [Raif::ModelTools::WikipediaSearch], tool_choice: nil
+        ).and_return(model_completion)
+
+        expect(described_class.check_native_tool_use(entry)).to include(status: :pass)
+      end
+
       it "fails when the parsed tool call arguments are not a hash" do
         allow(llm).to receive(:chat).and_return(
           instance_double(Raif::ModelCompletion, response_tool_calls: [{ "name" => "wikipedia_search", "arguments" => "not a hash" }])

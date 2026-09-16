@@ -1,39 +1,115 @@
+# Runs an AI code review on pull requests using claude-code-action.
+# Triggers automatically when a PR is opened as ready for review, or when
+# an existing draft PR is marked ready for review (except for claude/*
+# branches and dependabot PRs). Can also be run by hand for one PR:
+#   gh workflow run claude-code-review.yml -f pr_number=<n>
 name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    types: [opened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
+        type: string
 
 jobs:
   claude-review:
-    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && !startsWith(github.head_ref, 'claude/') && github.actor != 'dependabot[bot]')
+
     runs-on: ubuntu-latest
     permissions:
+      # The review only comments. Inline and summary comments need pull-requests
+      # and issues write; nothing here commits, so contents stays read-only.
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
+      issues: write
       id-token: write
+      actions: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          fetch-depth: 1
+          ref: ${{ inputs.pr_number && format('refs/pull/{0}/head', inputs.pr_number) || '' }}
+          # Full history so the prompt's "git history of the changed lines" is
+          # actually available to git log and git blame.
+          fetch-depth: 0
 
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1.0.223
         with:
+          # Attribute the review comments to the real claude[bot] account (209825114)
+          # rather than github-actions[bot] (the action's default bot_id of 41898282).
+          bot_id: "209825114"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          prompt: |
+            You are a staff software engineer. Review pull request #${{ inputs.pr_number || github.event.pull_request.number }} on ${{ github.repository }}.
+
+            This is a read-only review. Do not edit files, commit, push, or open pull requests. Your only outputs are the inline comments and the summary comment described below.
+
+            Gather context first:
+
+            - `gh pr diff ${{ inputs.pr_number || github.event.pull_request.number }}` is the change under review. Review only what it touches.
+            - Read the pull request title and body, and the issue it closes if it links one, for the author's intent.
+            - Read the root CLAUDE.md, and any CLAUDE.md in a directory containing a changed file. A CLAUDE.md rule governs only the files at or below its own directory.
+            - Read the surrounding code, the git history of the changed lines, and earlier pull requests that touched these files wherever you need the context to judge the change.
+
+            Look for bugs, data-integrity risks, security problems, correctness gaps, missing error handling, surprising behaviour, race windows, performance problems, and violations of the project's own conventions. Propose a different approach where you see a materially better one. Do not list what the change does well.
+
+            Rate every finding:
+
+            - High: a bug, a data-integrity risk, a security problem, or anything that should block a release.
+            - Med: a correctness gap, missing error handling, surprising behaviour, or a race window.
+            - Low: a smaller correctness or performance note that is not failing yet.
+            - Style: naming, comments, conventions, idiomatic Rails, repo conventions.
+
+            Do not report:
+
+            - A problem on lines this pull request did not touch.
+            - Anything the linter or the test suite would catch. Those run separately. Do not run them yourself.
+            - A finding you could not confirm by reading the code. A false positive costs the author more than a missed nitpick, so drop it and say nothing.
+            - A CLAUDE.md rule that does not govern the file you are flagging, or one the code silences deliberately.
+
+            Check each finding against the code before you report it, and drop the ones that do not hold up.
+
+            Then report, in this order:
+
+            1. Post each finding that belongs to specific lines as an inline comment on those lines, using `mcp__github_inline_comment__create_inline_comment` with `confirmed: true`. Open the comment with the severity, e.g. "High: ". One comment per finding, and never two comments for the same finding. Add a committable suggestion block only when committing it fixes the finding outright.
+            2. If that tool is unavailable, put those findings in the summary comment instead, each with its `path:line`.
+            3. Post a summary comment with `gh pr comment`. Post it whatever you found. Open with the heading "## Code review", then one line of verdict, then the findings that are broader than a single piece of code: architecture, a pattern repeated across files, a missing test, a doubt about the approach. Close with the number of inline comments you left. When nothing is worth raising, the whole comment is that heading and "LGTM - no issues found."
+
+            Cite code as `path/to/file.rb:123`. Quote and link any CLAUDE.md rule you rely on. Write plain prose, no emoji, no HTML, and keep it short.
+          # auto mode judges everything the allow list does not cover by classifier
+          # rather than denying it outright, so a review is not stranded by a tool
+          # nobody thought to enumerate.
+          #
+          # The allow list stays short but cannot be dropped. The action installs the
+          # github_inline_comment MCP server only when that tool is named here, so an
+          # empty list leaves the review with no way to comment inline at all. And
+          # allow rules resolve before the classifier, so naming `gh pr comment` keeps
+          # the mandatory summary comment off a classifier verdict.
+          claude_args: >-
+            --model opus
+            --permission-mode auto
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*)"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
+      # The action hides Claude's output from the job log, so the transcript is the
+      # only complete record of what a run did and which tool calls were denied.
+      # continue-on-error: a diagnostic must never decide the job result.
+      - name: Upload Claude transcript
+        if: always() && steps.claude-review.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: claude-transcript
+          path: ${{ steps.claude-review.outputs.execution_file || format('{0}/claude-execution-output.json', runner.temp) }}
+          if-no-files-found: warn
+          retention-days: 30

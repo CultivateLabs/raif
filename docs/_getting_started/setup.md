@@ -103,6 +103,26 @@ end
 
 The Bedrock models Raif ships are defined in [`bedrock.rb`](https://github.com/CultivateLabs/raif/blob/main/lib/raif/model_manifest/definitions/bedrock.rb).
 
+Claude Fable 5 and Fable 5.1 on Bedrock (`bedrock_claude_5_fable`, `bedrock_claude_5_1_fable`) require the AWS account or Bedrock project to use the `aws_review` [data retention mode](https://docs.aws.amazon.com/bedrock/latest/userguide/data-retention.html). With the default mode every request fails with a `ValidationException` reading "data retention mode 'default' is not available for this model". This is an account-level setting (`bedrock:PutAccountDataRetention`); no request parameter changes it.
+
+### Bedrock Mantle
+
+`bedrock_grok_4_3` and `bedrock_grok_4_6` use the OpenAI-compatible Chat Completions API on Bedrock Mantle. They use the same AWS SDK credential chain and `aws_bedrock_region` setting as the Converse adapter:
+
+```ruby
+Raif.configure do |config|
+  config.bedrock_models_enabled = true
+  config.aws_bedrock_region = "us-west-2"
+  config.default_llm_model_key = "bedrock_grok_4_6"
+end
+```
+
+Requests are signed with AWS SigV4 using credentials from the AWS SDK, including environment variables, profiles, and IAM roles. No separate Mantle API key is needed. The IAM identity needs Mantle inference permissions in addition to Converse permissions; see the [Mantle API documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions-mantle.html) for the required IAM actions.
+
+The Mantle base URL is derived from `aws_bedrock_region` when read. An explicit `config.bedrock_mantle_base_url` overrides it; setting that override to `nil` restores the derived URL. The signing region remains `aws_bedrock_region`, so any endpoint override must match that region.
+
+Grok 4.6's documented Mantle region is `us-west-2`; configure that region explicitly, or use `AWS_REGION=us-west-2` with `bin/smoke`. The default `aws_bedrock_region` is `us-east-1`, which does not serve Grok 4.6: with the default region the model still registers and appears in model lists, and every request to it fails with a client error from the Mantle endpoint. Mantle uses regional model IDs without the Converse inference-profile prefix. This adapter supports streaming, function tools, images, and native JSON schemas. It does not implement batch inference, PDFs, or provider-managed tools. See the [AWS Grok 4.6 model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-6.html) and [Mantle API documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions-mantle.html).
+
 ## OpenRouter
 [OpenRouter](https://openrouter.ai/){:target="_blank"} is a unified API that provides access to multiple AI models from different providers including Anthropic, Meta, Google, and more.
 

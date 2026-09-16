@@ -3,6 +3,33 @@
 require "rails_helper"
 
 RSpec.describe Raif::Configuration do
+  describe "#bedrock_mantle_base_url" do
+    let(:config){ described_class.new }
+
+    it "uses the same region as Converse" do
+      config.aws_bedrock_region = "us-east-2"
+
+      expect(config.bedrock_mantle_base_url).to eq("https://bedrock-mantle.us-east-2.api.aws/openai/v1")
+    end
+
+    it "derives the URL from the current Bedrock region even after an earlier read" do
+      config.bedrock_mantle_base_url
+      config.aws_bedrock_region = "eu-west-1"
+
+      expect(config.bedrock_mantle_base_url).to eq("https://bedrock-mantle.eu-west-1.api.aws/openai/v1")
+    end
+
+    it "preserves an explicit URL override until it is cleared" do
+      config.bedrock_mantle_base_url = "https://mantle.example.com/openai/v1"
+      config.aws_bedrock_region = "eu-west-1"
+
+      expect(config.bedrock_mantle_base_url).to eq("https://mantle.example.com/openai/v1")
+
+      config.bedrock_mantle_base_url = nil
+      expect(config.bedrock_mantle_base_url).to eq("https://bedrock-mantle.eu-west-1.api.aws/openai/v1")
+    end
+  end
+
   describe "#validate!" do
     describe "model_completion_authorizer" do
       around do |example|

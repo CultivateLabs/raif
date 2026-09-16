@@ -292,10 +292,12 @@ module Smoke
     private_class_method :run_structured_outputs_probe
 
     def self.check_native_tool_use(entry)
-      model_completion = Raif.llm(entry.key).chat(
+      llm = Raif.llm(entry.key)
+      tools = [Raif::ModelTools::WikipediaSearch]
+      model_completion = llm.chat(
         message: TOOL_CALL_PROMPT,
-        available_model_tools: [Raif::ModelTools::WikipediaSearch],
-        tool_choice: Raif::ModelTools::WikipediaSearch.to_s
+        available_model_tools: tools,
+        tool_choice: llm.supports_forced_tool_choice? ? tools.first.to_s : nil
       )
       arguments = model_completion&.response_tool_calls&.first&.dig("arguments")
       { status: arguments.is_a?(Hash) ? :pass : :fail, detail: arguments.inspect.first(180) }

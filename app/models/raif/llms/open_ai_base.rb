@@ -72,14 +72,4 @@ private
     formatted_system_prompt
   end
 
-  def supports_structured_outputs?
-    # Not all OpenAI models support structured outputs:
-    # https://platform.openai.com/docs/guides/structured-outputs?api-mode=chat#supported-models
-    provider_settings.key?(:supports_structured_outputs) ? provider_settings[:supports_structured_outputs] : true
-  end
-
-  def supports_temperature?
-    provider_settings.key?(:supports_temperature) ? provider_settings[:supports_temperature] : true
-  end
-
 end

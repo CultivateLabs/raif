@@ -85,10 +85,14 @@ module Raif::Concerns::Llms::Anthropic::ToolFormatting
   end
 
   def build_forced_tool_choice(tool_name)
+    validate_tool_choice_support!(:forced)
+
     { "type" => "tool", "name" => tool_name, "disable_parallel_tool_use" => true }
   end
 
   def build_required_tool_choice(disable_parallel: true)
+    validate_tool_choice_support!(:required)
+
     { "type" => "any", "disable_parallel_tool_use" => disable_parallel }
   end
 end

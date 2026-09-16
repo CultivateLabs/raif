@@ -86,7 +86,7 @@ RSpec.describe "model manifest definitions validity" do
       # documented rate is scheduled to end. A past valid_until is deliberately NOT a failure
       # here: it is a /model-check finding for a human to re-verify, not a build break.
       it "has well-typed optional pricing annotations" do
-        unknown = entry.pricing.keys - %i[input_per_million output_per_million note valid_until]
+        unknown = entry.pricing.keys - %i[input_per_million output_per_million cache_read_per_million note valid_until]
         expect(unknown).to be_empty, "unknown pricing keys: #{unknown.inspect}"
 
         note = entry.pricing[:note]
@@ -94,6 +94,9 @@ RSpec.describe "model manifest definitions validity" do
 
         valid_until = entry.pricing[:valid_until]
         expect(valid_until).to be_a(Date) if valid_until
+
+        cache_read_rate = entry.pricing[:cache_read_per_million]
+        expect(cache_read_rate).to be_a(Numeric).and be >= 0 if cache_read_rate
       end
 
       it "has Date objects for whichever lifecycle dates it declares" do
@@ -105,7 +108,13 @@ RSpec.describe "model manifest definitions validity" do
 
       it "has coherent lifecycle fields" do
         if entry.deprecated?
-          expect(entry.lifecycle.fetch(:retirement_date)).to be_present
+          retirement_date = entry.lifecycle.fetch(:retirement_date)
+          expect(retirement_date).to be_present
+
+          deprecated_on = entry.lifecycle.fetch(:deprecated_on)
+          if deprecated_on
+            expect(retirement_date).to be >= deprecated_on, "retirement_date #{retirement_date} precedes deprecated_on #{deprecated_on}"
+          end
         end
 
         replacement = entry.lifecycle.fetch(:replacement_key)

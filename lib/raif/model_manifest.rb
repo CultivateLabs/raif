@@ -22,6 +22,8 @@ module Raif
       "google" => "Raif::Llms::Google"
     }.freeze
 
+    BEDROCK_ADAPTERS = { mantle: "Raif::Llms::BedrockMantle" }.freeze
+
     OPEN_AI_ENDPOINT_ADAPTERS = {
       "completions" => "Raif::Llms::OpenAiCompletions",
       "responses" => "Raif::Llms::OpenAiResponses"
@@ -37,21 +39,30 @@ module Raif
       "Raif::Llms::OpenAiResponses",
       "Raif::Llms::Anthropic",
       "Raif::Llms::Bedrock",
+      "Raif::Llms::BedrockMantle",
       "Raif::Llms::OpenRouter",
       "Raif::Llms::XAi",
       "Raif::Llms::Google"
     ].freeze
 
-    CAPABILITY_KEYS = %i[
+    SMOKE_CAPABILITY_KEYS = %i[
       temperature structured_outputs native_tool_use streaming
       batch_inference images pdfs provider_managed_tools
     ].freeze
+
+    TOOL_CHOICE_CAPABILITY_KEYS = %i[forced_tool_choice required_tool_choice].freeze
+    CAPABILITY_KEYS = (SMOKE_CAPABILITY_KEYS + TOOL_CHOICE_CAPABILITY_KEYS).freeze
 
     LIFECYCLE_STATUSES = %i[active deprecated retired].freeze
 
     # Every entry's lifecycle carries all of these, defaulting to nil, so a
     # caller never has to ask whether a model declared them.
     LIFECYCLE_KEYS = %i[status added_on deprecated_on retirement_date replacement_key migration_note].freeze
+
+    # The only lifecycle fields an OpenAI endpoint declaration may override, so a
+    # deprecated model can point each endpoint at a replacement on the same API.
+    # Status and dates stay model-level so one endpoint cannot retire ahead of the other.
+    ENDPOINT_LIFECYCLE_KEYS = %i[replacement_key migration_note].freeze
 
     PROVIDER_MANAGED_TOOL_CLASSES = {
       "web_search" => "Raif::ModelTools::ProviderManaged::WebSearch",
@@ -67,6 +78,7 @@ module Raif
       "Raif::Llms::OpenAiResponses" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => true },
       "Raif::Llms::Anthropic" => { "temperature" => true, "structured_outputs" => false, "batch_inference" => true },
       "Raif::Llms::Bedrock" => { "temperature" => true, "structured_outputs" => false, "batch_inference" => false },
+      "Raif::Llms::BedrockMantle" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => false },
       # Mirrors OpenAI for structured outputs
       "Raif::Llms::OpenRouter" => { "temperature" => true, "structured_outputs" => true, "batch_inference" => false },
       # Mirrors OpenAI for structured outputs; includes XAi::BatchInference
@@ -87,7 +99,7 @@ module Raif
       def retired? = status == :retired
 
       # Capabilities the smoke runner would test for this entry: "completion"
-      # always, plus every schema capability, plus the derived
+      # always, plus every smoke capability, plus the derived
       # streaming_tool_calls whenever native tool use is claimed (even if
       # streaming itself is claimed false, so --only streaming_tool_calls
       # still works as a diagnostic on a streaming-disabled model).
@@ -96,7 +108,7 @@ module Raif
       # smoke CLI passes around; the capabilities they read are symbol-keyed.
       def smokable_capabilities
         caps = ["completion"]
-        caps += CAPABILITY_KEYS.reject { |c| c == :provider_managed_tools }.map(&:to_s)
+        caps += SMOKE_CAPABILITY_KEYS.reject { |c| c == :provider_managed_tools }.map(&:to_s)
         caps << "provider_managed_tools" if capabilities[:provider_managed_tools]&.any?
         caps << "streaming_tool_calls" if capabilities[:native_tool_use]
         caps
@@ -172,17 +184,27 @@ module Raif
     # A model that declares endpoints expands to one entry per endpoint: the
     # endpoint picks the adapter and the key prefix (open_ai_ vs
     # open_ai_responses_) that go in front of the model's key_base, and carries
-    # its own capabilities. Everything else is shared by all of its entries.
+    # its own capabilities and optional lifecycle overrides. Other attributes are shared.
     def self.entries_for_model(provider, model)
+      if model.adapter
+        unless provider.name == :bedrock && model.endpoints.nil?
+          raise ArgumentError, "#{model.source_path}: adapter: is only supported for single Bedrock entries"
+        end
+        unless BEDROCK_ADAPTERS.key?(model.adapter)
+          raise ArgumentError,
+            "#{model.source_path}: unknown adapter #{model.adapter.inspect}; expected one of #{BEDROCK_ADAPTERS.keys.map(&:inspect).join(", ")}"
+        end
+      end
       if model.endpoints
-        model.endpoints.map do |endpoint, capabilities|
+        model.endpoints.map do |endpoint, attributes|
           build_entry(
             provider: provider,
             model: model,
             key: :"#{OPEN_AI_ENDPOINT_KEY_PREFIXES.fetch(endpoint)}#{model.key_base}",
             endpoint: endpoint,
             adapter: OPEN_AI_ENDPOINT_ADAPTERS.fetch(endpoint),
-            capabilities: capabilities
+            capabilities: attributes.fetch(:capabilities),
+            lifecycle: Dsl.deep_freeze(model.lifecycle.merge(attributes.fetch(:lifecycle)))
           )
         end
       else
@@ -192,7 +214,7 @@ module Raif
             model: model,
             key: model.key,
             endpoint: nil,
-            adapter: PROVIDER_ADAPTERS.fetch(provider.name.to_s),
+            adapter: model.adapter ? BEDROCK_ADAPTERS.fetch(model.adapter) : PROVIDER_ADAPTERS.fetch(provider.name.to_s),
             capabilities: model.capabilities
           )
         ]
@@ -200,7 +222,7 @@ module Raif
     end
     private_class_method :entries_for_model
 
-    def self.build_entry(provider:, model:, key:, endpoint:, adapter:, capabilities:)
+    def self.build_entry(provider:, model:, key:, endpoint:, adapter:, capabilities:, lifecycle: model.lifecycle)
       Entry.new(
         key: key,
         provider_name: provider.name,
@@ -211,7 +233,7 @@ module Raif
         max_completion_tokens: model.max_completion_tokens,
         pricing: model.pricing,
         capabilities: capabilities,
-        lifecycle: model.lifecycle,
+        lifecycle: lifecycle,
         source_path: model.source_path,
         key_base: model.key_base
       )

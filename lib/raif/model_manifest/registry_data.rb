@@ -39,12 +39,14 @@ module Raif
         config[:supports_native_tool_use] = false unless entry.capabilities.fetch(:native_tool_use)
 
         config[:lifecycle] = entry.lifecycle
-        config[:pricing] = {
+        pricing = {
           input_per_million: entry.pricing.fetch(:input_per_million),
           output_per_million: entry.pricing.fetch(:output_per_million),
           note: entry.pricing[:note],
           valid_until: entry.pricing[:valid_until]
-        }.freeze
+        }
+        pricing[:cache_read_per_million] = entry.pricing[:cache_read_per_million] if entry.pricing.key?(:cache_read_per_million)
+        config[:pricing] = pricing.freeze
         config[:capabilities] = entry.capabilities
 
         if entry.deprecated?
@@ -70,6 +72,10 @@ module Raif
 
         batch_inference = caps.fetch(:batch_inference)
         settings[:supports_batch_inference] = batch_inference if batch_inference != defaults.fetch("batch_inference")
+
+        TOOL_CHOICE_CAPABILITY_KEYS.each do |capability|
+          settings[:"supports_#{capability}"] = false unless caps.fetch(capability)
+        end
 
         settings
       end

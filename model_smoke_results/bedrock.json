@@ -358,6 +358,13 @@
         "checked_at": "2026-09-01T22:07:02Z"
       }
     },
+    "bedrock_claude_5_opus": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-15T18:04:03Z"
+      }
+    },
     "bedrock_claude_5_sonnet": {
       "completion": {
         "claimed": true,
@@ -451,6 +458,20 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:07:02Z"
+      }
+    },
+    "bedrock_grok_4_3": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-15T18:04:03Z"
+      }
+    },
+    "bedrock_grok_4_6": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-15T18:04:03Z"
       }
     }
   }

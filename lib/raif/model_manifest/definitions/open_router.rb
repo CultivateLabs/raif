@@ -8,6 +8,33 @@ provider :open_router do |p|
   )
 
   p.model(
+    key: :open_router_gemini_3_8_flash,
+    api_name: "google/gemini-3.8-flash",
+    display_name: "Gemini 3.8 Flash (via OpenRouter)",
+    max_completion_tokens: 65_536,
+    pricing: {
+      input_per_million: 0.75,
+      output_per_million: 3.75,
+      note: "Mirrors Google's introductory rate through 2026-12-31; standard rate 1.50 / 7.50 from 2027-01-01",
+      valid_until: Date.new(2026, 12, 31)
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 14)
+    }
+  )
+
+  p.model(
     key: :open_router_claude_5_fable,
     api_name: "anthropic/claude-fable-5",
     display_name: "Anthropic Claude Fable 5 (via OpenRouter)",
@@ -160,7 +187,7 @@ provider :open_router do |p|
     key: :open_router_deepseek_v4_pro,
     api_name: "deepseek/deepseek-v4-pro-0813",
     display_name: "DeepSeek V4 Pro (via OpenRouter)",
-    pricing: { input_per_million: 0.5808, output_per_million: 1.742 },
+    pricing: { input_per_million: 0.9834, output_per_million: 2.9502 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -380,11 +407,7 @@ provider :open_router do |p|
     key: :open_router_glm_5_3,
     api_name: "z-ai/glm-5.3",
     display_name: "GLM 5.3 (via OpenRouter)",
-    pricing: {
-      input_per_million: 1.17,
-      output_per_million: 3.96,
-      note: "10% off promotional price shown on openrouter.ai as of 2026-09-01 (base 1.40 in / 4.40 out); no end date documented"
-    },
+    pricing: { input_per_million: 1.4, output_per_million: 4.4 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -405,11 +428,7 @@ provider :open_router do |p|
     key: :open_router_glm_5_3_flash,
     api_name: "z-ai/glm-5.3-flash",
     display_name: "GLM 5.3 Flash (via OpenRouter)",
-    pricing: {
-      input_per_million: 0.075,
-      output_per_million: 0.25,
-      note: "50% off promotional price shown on openrouter.ai as of 2026-09-01; no end date documented"
-    },
+    pricing: { input_per_million: 0.15, output_per_million: 0.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -740,9 +759,9 @@ provider :open_router do |p|
 
   p.model(
     key: :open_router_open_ai_gpt_oss_120b,
-    api_name: "gpt-oss-120b",
+    api_name: "openai/gpt-oss-120b",
     display_name: "OpenAI GPT-OSS 120B (via OpenRouter)",
-    pricing: { input_per_million: 0.15, output_per_million: 0.6 },
+    pricing: { input_per_million: 0.037, output_per_million: 0.17 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -849,7 +868,7 @@ provider :open_router do |p|
     key: :open_router_google_gemma_4_31b_it,
     api_name: "google/gemma-4-31b-it",
     display_name: "Google Gemma 4 31B IT (via OpenRouter)",
-    pricing: { input_per_million: 0.14, output_per_million: 0.4 },
+    pricing: { input_per_million: 0.09, output_per_million: 0.34 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -862,6 +881,50 @@ provider :open_router do |p|
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :open_router_qwen_qwen3_8_27b,
+    api_name: "qwen/qwen3.8-27b",
+    display_name: "Qwen3.8 27B (via OpenRouter)",
+    max_completion_tokens: 32_768,
+    pricing: { input_per_million: 0.214, output_per_million: 2.55 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 15)
+    }
+  )
+
+  p.model(
+    key: :open_router_meta_muse_glimmer_30b,
+    api_name: "meta/muse-glimmer-30b",
+    display_name: "Meta Muse Glimmer 30B (via OpenRouter)",
+    max_completion_tokens: 32_768,
+    pricing: { input_per_million: 0.35, output_per_million: 1.5 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 15)
     }
   )
 end

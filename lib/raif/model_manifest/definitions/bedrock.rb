@@ -2,9 +2,111 @@
 
 provider :bedrock do |p|
   p.references(
+    mantle_api: "https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions-mantle.html",
+    model_cards: "https://docs.aws.amazon.com/bedrock/latest/userguide/model-cards.html",
+    regional_lifecycle: "https://docs.aws.amazon.com/bedrock/latest/userguide/models-region-compatibility.html",
     models_doc: "https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html",
     pricing: "https://aws.amazon.com/bedrock/pricing/",
     deprecations: "https://docs.aws.amazon.com/bedrock/latest/userguide/model-lifecycle.html"
+  )
+
+  p.model(
+    key: :bedrock_claude_5_opus,
+    api_name: "anthropic.claude-opus-5",
+    display_name: "Anthropic Claude 5 Opus (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      input_per_million: 5.5,
+      output_per_million: 27.5,
+      note: "Regional inference rate including the 10% premium; global routing costs 5.00 / 25.00 per million."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: false,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 14)
+    }
+  )
+
+  p.model(
+    key: :bedrock_claude_5_1_fable,
+    api_name: "anthropic.claude-fable-5-1",
+    display_name: "Anthropic Claude Fable 5.1 (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.275,
+      input_per_million: 11.0,
+      output_per_million: 55.0,
+      note: "Regional inference rate including the 10% premium; global routing costs 10.00 / 50.00 per million."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: false,
+      native_tool_use: true,
+      forced_tool_choice: false,
+      required_tool_choice: false,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 14)
+    }
+  )
+
+  p.model(
+    key: :bedrock_grok_4_3,
+    adapter: :mantle,
+    api_name: "xai.grok-4.3",
+    display_name: "xAI Grok 4.3 (via AWS Bedrock Mantle)",
+    pricing: { cache_read_per_million: 0.2, input_per_million: 1.25, output_per_million: 2.5 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 14)
+    }
+  )
+
+  p.model(
+    key: :bedrock_grok_4_6,
+    adapter: :mantle,
+    api_name: "xai.grok-4.6",
+    display_name: "xAI Grok 4.6 (via AWS Bedrock Mantle)",
+    pricing: { cache_read_per_million: 0.55, input_per_million: 2.2, output_per_million: 6.6 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 14)
+    }
   )
 
   p.model(
@@ -255,7 +357,11 @@ provider :bedrock do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :retired,
+      retirement_date: Date.new(2026, 7, 30),
+      replacement_key: :bedrock_claude_5_sonnet,
+      migration_note: "Retired from Raif on 2026-09-14 after the US inference-profile end-of-life on 2026-07-30, the removal " \
+        "date announced in the v1.5.0 changelog; a few non-US regions still list the model. Migrate to Claude Sonnet 5."
     }
   )
 
@@ -276,7 +382,11 @@ provider :bedrock do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :retired,
+      retirement_date: Date.new(2026, 7, 30),
+      replacement_key: :bedrock_claude_5_sonnet,
+      migration_note: "Retired from Raif on 2026-09-14 after the US inference-profile end-of-life on 2026-07-30, the removal " \
+        "date announced in the v1.5.0 changelog; a few non-US regions still list the model. Migrate to Claude Sonnet 5."
     }
   )
 
@@ -292,7 +402,7 @@ provider :bedrock do |p|
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
-      images: true,
+      images: false,
       pdfs: false,
       provider_managed_tools: []
     },

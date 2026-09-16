@@ -3,7 +3,15 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::Anthropic, type: :model do
-  let(:llm){ Raif.llm(:anthropic_claude_4_1_opus) }
+  # These cassettes exercise the legacy protocol, including the JSON-tool fallback.
+  let(:llm) do
+    described_class.new(
+      key: :anthropic_legacy_protocol_fixture,
+      api_name: "claude-opus-4-1",
+      max_completion_tokens: 32_000,
+      supported_provider_managed_tools: [Raif::ModelTools::ProviderManaged::WebSearch, Raif::ModelTools::ProviderManaged::CodeExecution]
+    )
+  end
 
   let(:stubs) { Faraday::Adapter::Test::Stubs.new }
   let(:test_connection) do
@@ -17,12 +25,18 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
 
   before do
     allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
+    allow(Raif).to receive(:llm_registry).and_return(Raif.llm_registry.merge(
+      anthropic_legacy_protocol_fixture: {
+        llm_class: described_class, key: :anthropic_legacy_protocol_fixture, api_name: "claude-opus-4-1",
+        input_token_cost: 0.000015, output_token_cost: 0.000075
+      }
+    ))
   end
 
   describe "#update_model_completion" do
     let(:model_completion) do
       Raif::ModelCompletion.new(
-        llm_model_key: "anthropic_claude_4_1_opus",
+        llm_model_key: "anthropic_legacy_protocol_fixture",
         model_api_name: "claude-opus-4-1"
       )
     end
@@ -61,7 +75,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect(model_completion.completion_tokens).to eq(20)
         expect(model_completion.prompt_tokens).to eq(14)
         expect(model_completion.total_tokens).to eq(34)
-        expect(model_completion.llm_model_key).to eq("anthropic_claude_4_1_opus")
+        expect(model_completion.llm_model_key).to eq("anthropic_legacy_protocol_fixture")
         expect(model_completion.model_api_name).to eq("claude-opus-4-1")
         expect(model_completion.response_format).to eq("text")
         expect(model_completion.temperature).to eq(0.7)
@@ -86,7 +100,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect(model_completion.completion_tokens).to eq(23)
         expect(model_completion.prompt_tokens).to eq(35)
         expect(model_completion.total_tokens).to eq(58)
-        expect(model_completion.llm_model_key).to eq("anthropic_claude_4_1_opus")
+        expect(model_completion.llm_model_key).to eq("anthropic_legacy_protocol_fixture")
         expect(model_completion.model_api_name).to eq("claude-opus-4-1")
         expect(model_completion.response_format).to eq("json")
         expect(model_completion.response_id).to eq("msg_abc123")
@@ -486,7 +500,7 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     let(:model_completion) do
       Raif::ModelCompletion.new(
         messages: [{ role: "user", content: "Hello" }],
-        llm_model_key: "anthropic_claude_4_1_opus",
+        llm_model_key: "anthropic_legacy_protocol_fixture",
         model_api_name: "claude-opus-4-1",
         available_model_tools: available_model_tools,
         response_format: response_format,
@@ -1166,11 +1180,10 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     end
 
     context "with a json_response_schema but a non-supporting model" do
-      let(:llm){ Raif.llm(:anthropic_claude_4_1_opus) }
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Tell me a joke" }],
-          llm_model_key: "anthropic_claude_4_1_opus",
+          llm_model_key: "anthropic_legacy_protocol_fixture",
           model_api_name: "claude-opus-4-1",
           response_format: "json",
           source: test_task

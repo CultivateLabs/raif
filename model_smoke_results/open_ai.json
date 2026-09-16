@@ -411,7 +411,7 @@
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-09-15T18:04:21Z"
       },
       "images": {
         "claimed": true,
@@ -535,6 +535,13 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:28:51Z"
+      }
+    },
+    "open_ai_gpt_6_astra": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-15T18:04:21Z"
       }
     },
     "open_ai_o1": {
@@ -1437,6 +1444,13 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:28:51Z"
+      }
+    },
+    "open_ai_responses_gpt_6_astra": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-15T18:04:21Z"
       }
     },
     "open_ai_responses_o1": {

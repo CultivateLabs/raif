@@ -316,6 +316,13 @@
         "checked_at": "2026-09-01T22:02:00Z"
       }
     },
+    "anthropic_claude_5_1_fable": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-15T18:06:47Z"
+      }
+    },
     "anthropic_claude_5_fable": {
       "completion": {
         "claimed": true,
@@ -359,6 +366,13 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:02:00Z"
+      }
+    },
+    "anthropic_claude_5_opus": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-15T18:06:47Z"
       }
     },
     "anthropic_claude_5_sonnet": {

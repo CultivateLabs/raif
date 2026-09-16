@@ -43,6 +43,8 @@ RSpec.describe Raif::ModelManifest::RegistryData do
           temperature: true,
           structured_outputs: true,
           native_tool_use: true,
+          forced_tool_choice: true,
+          required_tool_choice: true,
           streaming: true,
           batch_inference: true,
           images: false,
@@ -65,6 +67,19 @@ RSpec.describe Raif::ModelManifest::RegistryData do
       # anthropic_old_model's capabilities equal the Anthropic adapter defaults on every field,
       # so no settings entry is emitted at all.
       expect(config_for.call(:anthropic_old_model)[:model_provider_settings]).to be_nil
+    end
+
+    it "translates tool-choice constraints independently into runtime settings" do
+      entry = manifest.llm_entries.find { |e| e.key == :open_ai_gpt_test }.dup
+      entry.capabilities = entry.capabilities.merge(forced_tool_choice: false, required_tool_choice: true)
+      settings = described_class.config_for(entry).fetch(:model_provider_settings)
+      expect(settings).to include(supports_forced_tool_choice: false)
+      expect(settings).not_to have_key(:supports_required_tool_choice)
+
+      entry.capabilities = entry.capabilities.merge(forced_tool_choice: true, required_tool_choice: false)
+      settings = described_class.config_for(entry).fetch(:model_provider_settings)
+      expect(settings).to include(supports_required_tool_choice: false)
+      expect(settings).not_to have_key(:supports_forced_tool_choice)
     end
 
     it "omits retired entries" do
