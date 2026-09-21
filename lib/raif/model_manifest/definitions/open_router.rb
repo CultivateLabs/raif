@@ -927,4 +927,26 @@ provider :open_router do |p|
       added_on: Date.new(2026, 9, 15)
     }
   )
+
+  p.model(
+    key: :open_router_qwen_qwen3_8_max,
+    api_name: "qwen/qwen3.8-max-0902",
+    display_name: "Qwen3.8 Max (via OpenRouter)",
+    max_completion_tokens: 131_072,
+    pricing: { cache_read_per_million: 0.25, input_per_million: 2.0, output_per_million: 6.0 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 21)
+    }
+  )
 end

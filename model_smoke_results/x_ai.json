@@ -160,6 +160,38 @@
         "result": "pass",
         "checked_at": "2026-08-26T16:09:36Z"
       }
+    },
+    "x_ai_grok_4_7": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:38:29Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:38:29Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:38:29Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:39:37Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:38:29Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:38:29Z"
+      }
     }
   }
 }

@@ -163,7 +163,10 @@ provider :google do |p|
       provider_managed_tools: %i[web_search code_execution]
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 9, 21),
+      retirement_date: Date.new(2027, 5, 7),
+      replacement_key: :google_gemini_3_5_flash_lite
     }
   )
 

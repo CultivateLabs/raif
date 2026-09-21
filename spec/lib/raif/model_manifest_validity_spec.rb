@@ -122,6 +122,17 @@ RSpec.describe "model manifest definitions validity" do
           target = entries.find { |e| e.key == replacement }
           expect(target).to be_present, "replacement_key #{replacement} not found in manifest"
           expect(target).to be_active, "replacement for a deprecated model must be active" if entry.deprecated?
+
+          # Raif::Llm#deprecation_message prints replacement_key and drops migration_note
+          # whenever both are set, so a cross-endpoint replacement silently moves a host app
+          # to the other OpenAI API and no prose can correct it. Each endpoint of a
+          # dual-endpoint model points at a replacement on its own API via an endpoint
+          # lifecycle override; see gpt_5 in definitions/open_ai.rb.
+          if entry.endpoint && target&.endpoint
+            expect(target.endpoint).to eq(entry.endpoint),
+              "#{entry.key} (#{entry.endpoint}) points replacement_key at #{replacement} (#{target.endpoint}); " \
+              "override the endpoint lifecycle so each endpoint replaces onto its own API"
+          end
         end
       end
     end
