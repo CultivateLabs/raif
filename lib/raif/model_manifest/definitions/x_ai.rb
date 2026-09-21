@@ -12,6 +12,7 @@ provider :x_ai do |p|
     api_name: "grok-4.7",
     display_name: "xAI Grok 4.7",
     pricing: {
+      cache_read_per_million: 0.5,
       input_per_million: 2.0,
       output_per_million: 6.0,
       note: "Long context surcharge: prompts of 200K tokens or more bill the whole request at $4.00 input and $12.00 output " \

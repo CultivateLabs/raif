@@ -575,6 +575,7 @@ provider :bedrock do |p|
     key: :bedrock_gpt_5_6_sol,
     api_name: "openai.gpt-5.6-sol",
     display_name: "OpenAI GPT-5.6 Sol (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
     pricing: {
       cache_read_per_million: 0.44,
       input_per_million: 4.4,
@@ -602,6 +603,7 @@ provider :bedrock do |p|
     key: :bedrock_gpt_5_6_terra,
     api_name: "openai.gpt-5.6-terra",
     display_name: "OpenAI GPT-5.6 Terra (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
     pricing: {
       cache_read_per_million: 0.22,
       input_per_million: 2.2,
@@ -629,6 +631,7 @@ provider :bedrock do |p|
     key: :bedrock_gpt_5_6_luna,
     api_name: "openai.gpt-5.6-luna",
     display_name: "OpenAI GPT-5.6 Luna (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
     pricing: {
       cache_read_per_million: 0.022,
       input_per_million: 0.22,

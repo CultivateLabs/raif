@@ -123,6 +123,8 @@ The Mantle base URL is derived from `aws_bedrock_region` when read. An explicit 
 
 Grok 4.6's documented Mantle region is `us-west-2`; configure that region explicitly, or use `AWS_REGION=us-west-2` with `bin/smoke`. The default `aws_bedrock_region` is `us-east-1`, which does not serve Grok 4.6: with the default region the model still registers and appears in model lists, and every request to it fails with a client error from the Mantle endpoint. Mantle uses regional model IDs without the Converse inference-profile prefix. This adapter supports streaming, function tools, images, and native JSON schemas. It does not implement batch inference, PDFs, or provider-managed tools. See the [AWS Grok 4.6 model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-xai-grok-4-6.html) and [Mantle API documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions-mantle.html).
 
+DeepSeek V3.1 (`bedrock_deepseek_v3_1`) has the same region trap on the Converse adapter. AWS offers `deepseek.v3-v1:0` in `us-west-2` and `us-east-2` but not in `us-east-1`, the default `aws_bedrock_region`. With the default region the model still registers and appears in model lists, and every request to it fails with `ValidationException: The provided model identifier is invalid`. Set `config.aws_bedrock_region` to `us-west-2` or `us-east-2`, or use `AWS_REGION=us-west-2` with `bin/smoke`. See the [AWS DeepSeek-V3.1 model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-deepseek-deepseek-v3-1.html).
+
 ## OpenRouter
 [OpenRouter](https://openrouter.ai/){:target="_blank"} is a unified API that provides access to multiple AI models from different providers including Anthropic, Meta, Google, and more.
 

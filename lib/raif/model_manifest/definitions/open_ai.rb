@@ -278,11 +278,12 @@ provider :open_ai do |p|
     pricing: { input_per_million: 1.75, output_per_million: 14.0 },
     lifecycle: {
       status: :retired,
-      replacement_key: :open_ai_gpt_5_6_sol,
+      replacement_key: :open_ai_responses_gpt_5_6_sol,
       migration_note: "No general-purpose gpt-5.3 API model was published; OpenAI only offered gpt-5.3-codex and the shut-down gpt-5.3-chat-latest."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_5_6_sol },
         capabilities: {
           temperature: false,
           structured_outputs: true,
@@ -621,11 +622,12 @@ provider :open_ai do |p|
       status: :deprecated,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
-      replacement_key: :open_ai_gpt_5_6_terra,
-      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_terra."
+      replacement_key: :open_ai_responses_gpt_5_6_terra,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-terra."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_5_6_terra },
         capabilities: {
           temperature: true,
           structured_outputs: false,
@@ -733,11 +735,12 @@ provider :open_ai do |p|
       status: :deprecated,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
-      replacement_key: :open_ai_gpt_5_6_luna,
-      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_luna."
+      replacement_key: :open_ai_responses_gpt_5_6_luna,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-luna."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_5_6_luna },
         capabilities: {
           temperature: true,
           structured_outputs: true,
@@ -773,11 +776,12 @@ provider :open_ai do |p|
       status: :deprecated,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
-      replacement_key: :open_ai_gpt_5_6_sol,
-      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_sol."
+      replacement_key: :open_ai_responses_gpt_5_6_sol,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_5_6_sol },
         capabilities: {
           temperature: false,
           structured_outputs: true,
@@ -854,11 +858,12 @@ provider :open_ai do |p|
       status: :deprecated,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
-      replacement_key: :open_ai_gpt_5_6_sol,
-      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_sol."
+      replacement_key: :open_ai_responses_gpt_5_6_sol,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_5_6_sol },
         capabilities: {
           temperature: false,
           structured_outputs: true,
@@ -894,11 +899,12 @@ provider :open_ai do |p|
       status: :deprecated,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
-      replacement_key: :open_ai_gpt_5_6_terra,
-      migration_note: "Responses API users should move to open_ai_responses_gpt_5_6_terra."
+      replacement_key: :open_ai_responses_gpt_5_6_terra,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-terra."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_5_6_terra },
         capabilities: {
           temperature: false,
           structured_outputs: true,
