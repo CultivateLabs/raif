@@ -1251,6 +1251,38 @@
         "result": "pass",
         "checked_at": "2026-09-16T13:14:10Z"
       }
+    },
+    "open_router_qwen_qwen3_8_max": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:37:20Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:37:20Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:37:20Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:37:20Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:37:20Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-21T18:37:20Z"
+      }
     }
   }
 }

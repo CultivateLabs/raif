@@ -542,4 +542,184 @@ provider :bedrock do |p|
       status: :active
     }
   )
+
+  p.model(
+    key: :bedrock_gpt_6_astra,
+    api_name: "openai.gpt-6-astra",
+    display_name: "OpenAI GPT-6 Astra (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 1.1,
+      input_per_million: 11.0,
+      output_per_million: 55.0,
+      note: "Regional and US geo inference rate including the 10% fee; global routing costs 10.00 / 50.00 per million. Above 272K input tokens, " \
+        "the full request costs 22.00 / 82.50 per million."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 21)
+    }
+  )
+
+  p.model(
+    key: :bedrock_gpt_5_6_sol,
+    api_name: "openai.gpt-5.6-sol",
+    display_name: "OpenAI GPT-5.6 Sol (via AWS Bedrock)",
+    pricing: {
+      cache_read_per_million: 0.44,
+      input_per_million: 4.4,
+      output_per_million: 22.0,
+      note: "Regional and US geo inference rate including the 10% fee; global routing costs 4.00 / 20.00 per million. Above 272K input tokens, the " \
+        "full request costs 8.80 / 33.00 per million."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 21)
+    }
+  )
+
+  p.model(
+    key: :bedrock_gpt_5_6_terra,
+    api_name: "openai.gpt-5.6-terra",
+    display_name: "OpenAI GPT-5.6 Terra (via AWS Bedrock)",
+    pricing: {
+      cache_read_per_million: 0.22,
+      input_per_million: 2.2,
+      output_per_million: 13.2,
+      note: "Regional and US geo inference rate including the 10% fee; global routing costs 2.00 / 12.00 per million. Above 272K input tokens, the " \
+        "full request costs 4.40 / 19.80 per million."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 21)
+    }
+  )
+
+  p.model(
+    key: :bedrock_gpt_5_6_luna,
+    api_name: "openai.gpt-5.6-luna",
+    display_name: "OpenAI GPT-5.6 Luna (via AWS Bedrock)",
+    pricing: {
+      cache_read_per_million: 0.022,
+      input_per_million: 0.22,
+      output_per_million: 1.32,
+      note: "Regional and US geo inference rate including the 10% fee; global routing costs 0.20 / 1.20 per million. Above 272K input tokens, the " \
+        "full request costs 0.44 / 1.98 per million."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 21)
+    }
+  )
+
+  p.model(
+    key: :bedrock_gpt_oss_safeguard_120b,
+    api_name: "openai.gpt-oss-safeguard-120b",
+    display_name: "OpenAI GPT-OSS Safeguard 120B (via AWS Bedrock)",
+    max_completion_tokens: 32_768,
+    pricing: { input_per_million: 0.15, output_per_million: 0.6 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 21)
+    }
+  )
+
+  p.model(
+    key: :bedrock_gpt_oss_safeguard_20b,
+    api_name: "openai.gpt-oss-safeguard-20b",
+    display_name: "OpenAI GPT-OSS Safeguard 20B (via AWS Bedrock)",
+    max_completion_tokens: 32_768,
+    pricing: { input_per_million: 0.07, output_per_million: 0.2 },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 21)
+    }
+  )
+
+  p.model(
+    key: :bedrock_deepseek_v3_1,
+    api_name: "deepseek.v3-v1:0",
+    display_name: "DeepSeek V3.1 (via AWS Bedrock)",
+    max_completion_tokens: 8192,
+    pricing: {
+      input_per_million: 0.58,
+      output_per_million: 1.68,
+      note: "Standard on-demand rate in US West (Oregon). Bedrock does not offer this model in us-east-1, raif's default aws_bedrock_region, so " \
+        "set the region to us-west-2 or us-east-2 before using this key."
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: false,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 21)
+    }
+  )
 end
