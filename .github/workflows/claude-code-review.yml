@@ -42,7 +42,7 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@v1.0.223
+        uses: anthropics/claude-code-action@v1.0.231
         with:
           # Attribute the review comments to the real claude[bot] account (209825114)
           # rather than github-actions[bot] (the action's default bot_id of 41898282).
