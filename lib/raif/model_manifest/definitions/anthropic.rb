@@ -8,6 +8,30 @@ provider :anthropic do |p|
   )
 
   p.model(
+    key: :anthropic_claude_5_5_opus,
+    api_name: "claude-opus-5-5",
+    display_name: "Anthropic Claude 5.5 Opus",
+    max_completion_tokens: 128_000,
+    pricing: { cache_read_per_million: 0.2, input_per_million: 4.0, output_per_million: 20.0 },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      forced_tool_choice: false,
+      required_tool_choice: false,
+      streaming: true,
+      batch_inference: true,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: %i[web_search code_execution]
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 22)
+    }
+  )
+
+  p.model(
     key: :anthropic_claude_5_opus,
     api_name: "claude-opus-5",
     display_name: "Anthropic Claude 5 Opus",

@@ -11,6 +11,35 @@ provider :bedrock do |p|
   )
 
   p.model(
+    key: :bedrock_claude_5_5_opus,
+    api_name: "anthropic.claude-opus-5-5",
+    display_name: "Anthropic Claude 5.5 Opus (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.22,
+      input_per_million: 4.4,
+      output_per_million: 22.0,
+      note: "Regional inference rate including the 10% premium; global routing costs 4.00 / 20.00 per million."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: false,
+      native_tool_use: true,
+      forced_tool_choice: false,
+      required_tool_choice: false,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 22)
+    }
+  )
+
+  p.model(
     key: :bedrock_claude_5_opus,
     api_name: "anthropic.claude-opus-5",
     display_name: "Anthropic Claude 5 Opus (via AWS Bedrock)",

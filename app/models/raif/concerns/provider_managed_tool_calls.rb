@@ -24,6 +24,12 @@ module Raif::Concerns::ProviderManagedToolCalls
     end
   end
 
+  # Not memoized: the blank-response guard re-checks the same record after each retry,
+  # and a memoized empty result would hide output from a later attempt.
+  def provider_managed_tool_output?
+    extract_provider_managed_tool_calls.any?
+  end
+
   # Returns citations with URLs sanitized to only allow http/https schemes.
   def sanitized_citations
     @sanitized_citations ||= Array(citations).map do |citation|

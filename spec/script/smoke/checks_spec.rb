@@ -507,6 +507,28 @@ RSpec.describe Smoke::Checks do
       expect(result.fetch("temperature")).to include(status: :consistent, detail: include("Unsupported value"))
     end
 
+    # Production OpenAI Responses rejection body as of 2026-09-22 (gpt-6-sol, gpt-6-luna).
+    it "classifies the OpenAI Responses temperature rejection with a null code as :consistent" do
+      stub_forced_llm_raising(bad_request_error(openai_rejection_body(
+        param: "temperature", code: nil, message: "Unsupported parameter: 'temperature' is not supported with this model."
+      )))
+
+      result = described_class.run_for(claimed_false_entry, only: "temperature")
+
+      expect(result.fetch("temperature")).to include(status: :consistent, detail: include("Unsupported parameter"))
+    end
+
+    it "does not classify a null-code OpenAI error naming a different param (stays :fail)" do
+      result = described_class.send(
+        :classify_claimed_false_error, "temperature",
+        bad_request_error(openai_rejection_body(
+          param: "reasoning_effort", code: nil, message: "Function tools with reasoning_effort are not supported for gpt-6-sol."
+        ))
+      )
+
+      expect(result[:status]).to eq(:fail)
+    end
+
     it "classifies an Anthropic invalid_request_error naming response_format as unsupported structured_outputs as :consistent" do
       stub_forced_llm_raising(bad_request_error(anthropic_rejection_body("response_format is not supported for this model")))
 
@@ -586,6 +608,17 @@ RSpec.describe Smoke::Checks do
         result = described_class.run_for(claimed_false_entry, only: "structured_outputs")
 
         expect(result.fetch("structured_outputs")).to include(status: :consistent, detail: include("outputConfig"))
+      end
+
+      # Production rejection as of 2026-09-22 (bedrock_claude_5_5_opus).
+      it "classifies the Anthropic output_config.format rejection as :consistent for structured_outputs" do
+        stub_forced_llm_raising(bedrock_validation_exception(
+          "The model returned the following errors: output_config.format: Extra inputs are not permitted"
+        ))
+
+        result = described_class.run_for(claimed_false_entry, only: "structured_outputs")
+
+        expect(result.fetch("structured_outputs")).to include(status: :consistent, detail: include("output_config.format"))
       end
 
       it "classifies a ValidationException naming temperature as unsupported as :consistent" do

@@ -74,6 +74,14 @@ module Smoke
         lambda do |parsed|
           error = openai_unsupported_parameter_error(parsed)
           error && (error["param"].to_s.match?(/temperature/i) || error["message"].to_s.match?(/temperature/i))
+        end,
+        # OpenAI Responses as of 2026-09-22 sends `code: null` for the same rejection:
+        # {"error"=>{"message"=>"Unsupported parameter: 'temperature' is not supported with this model.",
+        #  "type"=>"invalid_request_error","param"=>"temperature","code"=>nil}}
+        lambda do |parsed|
+          error = parsed.is_a?(Hash) ? parsed["error"] : nil
+          error.is_a?(Hash) && error["code"].nil? && error["param"] == "temperature" &&
+            error["message"].to_s.match?(/unsupported parameter|not supported/i)
         end
       ],
       "structured_outputs" => [
@@ -102,7 +110,10 @@ module Smoke
       "structured_outputs" => [
         lambda do |message|
           message.match?(/outputConfig|structured output|response format/i) && message.match?(/doesn't support|not support|unsupported/i)
-        end
+        end,
+        # Anthropic models on Converse as of 2026-09-22 pass the model's own schema error through:
+        # "The model returned the following errors: output_config.format: Extra inputs are not permitted"
+        ->(message) { message.match?(/output_config\.format/) && message.match?(/Extra inputs are not permitted/) }
       ]
     }.freeze
 

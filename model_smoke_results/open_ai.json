@@ -544,6 +544,60 @@
         "checked_at": "2026-09-15T18:04:21Z"
       }
     },
+    "open_ai_gpt_6_luna": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:45:59Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:45:59Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:45:59Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:45:59Z"
+      }
+    },
+    "open_ai_gpt_6_sol": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:45:59Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:45:59Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:45:59Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:45:59Z"
+      }
+    },
     "open_ai_o1": {
       "completion": {
         "claimed": true,
@@ -1451,6 +1505,108 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-15T18:04:21Z"
+      }
+    },
+    "open_ai_responses_gpt_6_luna": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:46:52Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-09-22T18:46:52Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      }
+    },
+    "open_ai_responses_gpt_6_sol": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:46:52Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-09-22T18:46:52Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-22T18:36:29Z"
       }
     },
     "open_ai_responses_o1": {
