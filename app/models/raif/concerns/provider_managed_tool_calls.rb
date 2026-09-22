@@ -24,6 +24,16 @@ module Raif::Concerns::ProviderManagedToolCalls
     end
   end
 
+  # True when a provider-managed tool produced a generated image. Unlike search or code
+  # execution, whose text follows in a message, the image is the response on its own.
+  # Not memoized: the blank-response guard re-checks the same record after each retry,
+  # and a memoized empty result would hide output from a later attempt.
+  def provider_managed_image_output?
+    extract_provider_managed_tool_calls.any? do |tool_call|
+      tool_call["tool_name"] == "image_generation" && tool_call.dig("raw_result", "result").present?
+    end
+  end
+
   # Returns citations with URLs sanitized to only allow http/https schemes.
   def sanitized_citations
     @sanitized_citations ||= Array(citations).map do |citation|

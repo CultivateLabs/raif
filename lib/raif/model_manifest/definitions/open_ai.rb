@@ -27,7 +27,93 @@ provider :open_ai do |p|
         capabilities: {
           temperature: false,
           structured_outputs: true,
+          native_tool_use: false,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: false,
+          provider_managed_tools: []
+        }
+      },
+      responses: {
+        capabilities: {
+          temperature: false,
+          structured_outputs: true,
           native_tool_use: true,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: true,
+          provider_managed_tools: %i[web_search code_execution image_generation]
+        }
+      }
+    }
+  )
+
+  p.model(
+    key_base: :gpt_6_sol,
+    api_name: "gpt-6-sol",
+    display_name: "OpenAI GPT-6 Sol",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.2,
+      input_per_million: 2.0,
+      output_per_million: 10.0,
+      note: "Above 272K input tokens, input and cache rates double to 4.00 input / 0.40 cached input per million; output is unchanged."
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 22)
+    },
+    endpoints: {
+      completions: {
+        capabilities: {
+          temperature: false,
+          structured_outputs: true,
+          native_tool_use: false,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: false,
+          provider_managed_tools: []
+        }
+      },
+      responses: {
+        capabilities: {
+          temperature: false,
+          structured_outputs: true,
+          native_tool_use: true,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: true,
+          provider_managed_tools: %i[web_search code_execution image_generation]
+        }
+      }
+    }
+  )
+
+  p.model(
+    key_base: :gpt_6_luna,
+    api_name: "gpt-6-luna",
+    display_name: "OpenAI GPT-6 Luna",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.01,
+      input_per_million: 0.1,
+      output_per_million: 0.5,
+      note: "Above 272K input tokens, input and cache rates double to 0.20 input / 0.02 cached input per million; output is unchanged."
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 9, 22)
+    },
+    endpoints: {
+      completions: {
+        capabilities: {
+          temperature: false,
+          structured_outputs: true,
+          native_tool_use: false,
           streaming: true,
           batch_inference: true,
           images: true,

@@ -1154,4 +1154,85 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
       expect(parameters).not_to have_key(:parallel_tool_calls)
     end
   end
+
+  describe "#ensure_model_completion_present!" do
+    let(:image_only_response) do
+      {
+        "id" => "resp_123",
+        "status" => "completed",
+        "output" => [
+          {
+            "id" => "ig_123",
+            "type" => "image_generation_call",
+            "status" => "completed",
+            "result" => "iVBORw0KGgo="
+          }
+        ],
+        "usage" => { "input_tokens" => 10, "output_tokens" => 5, "total_tokens" => 15 }
+      }
+    end
+
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        llm_model_key: "open_ai_responses_gpt_4o",
+        model_api_name: "gpt-4o",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::ImageGeneration]
+      )
+    end
+
+    it "accepts a response whose only output is a provider-managed image generation call" do
+      llm.send(:update_model_completion, model_completion, image_only_response)
+
+      expect(model_completion.raw_response).to be_blank
+      expect do
+        llm.send(:ensure_model_completion_present!, model_completion)
+      end.not_to raise_error
+    end
+
+    it "accepts provider-managed output on a retry after a blank first attempt" do
+      llm.send(:update_model_completion, model_completion, image_only_response.merge("output" => []))
+      expect do
+        llm.send(:ensure_model_completion_present!, model_completion)
+      end.to raise_error(Raif::Errors::BlankResponseError)
+
+      llm.send(:update_model_completion, model_completion, image_only_response)
+      expect do
+        llm.send(:ensure_model_completion_present!, model_completion)
+      end.not_to raise_error
+    end
+
+    it "still raises for a response with no text, tool calls, or provider-managed output" do
+      llm.send(:update_model_completion, model_completion, image_only_response.merge("output" => []))
+
+      expect do
+        llm.send(:ensure_model_completion_present!, model_completion)
+      end.to raise_error(Raif::Errors::BlankResponseError)
+    end
+
+    it "still raises for an image generation call with no result" do
+      output = [{ "id" => "ig_123", "type" => "image_generation_call", "status" => "in_progress" }]
+      llm.send(:update_model_completion, model_completion, image_only_response.merge("output" => output))
+
+      expect do
+        llm.send(:ensure_model_completion_present!, model_completion)
+      end.to raise_error(Raif::Errors::BlankResponseError)
+    end
+
+    it "still raises for a response whose only output is a web search or code interpreter call" do
+      model_completion.available_model_tools = [
+        Raif::ModelTools::ProviderManaged::WebSearch,
+        Raif::ModelTools::ProviderManaged::CodeExecution
+      ]
+      output = [
+        { "id" => "ws_123", "type" => "web_search_call", "status" => "completed", "action" => { "query" => "raif" } },
+        { "id" => "ci_123", "type" => "code_interpreter_call", "status" => "completed", "code" => "print(1)" }
+      ]
+      llm.send(:update_model_completion, model_completion, image_only_response.merge("output" => output))
+
+      expect(model_completion.provider_managed_tool_calls.map { |call| call["tool_name"] }).to eq(["web_search", "code_execution"])
+      expect do
+        llm.send(:ensure_model_completion_present!, model_completion)
+      end.to raise_error(Raif::Errors::BlankResponseError)
+    end
+  end
 end
