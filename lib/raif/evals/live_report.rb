@@ -38,6 +38,7 @@ module Raif
         @durations = []
         @stopped = nil
         @disabled = false
+        @discarded = false
         # Workers start and finish executions concurrently. One lock around render-and-write keeps
         # two rewrites from racing on the temporary file, and keeps the running list consistent.
         @mutex = Mutex.new
@@ -78,7 +79,7 @@ module Raif
       # The last rewrite of a run that ended without completing its plan. It carries no reload tag,
       # so the page stops refreshing a run that is no longer there.
       def stop!(reason:, resume_command: nil)
-        synchronized_publish do
+        synchronized_publish(final: true) do
           @running.clear
           @stopped = { reason: reason, resume_command: resume_command }
         end
@@ -88,13 +89,13 @@ module Raif
       # the guard in #publish, since the results file is already written and a report that fails
       # to render is no reason to fail the run. Returns whether the report was written.
       def complete!(&render_report)
-        @mutex.synchronize { publish(&render_report) }
+        @mutex.synchronize { publish(final: true, &render_report) }
       end
 
       # For a run that stopped before it recorded anything, whose run log is deleted with it.
       def discard!
         @mutex.synchronize do
-          @disabled = true
+          @discarded = true
           FileUtils.rm_f(path)
         end
       end
@@ -281,8 +282,9 @@ module Raif
         value >= 1 ? format("$%.2f", value) : format("$%.4f", value)
       end
 
+      # Read once: the page is rendered on every execution start and finish.
       def stylesheet
-        File.read(RunReport::STYLESHEET_PATH)
+        @stylesheet ||= File.read(RunReport::STYLESHEET_PATH)
       end
 
       # Model output reaches this page as expectation metadata and judge reasoning.
@@ -299,23 +301,28 @@ module Raif
     private
 
       # The block updates state; the page is then rendered from it and written, all under the lock.
-      def synchronized_publish
+      def synchronized_publish(final: false)
         @mutex.synchronize do
           yield
-          publish { render }
+          publish(final: final) { render }
         end
       end
 
       # A page that fails to render or write must not cost the run, which is spending money on every
-      # execution. The first failure is reported once and the page is left as it was.
-      def publish
-        return false if @disabled
+      # execution. The first failure is reported and stops the rewrites that follow.
+      #
+      # The final write still tries once more after that: otherwise the last page to succeed stays on
+      # disk saying "Running", and keeps reloading a run that has ended.
+      def publish(final: false)
+        return false if @discarded
+        return false if @disabled && !final
 
         write(yield)
         true
       rescue StandardError => e
+        message = final ? "Could not write the final live report" : "Live report disabled for the rest of this run"
         @disabled = true
-        @output.puts Raif::Utils::Colors.yellow("\nLive report disabled for the rest of this run: #{e.class}: #{e.message}")
+        @output.puts Raif::Utils::Colors.yellow("\n#{message}: #{e.class}: #{e.message}")
         false
       end
 

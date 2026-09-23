@@ -335,12 +335,16 @@ module Raif
         @mutex.synchronize { (@results[eval_set] || []).dup }
       end
 
-      # Everything a reader on another thread needs, taken under one lock so the counts agree with
+      # Everything a reader on another thread needs, copied under one lock so the counts agree with
       # each other: a result cannot land between reading the results and reading what is outstanding.
+      # Only the copies are taken under the lock, since #record waits on it. What is outstanding is
+      # worked out from them afterwards.
       def snapshot
-        @mutex.synchronize do
-          { results: @results.transform_values(&:dup), plan: plan, outstanding: plan.outstanding(@recorded_keys) }
+        results, recorded_keys, current_plan = @mutex.synchronize do
+          [@results.transform_values(&:dup), @recorded_keys.dup, plan]
         end
+
+        { results: results, plan: current_plan, outstanding: current_plan.outstanding(recorded_keys) }
       end
 
       # Derived from the log's own path so a resumed run completes the file its first attempt

@@ -10,49 +10,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Raif eval comparison</title>
 <style>
-  :root {
-    --bg: #f7f8fa;
-    --surface: #ffffff;
-    --border: #e2e5ea;
-    --text: #23272f;
-    --muted: #6b7280;
-    --good: #1f7a4d;
-    --good-bg: #e8f5ee;
-    --bad: #b3261e;
-    --bad-bg: #fdeceb;
-    --warn: #8a5a00;
-    --warn-bg: #fdf3e2;
-    --neutral-bg: #f1f3f6;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    padding: 32px 20px 64px;
-    background: var(--bg);
-    color: var(--text);
-    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  }
-  .wrap { max-width: 960px; margin: 0 auto; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 32px 0 10px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
-  tr:last-child td { border-bottom: none; }
-  .scroll { overflow-x: auto; }
-  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
-  .bad { color: var(--bad); font-weight: 600; }
-  .warn { color: var(--warn); font-weight: 600; }
-  .good { color: var(--good); font-weight: 600; }
-  .muted { color: var(--muted); }
-  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--neutral-bg); }
-  .pill.bad { background: var(--bad-bg); }
-  .pill.warn { background: var(--warn-bg); }
-  .pill.good { background: var(--good-bg); }
+<%= stylesheet %>
   .sub td { padding-left: 28px; font-size: 13px; }
   .verdict { margin-top: 24px; font-weight: 600; }
-  .empty { color: var(--muted); font-style: italic; }
 </style>
 </head>
 <body>

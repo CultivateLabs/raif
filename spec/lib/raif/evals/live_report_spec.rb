@@ -220,10 +220,11 @@ RSpec.describe Raif::Evals::LiveReport do
       allow_any_instance_of(described_class).to receive(:write).and_raise(Errno::EACCES, "results directory")
     end
 
-    it "warns once and finishes the run" do
+    it "warns once, tries the final report once more, and finishes the run" do
       run_evals
 
       expect(output.string.scan("Live report disabled").count).to eq(1)
+      expect(output.string.scan("Could not write the final live report").count).to eq(1)
       expect(File.exist?(results_path)).to be true
       expect(output.string).not_to include("Run report written to")
     end
@@ -315,6 +316,82 @@ RSpec.describe Raif::Evals::LiveReport do
       expect(Process).not_to have_received(:spawn)
     ensure
       Raif.config.evals_open_live_report = false
+    end
+  end
+
+  # The second write fails, which disables the rewrites that follow. The final write still tries,
+  # so the page does not stay on "Running" and reload a run that has ended.
+  context "when a write fails partway through the run" do
+    def fail_second_write
+      calls = 0
+      allow_any_instance_of(described_class).to receive(:write).and_wrap_original do |original, html|
+        calls += 1
+        raise Errno::ENOSPC, "results directory" if calls == 2
+
+        original.call(html)
+      end
+    end
+
+    it "still writes the full run report at the end" do
+      fail_second_write
+
+      run_evals
+
+      expect(output.string.scan("Live report disabled").count).to eq(1)
+      expect(File.read(report_path)).not_to include("http-equiv=\"refresh\"")
+      expect(File.read(report_path)).to eq(
+        Raif::Evals::RunReport.new(JSON.parse(File.read(results_path)), label: File.basename(results_path)).render
+      )
+      expect(output.string).to include("Run report written to")
+    end
+
+    context "and the run is then interrupted" do
+      let(:eval_set) do
+        Class.new(Raif::Evals::EvalSet) do
+          eval "first eval" do
+            expect("passes") { true }
+          end
+
+          eval "second eval" do
+            expect("passes") { true }
+          end
+
+          eval "third eval" do
+            raise Interrupt
+          end
+        end
+      end
+
+      it "still writes the stopped page" do
+        fail_second_write
+
+        run_evals
+
+        page = File.read(report_path)
+        expect(text(page)).to include("Stopped")
+        expect(page).not_to include("http-equiv=\"refresh\"")
+      end
+    end
+  end
+
+  context "with repeats" do
+    let(:eval_set) do
+      read_page = reader
+
+      Class.new(Raif::Evals::EvalSet) do
+        eval "fails every time" do
+          read_page.call
+          expect("passes") { false }
+        end
+      end
+    end
+
+    it "names the repeat of each failure, on the live page and in the full report" do
+      run_evals(repeats: 2)
+
+      expect(text(pages.last)).to include("(repeat 1)")
+      expect(text(File.read(report_path))).to include("(repeat 1)")
+      expect(text(File.read(report_path))).to include("(repeat 2)")
     end
   end
 

@@ -294,7 +294,7 @@ Some specifics worth knowing:
 - **A log written without a plan is refused.** Its finished work can't be told from its outstanding work, so there is no safe way to finish it. Start a new run.
 - **A run that stopped before recording anything deletes its own log**, since there is nothing there to resume.
 
-If you keep result files in version control, add `raif_evals/results/*.partial.jsonl` to your `.gitignore` - a log is transient, and the run it belongs to either finishes and replaces it or gets resumed.
+If you keep result files in version control, add `raif_evals/results/*.partial.jsonl` to your `.gitignore` - a log is transient, and the run it belongs to either finishes and replaces it or gets resumed. Each run also writes a [live report](#watching-a-run-in-the-browser) beside it as `raif_evals/results/<run name>.html`, which becomes the full run report when the run completes. Keep it next to its results file, or add `raif_evals/results/*.html` to your `.gitignore` - `evals:report` can write it again from the results file at any time.
 
 ## Watching a Run in the Browser
 
@@ -326,7 +326,7 @@ Raif.configure do |config|
 end
 ```
 
-`--live-report` turns it back on for one run. The page never costs a run: if it cannot be written, the run prints one warning and carries on without it.
+With the page off, a run writes no HTML at all, including the full report at the end; run [`evals:report`](#reading-one-run) on the results file to get it. `--live-report` turns it back on for one run. The page never costs a run: if it cannot be written, the run prints one warning and carries on without it.
 
 To have the page open in your browser when the run starts, pass `--open-live-report`, or set `RAIF_EVAL_OPEN_LIVE_REPORT=1` in your shell to open it for every run, or set it in your initializer:
 

@@ -294,7 +294,8 @@ Raif.configure do |config|
   # Whether `raif evals` writes a live HTML report beside the run log. The page reloads itself while
   # the run continues and shows progress, failures, and the executions running now. When the run
   # completes, the full run report replaces it at the same path. Defaults to true; `raif evals
-  # --no-live-report` disables it for one run.
+  # --no-live-report` disables it for one run. Disabled, a run writes no HTML at all: run
+  # `raif evals:report` on the results file for the full report.
   # config.evals_live_report = true
 
   # Whether `raif evals` opens the live report in your browser when the run starts. Defaults to

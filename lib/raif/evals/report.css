@@ -1,5 +1,5 @@
-/* Shared by run_report.html.erb and live_report.html.erb, so the live page and the report that
-   replaces it look the same. */
+/* Shared by run_report.html.erb, live_report.html.erb and comparison_report.html.erb, so every
+   eval page has one palette and the live page looks like the report that replaces it. */
 :root {
   --bg: #f7f8fa;
   --surface: #ffffff;
