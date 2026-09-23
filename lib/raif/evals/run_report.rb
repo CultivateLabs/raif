@@ -15,6 +15,7 @@ module Raif
     # Raif::Evals::Run holds in memory renders the same as the file it writes.
     class RunReport
       TEMPLATE_PATH = File.expand_path("run_report.html.erb", __dir__)
+      STYLESHEET_PATH = File.expand_path("report.css", __dir__)
 
       FORMATS = ["html"].freeze
 
@@ -23,6 +24,21 @@ module Raif
       COMPLETION_TEXT_KEYS = ["system_prompt", "messages", "response", "response_array", "response_tool_calls"].freeze
 
       attr_reader :payload, :label
+
+      # "45s", "12m 04s", "1h 03m". Shared with Raif::Evals::LiveReport, so the two pages agree.
+      def self.format_duration(seconds)
+        seconds = seconds.to_i
+        hours, remainder = seconds.divmod(3600)
+        minutes, secs = remainder.divmod(60)
+
+        if hours.positive?
+          format("%dh %02dm", hours, minutes)
+        elsif minutes.positive?
+          format("%dm %02ds", minutes, secs)
+        else
+          "#{secs}s"
+        end
+      end
 
       def initialize(payload, label: nil)
         @payload = stringify(payload)
@@ -38,6 +54,11 @@ module Raif
 
       def html
         ERB.new(File.read(TEMPLATE_PATH), trim_mode: "-").result(binding)
+      end
+
+      # Inlined rather than linked: the page is a single file that people forward.
+      def stylesheet
+        File.read(STYLESHEET_PATH)
       end
 
       def summary
@@ -92,6 +113,7 @@ module Raif
                   "eval_set" => eval_set_name,
                   "description" => result["description"],
                   "case_id" => result["case_id"],
+                  "run_index" => result["run_index"],
                   "expectation" => expectation
                 }
               end
@@ -113,6 +135,44 @@ module Raif
 
       def total_cost
         summary["total_cost"].to_f
+      end
+
+      def total_evals
+        summary["total_evals"].to_i
+      end
+
+      def passed_evals
+        summary["passed_evals"].to_i
+      end
+
+      def errored_evals
+        summary["errored_evals"].to_i
+      end
+
+      def failed_evals
+        total_evals - passed_evals - errored_evals
+      end
+
+      # Of the evals that measured something: errored ones leave the denominator, as they do in
+      # every pass rate Raif reports. nil when nothing was measured.
+      def percent_of_measured(count)
+        measured = total_evals - errored_evals
+        return if measured.zero?
+
+        (count * 100.0 / measured).round
+      end
+
+      # A width for the progress bar, as a share of every eval in the run.
+      def percent_of_total(count)
+        return 0 if total_evals.zero?
+
+        (count * 100.0 / total_evals).round(3)
+      end
+
+      # "-" for a results file written before the elapsed time was recorded.
+      def elapsed
+        seconds = payload["elapsed_seconds"]
+        seconds.nil? ? "-" : self.class.format_duration(seconds)
       end
 
       def completion_text(completion)

@@ -5,87 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Raif eval run</title>
 <style>
-  :root {
-    --bg: #f7f8fa;
-    --surface: #ffffff;
-    --border: #e2e5ea;
-    --text: #23272f;
-    --muted: #6b7280;
-    --good: #1f7a4d;
-    --good-bg: #e8f5ee;
-    --bad: #b3261e;
-    --bad-bg: #fdeceb;
-    --warn: #8a5a00;
-    --warn-bg: #fdf3e2;
-    --neutral-bg: #f1f3f6;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    padding: 32px 20px 64px;
-    background: var(--bg);
-    color: var(--text);
-    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  }
-  .wrap { max-width: 960px; margin: 0 auto; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 32px 0 10px; }
-  h3 { font-size: 14px; margin: 18px 0 6px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
-  .card + .card { margin-top: 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
-  tr:last-child td { border-bottom: none; }
-  .scroll { overflow-x: auto; }
-  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
-  .bad { color: var(--bad); font-weight: 600; }
-  .warn { color: var(--warn); font-weight: 600; }
-  .good { color: var(--good); font-weight: 600; }
-  .muted { color: var(--muted); }
-  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--neutral-bg); }
-  .pill.bad { background: var(--bad-bg); color: var(--bad); }
-  .pill.warn { background: var(--warn-bg); color: var(--warn); }
-  .pill.good { background: var(--good-bg); color: var(--good); }
-  .empty { color: var(--muted); font-style: italic; }
-  .totals { display: flex; flex-wrap: wrap; gap: 10px 28px; }
-  .totals div { min-width: 120px; }
-  .totals .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-  .totals .v { font-size: 19px; font-weight: 600; }
-  /* Header values are model keys and timestamps, not figures, so they need a smaller size. */
-  .totals.meta .v { font-size: 15px; }
-  .totals.meta > div { min-width: 150px; }
-  .selection { margin: 14px 0 0; font-size: 13px; }
-  details { border-top: 1px solid var(--border); padding: 8px 0; }
-  details:first-of-type { border-top: none; }
-  summary { cursor: pointer; font-size: 14px; }
-  summary::marker { color: var(--muted); }
-  .exp { margin: 8px 0 0 18px; font-size: 14px; }
-  .exp li { margin-bottom: 5px; list-style: none; }
-  .exp li::before { content: "\2717"; color: var(--bad); margin-right: 7px; }
-  .exp li.ok::before { content: "\2713"; color: var(--good); }
-  .exp li.err::before { content: "\26A0"; color: var(--warn); }
-  pre {
-    margin: 5px 0 0;
-    padding: 8px 10px;
-    background: var(--neutral-bg);
-    border-radius: 6px;
-    overflow-x: auto;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    /* anywhere, not break-word: break long unbroken tokens, not every word. */
-    overflow-wrap: anywhere;
-  }
-  /* The metadata row spans the table, so it joins the row above it. */
-  .failures tr.head td { border-bottom: none; }
-  .failures tr.detail td { padding-top: 0; }
+<%= stylesheet %>
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Raif eval run</h1>
-  <p class="muted">One run, in full. Every expectation is listed under its eval set; failures are collected at the top.</p>
 
   <div class="card">
     <div class="totals meta">
@@ -139,26 +64,34 @@
       - a partial run, so the totals below cover only what was selected.
     </p>
     <% end -%>
+
+    <% if total_evals.positive? -%>
+    <div class="progress" aria-label="<%= passed_evals %> passed, <%= failed_evals %> failed, <%= errored_evals %> errored">
+      <span class="good" style="width: <%= percent_of_total(passed_evals) %>%"></span>
+      <span class="bad" style="width: <%= percent_of_total(failed_evals) %>%"></span>
+      <span class="warn" style="width: <%= percent_of_total(errored_evals) %>%"></span>
+    </div>
+    <% end -%>
+
+    <div class="totals">
+      <div><div class="k">Completed</div><div class="v"><%= total_evals %> / <%= total_evals %></div></div>
+      <div><div class="k">Passed</div><div class="v good"><%= passed_evals %><%
+        %><% if (pct = percent_of_measured(passed_evals)) %> <span class="muted">(<%= pct %>%)</span><% end %></div></div>
+      <div><div class="k">Failed</div><div class="v <%= failed_evals.positive? ? "bad" : "" %>"><%= failed_evals %><%
+        %><% if (pct = percent_of_measured(failed_evals)) %> <span class="muted">(<%= pct %>%)</span><% end %></div></div>
+      <div><div class="k">Errored</div><div class="v <%= errored_evals.positive? ? "warn" : "" %>"><%= errored_evals %></div></div>
+      <div><div class="k">Elapsed</div><div class="v"><%= h elapsed %></div></div>
+    </div>
   </div>
 
   <h2>Totals</h2>
   <div class="card">
     <div class="totals">
       <div>
-        <div class="k">Evals passed</div>
-        <div class="v <%= summary["passed_evals"] == summary["total_evals"] ? "good" : "bad" %>">
-          <%= h summary["passed_evals"] %> / <%= h summary["total_evals"] %>
-        </div>
-      </div>
-      <div>
         <div class="k">Expectations passed</div>
         <div class="v <%= summary["passed_expectations"] == summary["total_expectations"] ? "good" : "bad" %>">
           <%= h summary["passed_expectations"] %> / <%= h summary["total_expectations"] %>
         </div>
-      </div>
-      <div>
-        <div class="k">Errored evals</div>
-        <div class="v <%= summary["errored_evals"].to_i.zero? ? "" : "warn" %>"><%= h summary["errored_evals"].to_i %></div>
       </div>
       <div>
         <div class="k">Model completions</div>
@@ -176,37 +109,33 @@
   </div>
 
   <h2>Failures (<%= failures.count %>)</h2>
+  <% if failures.empty? -%>
+  <div class="card">
+    <p class="empty">None. Every expectation passed.</p>
+  </div>
+  <% end -%>
+  <% failures.group_by { |row| row["eval_set"] }.each do |eval_set_name, rows| -%>
   <div class="card scroll">
-    <% if failures.empty? -%>
-      <p class="empty">None. Every expectation passed.</p>
-    <% else -%>
-    <table class="failures">
-      <tr><th>Eval set</th><th>Case</th><th>Expectation</th></tr>
-      <% failures.each do |row| -%>
-      <tr class="head">
-        <td><%= h row["eval_set"] %><br><span class="muted"><%= h row["description"] %></span></td>
-        <td class="mono"><%= h row["case_id"] || "-" %></td>
-        <td>
-          <span class="pill <%= status_class(row["expectation"]["status"]) %>"><%= h row["expectation"]["status"] %></span>
-          <%= h row["expectation"]["description"] %>
-        </td>
-      </tr>
-      <tr class="detail">
-        <td colspan="3">
-          <% if row["expectation"]["error"] -%>
-            <pre><%= h row["expectation"]["error"] %></pre>
-          <% end -%>
-          <% if row["expectation"]["metadata"] -%>
-            <pre><%= h pretty(row["expectation"]["metadata"]) %></pre>
-          <% elsif row["expectation"]["error"].nil? -%>
-            <span class="muted">no metadata recorded</span>
-          <% end -%>
-        </td>
-      </tr>
+    <h3><%= h eval_set_name %> <span class="pill bad"><%= rows.count %></span></h3>
+    <% rows.each do |row| -%>
+    <details>
+      <summary>
+        <span class="pill <%= status_class(row["expectation"]["status"]) %>"><%= h row["expectation"]["status"] %></span>
+        <span class="mono"><%= h row["case_id"] || "-" %></span><%= " (repeat #{h row["run_index"]})" if row["run_index"] %>
+        <span class="muted"><%= h row["description"] %>: <%= h row["expectation"]["description"] %></span>
+      </summary>
+      <% if row["expectation"]["error"] -%>
+        <pre><%= h row["expectation"]["error"] %></pre>
       <% end -%>
-    </table>
+      <% if row["expectation"]["metadata"] -%>
+        <pre><%= h pretty(row["expectation"]["metadata"]) %></pre>
+      <% elsif row["expectation"]["error"].nil? -%>
+        <p class="muted">no metadata recorded</p>
+      <% end -%>
+    </details>
     <% end -%>
   </div>
+  <% end -%>
 
   <h2>Pass rates</h2>
   <div class="card scroll">

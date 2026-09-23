@@ -31,13 +31,17 @@ module Raif
 
       attr_reader :path, :run_at, :configuration, :plan, :results
 
-      def initialize(path:, run_at:, configuration:, plan:, results: {}, recorded_keys: nil)
+      def initialize(path:, run_at:, configuration:, plan:, results: {}, recorded_keys: nil, prior_elapsed_seconds: 0)
         @path = Pathname.new(path.to_s)
         @run_at = run_at
         @configuration = configuration
         @plan = plan
         @results = results
         @recorded_keys = recorded_keys || Set.new
+        # Time spent by earlier invocations of a resumed run, so the elapsed time the results file
+        # records covers the time evals were running and not the gap between a stop and a resume.
+        @prior_elapsed_seconds = prior_elapsed_seconds.to_f
+        @invocation_started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         # Concurrent evals record into one log. The append is one File.open per LLM-bound eval,
         # so serializing the whole of #record costs nothing next to what produced the result.
         @mutex = Mutex.new
@@ -100,7 +104,8 @@ module Raif
             configuration: configuration,
             plan: logged_plan,
             results: log[:results],
-            recorded_keys: log[:recorded_keys]
+            recorded_keys: log[:recorded_keys],
+            prior_elapsed_seconds: log[:elapsed_seconds]
           )
 
           run_log.extend_plan!(plan)
@@ -143,6 +148,7 @@ module Raif
           recorded_keys = Set.new
           plan_records = []
           unidentified_results = 0
+          elapsed_seconds = 0.0
 
           File.foreach(path) do |line|
             line = line.strip
@@ -169,6 +175,10 @@ module Raif
               result = normalize_result(record[:result])
               next if result.nil?
 
+              # Cumulative, so the largest is the run's elapsed time as of its last result. Absent
+              # from logs written before it was recorded, which then count from zero.
+              elapsed_seconds = [elapsed_seconds, record[:elapsed_seconds].to_f].max
+
               (results[record[:eval_set]] ||= []) << result
 
               # A result from before evals carried an id has nothing to match a pending execution
@@ -191,7 +201,8 @@ module Raif
             results: results,
             recorded_keys: recorded_keys,
             plan_records: plan_records,
-            unidentified_results: unidentified_results
+            unidentified_results: unidentified_results,
+            elapsed_seconds: elapsed_seconds
           }
         end
 
@@ -294,12 +305,18 @@ module Raif
         outstanding_keys.empty?
       end
 
+      # Seconds the run has spent running evals, across every invocation. Time after an
+      # invocation's last result is lost if it is killed outright, but that time recorded nothing.
+      def elapsed_seconds
+        @prior_elapsed_seconds + (Process.clock_gettime(Process::CLOCK_MONOTONIC) - @invocation_started_at)
+      end
+
       # Appends one result and returns the hash that was written.
       def record(eval_set:, result:)
         payload = result.to_h
 
         @mutex.synchronize do
-          append({ type: "result", eval_set: eval_set, result: payload })
+          append({ type: "result", eval_set: eval_set, elapsed_seconds: elapsed_seconds.round(3), result: payload })
 
           (@results[eval_set] ||= []) << payload
           @recorded_keys << self.class.key(
@@ -316,6 +333,18 @@ module Raif
       # pushing onto.
       def results_for(eval_set)
         @mutex.synchronize { (@results[eval_set] || []).dup }
+      end
+
+      # Everything a reader on another thread needs, copied under one lock so the counts agree with
+      # each other: a result cannot land between reading the results and reading what is outstanding.
+      # Only the copies are taken under the lock, since #record waits on it. What is outstanding is
+      # worked out from them afterwards.
+      def snapshot
+        results, recorded_keys, current_plan = @mutex.synchronize do
+          [@results.transform_values(&:dup), @recorded_keys.dup, plan]
+        end
+
+        { results: results, plan: current_plan, outstanding: current_plan.outstanding(recorded_keys) }
       end
 
       # Derived from the log's own path so a resumed run completes the file its first attempt

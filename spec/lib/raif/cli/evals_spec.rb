@@ -11,16 +11,20 @@ RSpec.describe Raif::CLI::Evals do
 
   around do |example|
     original_env = ENV.to_h.slice("RAIF_EVAL_REPEATS", "RAIF_EVAL_CASES", "RAIF_EVAL_SAMPLE", "RAIF_EVAL_SEED", "RAIF_EVAL_VERBOSE",
-      "RAIF_EVAL_RESUME", "RAIF_EVAL_CONCURRENCY", "RAIF_RUNNING_EVALS")
+      "RAIF_EVAL_RESUME", "RAIF_EVAL_CONCURRENCY", "RAIF_EVAL_LIVE_REPORT", "RAIF_EVAL_OPEN_LIVE_REPORT", "RAIF_RUNNING_EVALS")
     original_verbose = Raif.config.evals_verbose_output
+    original_live_report = Raif.config.evals_live_report
+    original_open_live_report = Raif.config.evals_open_live_report
 
     example.run
 
     %w[RAIF_EVAL_REPEATS RAIF_EVAL_CASES RAIF_EVAL_SAMPLE RAIF_EVAL_SEED RAIF_EVAL_VERBOSE RAIF_EVAL_RESUME
-       RAIF_EVAL_CONCURRENCY RAIF_RUNNING_EVALS].each do |key|
+       RAIF_EVAL_CONCURRENCY RAIF_EVAL_LIVE_REPORT RAIF_EVAL_OPEN_LIVE_REPORT RAIF_RUNNING_EVALS].each do |key|
       original_env.key?(key) ? ENV[key] = original_env[key] : ENV.delete(key)
     end
     Raif.config.evals_verbose_output = original_verbose
+    Raif.config.evals_live_report = original_live_report
+    Raif.config.evals_open_live_report = original_open_live_report
   end
 
   # Stops short of load_rails_application: the app is already booted in the spec process, and
@@ -220,6 +224,85 @@ RSpec.describe Raif::CLI::Evals do
       run_cli(["--verbose"])
 
       expect(Raif.config.evals_verbose_output).to be(true)
+    end
+  end
+
+  describe "live report" do
+    it "leaves the configured value alone when neither flag is given" do
+      Raif.config.evals_live_report = true
+
+      run_cli([])
+
+      expect(Raif.config.evals_live_report).to be(true)
+    end
+
+    it "turns the live report off with --no-live-report" do
+      Raif.config.evals_live_report = true
+
+      run_cli(["--no-live-report"])
+
+      expect(Raif.config.evals_live_report).to be(false)
+    end
+
+    it "turns the live report on with --live-report" do
+      Raif.config.evals_live_report = false
+
+      run_cli(["--live-report"])
+
+      expect(Raif.config.evals_live_report).to be(true)
+    end
+
+    it "treats RAIF_EVAL_LIVE_REPORT=0 as off" do
+      Raif.config.evals_live_report = true
+      ENV["RAIF_EVAL_LIVE_REPORT"] = "0"
+
+      run_cli([])
+
+      expect(Raif.config.evals_live_report).to be(false)
+    end
+
+    it "lets --live-report win over RAIF_EVAL_LIVE_REPORT=0" do
+      Raif.config.evals_live_report = false
+      ENV["RAIF_EVAL_LIVE_REPORT"] = "0"
+
+      run_cli(["--live-report"])
+
+      expect(Raif.config.evals_live_report).to be(true)
+    end
+  end
+
+  describe "opening the live report" do
+    it "leaves the configured value alone when neither flag is given" do
+      Raif.config.evals_open_live_report = true
+
+      run_cli([])
+
+      expect(Raif.config.evals_open_live_report).to be(true)
+    end
+
+    it "turns it on with --open-live-report" do
+      Raif.config.evals_open_live_report = false
+
+      run_cli(["--open-live-report"])
+
+      expect(Raif.config.evals_open_live_report).to be(true)
+    end
+
+    it "turns it off with --no-open-live-report" do
+      Raif.config.evals_open_live_report = true
+
+      run_cli(["--no-open-live-report"])
+
+      expect(Raif.config.evals_open_live_report).to be(false)
+    end
+
+    it "reads RAIF_EVAL_OPEN_LIVE_REPORT" do
+      Raif.config.evals_open_live_report = false
+      ENV["RAIF_EVAL_OPEN_LIVE_REPORT"] = "1"
+
+      run_cli([])
+
+      expect(Raif.config.evals_open_live_report).to be(true)
     end
   end
 end

@@ -26,6 +26,17 @@ module Raif
         when "0", "false" then false
         else true
         end
+        # nil leaves Raif.config.evals_live_report alone, for the same reason as verbose above.
+        live_report = case ENV["RAIF_EVAL_LIVE_REPORT"]
+        when nil, "" then nil
+        when "0", "false" then false
+        else true
+        end
+        open_live_report = case ENV["RAIF_EVAL_OPEN_LIVE_REPORT"]
+        when nil, "" then nil
+        when "0", "false" then false
+        else true
+        end
 
         parser = OptionParser.new do |opts|
           opts.banner = "Usage: raif evals [options] [FILE_PATHS]"
@@ -56,6 +67,14 @@ module Raif
 
           opts.on("--[no-]verbose", "Print every expectation for every dataset case (default: Raif.config.evals_verbose_output)") do |value|
             verbose = value
+          end
+
+          opts.on("--[no-]live-report", "Write an HTML page that shows the run's progress (default: Raif.config.evals_live_report)") do |value|
+            live_report = value
+          end
+
+          opts.on("--[no-]open-live-report", "Open the live report in a browser at start (default: Raif.config.evals_open_live_report)") do |value|
+            open_live_report = value
           end
 
           opts.on("--resume PATH", "Resume an interrupted run from its .partial.jsonl log, skipping results it already holds") do |path|
@@ -105,6 +124,8 @@ module Raif
         require "raif/evals"
 
         Raif.config.evals_verbose_output = verbose unless verbose.nil?
+        Raif.config.evals_live_report = live_report unless live_report.nil?
+        Raif.config.evals_open_live_report = open_live_report unless open_live_report.nil?
 
         run = Raif::Evals::Run.new(
           file_paths: file_paths,

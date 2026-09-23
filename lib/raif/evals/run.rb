@@ -58,6 +58,8 @@ module Raif
           output.puts "Run log: #{run_log.display_path}"
         end
 
+        output.puts "Live report: #{live_report.display_path}" if live_report
+
         print_self_judging_warning if judge_is_model_under_test?
 
         output.puts ""
@@ -99,8 +101,18 @@ module Raif
         # Zeitwerk autoloads are a flake source. Nothing to gain from it on the serial path.
         Rails.application.eager_load! if concurrency > 1
 
+        live_report&.start!(executions: units.size)
+        live_report&.open_in_browser if Raif.config.evals_open_live_report
+
         WorkerPool.new(concurrency: concurrency).run(units) do |unit|
-          result = unit.coordinator.run_and_record(unit.execution)
+          live_report&.execution_started(unit.execution, eval_set_name: unit.eval_set_class.name)
+
+          begin
+            result = unit.coordinator.run_and_record(unit.execution)
+          ensure
+            live_report&.execution_finished(unit.execution)
+          end
+
           report_eval_set_progress(unit.eval_set_class)
           result
         end
@@ -252,11 +264,34 @@ module Raif
 
         if run_log.results_count.zero?
           run_log.discard!
+          live_report&.discard!
           return
         end
 
+        live_report&.stop!(reason: reason, resume_command: resume_command)
+
         output.puts "#{run_log.results_count} results were recorded before it stopped: #{run_log.display_path}"
-        output.puts "Resume with: bundle exec raif evals --resume #{run_log.display_path}"
+        output.puts "Resume with: #{resume_command}"
+      end
+
+      def resume_command
+        "bundle exec raif evals --resume #{run_log.display_path}"
+      end
+
+      # Nil when turned off. Built from the run log, since the page is named after the results file
+      # the log is headed for: the path the full report takes over when the run completes.
+      def live_report
+        return @live_report if defined?(@live_report)
+
+        @live_report = if Raif.config.evals_live_report
+          LiveReport.new(
+            path: run_log.results_path.sub_ext(".html"),
+            run_log: run_log,
+            configuration: configuration_data,
+            concurrency: concurrency,
+            output: output
+          )
+        end
       end
 
       def run_log
@@ -298,7 +333,9 @@ module Raif
         end
 
         output.puts "#{run_log.results_count} results are recorded: #{run_log.display_path}"
-        output.puts "Finish the run with: bundle exec raif evals --resume #{run_log.display_path}"
+        output.puts "Finish the run with: #{resume_command}"
+
+        live_report&.stop!(reason: "Run incomplete.", resume_command: resume_command)
       end
 
       # An eval id is "EvalSetName#slug-digest", so the set an outstanding execution belongs to is
@@ -433,17 +470,24 @@ module Raif
         filename = run_log.results_path
         FileUtils.mkdir_p(File.dirname(filename))
 
-        File.write(filename, JSON.pretty_generate({
+        payload = {
           run_at: run_log.run_at,
+          elapsed_seconds: run_log.elapsed_seconds.round(1),
           configuration: configuration_data,
           results: @results,
           summary: summary_data
-        }))
+        }
+
+        File.write(filename, JSON.pretty_generate(payload))
 
         # Only once the durable file exists, since until then the log is the only copy.
         run_log.discard!
 
         output.puts "\nResults exported to: #{filename}"
+
+        return unless live_report&.complete! { RunReport.new(payload, label: File.basename(filename)).render }
+
+        output.puts "Run report written to: #{live_report.display_path}"
       end
 
       # Results reach the log in completion order, which under concurrency is neither definition

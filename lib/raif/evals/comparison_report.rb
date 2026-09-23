@@ -12,6 +12,7 @@ module Raif
     # Renders a Comparison as console text, JSON, or a self-contained HTML file.
     class ComparisonReport
       TEMPLATE_PATH = File.expand_path("comparison_report.html.erb", __dir__)
+      STYLESHEET_PATH = File.expand_path("report.css", __dir__)
 
       attr_reader :comparison, :threshold, :alpha, :max_error_rate
 
@@ -34,6 +35,11 @@ module Raif
 
       def html
         ERB.new(File.read(TEMPLATE_PATH), trim_mode: "-").result(binding)
+      end
+
+      # The palette and base styles every eval page shares, inlined so the page stays one file.
+      def stylesheet
+        File.read(STYLESHEET_PATH)
       end
 
       def text

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<% if running? -%>
+<meta http-equiv="refresh" content="<%= refresh_seconds %>">
+<% end -%>
+<title><%= completed %>/<%= expected %> - Raif eval run</title>
+<style>
+<%= stylesheet %>
+  .status { margin-left: 8px; vertical-align: middle; }
+  details.section { border-top: none; padding: 0; }
+  details.section > summary { list-style: none; }
+  details.section > summary::-webkit-details-marker { display: none; }
+  details.section > summary h2 { display: inline-block; }
+  details.section > summary h2::before { content: "\25B8"; display: inline-block; width: 1em; }
+  details.section[open] > summary h2::before { content: "\25BE"; }
+  .notice { border-color: var(--warn); background: var(--warn-bg); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Raif eval run
+    <% if running? -%>
+      <span class="pill good status">Running</span>
+    <% else -%>
+      <span class="pill warn status">Stopped</span>
+    <% end -%>
+  </h1>
+  <p class="muted">
+    Last updated <span class="mono"><%= h rendered_at %></span>.
+    <% if running? -%>
+      This page reloads every <%= refresh_seconds %> seconds. The full run report replaces it when the run completes.
+    <% end -%>
+  </p>
+
+  <% if stopped -%>
+  <div class="card notice">
+    <p><strong><%= h stopped[:reason] %></strong> <%= outstanding %> of <%= expected %> planned executions did not run.</p>
+    <% if stopped[:resume_command] -%>
+      <p>Resume with: <code><%= h stopped[:resume_command] %></code></p>
+    <% end -%>
+  </div>
+  <% end -%>
+
+  <div class="card">
+    <div class="totals meta">
+      <div><div class="k">Model</div><div class="v mono"><%= h model %></div></div>
+      <div><div class="k">Judge</div><div class="v mono"><%= h judge || "none configured" %></div></div>
+      <div><div class="k">Started</div><div class="v mono"><%= h run_at %></div></div>
+      <div><div class="k">Concurrency</div><div class="v mono"><%= h concurrency %></div></div>
+      <div><div class="k">Code</div><div class="v mono"><%= h describe_code %></div></div>
+    </div>
+
+    <% if expected.positive? -%>
+    <div class="progress" aria-label="<%= completed %> of <%= expected %> executions completed">
+      <span class="good" style="width: <%= (counts[:passed] * 100.0 / expected).round(3) %>%"></span>
+      <span class="bad" style="width: <%= (counts[:failed] * 100.0 / expected).round(3) %>%"></span>
+      <span class="warn" style="width: <%= (counts[:errored] * 100.0 / expected).round(3) %>%"></span>
+    </div>
+    <% end -%>
+
+    <div class="totals">
+      <div><div class="k">Completed</div><div class="v"><%= completed %> / <%= expected %> <span class="muted">(<%= percent_complete %>%)</span></div></div>
+      <div><div class="k">Passed</div><div class="v good"><%= counts[:passed] %><%
+        %><% if (pct = percent_of_measured(counts[:passed])) %> <span class="muted">(<%= pct %>%)</span><% end %></div></div>
+      <div><div class="k">Failed</div><div class="v <%= counts[:failed].positive? ? "bad" : "" %>"><%= counts[:failed] %><%
+        %><% if (pct = percent_of_measured(counts[:failed])) %> <span class="muted">(<%= pct %>%)</span><% end %></div></div>
+      <div><div class="k">Errored</div><div class="v <%= counts[:errored].positive? ? "warn" : "" %>"><%= counts[:errored] %></div></div>
+      <div><div class="k">Elapsed</div><div class="v"><%= h elapsed %></div></div>
+      <div><div class="k">Time left</div><div class="v"><%= h running? ? time_left : "-" %></div></div>
+      <div><div class="k">Cost</div><div class="v"><%= format_cost(total_cost) %>
+        <% if judge_cost.positive? -%>
+          <span class="muted" style="font-size: 13px;">judge <%= format_cost(judge_cost) %></span>
+        <% end -%>
+      </div></div>
+    </div>
+  </div>
+
+  <details class="section" data-key="section:eval-sets" open>
+    <summary><h2>Eval sets</h2></summary>
+    <div class="card scroll">
+      <table>
+        <tr><th>Eval set</th><th>Completed</th><th>Passed</th><th>Failed</th><th>Errored</th></tr>
+        <% eval_set_rows.each do |row| -%>
+        <tr>
+          <td><%= h row[:name] %></td>
+          <td class="mono"><%= row[:completed] %> / <%= row[:expected] %></td>
+          <td class="mono good"><%= row[:passed] %></td>
+          <td class="mono <%= row[:failed].positive? ? "bad" : "muted" %>"><%= row[:failed] %></td>
+          <td class="mono <%= row[:errored].positive? ? "warn" : "muted" %>"><%= row[:errored] %></td>
+        </tr>
+        <% end -%>
+      </table>
+    </div>
+  </details>
+
+  <% if running? -%>
+  <details class="section" data-key="section:running" open>
+    <summary><h2>Running now (<%= running_rows.size %>)</h2></summary>
+    <div class="card scroll">
+      <% if running_rows.empty? -%>
+        <p class="empty">No executions in flight.</p>
+      <% else -%>
+      <table>
+        <tr><th>Eval</th><th>Case</th><th>Repeat</th><th>Started</th><th>Running for</th></tr>
+        <% running_rows.each do |entry| -%>
+        <tr>
+          <td><%= h entry[:eval_set] %><br><span class="muted"><%= h entry[:description] %></span></td>
+          <td class="mono"><%= h entry[:case_id] || "-" %></td>
+          <td class="mono"><%= h entry[:run_index] || "-" %></td>
+          <td class="mono"><%= h entry[:started_at].strftime("%H:%M:%S") %></td>
+          <td class="mono"><%= h running_for(entry) %></td>
+        </tr>
+        <% end -%>
+      </table>
+      <% end -%>
+    </div>
+  </details>
+  <% end -%>
+
+  <% failure_rows = failures -%>
+  <details class="section" data-key="section:failures" open>
+    <summary><h2>Failures (<%= failure_rows.size %>)</h2></summary>
+    <% if failure_rows.empty? -%>
+    <div class="card">
+      <p class="empty">None so far.</p>
+    </div>
+    <% end -%>
+    <% failure_rows.group_by { |row| row[:eval_set] }.each do |eval_set_name, rows| -%>
+    <div class="card scroll">
+      <h3><%= h eval_set_name %> <span class="pill bad"><%= rows.size %></span></h3>
+      <% rows.each do |row| -%>
+      <details data-key="<%= h row[:key] %>">
+        <summary>
+          <span class="pill <%= status_class(row[:expectation][:status]) %>"><%= h row[:expectation][:status] %></span>
+          <span class="mono"><%= h row[:case_id] || "-" %></span><%= " (repeat #{h row[:run_index]})" if row[:run_index] %>
+          <span class="muted"><%= h row[:description] %>: <%= h row[:expectation][:description] %></span>
+        </summary>
+        <% if row[:expectation][:error] -%>
+          <pre><%= h row[:expectation][:error] %></pre>
+        <% end -%>
+        <% if row[:expectation][:metadata] -%>
+          <pre><%= h pretty(row[:expectation][:metadata]) %></pre>
+        <% elsif row[:expectation][:error].nil? -%>
+          <p class="muted">no metadata recorded</p>
+        <% end -%>
+      </details>
+      <% end -%>
+    </div>
+    <% end -%>
+  </details>
+
+  <details class="section" data-key="section:completed" open>
+    <summary><h2>Completed executions (<%= completed %>)</h2></summary>
+    <div class="card scroll">
+      <% if completed.zero? -%>
+        <p class="empty">None yet.</p>
+      <% else -%>
+      <table>
+        <tr><th>Result</th><th>Eval</th><th>Case</th><th>Repeat</th><th>Cost</th></tr>
+        <% completed_rows.each do |eval_set_name, result| -%>
+        <% label, label_class = result_status(result) -%>
+        <tr>
+          <td class="<%= label_class %>"><%= label %></td>
+          <td><%= h eval_set_name %><br><span class="muted"><%= h result[:description] %></span></td>
+          <td class="mono"><%= h result[:case_id] || "-" %></td>
+          <td class="mono"><%= h result[:run_index] || "-" %></td>
+          <td class="mono"><%= format_cost(result.dig(:usage, :total_cost)) %></td>
+        </tr>
+        <% end -%>
+      </table>
+      <% end -%>
+    </div>
+  </details>
+</div>
+<script>
+  // Each reload would otherwise collapse what the reader opened and jump back to the top. The state
+  // lives in sessionStorage for this tab only; where storage is blocked, the page renders without it.
+  (function () {
+    var storageKey = "raif-live-report:" + location.pathname;
+
+    function save() {
+      try {
+        var open = {};
+        document.querySelectorAll("details[data-key]").forEach(function (el) { open[el.dataset.key] = el.open; });
+        sessionStorage.setItem(storageKey, JSON.stringify({ y: window.scrollY, open: open }));
+      } catch (e) {}
+    }
+
+    function restore() {
+      try {
+        var state = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+        if (!state) return;
+        document.querySelectorAll("details[data-key]").forEach(function (el) {
+          if (Object.prototype.hasOwnProperty.call(state.open, el.dataset.key)) el.open = state.open[el.dataset.key];
+        });
+        window.scrollTo(0, state.y || 0);
+      } catch (e) {}
+    }
+
+    window.addEventListener("pagehide", save);
+    restore();
+  })();
+</script>
+</body>
+</html>
