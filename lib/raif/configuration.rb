@@ -138,9 +138,9 @@ module Raif
       # unmanageable for a dataset run. :summary keeps tokens and cost, :none omits the
       # per-call array. Usage totals are identical in all three modes.
       @evals_capture_model_completions = :full
-      # How many eval executions run at once. An eval run is almost entirely waiting on provider
-      # responses, so this is the wall clock. Serial by default: raising it needs a database
-      # connection pool larger than the concurrency, and enough provider rate limit to absorb it.
+      # How many eval executions run at once, each in a forked worker process. An eval run is almost
+      # entirely waiting on provider responses, so this is the wall clock. Serial by default:
+      # raising it needs enough provider rate limit to absorb it. See Raif::Evals::WorkerPool.
       @evals_concurrency = 1
       # Evals run in the test environment but against their own database, so a run cannot collide
       # with the test suite. Replaces a trailing _test in each database name: app_test becomes

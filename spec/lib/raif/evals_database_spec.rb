@@ -19,6 +19,19 @@ RSpec.describe Raif::EvalsDatabase do
     end
   end
 
+  describe ".name_for a worker database" do
+    {
+      "app_raif_evals" => "app_raif_evals_2",
+      "app_test" => "app_test_2",
+      "db/test_raif_evals.sqlite3" => "db/test_raif_evals_2.sqlite3",
+      ":memory:" => ":memory:"
+    }.each do |database, expected|
+      it "names #{database} #{expected}" do
+        expect(described_class.name_for(database, suffix: "_2", replacing: nil)).to eq(expected)
+      end
+    end
+  end
+
   describe ".configure!" do
     # Boot goes on to query the renamed database - routes load after after_initialize - so a
     # database created later would not exist yet when it does.
@@ -28,7 +41,7 @@ RSpec.describe Raif::EvalsDatabase do
 
       described_class.configure!
 
-      expect(described_class).to have_received(:switch_to).with("_raif_evals")
+      expect(described_class).to have_received(:switch_to).with("_raif_evals", replacing: "_test")
     end
 
     it "does nothing outside an eval run" do
@@ -38,6 +51,21 @@ RSpec.describe Raif::EvalsDatabase do
       described_class.configure!
 
       expect(described_class).not_to have_received(:switch_to)
+    end
+  end
+
+  describe ".use_worker_database!" do
+    it "renames the databases, drops the inherited connections, then prepares the worker's database" do
+      allow(described_class).to receive(:rename)
+      allow(ActiveRecord::Base.connection_handler).to receive(:clear_all_connections!)
+      allow(described_class).to receive(:prepare!)
+
+      described_class.use_worker_database!(3)
+
+      expect(described_class).to have_received(:rename)
+        .with(ActiveRecord::Base.configurations, env_name: "test", suffix: "_3", replacing: nil).ordered
+      expect(ActiveRecord::Base.connection_handler).to have_received(:clear_all_connections!).with(:all).ordered
+      expect(described_class).to have_received(:prepare!).ordered
     end
   end
 

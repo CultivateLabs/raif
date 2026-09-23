@@ -20,3 +20,12 @@ Capybara.register_driver(:cuprite) do |app|
 end
 
 Capybara.disable_animation = true
+
+RSpec.configure do |config|
+  # Cuprite leaves Chrome to a finalizer, which runs after every at_exit hook. Once anything in the
+  # suite forks - the eval worker specs do - the debug gem adds an at_exit hook that waits for every
+  # child process, so a Chrome still open at that point holds the suite open forever.
+  config.after(:suite) do
+    Capybara.using_driver(:cuprite) { Capybara.current_session.driver.quit }
+  end
+end

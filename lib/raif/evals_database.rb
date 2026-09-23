@@ -27,36 +27,46 @@ module Raif
         return unless enabled?
 
         ActiveSupport.on_load(:active_record) do
-          Raif::EvalsDatabase.switch_to(Raif.config.evals_database_suffix)
+          Raif::EvalsDatabase.switch_to(Raif.config.evals_database_suffix, replacing: "_test")
         end
       end
 
-      def switch_to(suffix)
-        rename(ActiveRecord::Base.configurations, env_name: Rails.env, suffix: suffix)
+      # Moves a forked eval worker onto a database of its own - app_raif_evals becomes
+      # app_raif_evals_2 - so its uncommitted rows cannot hold up the other workers. Two workers
+      # sharing one database block on any unique index both write the same key to, which a shared
+      # fixture or a repeated case does on every execution.
+      def use_worker_database!(worker_number)
+        switch_to("_#{worker_number}", replacing: nil)
+      end
+
+      def switch_to(suffix, replacing:)
+        rename(ActiveRecord::Base.configurations, env_name: Rails.env, suffix: suffix, replacing: replacing)
         ActiveRecord::Base.connection_handler.clear_all_connections!(:all)
         prepare!
       end
 
-      def rename(configurations, env_name:, suffix:)
+      def rename(configurations, env_name:, suffix:, replacing: "_test")
         configurations.configs_for(env_name: env_name, include_hidden: true).each do |db_config|
           # A non-replica that opts out of database tasks is a database the host does not manage,
           # such as a shared read-only warehouse, so there is no evals copy of it to point at.
           next if db_config.database.blank? || (!db_config.replica? && !db_config.database_tasks?)
 
-          db_config._database = name_for(db_config.database, suffix: suffix)
+          db_config._database = name_for(db_config.database, suffix: suffix, replacing: replacing)
         end
       end
 
       # app_test becomes app_raif_evals. A name without a _test suffix keeps its name and gains the
       # suffix, and a SQLite file keeps its extension: db/test.sqlite3 becomes db/test_raif_evals.sqlite3.
-      def name_for(database, suffix:)
+      # A worker database passes replacing: nil, since its name only gains the worker number.
+      def name_for(database, suffix:, replacing: "_test")
         return database if IN_MEMORY_DATABASES.include?(database) || database.include?("mode=memory")
 
         extension = File.extname(database)
         extension = "" unless extension.match?(/\A\.sqlite3?\z/)
         base = database.delete_suffix(extension)
+        base = base.delete_suffix(replacing) if replacing
 
-        "#{base.delete_suffix("_test")}#{suffix}#{extension}"
+        "#{base}#{suffix}#{extension}"
       end
 
       # Creates each evals database that does not exist and loads the schema into any whose schema

@@ -304,8 +304,8 @@ Raif.configure do |config|
 
   # How many eval executions run at once. An eval run is almost entirely spent waiting on
   # provider responses, so this is the wall clock. Defaults to 1 (serial); `raif evals
-  # --concurrency N` overrides it per run. Raising it requires a database connection pool
-  # larger than the concurrency (see `pool:` in config/database.yml) and enough provider rate
+  # --concurrency N` overrides it per run. Each execution runs in a forked worker process with a
+  # database of its own (myapp_raif_evals_1, _2, ...), so raising it needs enough provider rate
   # limit to absorb the requests.
   # config.evals_concurrency = 1
 
