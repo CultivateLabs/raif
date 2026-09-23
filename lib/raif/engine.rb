@@ -156,6 +156,12 @@ module Raif
       Raif.config.validate!
     end
 
+    # After validate!, so a bad evals_database_suffix is reported as a config error rather than as
+    # a connection to a strangely named database.
+    config.after_initialize do
+      Raif::EvalsDatabase.configure!
+    end
+
     config.after_initialize do
       # Check to see if the host app is missing any of our migrations
       # and print a warning if they are

@@ -156,7 +156,31 @@ bundle exec raif evals --open-live-report
 
 `--cases`, `--sample`, and `--seed` only affect evals that have a [dataset](#datasets); see [Selecting Cases to Run](#selecting-cases-to-run).
 
-By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
+By default, evals are run in your Rails test environment, against a database of their own. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
+
+### The Evals Database
+
+Evals boot in the test environment, because that is where your app loads its test-only gems (FactoryBot, WebMock, and so on), but they do not share its database. Sharing it means your test suite and an eval run block each other: a spec that inserts a row with the same unique key as an eval's uncommitted row waits until that eval rolls back, and a test run that purges or truncates the database does it under a running eval.
+
+So `raif evals` renames each test database before it connects, replacing a trailing `_test`:
+
+| Test database | Evals database |
+| --- | --- |
+| `myapp_test` | `myapp_raif_evals` |
+| `db/test.sqlite3` | `db/test_raif_evals.sqlite3` |
+
+Every database the test environment connects to is renamed, replicas included, so an app with more than one database cannot leave some of its models on the test database. A database with `database_tasks: false` is left alone, since it is not one your app manages. Nothing changes in `config/database.yml`, and your test suite still uses the test database: the rename only happens inside `raif evals`, and only in the test environment, so `raif evals --environment development` runs against your development database as before.
+
+At the start of every run Raif prepares the evals database the way Rails prepares its parallel test databases: it creates the database if it does not exist, loads `db/schema.rb` (or `db/structure.sql`) if the schema has changed since the last run, and otherwise truncates its tables. There is nothing to migrate by hand, and every run starts from empty tables. The run's header prints the database name.
+
+To change the suffix, or to run evals against the test database as before, set `evals_database_suffix` in your initializer:
+
+```ruby
+Raif.configure do |config|
+  config.evals_database_suffix = "_evals" # myapp_test becomes myapp_evals
+  config.evals_database_suffix = nil      # run evals against the test database
+end
+```
 
 While Raif makes it intentionally difficult to run your normal test suite using real LLM provider API keys, the nature of evals makes it essential that actual API keys are available. When running evals, Raif will load API keys from your initializer, as described in the [setup docs](../getting_started/setup#initial-setup).
 

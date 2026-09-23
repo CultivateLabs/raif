@@ -308,4 +308,10 @@ Raif.configure do |config|
   # larger than the concurrency (see `pool:` in config/database.yml) and enough provider rate
   # limit to absorb the requests.
   # config.evals_concurrency = 1
+
+  # `raif evals` runs in the test environment but against its own database, so a run cannot
+  # collide with your test suite. The suffix replaces a trailing _test in each database name:
+  # myapp_test becomes myapp_raif_evals. Raif creates the database and loads the schema at the
+  # start of each run. Set to nil to run evals against the test database.
+  # config.evals_database_suffix = "_raif_evals"
 end

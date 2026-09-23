@@ -47,6 +47,7 @@ module Raif
         output.puts ""
         output.puts "Raif.config.default_llm_model_key: #{Raif.config.default_llm_model_key}"
         output.puts "Raif.config.evals_default_llm_judge_model_key: #{configured_judge_description}"
+        output.puts "Database: #{Raif::EvalsDatabase.database_names.join(", ")}"
         output.puts "Repeats per eval: #{repeats}"
         output.puts "Concurrency: #{concurrency}" if concurrency > 1
         output.puts "Cases: #{cases.join(", ")}" if cases
