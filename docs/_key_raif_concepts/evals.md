@@ -146,6 +146,12 @@ bundle exec raif evals --no-verbose
 
 # Pick up an interrupted run where it stopped, without paying for its results again
 bundle exec raif evals --resume raif_evals/results/eval_run_20260805_094122_anthropic_claude_5_sonnet.partial.jsonl
+
+# Skip the live HTML progress page for this run
+bundle exec raif evals --no-live-report
+
+# Open the live HTML progress page in your browser when the run starts
+bundle exec raif evals --open-live-report
 ```
 
 `--cases`, `--sample`, and `--seed` only affect evals that have a [dataset](#datasets); see [Selecting Cases to Run](#selecting-cases-to-run).
@@ -161,6 +167,7 @@ Once your evals have run, a JSON file will be created in `raif_evals/results` wi
 ```json
 {
   "run_at": "2026-08-02T18:14:22Z",
+  "elapsed_seconds": 412.6,
   "configuration": {
     "default_llm_model_key": "open_ai_responses_gpt_5_6_terra",
     "evals_default_llm_judge_model_key": "anthropic_claude_5_sonnet",
@@ -190,7 +197,9 @@ This matters because [`evals:compare`](#comparing-runs) joins the two runs on ca
 
 `code` is the host app's git HEAD and whether the working tree was dirty, or `null` when the app is not a git checkout. Comparing one model before and after a prompt change is one of the two workflows `evals:compare` exists for, and nothing else in the results says which side of the change a run was on. Unlike everything else in the block, it does not constrain `--resume`: the commit that landed while a run was interrupted is often the one that fixed whatever interrupted it, so a resume across a commit warns and carries on rather than refusing.
 
-Alongside `run_at` and `configuration`, the file has two more top-level keys:
+`elapsed_seconds` is the time the run spent running evals. For a [resumed run](#resuming-an-interrupted-run) it adds up every invocation and leaves out the time between a stop and the resume. Files written before this key existed do not have it.
+
+Alongside `run_at`, `elapsed_seconds` and `configuration`, the file has two more top-level keys:
 
 - `results` - one entry per eval set, each an array with one result per execution of an eval block. A result carries its `description`, [`eval_id`](#eval-ids), `eval_index`, `passed`, `expectation_results`, any [`scores`](#scores), its [`usage` and `model_completions`](#captured-llm-calls), plus a `run_index` for [repeats](#repeating-evals) and a `case_id` for [dataset](#dataset-results) cases. A result that raised also carries `errored: true` - see [Errors Are Not Failures](#errors-are-not-failures).
 - `summary` - run-wide totals across every eval, plus an `eval_pass_rates` array with one row per eval and a `score_summaries` array with one row per score name per eval.
@@ -286,6 +295,48 @@ Some specifics worth knowing:
 - **A run that stopped before recording anything deletes its own log**, since there is nothing there to resume.
 
 If you keep result files in version control, add `raif_evals/results/*.partial.jsonl` to your `.gitignore` - a log is transient, and the run it belongs to either finishes and replaces it or gets resumed.
+
+## Watching a Run in the Browser
+
+Each run writes a live HTML page and prints its path next to the run log:
+
+```
+Run log: raif_evals/results/eval_run_20260805_094122_anthropic_claude_5_sonnet.partial.jsonl
+Live report: raif_evals/results/eval_run_20260805_094122_anthropic_claude_5_sonnet.html
+```
+
+Open it once and leave the tab open. The page is rewritten as each execution starts and finishes, and it reloads itself every 30 seconds. It shows:
+
+- completed executions out of the planned total, with passed, failed, and errored counts and a progress bar;
+- elapsed time, an estimate of the time left (once three executions have finished), and the cost so far, with the judge's share apart;
+- progress for each eval set;
+- the executions running now;
+- every expectation that did not pass so far, with its [`result_metadata`](#adding-result-metadata-to-expectations);
+- every completed execution, newest first.
+
+A reload keeps your scroll position and the sections you opened or closed. Each rewrite goes to a temporary file that is then renamed over the page, so a reload never catches a half-written page.
+
+When the run completes, the full [run report](#reading-one-run) replaces the page at the same path, so the same tab ends on the full report. That is the file `evals:report` would write for the run, and the refresh stops there. A run that stops early - Ctrl-C, an exception, or a resume that leaves planned executions outstanding - gets one last rewrite that says why it stopped and gives the `--resume` command. That rewrite does not reload either. A resumed run reuses the page and counts the results already in the log. A process killed outright cannot write that last page, so the page keeps showing "Running" with the time of its last update.
+
+The page is on by default. Turn it off for one run with `--no-live-report` (or `RAIF_EVAL_LIVE_REPORT=0`), or for every run in your initializer:
+
+```ruby
+Raif.configure do |config|
+  config.evals_live_report = false
+end
+```
+
+`--live-report` turns it back on for one run. The page never costs a run: if it cannot be written, the run prints one warning and carries on without it.
+
+To have the page open in your browser when the run starts, pass `--open-live-report`, or set `RAIF_EVAL_OPEN_LIVE_REPORT=1` in your shell to open it for every run, or set it in your initializer:
+
+```ruby
+Raif.configure do |config|
+  config.evals_open_live_report = true
+end
+```
+
+It is off by default, since evals also run in CI, over SSH, and from scripts, where a browser tab is impossible or unseen. Raif uses `open` on macOS, `xdg-open` on Linux, and `start` on Windows. If the opener cannot be launched, the run prints one warning and continues.
 
 ## Running Evals Concurrently
 
@@ -1306,9 +1357,9 @@ It writes `eval_run_20260804_180216_open_ai_responses_gpt_5_4.html` beside the r
 --format html
 ```
 
-The page opens with the run's header - the model, the judge that actually graded, when it started, its shape, its cost, the host app's commit, and the [capture mode](#limiting-what-is-captured) - then the run-wide totals, then:
+The page opens with the run's header - the model, the judge that actually graded, when it started, its shape, its cost, the host app's commit, and the [capture mode](#limiting-what-is-captured) - then a progress bar and the completed, passed, failed and errored counts with the elapsed time. The passed and failed percentages leave errored evals out, as every Raif pass rate does. Then come the rest of the run-wide totals, then:
 
-- **Failures.** Every expectation that did not pass, with the [`result_metadata`](#adding-result-metadata-to-expectations) it recorded. This is first because it is what you came for; a full drill-down you have to scroll is not a report. A [gated score](#scored-evaluations) records both a failed expectation and a score whose `passed` is false, and appears here once, through its expectation.
+- **Failures.** Every expectation that did not pass, one line each naming the eval set, case and expectation. Open a line to see the error or the [`result_metadata`](#adding-result-metadata-to-expectations) it recorded. This is first because it is what you came for; a full drill-down you have to scroll is not a report. A [gated score](#scored-evaluations) records both a failed expectation and a score whose `passed` is false, and appears here once, through its expectation.
 - **Pass rates**, one row per eval, naming the cases that did not pass every run.
 - **Scores**, one row per score name per eval, with the mean, the median, and the [spread](#scored-evaluations) it was measured over.
 - **Every eval**, as collapsed blocks carrying each execution's expectations, its scores against their gates, its usage, and its [captured LLM calls](#captured-llm-calls).

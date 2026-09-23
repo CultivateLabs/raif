@@ -18,6 +18,8 @@ require "raif/evals/comparison"
 require "raif/evals/comparison_report"
 require "raif/evals/run_plan"
 require "raif/evals/run_log"
+require "raif/evals/run_report"
+require "raif/evals/live_report"
 require "raif/evals/run"
 
 module Raif

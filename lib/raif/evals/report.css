@@ -1,0 +1,80 @@
+/* Shared by run_report.html.erb and live_report.html.erb, so the live page and the report that
+   replaces it look the same. */
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --border: #e2e5ea;
+  --text: #23272f;
+  --muted: #6b7280;
+  --good: #1f7a4d;
+  --good-bg: #e8f5ee;
+  --bad: #b3261e;
+  --bad-bg: #fdeceb;
+  --warn: #8a5a00;
+  --warn-bg: #fdf3e2;
+  --neutral-bg: #f1f3f6;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 32px 20px 64px;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+.wrap { max-width: 960px; margin: 0 auto; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 32px 0 10px; }
+h3 { font-size: 14px; margin: 18px 0 6px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+.card + .card { margin-top: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+.scroll { overflow-x: auto; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+.bad { color: var(--bad); font-weight: 600; }
+.warn { color: var(--warn); font-weight: 600; }
+.good { color: var(--good); font-weight: 600; }
+.muted { color: var(--muted); }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--neutral-bg); }
+.pill.bad { background: var(--bad-bg); color: var(--bad); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.good { background: var(--good-bg); color: var(--good); }
+.empty { color: var(--muted); font-style: italic; }
+.totals { display: flex; flex-wrap: wrap; gap: 10px 28px; }
+.totals div { min-width: 120px; }
+.totals .k { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.totals .v { font-size: 19px; font-weight: 600; }
+/* Header values are model keys and timestamps, not figures, so they need a smaller size. */
+.totals.meta .v { font-size: 15px; }
+.totals.meta > div { min-width: 150px; }
+.selection { margin: 14px 0 0; font-size: 13px; }
+details { border-top: 1px solid var(--border); padding: 8px 0; }
+details:first-of-type { border-top: none; }
+summary { cursor: pointer; font-size: 14px; }
+summary::marker { color: var(--muted); }
+.exp { margin: 8px 0 0 18px; font-size: 14px; }
+.exp li { margin-bottom: 5px; list-style: none; }
+.exp li::before { content: "\2717"; color: var(--bad); margin-right: 7px; }
+.exp li.ok::before { content: "\2713"; color: var(--good); }
+.exp li.err::before { content: "\26A0"; color: var(--warn); }
+pre {
+  margin: 5px 0 0;
+  padding: 8px 10px;
+  background: var(--neutral-bg);
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  /* anywhere, not break-word: break long unbroken tokens, not every word. */
+  overflow-wrap: anywhere;
+}
+/* Passed, failed and errored as shares of the total, in that order. */
+.progress { height: 10px; margin: 14px 0 4px; background: var(--neutral-bg); border-radius: 999px; overflow: hidden; display: flex; }
+.progress span { display: block; height: 100%; }
+.progress .good { background: var(--good); }
+.progress .bad { background: var(--bad); }
+.progress .warn { background: var(--warn); }

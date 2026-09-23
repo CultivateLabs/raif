@@ -17,6 +17,32 @@ RSpec.describe Raif::Evals::RunReport do
     expect(html).to include("is under 1000 words")
   end
 
+  it "opens with a progress bar and the outcome counts" do
+    report = described_class.new(payload.merge("elapsed_seconds" => 3725.2))
+    html = report.html
+
+    expect(html).to include(%(class="progress"))
+    expect(html).not_to include("One run, in full")
+    expect(html).to include("Elapsed</div><div class=\"v\">1h 02m")
+
+    measured = report.total_evals - report.errored_evals
+    expect(report.percent_of_measured(report.passed_evals)).to eq((report.passed_evals * 100.0 / measured).round)
+    expect(report.passed_evals + report.failed_evals + report.errored_evals).to eq(report.total_evals)
+  end
+
+  it "shows no elapsed time for a results file written before it was recorded" do
+    expect(described_class.new(payload).elapsed).to eq("-")
+  end
+
+  it "leaves errored evals out of the percentages" do
+    report = described_class.new(payload.merge("summary" => payload["summary"].merge(
+      "total_evals" => 4, "passed_evals" => 1, "errored_evals" => 2
+    )))
+
+    expect(report.percent_of_measured(report.passed_evals)).to eq(50)
+    expect(report.percent_of_measured(report.failed_evals)).to eq(50)
+  end
+
   it "says so when nothing failed" do
     html = described_class.new(cli_results_payload(model: "gpt_a", passed: true, score_value: 5.0)).html
 

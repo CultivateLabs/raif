@@ -291,6 +291,16 @@ Raif.configure do |config|
   # When true, provides more detailed output including individual test results.
   # config.evals_verbose_output = false
 
+  # Whether `raif evals` writes a live HTML report beside the run log. The page reloads itself while
+  # the run continues and shows progress, failures, and the executions running now. When the run
+  # completes, the full run report replaces it at the same path. Defaults to true; `raif evals
+  # --no-live-report` disables it for one run.
+  # config.evals_live_report = true
+
+  # Whether `raif evals` opens the live report in your browser when the run starts. Defaults to
+  # false. `raif evals --open-live-report` (or RAIF_EVAL_OPEN_LIVE_REPORT=1) turns it on for one run.
+  # config.evals_open_live_report = false
+
   # How many eval executions run at once. An eval run is almost entirely spent waiting on
   # provider responses, so this is the wall clock. Defaults to 1 (serial); `raif evals
   # --concurrency N` overrides it per run. Raising it requires a database connection pool

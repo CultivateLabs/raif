@@ -31,6 +31,8 @@ module Raif
       :evals_capture_model_completions,
       :evals_concurrency,
       :evals_default_llm_judge_model_key,
+      :evals_live_report,
+      :evals_open_live_report,
       :evals_verbose_output,
       :google_api_key,
       :google_embedding_models_enabled,
@@ -143,6 +145,12 @@ module Raif
       # own output and a run against a second model changes the judge with it, which
       # Raif::Evals::Run warns about.
       @evals_default_llm_judge_model_key = ENV["RAIF_EVALS_DEFAULT_LLM_JUDGE_MODEL_KEY"].presence
+      # An HTML page beside the run log, rewritten as executions start and finish, so a long run can
+      # be watched from a browser. See Raif::Evals::LiveReport.
+      @evals_live_report = true
+      # Off by default: evals also run in CI, over SSH and from scripts, where a browser tab is
+      # either impossible or unseen.
+      @evals_open_live_report = false
       @evals_verbose_output = false
       google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
       @google_api_key = default_disable_llm_api_requests? ? "placeholder-google-api-key" : google_api_key

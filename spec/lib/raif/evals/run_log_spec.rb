@@ -90,6 +90,45 @@ RSpec.describe Raif::Evals::RunLog do
     end
   end
 
+  describe "#snapshot" do
+    it "returns copies of the results beside the plan and what is still outstanding" do
+      log.record(eval_set: "MyEvalSet", result: eval_result(description: "first", eval_id: "MyEvalSet#first-abc123"))
+
+      snapshot = log.snapshot
+      log.record(eval_set: "MyEvalSet",
+        result: eval_result(description: "second", eval_id: "MyEvalSet#second-def456", eval_index: 1))
+
+      expect(snapshot[:results]["MyEvalSet"].map { |result| result[:description] }).to eq(["first"])
+      expect(snapshot[:plan].size).to eq(3)
+      expect(snapshot[:outstanding]).to eq([["MyEvalSet#second-def456", nil, nil], ["MyEvalSet#third-ghi789", nil, nil]])
+    end
+  end
+
+  describe "#elapsed_seconds" do
+    it "continues from the time the resumed log last recorded, not from zero" do
+      log.record(eval_set: "MyEvalSet", result: eval_result(description: "first", eval_id: "MyEvalSet#first-abc123"))
+      recorded = JSON.parse(File.readlines(log.path).last)["elapsed_seconds"]
+      expect(recorded).to be_a(Numeric)
+
+      # As if the first invocation had run for ten minutes before it stopped.
+      lines = File.readlines(log.path)
+      lines[-1] = JSON.generate(JSON.parse(lines[-1]).merge("elapsed_seconds" => 600.0)) + "\n"
+      File.write(log.path, lines.join)
+
+      resumed = described_class.resume(path: log.path, configuration: configuration, plan: plan)
+      expect(resumed.elapsed_seconds).to be_between(600.0, 660.0)
+    end
+
+    it "counts from zero for a log written before the elapsed time was recorded" do
+      log.record(eval_set: "MyEvalSet", result: eval_result(description: "first", eval_id: "MyEvalSet#first-abc123"))
+      lines = File.readlines(log.path)
+      lines[-1] = JSON.generate(JSON.parse(lines[-1]).except("elapsed_seconds")) + "\n"
+      File.write(log.path, lines.join)
+
+      expect(described_class.resume(path: log.path, configuration: configuration, plan: plan).elapsed_seconds).to be < 60
+    end
+  end
+
   describe ".resume" do
     before do
       log.record(eval_set: "MyEvalSet", result: eval_result(description: "first", eval_id: "MyEvalSet#first-abc123"))

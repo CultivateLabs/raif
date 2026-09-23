@@ -3,12 +3,13 @@ EnableDefaultLinters: true
 exclude:
   - '**/vendor/**/*'
   - '**/node_modules/**/*'
-  # The eval reports are standalone HTML files `raif evals:compare` and `raif evals:report` write
+  # The eval reports are standalone HTML files `raif evals`, `raif evals:compare` and `raif evals:report` write
   # for the developer who ran them, never rendered in a request: HardCodedString would have us
   # translate a CLI artifact, and RequireScriptNonce has no CSP to satisfy. Named rather than
   # globbed, so an ERB added next to them later is still linted.
   - 'lib/raif/evals/comparison_report.html.erb'
   - 'lib/raif/evals/run_report.html.erb'
+  - 'lib/raif/evals/live_report.html.erb'
 linters:
   RequireScriptNonce:
     enabled: true

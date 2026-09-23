@@ -73,6 +73,10 @@ RSpec.configure do |config|
   config.include ActiveJob::TestHelper
 
   config.before(:each) do
+    # Every eval run spec would otherwise leave a live report in the dummy app's results directory.
+    # The specs that cover it turn it back on.
+    Raif.config.evals_live_report = false
+
     # If we're using a VCR cassette, we always want to allow LLM API requests.
     if VCR.current_cassette.present?
       allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
