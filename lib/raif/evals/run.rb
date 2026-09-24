@@ -29,7 +29,6 @@ module Raif
         @concurrency = resolve_concurrency(concurrency)
         @reported_eval_sets = Set.new
         @result_order = {}
-        @summary_mutex = Mutex.new
 
         # Before the eval sets, not after: loading an eval set evaluates its class body, so
         # anything setup.rb defines for it (helper modules, rubrics) must exist by then.
@@ -47,8 +46,11 @@ module Raif
         output.puts ""
         output.puts "Raif.config.default_llm_model_key: #{Raif.config.default_llm_model_key}"
         output.puts "Raif.config.evals_default_llm_judge_model_key: #{configured_judge_description}"
+        output.puts "Database: #{Raif::EvalsDatabase.database_names.join(", ")}"
         output.puts "Repeats per eval: #{repeats}"
-        output.puts "Concurrency: #{concurrency}" if concurrency > 1
+        if concurrency > 1
+          output.puts "Concurrency: #{concurrency}#{worker_databases_description}"
+        end
         output.puts "Cases: #{cases.join(", ")}" if cases
         output.puts "Sample per dataset: #{sample}#{" (seed #{seed})" if seed}" if sample
 
@@ -95,26 +97,13 @@ module Raif
       # every set has finished - hence the resume hint, so a user staring at a stack trace knows
       # the spend is still on disk.
       def run_eval_sets
-        units = build_units
-
-        # The CLI defaults to the test environment, where eager_load is off, and concurrent
-        # Zeitwerk autoloads are a flake source. Nothing to gain from it on the serial path.
-        Rails.application.eager_load! if concurrency > 1
-
         live_report&.start!(executions: units.size)
         live_report&.open_in_browser if Raif.config.evals_open_live_report
 
-        WorkerPool.new(concurrency: concurrency).run(units) do |unit|
-          live_report&.execution_started(unit.execution, eval_set_name: unit.eval_set_class.name)
-
-          begin
-            result = unit.coordinator.run_and_record(unit.execution)
-          ensure
-            live_report&.execution_finished(unit.execution)
-          end
-
-          report_eval_set_progress(unit.eval_set_class)
-          result
+        if concurrency > 1
+          run_in_workers(units)
+        else
+          units.each { |unit| run_unit(unit) }
         end
 
         # Sets a resumed run had nothing left to do for, which reach no completion callback.
@@ -131,9 +120,70 @@ module Raif
         raise
       end
 
+      def run_unit(unit)
+        live_report&.execution_started(unit.execution, eval_set_name: unit.eval_set_class.name)
+
+        begin
+          unit.coordinator.run_and_record(unit.execution)
+        ensure
+          live_report&.execution_finished(unit.execution)
+        end
+
+        report_eval_set_progress(unit.eval_set_class)
+      end
+
+      # Each worker is a forked copy of this process on a database of its own; everything that
+      # records a result stays here. See Raif::Evals::WorkerPool.
+      def run_in_workers(units)
+        # The CLI defaults to the test environment, where eager_load is off. Loaded once here
+        # rather than autoloaded again in every worker.
+        Rails.application.eager_load!
+
+        pool = WorkerPool.new(
+          concurrency: concurrency,
+          setup_worker: ->(worker_number) { Raif::EvalsDatabase.use_worker_database!(worker_number) if worker_databases? }
+        )
+
+        pool.run(
+          units,
+          dispatched: ->(unit) { live_report&.execution_started(unit.execution, eval_set_name: unit.eval_set_class.name) },
+          # executor.wrap gives each execution the boundary a Rails request gets: it returns the
+          # connection and clears per-execution state, such as the query cache, afterwards.
+          work: ->(unit) { Rails.application.executor.wrap { unit.coordinator.run_in_worker(unit.execution) } },
+          collect: lambda do |unit, value|
+            begin
+              unit.coordinator.record_from_worker(unit.execution, value)
+            ensure
+              live_report&.execution_finished(unit.execution)
+            end
+
+            report_eval_set_progress(unit.eval_set_class)
+          end
+        )
+      end
+
+      # Without an evals database, the workers share whatever database the run is on, and wait on
+      # each other's uncommitted rows under its unique indexes.
+      def worker_databases?
+        Raif::EvalsDatabase.enabled?
+      end
+
+      # The pool forks no more workers than there are executions, so a small run names fewer
+      # databases than its concurrency.
+      def worker_databases_description
+        worker_count = [concurrency, units.size].min
+        return "" unless worker_databases? && worker_count.positive?
+
+        " (one database per worker, suffixed _1 to _#{worker_count})"
+      end
+
       # One flat list of executions across every eval set, each paired with the instance that
       # coordinates its set. Order is definition order, which is what a serial run executes in and
       # what the eval set summaries follow.
+      def units
+        @units ||= build_units
+      end
+
       def build_units
         @pending_by_eval_set = Hash.new(0)
         @result_order = {}
@@ -226,19 +276,16 @@ module Raif
         ]
       end
 
-      # Called from a worker thread once an execution has been recorded: an eval set is reported as
-      # its last execution lands, so a serial run still reports each set as it finishes.
+      # Called once an execution has been recorded: an eval set is reported as its last execution
+      # lands, so a serial run still reports each set as it finishes.
       def report_eval_set_progress(eval_set_class)
-        finished = @summary_mutex.synchronize do
-          @pending_by_eval_set[eval_set_class] -= 1
-          @pending_by_eval_set[eval_set_class].zero?
-        end
+        @pending_by_eval_set[eval_set_class] -= 1
 
-        print_eval_set_summary(eval_set_class) if finished
+        print_eval_set_summary(eval_set_class) if @pending_by_eval_set[eval_set_class].zero?
       end
 
       def print_eval_set_summary(eval_set_class)
-        return unless @summary_mutex.synchronize { @reported_eval_sets.add?(eval_set_class) }
+        return unless @reported_eval_sets.add?(eval_set_class)
 
         # From the log rather than what this invocation returned, so a resumed run reports the
         # whole set and not just the tail of it that was left to do.
@@ -545,36 +592,33 @@ module Raif
         )
       end
 
-      # sqlite3 is capped rather than rejected: an eval runs inside a transaction, and concurrent
-      # write transactions against one file serialize on SQLITE_BUSY instead of going faster.
-      #
-      # The pool check is a hard failure: with fewer connections than workers, each execution waits
-      # out the checkout timeout and dies with ConnectionTimeoutError, which reads like a database
-      # problem rather than a setting.
+      # Capped rather than rejected, since a serial run still measures the same thing.
       def resolve_concurrency(concurrency)
         requested = [(concurrency || Raif.config.evals_concurrency).to_i, 1].max
         return 1 if requested == 1
 
-        adapter = ActiveRecord::Base.connection_db_config.adapter.to_s
+        reason = serial_only_reason
+        return requested if reason.nil?
 
-        if adapter.start_with?("sqlite")
-          output.puts Raif::Utils::Colors.yellow(
-            "Ignoring concurrency #{requested}: the #{adapter} adapter serializes the transaction each eval runs in. Running serially."
-          )
-          return 1
+        output.puts Raif::Utils::Colors.yellow("Ignoring concurrency #{requested}: #{reason}. Running serially.")
+        1
+      end
+
+      # Concurrent evals run in forked worker processes. On sqlite3 each worker needs a database file
+      # of its own: concurrent write transactions against one file serialize on SQLITE_BUSY, and an
+      # in-memory database does not survive the fork at all.
+      def serial_only_reason
+        return "this platform cannot fork worker processes" unless Process.respond_to?(:fork)
+
+        db_config = ActiveRecord::Base.connection_db_config
+        return unless db_config.adapter.to_s.start_with?("sqlite")
+        if Raif::EvalsDatabase.in_memory?(db_config.database.to_s)
+          return "an in-memory sqlite3 database cannot be shared with worker processes"
         end
+        return if worker_databases?
 
-        pool_size = ActiveRecord::Base.connection_pool.size
-
-        if pool_size <= requested
-          output.puts Raif::Utils::Colors.red(
-            "Concurrency #{requested} needs a database connection pool larger than #{requested}, but this environment's pool holds " \
-            "#{pool_size}. Raise `pool:` for the #{Rails.env} environment in config/database.yml, or lower --concurrency."
-          )
-          exit 1
-        end
-
-        requested
+        "the workers would share one sqlite3 file, which serializes the transaction each eval runs in. " \
+          "Set Raif.config.evals_database_suffix to give each worker a database of its own"
       end
 
       # A sampled run always ends up with a seed, drawing one when the caller did not supply it.

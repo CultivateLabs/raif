@@ -122,6 +122,13 @@ module Raif
           nil
         end
 
+        # A result hash after the trip through JSON the log itself puts it through, for a caller that
+        # has to move one somewhere Marshal cannot follow: an eval's metadata can hold anything, and
+        # JSON renders what Marshal would refuse.
+        def json_round_trip(result)
+          normalize_result(JSON.parse(JSON.generate(result), symbolize_names: true))
+        end
+
       private
 
         # Every plan record in the log, folded into one. Unreadable rather than absent is its own

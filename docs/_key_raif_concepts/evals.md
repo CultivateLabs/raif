@@ -156,7 +156,37 @@ bundle exec raif evals --open-live-report
 
 `--cases`, `--sample`, and `--seed` only affect evals that have a [dataset](#datasets); see [Selecting Cases to Run](#selecting-cases-to-run).
 
-By default, evals are run against your Rails test environment & database. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
+By default, evals are run in your Rails test environment, against a database of their own. Each eval is run in a database transaction, which will be rolled back at the end of the eval.
+
+### The Evals Database
+
+Evals boot in the test environment, because that is where your app loads its test-only gems (FactoryBot, WebMock, and so on), but they do not share its database. Sharing it means your test suite and an eval run block each other: a spec that inserts a row with the same unique key as an eval's uncommitted row waits until that eval rolls back, and a test run that purges or truncates the database does it under a running eval.
+
+So `raif evals` renames each test database before it connects, replacing a trailing `_test`:
+
+| Test database | Evals database |
+| --- | --- |
+| `myapp_test` | `myapp_raif_evals` |
+| `db/test.sqlite3` | `db/test_raif_evals.sqlite3` |
+
+Every database the test environment connects to is renamed, replicas included, so an app with more than one database cannot leave some of its models on the test database. A database with `database_tasks: false` is left alone, since it is not one your app manages. Nothing changes in `config/database.yml`, and your test suite still uses the test database: the rename only happens inside `raif evals`, and only in the test environment, so `raif evals --environment development` runs against your development database as before.
+
+At the start of every run Raif prepares the evals database the way Rails prepares its parallel test databases: it creates the database if it does not exist, loads `db/schema.rb` (or `db/structure.sql`) if the schema has changed since the last run, and otherwise truncates its tables. There is nothing to migrate by hand, and every run starts from empty tables. The run's header prints the database name.
+
+Because every run truncates the evals database, two runs cannot share it. A second `raif evals` started while another is still running on the same database stops at boot with an error, rather than truncating the first run's tables under it. To run two at once - to compare two models side by side, say - give one of them a suffix of its own:
+
+```ruby
+config.evals_database_suffix = ENV.fetch("RAIF_EVALS_DATABASE_SUFFIX", "_raif_evals")
+```
+
+To change the suffix, or to run evals against the test database as before, set `evals_database_suffix` in your initializer:
+
+```ruby
+Raif.configure do |config|
+  config.evals_database_suffix = "_evals" # myapp_test becomes myapp_evals
+  config.evals_database_suffix = nil      # run evals against the test database
+end
+```
 
 While Raif makes it intentionally difficult to run your normal test suite using real LLM provider API keys, the nature of evals makes it essential that actual API keys are available. When running evals, Raif will load API keys from your initializer, as described in the [setup docs](../getting_started/setup#initial-setup).
 
@@ -340,28 +370,41 @@ It is off by default, since evals also run in CI, over SSH, and from scripts, wh
 
 ## Running Evals Concurrently
 
-An eval run is almost entirely spent waiting for provider responses. A 30-case dataset at `--repeat 5` with a judge call per case is 300 sequential round trips - half an hour in which your CPU does nothing. `--concurrency N` (or `RAIF_EVAL_CONCURRENCY=N`, or `Raif.config.evals_concurrency` in your initializer) overlaps that waiting across N threads:
+An eval run is almost entirely spent waiting for provider responses. A 30-case dataset at `--repeat 5` with a judge call per case is 300 sequential round trips - half an hour in which your CPU does nothing. `--concurrency N` (or `RAIF_EVAL_CONCURRENCY=N`, or `Raif.config.evals_concurrency` in your initializer) overlaps that waiting across N worker processes:
 
 ```bash
 bundle exec raif evals --concurrency 8
 ```
 
-The default is 1, and the serial path is unchanged: same order, same output, no threads.
+The default is 1, and the serial path is unchanged: same order, same output, no extra processes.
 
-The whole run's work - every eval, every dataset case, every repeat, across every eval set - is listed before any of it executes, so the threads stay busy across eval set boundaries rather than draining a pool at the end of each set. Raising concurrency changes nothing about what a result means, which is why `--resume` will happily resume a run at a different concurrency than the one that started it.
+The whole run's work - every eval, every dataset case, every repeat, across every eval set - is listed before any of it executes, so the workers stay busy across eval set boundaries rather than draining a pool at the end of each set. Raising concurrency changes nothing about what a result means, as long as `raif_evals/setup.rb` writes no rows (see [below](#why-workers-are-processes-with-their-own-databases)), which is why `--resume` will happily resume a run at a different concurrency than the one that started it.
 
-Before turning it up, three things need to be true:
+### Why workers are processes with their own databases
 
-- **Your database connection pool has to be bigger than the concurrency.** Each eval takes a connection for the transaction it runs in, so `--concurrency 8` against the default `pool: 5` would spend the run timing out on checkouts rather than on inference. Raif checks this at startup and refuses to run rather than letting you find out at case 40; raise `pool:` for your test environment in `config/database.yml`. On sqlite3 concurrency is capped to 1 instead - concurrent write transactions against one file serialize on `SQLITE_BUSY`, so the threads would only add contention.
+Each eval runs in a transaction that is rolled back. Two evals that share a database also share its unique indexes, and an uncommitted row holds its key until the transaction ends. So if two evals insert the same key - a reference row that every eval's `setup` seeds, a fixture record with a unique URL, or the same case run twice under `--repeat` - the second one waits until the first one rolls back. Evals written that way run one at a time however high the concurrency is.
+
+So each worker is a forked copy of the `raif evals` process, on a database of its own. With the [evals database](#the-evals-database) at `myapp_raif_evals`, `--concurrency 4` uses `myapp_raif_evals_1` to `myapp_raif_evals_4`. Raif prepares each one when its worker starts, the same way it prepares the evals database: it creates the database if it does not exist, loads the schema if it changed, and otherwise truncates its tables. The worker databases stay between runs, like Rails' parallel test databases. Everything that records a result - the run log, the console, the live report - stays in the parent process.
+
+Three consequences:
+
+- **Rows that `raif_evals/setup.rb` writes do not reach the workers.** `setup.rb` runs once, in the parent, before the workers fork, and each worker has its own database. Raif does not run it again in each worker, because it also defines the modules and rubrics your eval sets use, and loading it a second time would redefine them. Seed what an eval needs in the eval set's `setup` block instead. Until you do, a run at concurrency 1 and a run above it see different data, so do not resume one at a different concurrency.
+- **With `evals_database_suffix` set to `nil`, the workers share the test database** and contend on it as described above. Raif still runs them in parallel.
+- **sqlite3 needs a database file per worker.** Concurrent write transactions against one file serialize on `SQLITE_BUSY`, so Raif runs serially on sqlite3 when `evals_database_suffix` is `nil`, and always on an in-memory database. On a platform that cannot fork, Raif runs serially too.
+
+### Before turning it up
+
+Two things need to be true:
+
 - **Your provider rate limit has to absorb it.** Concurrency turns 429s from rare into routine. Raif retries them with exponential backoff and honors a `Retry-After` header when the provider sends one (see `Raif.config.llm_request_max_retries`), but a concurrency well past your tokens-per-minute limit just converts wall clock into retry sleep. Start around 4-8 and watch for retries in the logs.
-- **Your evals have to be independent of each other.** They already need to be - each eval runs in its own transaction that is rolled back - but concurrency makes it visible: two evals running at once are in two uncommitted transactions on two connections, so neither can see what the other created. An eval that depends on data another eval's `setup` left behind was already relying on something Raif does not promise, and will start failing here.
+- **Your evals have to be independent of each other.** They already need to be - each eval runs in its own transaction that is rolled back - but concurrency makes it visible: two evals running at once are in two processes on two databases, so neither can see what the other created. An eval that depends on data another eval's `setup` left behind was already relying on something Raif does not promise, and will start failing here.
 
 Two things about the console output change:
 
 - **Lines arrive in completion order, not definition order.** Every line carries its case id, and each eval's description is printed the first time one of its results lands. The results file is unaffected: it is always written back in definition order, so two runs of the same work produce the same file whatever concurrency produced them.
 - **Each execution's lines are written as one block.** A case summary and the failing expectations beneath it are emitted together rather than being interleaved with whatever else finished at the same moment.
 
-Ctrl-C still works. Workers stop before picking up their next execution and the in-flight ones are allowed to finish and be recorded, so everything already paid for reaches the run log and the run stays resumable.
+Ctrl-C still works. Workers stop before picking up their next execution and the in-flight ones are allowed to finish and be recorded, so everything already paid for reaches the run log and the run stays resumable. A second Ctrl-C stops waiting and kills the workers.
 
 ## Repeating Evals
 

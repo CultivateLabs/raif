@@ -30,6 +30,7 @@ module Raif
       :default_llm_model_key,
       :evals_capture_model_completions,
       :evals_concurrency,
+      :evals_database_suffix,
       :evals_default_llm_judge_model_key,
       :evals_live_report,
       :evals_open_live_report,
@@ -137,10 +138,14 @@ module Raif
       # unmanageable for a dataset run. :summary keeps tokens and cost, :none omits the
       # per-call array. Usage totals are identical in all three modes.
       @evals_capture_model_completions = :full
-      # How many eval executions run at once. An eval run is almost entirely waiting on provider
-      # responses, so this is the wall clock. Serial by default: raising it needs a database
-      # connection pool larger than the concurrency, and enough provider rate limit to absorb it.
+      # How many eval executions run at once, each in a forked worker process. An eval run is almost
+      # entirely waiting on provider responses, so this is the wall clock. Serial by default:
+      # raising it needs enough provider rate limit to absorb it. See Raif::Evals::WorkerPool.
       @evals_concurrency = 1
+      # Evals run in the test environment but against their own database, so a run cannot collide
+      # with the test suite. Replaces a trailing _test in each database name: app_test becomes
+      # app_raif_evals. nil runs evals against the test database. See Raif::EvalsDatabase.
+      @evals_database_suffix = "_raif_evals"
       # Unset means judging falls back to default_llm_model_key, so the model under test grades its
       # own output and a run against a second model changes the judge with it, which
       # Raif::Evals::Run warns about.
@@ -369,6 +374,11 @@ module Raif
       else
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.model_completion_authorizer must be nil or respond to :call"
+      end
+
+      unless evals_database_suffix.nil? || (evals_database_suffix.is_a?(String) && evals_database_suffix.present?)
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.evals_database_suffix must be nil or a non-empty String (got #{evals_database_suffix.inspect})"
       end
 
       unless CAPTURE_MODEL_COMPLETION_MODES.include?(evals_capture_model_completions.to_s)

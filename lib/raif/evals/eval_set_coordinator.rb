@@ -134,21 +134,13 @@ module Raif
         end.to_h
       end
 
-      # Runs one execution and records its result. The unit of work Raif::Evals::Run hands to a
-      # worker thread, so everything it touches has to be safe to call concurrently: the run log
-      # takes a lock, and console output goes through a writer that flushes as one block.
+      # Runs one execution and records its result, in this process. The serial path, where the
+      # execution's lines stream to the console as they are written.
       def run_and_record(execution)
         eval_result = nil
 
         writer.capture(headers: headers_for(execution)) do |execution_output|
-          # A fresh eval set per execution: run_eval writes the current case and result onto the
-          # instance, so a shared one would allow only one execution in flight.
-          eval_result = eval_set_class.new(output: execution_output).run_eval(
-            execution.eval_definition,
-            eval_case: execution.eval_case,
-            run_index: execution.run_index,
-            case_id_width: execution.case_id_width
-          )
+          eval_result = run_execution(execution, execution_output)
 
           # Recorded the moment it completes, so the run's spend survives an interrupt that
           # never reaches the results file.
@@ -158,7 +150,36 @@ module Raif
         eval_result
       end
 
+      # The half of #run_and_record a forked worker does: runs the execution and returns what the
+      # parent needs to record it, as plain data that survives Marshal. The run log and the console
+      # belong to the parent, so nothing here writes to either.
+      def run_in_worker(execution)
+        execution_output = StringIO.new
+        eval_result = run_execution(execution, execution_output)
+
+        { output: execution_output.string, result: RunLog.json_round_trip(eval_result.to_h) }
+      end
+
+      # The other half, in the parent, with what #run_in_worker returned.
+      def record_from_worker(execution, value)
+        writer.capture(headers: headers_for(execution)) do |execution_output|
+          execution_output.write(value[:output])
+          run_log&.record(eval_set: eval_set_class.name, result: value[:result])
+        end
+      end
+
     private
+
+      # A fresh eval set per execution: run_eval writes the current case and result onto the
+      # instance, so a shared one would allow only one execution in flight.
+      def run_execution(execution, execution_output)
+        eval_set_class.new(output: execution_output).run_eval(
+          execution.eval_definition,
+          eval_case: execution.eval_case,
+          run_index: execution.run_index,
+          case_id_width: execution.case_id_width
+        )
+      end
 
       # nil rather than 1 for a single run, matching the run_index EvalResult records.
       def repeat_run_indexes(repeats)
