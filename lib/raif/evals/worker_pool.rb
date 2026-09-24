@@ -35,7 +35,12 @@ module Raif
       # killed, so their results still reach `collect`. The Interrupt is then re-raised for the
       # caller to report on. A second Ctrl-C stops waiting and kills the workers.
       def run(items, work:, collect:, dispatched: nil)
-        if concurrency == 1 || items.size <= 1
+        return items if items.empty?
+
+        # Only at concurrency 1, not for a lone item at a higher one: an item run here uses this
+        # process's database rather than a worker's, and its result must not depend on how many
+        # items happen to be left.
+        if concurrency == 1
           return items.each do |item|
             dispatched&.call(item)
             collect.call(item, work.call(item))
@@ -132,9 +137,11 @@ module Raif
           write_message(worker.tasks, index)
         end
 
+        # A worker killed part way through writing a message leaves it truncated, which Marshal
+        # reports as ArgumentError or TypeError rather than EOFError. Either way the worker died.
         def receive(worker)
           Marshal.load(worker.results)
-        rescue EOFError, Errno::ECONNRESET
+        rescue EOFError, Errno::ECONNRESET, ArgumentError, TypeError
           nil
         end
 

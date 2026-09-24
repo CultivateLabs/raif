@@ -173,6 +173,12 @@ Every database the test environment connects to is renamed, replicas included, s
 
 At the start of every run Raif prepares the evals database the way Rails prepares its parallel test databases: it creates the database if it does not exist, loads `db/schema.rb` (or `db/structure.sql`) if the schema has changed since the last run, and otherwise truncates its tables. There is nothing to migrate by hand, and every run starts from empty tables. The run's header prints the database name.
 
+Because every run truncates the evals database, two runs cannot share it. A second `raif evals` started while another is still running on the same database stops at boot with an error, rather than truncating the first run's tables under it. To run two at once - to compare two models side by side, say - give one of them a suffix of its own:
+
+```ruby
+config.evals_database_suffix = ENV.fetch("RAIF_EVALS_DATABASE_SUFFIX", "_raif_evals")
+```
+
 To change the suffix, or to run evals against the test database as before, set `evals_database_suffix` in your initializer:
 
 ```ruby
@@ -372,7 +378,7 @@ bundle exec raif evals --concurrency 8
 
 The default is 1, and the serial path is unchanged: same order, same output, no extra processes.
 
-The whole run's work - every eval, every dataset case, every repeat, across every eval set - is listed before any of it executes, so the workers stay busy across eval set boundaries rather than draining a pool at the end of each set. Raising concurrency changes nothing about what a result means, which is why `--resume` will happily resume a run at a different concurrency than the one that started it.
+The whole run's work - every eval, every dataset case, every repeat, across every eval set - is listed before any of it executes, so the workers stay busy across eval set boundaries rather than draining a pool at the end of each set. Raising concurrency changes nothing about what a result means, as long as `raif_evals/setup.rb` writes no rows (see [below](#why-workers-are-processes-with-their-own-databases)), which is why `--resume` will happily resume a run at a different concurrency than the one that started it.
 
 ### Why workers are processes with their own databases
 
@@ -382,7 +388,7 @@ So each worker is a forked copy of the `raif evals` process, on a database of it
 
 Three consequences:
 
-- **Rows that `raif_evals/setup.rb` writes do not reach the workers.** `setup.rb` runs once, in the parent, before the workers fork, and each worker has its own database. Seed what an eval needs in the eval set's `setup` block instead.
+- **Rows that `raif_evals/setup.rb` writes do not reach the workers.** `setup.rb` runs once, in the parent, before the workers fork, and each worker has its own database. Raif does not run it again in each worker, because it also defines the modules and rubrics your eval sets use, and loading it a second time would redefine them. Seed what an eval needs in the eval set's `setup` block instead. Until you do, a run at concurrency 1 and a run above it see different data, so do not resume one at a different concurrency.
 - **With `evals_database_suffix` set to `nil`, the workers share the test database** and contend on it as described above. Raif still runs them in parallel.
 - **sqlite3 needs a database file per worker.** Concurrent write transactions against one file serialize on `SQLITE_BUSY`, so Raif runs serially on sqlite3 when `evals_database_suffix` is `nil`, and always on an in-memory database. On a platform that cannot fork, Raif runs serially too.
 

@@ -49,7 +49,7 @@ module Raif
         output.puts "Database: #{Raif::EvalsDatabase.database_names.join(", ")}"
         output.puts "Repeats per eval: #{repeats}"
         if concurrency > 1
-          output.puts "Concurrency: #{concurrency}#{" (one database per worker, suffixed _1 to _#{concurrency})" if worker_databases?}"
+          output.puts "Concurrency: #{concurrency}#{worker_databases_description}"
         end
         output.puts "Cases: #{cases.join(", ")}" if cases
         output.puts "Sample per dataset: #{sample}#{" (seed #{seed})" if seed}" if sample
@@ -97,8 +97,6 @@ module Raif
       # every set has finished - hence the resume hint, so a user staring at a stack trace knows
       # the spend is still on disk.
       def run_eval_sets
-        units = build_units
-
         live_report&.start!(executions: units.size)
         live_report&.open_in_browser if Raif.config.evals_open_live_report
 
@@ -170,9 +168,22 @@ module Raif
         Raif::EvalsDatabase.enabled?
       end
 
+      # The pool forks no more workers than there are executions, so a small run names fewer
+      # databases than its concurrency.
+      def worker_databases_description
+        worker_count = [concurrency, units.size].min
+        return "" unless worker_databases? && worker_count.positive?
+
+        " (one database per worker, suffixed _1 to _#{worker_count})"
+      end
+
       # One flat list of executions across every eval set, each paired with the instance that
       # coordinates its set. Order is definition order, which is what a serial run executes in and
       # what the eval set summaries follow.
+      def units
+        @units ||= build_units
+      end
+
       def build_units
         @pending_by_eval_set = Hash.new(0)
         @result_order = {}
@@ -601,15 +612,13 @@ module Raif
 
         db_config = ActiveRecord::Base.connection_db_config
         return unless db_config.adapter.to_s.start_with?("sqlite")
-        return "an in-memory sqlite3 database cannot be shared with worker processes" if memory_database?(db_config.database.to_s)
+        if Raif::EvalsDatabase.in_memory?(db_config.database.to_s)
+          return "an in-memory sqlite3 database cannot be shared with worker processes"
+        end
         return if worker_databases?
 
         "the workers would share one sqlite3 file, which serializes the transaction each eval runs in. " \
           "Set Raif.config.evals_database_suffix to give each worker a database of its own"
-      end
-
-      def memory_database?(database)
-        Raif::EvalsDatabase::IN_MEMORY_DATABASES.include?(database) || database.include?("mode=memory")
       end
 
       # A sampled run always ends up with a seed, drawing one when the caller did not supply it.

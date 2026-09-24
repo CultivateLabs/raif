@@ -85,6 +85,16 @@ RSpec.describe Raif::Evals::WorkerPool do
     expect(ENV).not_to have_key("RAIF_SPEC_WORKER_NUMBER")
   end
 
+  it "runs a lone item in a set-up worker too, so it gets the same database as any other" do
+    pool = described_class.new(concurrency: 3, setup_worker: ->(number) { ENV["RAIF_SPEC_WORKER_NUMBER"] = number.to_s })
+
+    collected = run_pool(pool, [:a], work: ->(_item) { [ENV.fetch("RAIF_SPEC_WORKER_NUMBER", nil), Process.pid] })
+
+    worker_number, pid = collected.first.last
+    expect(worker_number).to eq("1")
+    expect(pid).not_to eq(Process.pid)
+  end
+
   describe "at concurrency 1" do
     it "runs the items in order in this process" do
       collected = run_pool(described_class.new(concurrency: 1), [:a, :b, :c], work: ->(item) { [item, Process.pid] })
@@ -130,6 +140,25 @@ RSpec.describe Raif::Evals::WorkerPool do
         run_pool(pool, [1, 2], work: ->(_item) { -> { :not_marshalable } })
       end.to raise_error(Raif::Evals::WorkerPool::WorkerError, /TypeError/)
     end
+  end
+
+  it "reports a worker that raises while it is set up, before it takes any work" do
+    pool = described_class.new(concurrency: 2, setup_worker: ->(number) { raise "could not create database #{number}" if number == 2 })
+
+    expect do
+      run_pool(pool, [1, 2, 3], work: ->(item) { item })
+    end.to raise_error(Raif::Evals::WorkerPool::WorkerError, "RuntimeError: could not create database 2")
+  end
+
+  it "treats a message truncated by a worker that died mid-write as the worker dying" do
+    reader, writer = IO.pipe.each(&:binmode)
+    writer.write(Marshal.dump({ type: :result, value: "x" * 1000 })[0, 500])
+    writer.close
+    dispatch = described_class::Dispatch.new(items: [], work: nil, collect: nil, dispatched: nil, setup_worker: nil)
+
+    expect(dispatch.send(:receive, described_class::Dispatch::Worker.new(results: reader))).to be_nil
+  ensure
+    reader&.close
   end
 
   it "reports a worker that dies mid-item" do

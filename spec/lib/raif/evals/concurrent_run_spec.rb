@@ -177,8 +177,10 @@ RSpec.describe "Running evals concurrently" do
         dataset(:cases) { (1..2).map { |i| { id: "case-#{i}", input: {} } } }
 
         eval "writes the same unique key as every other case", dataset: :cases do |eval_case|
-          ActiveRecord::Base.connection.execute(<<~SQL)
-            INSERT INTO active_storage_blobs (key, filename, byte_size, service_name, created_at)
+          connection = ActiveRecord::Base.connection
+          # key is a reserved word in MySQL.
+          connection.execute(<<~SQL)
+            INSERT INTO active_storage_blobs (#{connection.quote_column_name("key")}, filename, byte_size, service_name, created_at)
             VALUES ('shared-key', 'shared.txt', 1, 'test', CURRENT_TIMESTAMP)
           SQL
           latch.signal(eval_case.id)
@@ -221,6 +223,30 @@ RSpec.describe "Running evals concurrently" do
       runner.join
 
       expect(Raif::EvalsDatabase).not_to have_received(:use_worker_database!)
+    end
+  end
+
+  describe "the run header" do
+    let(:eval_set) do
+      Class.new(Raif::Evals::EvalSet) do
+        dataset(:cases) { (1..3).map { |i| { id: "case-#{i}", input: {} } } }
+
+        eval "passes", dataset: :cases do
+          expect("passes") { true }
+        end
+      end
+    end
+
+    before do
+      stub_const("HeaderEvalSet", eval_set)
+      allow(Raif::EvalsDatabase).to receive(:enabled?).and_return(true)
+      allow(Raif::EvalsDatabase).to receive(:use_worker_database!)
+    end
+
+    it "names only the worker databases the run uses when it has fewer executions than workers" do
+      run_with(HeaderEvalSet, concurrency: 8).execute
+
+      expect(output.string).to include("Concurrency: 8 (one database per worker, suffixed _1 to _3)")
     end
   end
 

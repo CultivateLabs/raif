@@ -3,6 +3,15 @@
 require "rails_helper"
 
 RSpec.describe Raif::EvalsDatabase do
+  # Rails merges DATABASE_URL into the current environment's primary config, which CI sets, so it
+  # would replace the database each example names.
+  def build_configurations(configurations)
+    database_url = ENV.delete("DATABASE_URL")
+    ActiveRecord::DatabaseConfigurations.new(configurations)
+  ensure
+    ENV["DATABASE_URL"] = database_url if database_url
+  end
+
   describe ".name_for" do
     {
       "app_test" => "app_raif_evals",
@@ -10,6 +19,8 @@ RSpec.describe Raif::EvalsDatabase do
       "app_test_shard" => "app_test_shard_raif_evals",
       "db/test.sqlite3" => "db/test_raif_evals.sqlite3",
       "storage/app_test.sqlite3" => "storage/app_raif_evals.sqlite3",
+      "file:db/test.sqlite3?mode=rwc" => "file:db/test_raif_evals.sqlite3?mode=rwc",
+      "file:db/test.sqlite3" => "file:db/test_raif_evals.sqlite3",
       ":memory:" => ":memory:",
       "file::memory:?mode=memory&cache=shared" => "file::memory:?mode=memory&cache=shared"
     }.each do |database, expected|
@@ -24,6 +35,7 @@ RSpec.describe Raif::EvalsDatabase do
       "app_raif_evals" => "app_raif_evals_2",
       "app_test" => "app_test_2",
       "db/test_raif_evals.sqlite3" => "db/test_raif_evals_2.sqlite3",
+      "file:db/test_raif_evals.sqlite3?mode=rwc" => "file:db/test_raif_evals_2.sqlite3?mode=rwc",
       ":memory:" => ":memory:"
     }.each do |database, expected|
       it "names #{database} #{expected}" do
@@ -41,7 +53,7 @@ RSpec.describe Raif::EvalsDatabase do
 
       described_class.configure!
 
-      expect(described_class).to have_received(:switch_to).with("_raif_evals", replacing: "_test")
+      expect(described_class).to have_received(:switch_to).with("_raif_evals", replacing: "_test", lock: true)
     end
 
     it "does nothing outside an eval run" do
@@ -71,7 +83,7 @@ RSpec.describe Raif::EvalsDatabase do
 
   describe ".rename" do
     let(:configurations) do
-      ActiveRecord::DatabaseConfigurations.new(
+      build_configurations(
         "test" => {
           "primary" => { "adapter" => "postgresql", "database" => "app_test" },
           "primary_replica" => { "adapter" => "postgresql", "database" => "app_test", "replica" => true },
@@ -100,6 +112,82 @@ RSpec.describe Raif::EvalsDatabase do
 
     it "leaves other environments alone" do
       expect(database_for("development", "primary")).to eq("app_development")
+    end
+  end
+
+  describe ".lock!" do
+    let(:root) { Pathname.new(Dir.mktmpdir) }
+
+    before do
+      allow(Rails).to receive(:root).and_return(root)
+      allow(described_class).to receive(:database_names).and_return(["app_raif_evals"])
+    end
+
+    after do
+      described_class.instance_variable_get(:@lock_file)&.close
+      described_class.instance_variable_set(:@lock_file, nil)
+      FileUtils.rm_rf(root)
+    end
+
+    it "refuses a second run on the same evals database" do
+      described_class.lock!
+
+      expect { described_class.lock! }.to raise_error(Raif::EvalsDatabase::InUseError, /app_raif_evals/)
+    end
+
+    it "lets a run start once the one before it has finished" do
+      described_class.lock!
+      described_class.instance_variable_get(:@lock_file).close
+
+      expect { described_class.lock! }.not_to raise_error
+    end
+
+    it "does not lock an in-memory database, which no other run can reach" do
+      allow(described_class).to receive(:database_names).and_return([":memory:"])
+
+      described_class.lock!
+
+      expect { described_class.lock! }.not_to raise_error
+    end
+  end
+
+  describe ".prepare!" do
+    let(:reporting_schema_dump) { { "schema_dump" => "schema.rb" } }
+    let(:configurations) do
+      build_configurations(
+        "test" => {
+          "primary_replica" => { "adapter" => "postgresql", "database" => "app_raif_evals", "replica" => true },
+          "primary" => { "adapter" => "postgresql", "database" => "app_raif_evals" },
+          "reporting_replica" => {
+            "adapter" => "postgresql",
+            "database" => "reporting_replica_raif_evals",
+            "replica" => true
+          }.merge(reporting_schema_dump),
+          "warehouse" => { "adapter" => "postgresql", "database" => "warehouse", "database_tasks" => false }
+        }
+      )
+    end
+
+    let(:prepared) { [] }
+
+    before do
+      allow(ActiveRecord::Base).to receive(:configurations).and_return(configurations)
+      allow(ActiveRecord::Base).to receive(:establish_connection)
+      allow(ActiveRecord::Tasks::DatabaseTasks).to receive(:reconstruct_from_schema) { |db_config, *| prepared << db_config.name }
+    end
+
+    it "prepares each managed database once, from its writer when a replica shares it" do
+      described_class.prepare!
+
+      expect(prepared).to eq(["primary", "reporting_replica"])
+    end
+
+    context "when a replica with a database of its own has no schema file" do
+      let(:reporting_schema_dump) { {} }
+
+      it "refuses it rather than let Rails advise a migration" do
+        expect { described_class.prepare! }.to raise_error(Raif::Errors::InvalidConfigError, /reporting_replica replica/)
+      end
     end
   end
 
