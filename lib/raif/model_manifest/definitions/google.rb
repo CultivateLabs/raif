@@ -131,7 +131,13 @@ provider :google do |p|
     key: :google_gemini_3_1_pro,
     api_name: "gemini-3.1-pro-preview",
     display_name: "Google Gemini 3.1 Pro",
-    pricing: { input_per_million: 2.0, output_per_million: 12.0 },
+    pricing: {
+      cache_read_per_million: 0.2,
+      input_per_million: 2.0,
+      output_per_million: 12.0,
+      note: "Above 200K input tokens, input and cache rates double to 4.00 input / 0.40 cached input per million " \
+        "and output rises to 18.00 per million."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -194,7 +200,13 @@ provider :google do |p|
     key: :google_gemini_2_5_pro,
     api_name: "gemini-2.5-pro",
     display_name: "Google Gemini 2.5 Pro",
-    pricing: { input_per_million: 1.25, output_per_million: 10.0 },
+    pricing: {
+      cache_read_per_million: 0.125,
+      input_per_million: 1.25,
+      output_per_million: 10.0,
+      note: "Above 200K input tokens, input and cache rates double to 2.50 input / 0.25 cached input per million " \
+        "and output rises to 15.00 per million."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,

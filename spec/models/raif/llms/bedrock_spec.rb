@@ -364,6 +364,13 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       resolved = llm.send(:resolve_model_api_name, "us.anthropic.claude-sonnet-5")
       expect(resolved).to eq("us.anthropic.claude-sonnet-5")
     end
+
+    it "does not prefix model ids that already name a different inference profile" do
+      allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return("us")
+
+      expect(llm.send(:resolve_model_api_name, "global.anthropic.claude-sonnet-5-5")).to eq("global.anthropic.claude-sonnet-5-5")
+      expect(llm.send(:resolve_model_api_name, "eu.anthropic.claude-sonnet-5")).to eq("eu.anthropic.claude-sonnet-5")
+    end
   end
 
   describe "blank response retry behavior" do

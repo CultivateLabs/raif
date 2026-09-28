@@ -59,7 +59,8 @@ provider :open_ai do |p|
       cache_read_per_million: 0.2,
       input_per_million: 2.0,
       output_per_million: 10.0,
-      note: "Above 272K input tokens, input and cache rates double to 4.00 input / 0.40 cached input per million; output is unchanged."
+      note: "Above 272K input tokens, input and cache rates double to 4.00 input / 0.40 cached input per million " \
+        "and output rises to 15.00 per million."
     },
     lifecycle: {
       status: :active,
@@ -102,7 +103,8 @@ provider :open_ai do |p|
       cache_read_per_million: 0.01,
       input_per_million: 0.1,
       output_per_million: 0.5,
-      note: "Above 272K input tokens, input and cache rates double to 0.20 input / 0.02 cached input per million; output is unchanged."
+      note: "Above 272K input tokens, input and cache rates double to 0.20 input / 0.02 cached input per million " \
+        "and output rises to 0.75 per million."
     },
     lifecycle: {
       status: :active,
