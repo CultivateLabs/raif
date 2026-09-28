@@ -1002,6 +1002,36 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       ])
     end
 
+    it "lists the sources an openai web search returned and the page it opened" do
+      model_completion = described_class.new(
+        llm_model_key: "open_ai_responses_gpt_4o",
+        model_api_name: "gpt-4o",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_array: [
+          {
+            "id" => "ws_123",
+            "type" => "web_search_call",
+            "status" => "completed",
+            "action" => {
+              "type" => "search",
+              "sources" => [{ "type" => "url", "url" => "https://example.com/uncited?utm_source=openai" }, "not a hash"]
+            }
+          },
+          {
+            "id" => "ws_456",
+            "type" => "web_search_call",
+            "status" => "completed",
+            "action" => { "type" => "open_page", "url" => "https://example.com/opened" }
+          }
+        ]
+      )
+
+      expect(model_completion.provider_managed_tool_calls.map { |call| call["sources"] }).to eq([
+        [{ "url" => "https://example.com/uncited" }],
+        [{ "url" => "https://example.com/opened" }]
+      ])
+    end
+
     it "infers google web search usage from citations when no explicit tool block is stored" do
       model_completion = described_class.new(
         llm_model_key: "google_gemini_2_5_flash",
@@ -1113,6 +1143,113 @@ RSpec.describe Raif::ModelCompletion, type: :model do
       )
 
       expect(model_completion.provider_managed_tool_calls).to eq([])
+    end
+  end
+
+  describe "#web_search_source_urls" do
+    it "returns the cited pages and the uncited pages an anthropic web search returned" do
+      model_completion = described_class.new(
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        model_api_name: "claude-haiku-4-5",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_array: [
+          { "type" => "server_tool_use", "id" => "srvtoolu_123", "name" => "web_search", "input" => { "query" => "rails" } },
+          {
+            "type" => "web_search_tool_result",
+            "tool_use_id" => "srvtoolu_123",
+            "content" => [
+              { "type" => "web_search_result", "title" => "Cited", "url" => "https://example.com/cited" },
+              { "type" => "web_search_result", "title" => "Uncited", "url" => "https://example.com/uncited?utm_source=test" }
+            ]
+          }
+        ],
+        citations: [{ "title" => "Cited", "url" => "https://example.com/cited" }]
+      )
+
+      expect(model_completion.web_search_source_urls).to eq(["https://example.com/cited", "https://example.com/uncited"])
+    end
+
+    it "returns the cited pages, every page an openai search returned, and every page it opened" do
+      model_completion = described_class.new(
+        llm_model_key: "open_ai_responses_gpt_4o",
+        model_api_name: "gpt-4o",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_array: [
+          {
+            "type" => "web_search_call",
+            "action" => {
+              "type" => "search",
+              "sources" => [
+                { "type" => "url", "url" => "https://example.com/cited" },
+                { "type" => "url", "url" => "https://example.com/uncited?utm_source=openai" }
+              ]
+            }
+          },
+          { "type" => "web_search_call", "action" => { "type" => "open_page", "url" => "https://example.com/opened" } },
+          { "type" => "message", "content" => [] }
+        ],
+        citations: [{ "title" => "Cited", "url" => "https://example.com/cited" }]
+      )
+
+      expect(model_completion.web_search_source_urls).to eq([
+        "https://example.com/cited",
+        "https://example.com/uncited",
+        "https://example.com/opened"
+      ])
+    end
+
+    it "returns only the cited pages when an openai response lists no sources" do
+      model_completion = described_class.new(
+        llm_model_key: "open_ai_responses_gpt_4o",
+        model_api_name: "gpt-4o",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_array: [{ "type" => "web_search_call", "action" => { "type" => "search" } }],
+        citations: [{ "title" => "Cited", "url" => "https://example.com/cited" }]
+      )
+
+      expect(model_completion.web_search_source_urls).to eq(["https://example.com/cited"])
+    end
+
+    it "returns the citations for google, which stores no uncited pages" do
+      model_completion = described_class.new(
+        llm_model_key: "google_gemini_2_5_flash",
+        model_api_name: "gemini-2.5-flash",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_array: [{ "text" => "Rails 8.1 was recently released." }],
+        citations: [{ "title" => "wikipedia.org", "url" => "https://en.wikipedia.org/wiki/Ruby_on_Rails" }]
+      )
+
+      expect(model_completion.web_search_source_urls).to eq(["https://en.wikipedia.org/wiki/Ruby_on_Rails"])
+    end
+
+    it "drops urls that are not http or https" do
+      model_completion = described_class.new(
+        llm_model_key: "open_ai_responses_gpt_4o",
+        model_api_name: "gpt-4o",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_array: [
+          {
+            "type" => "web_search_call",
+            "action" => { "type" => "search", "sources" => [{ "type" => "url", "url" => "data:text/html,hi" }] }
+          }
+        ],
+        citations: [{ "title" => "Bad", "url" => "javascript:alert(1)" }, { "title" => "Good", "url" => "https://example.com/good" }]
+      )
+
+      expect(model_completion.web_search_source_urls).to eq(["https://example.com/good"])
+    end
+
+    it "does not need the completion's model to be registered" do
+      model_completion = described_class.new(
+        llm_model_key: "open_ai_responses_retired_model",
+        model_api_name: "retired-model",
+        available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
+        response_array: [
+          { "type" => "web_search_call", "action" => { "type" => "search", "sources" => [{ "url" => "https://example.com/a" }] } }
+        ]
+      )
+
+      expect(model_completion.web_search_source_urls).to eq(["https://example.com/a"])
     end
   end
 

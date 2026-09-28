@@ -231,6 +231,23 @@ model_completion = llm.chat(
 )
 ```
 
+## Web Search Sources
+
+A web search often returns pages that the response does not cite. This happens when a model cites pages in a format of its own, such as a marker inside a JSON field, and writes no provider citation. `model_completion.citations` then misses pages the model did retrieve. Call `model_completion.web_search_source_urls` to get the URL of every page a web search returned, cited or not:
+
+```ruby
+model_completion.web_search_source_urls
+# => ["https://rubyonrails.org/blog/", "https://guides.rubyonrails.org/8_1_release_notes.html"]
+```
+
+The URLs have no tracking parameters, and URLs that are not http or https are omitted. What the method returns depends on the provider:
+
+| Provider             | Returns |
+|:---------------------|:--------|
+| OpenAI Responses API | The cited pages, every page a search returned, and every page the model opened. Raif sends `include: ["web_search_call.action.sources"]` to get them. |
+| Anthropic Claude     | The cited pages and every page in the `web_search_tool_result` blocks. |
+| Google AI            | The cited pages only. Gemini's stored response lists no uncited pages. |
+
 Note for Google AI: Gemini's provider-side `"require any tool"` enforcement only applies to declared function tools. If you use `tool_choice: :required` with Google provider-managed tools, or mix provider-managed and developer-managed tools, Raif logs a warning and falls back to runtime validation instead of provider-enforced required-tool selection.
 
 ---

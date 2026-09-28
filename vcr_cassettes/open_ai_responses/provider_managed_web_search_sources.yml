@@ -1,0 +1,254 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.openai.com/v1/responses
+    body:
+      encoding: UTF-8
+      string: '{"model":"gpt-4o","input":[{"role":"user","content":[{"type":"input_text","text":"What
+        changed in the latest Ruby on Rails release? Answer in two sentences."}]}],"store":false,"temperature":0.7,"tools":[{"type":"web_search_preview"}],"include":["web_search_call.action.sources"]}'
+    headers:
+      Authorization:
+      - "<PLACEHOLDER_AUTHORIZATION>"
+      User-Agent:
+      - Faraday v2.14.3
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Mon, 28 Sep 2026 15:57:34 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cf-Ray:
+      - a423f1bf086abebb-CVG
+      Cf-Cache-Status:
+      - DYNAMIC
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      X-Content-Type-Options:
+      - nosniff
+      Access-Control-Expose-Headers:
+      - CF-Ray
+      - CF-Ray
+      - X-Request-ID
+      Openai-Organization:
+      - "<OPENAI_ORGANIZATION>"
+      Openai-Processing-Ms:
+      - '2801'
+      Openai-Project:
+      - "<OPENAI_PROJECT_ID>"
+      Openai-Version:
+      - '2020-10-01'
+      X-Ratelimit-Limit-Requests:
+      - '10000'
+      X-Ratelimit-Limit-Tokens:
+      - '30000000'
+      X-Ratelimit-Remaining-Requests:
+      - '9999'
+      X-Ratelimit-Remaining-Tokens:
+      - '29999665'
+      X-Ratelimit-Reset-Requests:
+      - 6ms
+      X-Ratelimit-Reset-Tokens:
+      - 0s
+      X-Request-Id:
+      - "<REQUEST_ID>"
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: ASCII-8BIT
+      string: |-
+        {
+          "id": "resp_abc123",
+          "object": "response",
+          "created_at": 1790611051,
+          "status": "completed",
+          "access_programs": null,
+          "background": false,
+          "billing": {
+            "payer": "developer"
+          },
+          "completed_at": 1790611054,
+          "error": null,
+          "frequency_penalty": 0.0,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-2024-08-06",
+          "moderation": null,
+          "output": [
+            {
+              "id": "ws_abc123",
+              "type": "web_search_call",
+              "status": "completed",
+              "action": {
+                "type": "search",
+                "queries": [
+                  "latest Ruby on Rails release changes"
+                ],
+                "query": "latest Ruby on Rails release changes",
+                "sources": [
+                  {
+                    "type": "url",
+                    "url": "https://rubyonrails.org/category/releases?utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://www.rubyonrails.org/releases?utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://rubyonrails.org/2026/3/24/Rails-Versions-8-0-5-and-8-1-3-have-been-released?utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://endoflife.date/rails?utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://www.ruby-lang.org/en/news/2025/11/17/ruby-4-0-0-preview2-released/?utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://rubygems.org/gems/rails/versions/8.1.0?utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://bundler.rubygems.org/gems/rails/versions/8.1.0?utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://rubygems.org/gems/rails/versions/8.1.1?utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://bundler.rubygems.org/gems/rails/versions/7.0.10?utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://bundler.rubygems.org/gems/rails/versions/8.0.4?locale=en&utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://bundler.rubygems.org/gems/rails/versions/8.1.1?locale=en&utm_source=openai"
+                  },
+                  {
+                    "type": "url",
+                    "url": "https://www.allerin.com/services/ruby-on-rails/support-calendar?utm_source=openai"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "msg_abc123",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [
+                    {
+                      "type": "url_citation",
+                      "end_index": 166,
+                      "start_index": 86,
+                      "title": "Ruby on Rails new release updates",
+                      "url": "https://rubyonrails.org/category/releases?utm_source=openai"
+                    }
+                  ],
+                  "logprobs": [],
+                  "text": "The latest Ruby on Rails release, version 8.1.4, was announced on September 24, 2026. ([rubyonrails.org](https://rubyonrails.org/category/releases?utm_source=openai)) This update includes various bug fixes and improvements; for a detailed list of changes, please refer to the [release notes on GitHub](https://github.com/rails/rails/releases/tag/v8.1.4). "
+                }
+              ],
+              "role": "assistant"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "presence_penalty": 0.0,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "prompt_cache_retention": "in_memory",
+          "reasoning": {
+            "context": null,
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": false,
+          "temperature": 0.7,
+          "text": {
+            "format": {
+              "type": "text"
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "auto",
+          "tool_usage": {
+            "image_gen": {
+              "input_tokens": 0,
+              "input_tokens_details": {
+                "image_tokens": 0,
+                "text_tokens": 0
+              },
+              "output_tokens": 0,
+              "output_tokens_details": {
+                "image_tokens": 0,
+                "text_tokens": 0
+              },
+              "total_tokens": 0
+            },
+            "web_search": {
+              "num_requests": 1
+            }
+          },
+          "tools": [
+            {
+              "type": "web_search_preview",
+              "search_content_types": [
+                "text"
+              ],
+              "search_context_size": "medium",
+              "user_location": {
+                "type": "approximate",
+                "city": null,
+                "country": "US",
+                "region": null,
+                "timezone": null
+              }
+            }
+          ],
+          "top_logprobs": 0,
+          "top_p": 1.0,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 316,
+            "input_tokens_details": {
+              "cache_write_tokens": 0,
+              "cached_tokens": 0
+            },
+            "output_tokens": 109,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 425
+          },
+          "user": null,
+          "metadata": {}
+        }
+  recorded_at: Mon, 28 Sep 2026 15:57:34 GMT
+recorded_with: VCR 6.4.0

@@ -9,18 +9,6 @@ class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
     "/v1/responses"
   end
 
-  def web_search_source_urls(model_completion)
-    source_urls = Array(model_completion.response_array).flat_map do |output_item|
-      next [] unless output_item.is_a?(Hash) && output_item["type"] == "web_search_call"
-
-      Array(output_item.dig("action", "sources")).filter_map do |source|
-        source["url"].presence && Raif::Utils::HtmlFragmentProcessor.strip_tracking_parameters(source["url"])
-      end
-    end
-
-    (super + source_urls).uniq
-  end
-
 private
 
   def api_path
