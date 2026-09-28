@@ -220,6 +220,17 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
           }
         ])
       end
+
+      it "returns the uncited pages a web search retrieved", vcr: { cassette_name: "open_ai_responses/provider_managed_web_search_sources" } do
+        model_completion = llm.chat(
+          messages: [{ role: "user", content: "What changed in the latest Ruby on Rails release? Answer in two sentences." }],
+          available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
+        )
+
+        cited_urls = model_completion.citations.map { |citation| citation["url"] }
+        expect(model_completion.web_search_source_urls).to include(*cited_urls)
+        expect(model_completion.web_search_source_urls - cited_urls).not_to be_empty
+      end
     end
 
     context "streaming" do
@@ -614,6 +625,38 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
             }
           }
         })
+      end
+    end
+
+    context "with the WebSearch tool" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "open_ai_responses_gpt_4o",
+          model_api_name: "gpt-4o",
+          response_format: "text",
+          available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
+        )
+      end
+
+      it "asks for the pages each search returned" do
+        expect(parameters[:include]).to eq(["web_search_call.action.sources"])
+      end
+    end
+
+    context "without the WebSearch tool" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "open_ai_responses_gpt_4o",
+          model_api_name: "gpt-4o",
+          response_format: "text",
+          available_model_tools: [Raif::ModelTools::ProviderManaged::CodeExecution]
+        )
+      end
+
+      it "does not ask for search sources" do
+        expect(parameters).not_to have_key(:include)
       end
     end
   end

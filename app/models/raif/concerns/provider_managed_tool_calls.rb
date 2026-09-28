@@ -34,6 +34,17 @@ module Raif::Concerns::ProviderManagedToolCalls
     end
   end
 
+  # URLs of the pages a provider-managed web search returned, whether or not the response
+  # cites them. A model told to cite pages in a format of its own writes no provider
+  # citation, so its citations alone miss pages it did retrieve. Google stores only the
+  # cited pages, so for Google this returns the citations.
+  def web_search_source_urls
+    provider_managed_tool_calls
+      .select { |tool_call| tool_call["tool_name"] == "web_search" }
+      .flat_map { |tool_call| tool_call["sources"].filter_map { |source| source["url"] } }
+      .uniq
+  end
+
   # Returns citations with URLs sanitized to only allow http/https schemes.
   def sanitized_citations
     @sanitized_citations ||= Array(citations).map do |citation|
@@ -126,10 +137,21 @@ private
       "provider_tool_call_id" => block["id"],
       "status" => block["status"],
       "arguments" => payload,
-      "sources" => [],
+      "sources" => tool_name == "web_search" ? open_ai_web_search_sources(block) : [],
       "raw_result" => payload,
       "inferred" => false
     }
+  end
+
+  # OpenAI lists a search's pages in `action.sources` when the request asks for them. An
+  # `open_page` or `find` action carries the one page it fetched in `action.url`.
+  def open_ai_web_search_sources(block)
+    action = block["action"]
+    return [] unless action.is_a?(Hash)
+
+    sources = Array(action["sources"])
+    sources += [{ "url" => action["url"] }] if action["url"].present?
+    merge_provider_managed_sources([], sources)
   end
 
   def inferred_provider_managed_tool_calls

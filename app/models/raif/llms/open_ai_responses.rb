@@ -120,6 +120,12 @@ private
       tools = build_tools_parameter(model_completion)
       parameters[:tools] = tools unless tools.blank?
 
+      # The response lists a search's pages only when asked. Without them, a page the text
+      # cites without a url_citation annotation cannot be told apart from one cited from memory.
+      if tools&.any? { |tool| tool[:type].to_s.start_with?("web_search") }
+        parameters[:include] = ["web_search_call.action.sources"]
+      end
+
       if model_completion.tool_choice == "required"
         parameters[:tool_choice] = build_required_tool_choice
         parameters[:parallel_tool_calls] = (model_completion.allow_parallel_tool_calls == true) unless tools.blank?
