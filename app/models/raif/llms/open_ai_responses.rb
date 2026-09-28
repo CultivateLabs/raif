@@ -9,6 +9,18 @@ class Raif::Llms::OpenAiResponses < Raif::Llms::OpenAiBase
     "/v1/responses"
   end
 
+  def web_search_source_urls(model_completion)
+    source_urls = Array(model_completion.response_array).flat_map do |output_item|
+      next [] unless output_item.is_a?(Hash) && output_item["type"] == "web_search_call"
+
+      Array(output_item.dig("action", "sources")).filter_map do |source|
+        source["url"].presence && Raif::Utils::HtmlFragmentProcessor.strip_tracking_parameters(source["url"])
+      end
+    end
+
+    (super + source_urls).uniq
+  end
+
 private
 
   def api_path
@@ -119,6 +131,12 @@ private
     if supports_native_tool_use?
       tools = build_tools_parameter(model_completion)
       parameters[:tools] = tools unless tools.blank?
+
+      # The response lists a search's pages only when asked. Without them, a page the text
+      # cites without a url_citation annotation cannot be told apart from one cited from memory.
+      if tools&.any? { |tool| tool[:type].to_s.start_with?("web_search") }
+        parameters[:include] = ["web_search_call.action.sources"]
+      end
 
       if model_completion.tool_choice == "required"
         parameters[:tool_choice] = build_required_tool_choice

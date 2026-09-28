@@ -343,6 +343,14 @@ module Raif
       supported_provider_managed_tools&.include?(tool_klass.to_s)
     end
 
+    # URLs of the pages a provider-managed web search returned for the completion, whether or
+    # not the response cites them. A model told to cite pages in a format of its own writes no
+    # provider citation, so its citations alone miss pages it did retrieve. The base covers a
+    # provider whose stored response lists no uncited pages.
+    def web_search_source_urls(model_completion)
+      Array(model_completion.citations).filter_map { |citation| citation["url"] }.uniq
+    end
+
     # Build the tool_choice parameter to force a specific tool to be called.
     # Each provider implements this to return the correct format.
     # @param tool_name [String] The name of the tool to force

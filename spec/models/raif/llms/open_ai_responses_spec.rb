@@ -616,6 +616,71 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
         })
       end
     end
+    context "with the WebSearch tool" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "open_ai_responses_gpt_4o",
+          model_api_name: "gpt-4o",
+          response_format: "text",
+          available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch]
+        )
+      end
+
+      it "asks for the pages each search returned" do
+        expect(parameters[:include]).to eq(["web_search_call.action.sources"])
+      end
+    end
+
+    context "without the WebSearch tool" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: "open_ai_responses_gpt_4o",
+          model_api_name: "gpt-4o",
+          response_format: "text",
+          available_model_tools: [Raif::ModelTools::ProviderManaged::CodeExecution]
+        )
+      end
+
+      it "does not ask for search sources" do
+        expect(parameters).not_to have_key(:include)
+      end
+    end
+  end
+
+  describe "#web_search_source_urls" do
+    let(:model_completion) do
+      Raif::ModelCompletion.new(
+        llm_model_key: "open_ai_responses_gpt_4o",
+        citations: [{ "url" => "https://example.com/cited", "title" => "Cited" }],
+        response_array: [
+          {
+            "type" => "web_search_call",
+            "action" => {
+              "type" => "search",
+              "sources" => [
+                { "type" => "url", "url" => "https://example.com/cited" },
+                { "type" => "url", "url" => "https://example.com/uncited?utm_source=openai" }
+              ]
+            }
+          },
+          { "type" => "web_search_call", "action" => { "type" => "open_page", "url" => "https://example.com/opened" } },
+          { "type" => "message", "content" => [] }
+        ]
+      )
+    end
+
+    it "returns the cited pages and every page a search returned, without tracking parameters" do
+      expect(llm.web_search_source_urls(model_completion)).to eq(["https://example.com/cited", "https://example.com/uncited"])
+      expect(model_completion.web_search_source_urls).to eq(["https://example.com/cited", "https://example.com/uncited"])
+    end
+
+    it "returns only the cited pages when the response lists no sources" do
+      model_completion.response_array = [{ "type" => "web_search_call", "action" => { "type" => "search" } }]
+
+      expect(llm.web_search_source_urls(model_completion)).to eq(["https://example.com/cited"])
+    end
   end
 
   describe "#build_tools_parameter" do

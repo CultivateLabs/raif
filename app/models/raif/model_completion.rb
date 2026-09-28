@@ -284,6 +284,10 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     save!
   end
 
+  def web_search_source_urls
+    Raif.llm(llm_model_key.to_sym).web_search_source_urls(self)
+  end
+
   # Columns copied onto the inference cost event. A post-terminal change to
   # any of them (e.g. batch results applying token counts after completed_at
   # was already set) re-syncs the event so it stays a faithful mirror.
