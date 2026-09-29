@@ -537,6 +537,28 @@
         "checked_at": "2026-09-01T22:28:51Z"
       }
     },
+    "open_ai_gpt_6_1_sol": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:26:38Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:26:38Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:26:38Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:26:38Z"
+      }
+    },
     "open_ai_gpt_6_astra": {
       "completion": {
         "claimed": true,
@@ -1498,6 +1520,52 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:28:51Z"
+      }
+    },
+    "open_ai_responses_gpt_6_1_sol": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:28:05Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:28:05Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:28:05Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:28:05Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-09-29T18:28:39Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:28:05Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:28:05Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-29T18:28:05Z"
       }
     },
     "open_ai_responses_gpt_6_astra": {
