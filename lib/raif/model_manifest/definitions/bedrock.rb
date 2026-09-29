@@ -215,7 +215,12 @@ provider :bedrock do |p|
     api_name: "anthropic.claude-sonnet-5",
     display_name: "Anthropic Claude 5 Sonnet (via AWS Bedrock)",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 3.0, output_per_million: 15.0 },
+    pricing: {
+      cache_read_per_million: 0.22,
+      input_per_million: 2.2,
+      output_per_million: 11.0,
+      note: "Regional inference rate including the 10% premium; global routing costs 2.00 / 10.00 per million."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: false,

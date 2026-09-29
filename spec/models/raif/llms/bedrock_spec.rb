@@ -371,6 +371,18 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       expect(llm.send(:resolve_model_api_name, "global.anthropic.claude-sonnet-5-5")).to eq("global.anthropic.claude-sonnet-5-5")
       expect(llm.send(:resolve_model_api_name, "eu.anthropic.claude-sonnet-5")).to eq("eu.anthropic.claude-sonnet-5")
     end
+
+    it "resolves every Bedrock manifest api_name to at most one inference profile prefix" do
+      allow(Raif.config).to receive(:aws_bedrock_model_name_prefix).and_return("us")
+      profiles = described_class::INFERENCE_PROFILE_PREFIXES
+      bedrock_entries = Raif::ModelManifest.load.llm_entries.select { |entry| entry.adapter_class_name == described_class.name }
+
+      expect(bedrock_entries).not_to be_empty
+      bedrock_entries.each do |entry|
+        resolved = llm.send(:resolve_model_api_name, entry.api_name)
+        expect(profiles).not_to include(resolved.split(".")[1]), "#{entry.key} resolves to #{resolved}"
+      end
+    end
   end
 
   describe "blank response retry behavior" do

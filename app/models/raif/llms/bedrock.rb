@@ -247,8 +247,14 @@ private
     prefix = Raif.config.aws_bedrock_model_name_prefix.to_s.presence
 
     return api_name if prefix.blank?
-    return api_name if api_name.start_with?(*INFERENCE_PROFILE_PREFIXES.map { |profile| "#{profile}." })
     return api_name if api_name.start_with?("#{prefix}.")
+
+    if api_name.start_with?(*INFERENCE_PROFILE_PREFIXES.map { |profile| "#{profile}." })
+      Raif.logger.debug(
+        "Raif: #{api_name} names its own inference profile; aws_bedrock_model_name_prefix #{prefix.inspect} is not applied."
+      )
+      return api_name
+    end
 
     # Some Bedrock model IDs are provider IDs (not inference profile IDs),
     # so they should not be prefixed.

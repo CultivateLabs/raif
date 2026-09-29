@@ -49,6 +49,9 @@ Raif.configure do |config|
   # config.aws_bedrock_region = "us-east-1"
 
   # Prefix to apply to the model name in AWS Bedrock API calls (e.g. us.anthropic.claude-3-5-haiku-20241022-v1:0)
+  # Models that Bedrock offers through one inference profile only, such as bedrock_claude_5_5_sonnet (global),
+  # name that profile in their model ID and ignore this prefix. In GovCloud, register your own model with the
+  # us-gov profile ID for those models.
   # config.aws_bedrock_model_name_prefix = "us"
 
   # Whether Titan embedding models are enabled. Defaults to false

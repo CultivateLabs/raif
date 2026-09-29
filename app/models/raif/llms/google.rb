@@ -7,7 +7,7 @@ class Raif::Llms::Google < Raif::Llm
   include Raif::Concerns::Llms::Google::BatchInference
 
   def self.cache_read_input_token_cost_multiplier
-    0.25
+    0.1
   end
 
   def perform_model_completion!(model_completion, &block)
