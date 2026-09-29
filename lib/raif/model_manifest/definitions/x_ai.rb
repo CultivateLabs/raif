@@ -39,6 +39,7 @@ provider :x_ai do |p|
     api_name: "grok-4.6",
     display_name: "xAI Grok 4.6",
     pricing: {
+      cache_read_per_million: 0.5,
       input_per_million: 2.0,
       output_per_million: 6.0,
       note: "Long context surcharge: prompts of 200K tokens or more bill the whole request at $4.00 input and $12.00 output " \
@@ -64,7 +65,13 @@ provider :x_ai do |p|
     key: :x_ai_grok_4_5,
     api_name: "grok-4.5",
     display_name: "xAI Grok 4.5",
-    pricing: { input_per_million: 2.0, output_per_million: 6.0 },
+    pricing: {
+      cache_read_per_million: 0.3,
+      input_per_million: 2.0,
+      output_per_million: 6.0,
+      note: "Long context surcharge: prompts of 200K tokens or more bill the whole request at $4.00 input and $12.00 output " \
+        "per million. Cached input is $0.30 per million ($0.60 at long context). Context window is 500K tokens."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -84,7 +91,13 @@ provider :x_ai do |p|
     key: :x_ai_grok_4_3,
     api_name: "grok-4.3",
     display_name: "xAI Grok 4.3",
-    pricing: { input_per_million: 1.25, output_per_million: 2.5 },
+    pricing: {
+      cache_read_per_million: 0.2,
+      input_per_million: 1.25,
+      output_per_million: 2.5,
+      note: "Long context surcharge: prompts of 200K tokens or more bill the whole request at $2.50 input and $5.00 output " \
+        "per million. Cached input is $0.20 per million ($0.40 at long context). Context window is 1M tokens."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -104,7 +117,13 @@ provider :x_ai do |p|
     key: :x_ai_grok_4_20_reasoning,
     api_name: "grok-4.20-0309-reasoning",
     display_name: "xAI Grok 4.20 (reasoning)",
-    pricing: { input_per_million: 1.25, output_per_million: 2.5 },
+    pricing: {
+      cache_read_per_million: 0.2,
+      input_per_million: 1.25,
+      output_per_million: 2.5,
+      note: "Long context surcharge: prompts of 200K tokens or more bill the whole request at $2.50 input and $5.00 output " \
+        "per million. Cached input is $0.20 per million ($0.40 at long context). Context window is 1M tokens."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -124,7 +143,13 @@ provider :x_ai do |p|
     key: :x_ai_grok_4_20_non_reasoning,
     api_name: "grok-4.20-0309-non-reasoning",
     display_name: "xAI Grok 4.20 (non-reasoning)",
-    pricing: { input_per_million: 1.25, output_per_million: 2.5 },
+    pricing: {
+      cache_read_per_million: 0.2,
+      input_per_million: 1.25,
+      output_per_million: 2.5,
+      note: "Long context surcharge: prompts of 200K tokens or more bill the whole request at $2.50 input and $5.00 output " \
+        "per million. Cached input is $0.20 per million ($0.40 at long context). Context window is 1M tokens."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,

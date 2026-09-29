@@ -5,6 +5,11 @@ class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
   include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
 
+  # Cross-region inference profile prefixes. A manifest api_name that already
+  # starts with one names its profile, as global-only models such as Claude
+  # Sonnet 5.5 must, so the configured prefix is not added.
+  INFERENCE_PROFILE_PREFIXES = %w[global us us-gov eu apac jp au ca].freeze
+
   def self.prompt_tokens_include_cached_tokens?
     false
   end
@@ -243,6 +248,13 @@ private
 
     return api_name if prefix.blank?
     return api_name if api_name.start_with?("#{prefix}.")
+
+    if api_name.start_with?(*INFERENCE_PROFILE_PREFIXES.map { |profile| "#{profile}." })
+      Raif.logger.debug(
+        "Raif: #{api_name} names its own inference profile; aws_bedrock_model_name_prefix #{prefix.inspect} is not applied."
+      )
+      return api_name
+    end
 
     # Some Bedrock model IDs are provider IDs (not inference profile IDs),
     # so they should not be prefixed.

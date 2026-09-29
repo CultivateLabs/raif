@@ -78,7 +78,7 @@ provider :open_router do |p|
     key: :open_router_claude_5_sonnet,
     api_name: "anthropic/claude-sonnet-5",
     display_name: "Anthropic Claude 5 Sonnet (via OpenRouter)",
-    pricing: { input_per_million: 3.0, output_per_million: 15.0 },
+    pricing: { input_per_million: 2.0, output_per_million: 10.0 },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -322,7 +322,13 @@ provider :open_router do |p|
     key: :open_router_gemini_2_5_pro,
     api_name: "google/gemini-2.5-pro",
     display_name: "Gemini 2.5 Pro (via OpenRouter)",
-    pricing: { input_per_million: 1.25, output_per_million: 10.0 },
+    pricing: {
+      cache_read_per_million: 0.125,
+      input_per_million: 1.25,
+      output_per_million: 10.0,
+      note: "Above 200K input tokens, input and cache rates double to 2.50 input / 0.25 cached input per million " \
+        "and output rises to 15.00 per million."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -334,7 +340,10 @@ provider :open_router do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 9, 28),
+      retirement_date: Date.new(2026, 10, 20),
+      replacement_key: :open_router_gemini_3_1_pro_preview
     }
   )
 
@@ -342,7 +351,13 @@ provider :open_router do |p|
     key: :open_router_gemini_3_1_pro_preview,
     api_name: "google/gemini-3.1-pro-preview",
     display_name: "Gemini 3.1 Pro Preview (via OpenRouter)",
-    pricing: { input_per_million: 2.0, output_per_million: 12.0 },
+    pricing: {
+      cache_read_per_million: 0.2,
+      input_per_million: 2.0,
+      output_per_million: 12.0,
+      note: "Above 200K input tokens, input and cache rates double to 4.00 input / 0.40 cached input per million " \
+        "and output rises to 18.00 per million."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -374,7 +389,10 @@ provider :open_router do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 9, 28),
+      retirement_date: Date.new(2026, 10, 28),
+      replacement_key: :open_router_gemini_3_5_flash_lite
     }
   )
 

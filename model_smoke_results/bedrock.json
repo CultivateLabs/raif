@@ -390,6 +390,38 @@
         "checked_at": "2026-09-22T18:38:01Z"
       }
     },
+    "bedrock_claude_5_5_sonnet": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T20:18:10Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T20:18:10Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T20:18:10Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T20:18:10Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T20:18:10Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T20:18:10Z"
+      }
+    },
     "bedrock_claude_5_opus": {
       "completion": {
         "claimed": true,
@@ -621,6 +653,70 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-21T18:47:24Z"
+      }
+    },
+    "bedrock_gpt_6_luna": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      }
+    },
+    "bedrock_gpt_6_sol": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-09-28T18:28:45Z"
       }
     },
     "bedrock_gpt_oss_120b": {
