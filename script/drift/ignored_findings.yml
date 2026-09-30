@@ -1,0 +1,20 @@
+# Drift findings the scheduled check should stop reporting
+# (.github/workflows/model-manifest-check.yml).
+#
+# Each run opens one weekly issue listing every current finding. To dismiss a
+# finding, add an entry here. The check matches on `finding`, which uses the
+# same wording as the finding's heading in the weekly issue:
+# "<provider> <category>: <model or topic>".
+#
+# `observed` records what the finding said when it was dismissed. If a later
+# run sees something materially different (a new price, a new retirement date,
+# a changed set of affected models), the check reports the finding again and
+# notes that it was previously ignored.
+#
+# Example:
+#   - finding: "openrouter new model: some-vendor/some-model"
+#     observed: "Listed on OpenRouter at $1.00/$4.00 per 1M tokens"
+#     reason: "Not a model raif users need"
+#     ignored_on: 2026-09-30
+
+[]
