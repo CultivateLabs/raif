@@ -538,6 +538,11 @@
       }
     },
     "open_ai_gpt_6_1_sol": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-01T18:05:01Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -1523,6 +1528,11 @@
       }
     },
     "open_ai_responses_gpt_6_1_sol": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-01T18:05:01Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
