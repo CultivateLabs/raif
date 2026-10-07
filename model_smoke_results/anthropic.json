@@ -323,6 +323,56 @@
         "checked_at": "2026-09-15T18:06:47Z"
       }
     },
+    "anthropic_claude_5_5_haiku": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:30:52Z"
+      },
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:30:52Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:30:52Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:30:52Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:30:52Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-10-07T19:30:52Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:30:52Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:30:52Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:30:52Z"
+      }
+    },
     "anthropic_claude_5_5_opus": {
       "batch_inference": {
         "claimed": true,

@@ -70,6 +70,34 @@ provider :bedrock do |p|
   )
 
   p.model(
+    key: :bedrock_claude_5_5_haiku,
+    api_name: "anthropic.claude-haiku-5-5",
+    display_name: "Anthropic Claude 5.5 Haiku (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.011,
+      input_per_million: 0.11,
+      output_per_million: 0.55,
+      note: "Geo and in-region inference rate including the 10% premium, for prompts up to 100K tokens; global routing costs " \
+        "0.10 / 0.50 per million. Prompts over 100K tokens bill 0.55 / 2.75 per million (0.50 / 2.50 with global routing)."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: false,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 10, 7)
+    }
+  )
+
+  p.model(
     key: :bedrock_claude_5_opus,
     api_name: "anthropic.claude-opus-5",
     display_name: "Anthropic Claude 5 Opus (via AWS Bedrock)",
