@@ -75,10 +75,11 @@ provider :bedrock do |p|
     display_name: "Anthropic Claude 5.5 Haiku (via AWS Bedrock)",
     max_completion_tokens: 128_000,
     pricing: {
-      cache_read_per_million: 0.01,
-      input_per_million: 0.1,
-      output_per_million: 0.5,
-      note: "Rate for prompts up to 100K tokens. Bedrock bills a separate long-context rate for prompts over 100K tokens."
+      cache_read_per_million: 0.011,
+      input_per_million: 0.11,
+      output_per_million: 0.55,
+      note: "Geo and in-region inference rate including the 10% premium, for prompts up to 100K tokens; global routing costs " \
+        "0.10 / 0.50 per million. Prompts over 100K tokens bill 0.55 / 2.75 per million (0.50 / 2.50 with global routing)."
     },
     capabilities: {
       temperature: false,
