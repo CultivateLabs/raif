@@ -70,6 +70,33 @@ provider :bedrock do |p|
   )
 
   p.model(
+    key: :bedrock_claude_5_5_haiku,
+    api_name: "anthropic.claude-haiku-5-5",
+    display_name: "Anthropic Claude 5.5 Haiku (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.01,
+      input_per_million: 0.1,
+      output_per_million: 0.5,
+      note: "Rate for prompts up to 100K tokens. Bedrock bills a separate long-context rate for prompts over 100K tokens."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: false,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 10, 7)
+    }
+  )
+
+  p.model(
     key: :bedrock_claude_5_opus,
     api_name: "anthropic.claude-opus-5",
     display_name: "Anthropic Claude 5 Opus (via AWS Bedrock)",

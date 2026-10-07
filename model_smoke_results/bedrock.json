@@ -358,6 +358,38 @@
         "checked_at": "2026-09-01T22:07:02Z"
       }
     },
+    "bedrock_claude_5_5_haiku": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:31:10Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:31:10Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:31:10Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:31:10Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:31:10Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-07T19:31:10Z"
+      }
+    },
     "bedrock_claude_5_5_opus": {
       "completion": {
         "claimed": true,

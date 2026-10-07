@@ -56,6 +56,33 @@ provider :anthropic do |p|
   )
 
   p.model(
+    key: :anthropic_claude_5_5_haiku,
+    api_name: "claude-haiku-5-5",
+    display_name: "Anthropic Claude 5.5 Haiku",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.01,
+      input_per_million: 0.1,
+      output_per_million: 0.5,
+      note: "Rate for prompts up to 100K tokens. Prompts over 100K tokens bill 0.50 input, 2.50 output, and 0.05 cache read per million."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: true,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: %i[web_search code_execution]
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 10, 7)
+    }
+  )
+
+  p.model(
     key: :anthropic_claude_5_opus,
     api_name: "claude-opus-5",
     display_name: "Anthropic Claude 5 Opus",
