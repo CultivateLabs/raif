@@ -218,7 +218,51 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
             messages: [{ role: "user", content: "Hello" }],
             response_format: :json
           )
-        end.to raise_error(Raif::Errors::BlankResponseError)
+        end.to raise_error(Raif::Errors::BlankResponseError, /\(finish reason: none\)\z/)
+      end
+    end
+
+    context "when the model refuses the prompt" do
+      let(:request_count) { [0] }
+      let(:content) { [] }
+
+      before do
+        allow(llm).to receive(:connection).and_return(test_connection)
+
+        stubs.post("messages") do |_env|
+          request_count[0] += 1
+          [
+            200,
+            { "Content-Type" => "application/json" },
+            { "id" => "msg_refused", "content" => content, "stop_reason" => "refusal", "usage" => { "input_tokens" => 4, "output_tokens" => 0 } }
+          ]
+        end
+      end
+
+      it "raises RefusalError on the first attempt instead of retrying a blank response" do
+        expect do
+          llm.chat(messages: [{ role: "user", content: "Hello" }], response_format: :json)
+        end.to raise_error(Raif::Errors::RefusalError, /\(finish reason: refusal\)\z/)
+
+        expect(request_count[0]).to eq(1)
+
+        model_completion = Raif::ModelCompletion.last
+        expect(model_completion).to be_failed
+        expect(model_completion.retry_count).to eq(0)
+        expect(model_completion.failure_error).to eq("Raif::Errors::RefusalError")
+        expect(model_completion.response_finish_reason).to eq("refusal")
+      end
+
+      context "when the refusal arrives after partial output" do
+        let(:content) { [{ "type" => "text", "text" => "Here is the first part of" }] }
+
+        it "raises RefusalError rather than completing with the partial output" do
+          expect do
+            llm.chat(messages: [{ role: "user", content: "Hello" }])
+          end.to raise_error(Raif::Errors::RefusalError)
+
+          expect(Raif::ModelCompletion.last).to be_failed
+        end
       end
     end
 

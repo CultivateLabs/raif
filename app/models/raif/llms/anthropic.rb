@@ -34,6 +34,10 @@ class Raif::Llms::Anthropic < Raif::Llm
 
 private
 
+  def refusal_finish_reasons
+    ["refusal"]
+  end
+
   def connection
     @connection ||= Faraday.new(url: "https://api.anthropic.com/v1", request: Raif.default_request_options) do |f|
       f.headers["x-api-key"] = Raif.config.anthropic_api_key

@@ -53,6 +53,10 @@ class Raif::Llms::Bedrock < Raif::Llm
 
 private
 
+  def refusal_finish_reasons
+    ["guardrail_intervened", "content_filtered"]
+  end
+
   def bedrock_client
     @bedrock_client ||= begin
       client_options = {

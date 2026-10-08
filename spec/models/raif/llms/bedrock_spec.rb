@@ -487,6 +487,24 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
   end
 
+  describe "refusal handling" do
+    it "raises RefusalError without retrying when a content filter blocks the output" do
+      message = Aws::BedrockRuntime::Types::Message.new(role: "assistant", content: [])
+      output = Aws::BedrockRuntime::Types::ConverseOutput::Message.new(message: message)
+      usage = Aws::BedrockRuntime::Types::TokenUsage.new(input_tokens: 4, output_tokens: 0, total_tokens: 4)
+      blocked_response = Aws::BedrockRuntime::Types::ConverseResponse.new(output: output, usage: usage, stop_reason: "content_filtered")
+      mock_client = instance_double(Aws::BedrockRuntime::Client)
+      allow(llm).to receive(:bedrock_client).and_return(mock_client)
+      allow(mock_client).to receive(:converse).and_return(blocked_response)
+
+      expect do
+        llm.chat(messages: [{ role: "user", content: "Hello" }])
+      end.to raise_error(Raif::Errors::RefusalError, /\(finish reason: content_filtered\)\z/)
+
+      expect(mock_client).to have_received(:converse).once
+    end
+  end
+
   describe "nil response handling" do
     it "raises BlankResponseError when the API returns nil" do
       mock_client = instance_double(Aws::BedrockRuntime::Client)
