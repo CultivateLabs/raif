@@ -448,6 +448,15 @@ module Raif
     end
 
     def ensure_model_completion_present!(model_completion)
+      # Checked before the blank-response check because a refusal often arrives with no content,
+      # and BlankResponseError is retriable. A refusal that arrives after partial output raises
+      # too: the partial output is not an answer.
+      if refusal_finish_reasons.include?(model_completion.response_finish_reason.to_s)
+        raise Raif::Errors::RefusalError,
+          "Model completion #{model_completion.id} was refused by the model " \
+            "(finish reason: #{model_completion.response_finish_reason})"
+      end
+
       # response_array/raw provider data may still be present for debugging even when
       # the normalized response has no text or tool calls. A generated image (e.g. an
       # OpenAI image_generation_call) is output on its own, even with no text.
@@ -456,7 +465,13 @@ module Raif
         model_completion.provider_managed_image_output?
 
       raise Raif::Errors::BlankResponseError,
-        "Model completion #{model_completion.id} returned no text response and no tool calls"
+        "Model completion #{model_completion.id} returned no text response and no tool calls " \
+          "(finish reason: #{model_completion.response_finish_reason.presence || "none"})"
+    end
+
+    # Provider finish reasons that mean the model declined the prompt. Override per provider.
+    def refusal_finish_reasons
+      []
     end
 
     def streaming_chunk_handler(model_completion, &block)

@@ -355,7 +355,7 @@ RSpec.describe Raif::Llm, type: :model do
         expect(mc.failed?).to be true
         expect(mc.completed?).to be false
         expect(mc.failure_error).to eq("Raif::Errors::BlankResponseError")
-        expect(mc.failure_reason).to eq("Model completion #{mc.id} returned no text response and no tool calls")
+        expect(mc.failure_reason).to eq("Model completion #{mc.id} returned no text response and no tool calls (finish reason: none)")
         expect(mc.response_array).to eq([{ "text" => "" }])
       end
     end

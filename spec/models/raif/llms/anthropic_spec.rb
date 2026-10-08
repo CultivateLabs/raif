@@ -218,7 +218,51 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
             messages: [{ role: "user", content: "Hello" }],
             response_format: :json
           )
-        end.to raise_error(Raif::Errors::BlankResponseError)
+        end.to raise_error(Raif::Errors::BlankResponseError, /\(finish reason: none\)\z/)
+      end
+    end
+
+    context "when the model refuses the prompt" do
+      let(:request_count) { [0] }
+      let(:content) { [] }
+
+      before do
+        allow(llm).to receive(:connection).and_return(test_connection)
+
+        stubs.post("messages") do |_env|
+          request_count[0] += 1
+          [
+            200,
+            { "Content-Type" => "application/json" },
+            { "id" => "msg_refused", "content" => content, "stop_reason" => "refusal", "usage" => { "input_tokens" => 4, "output_tokens" => 0 } }
+          ]
+        end
+      end
+
+      it "raises RefusalError on the first attempt instead of retrying a blank response" do
+        expect do
+          llm.chat(messages: [{ role: "user", content: "Hello" }], response_format: :json)
+        end.to raise_error(Raif::Errors::RefusalError, /\(finish reason: refusal\)\z/)
+
+        expect(request_count[0]).to eq(1)
+
+        model_completion = Raif::ModelCompletion.last
+        expect(model_completion).to be_failed
+        expect(model_completion.retry_count).to eq(0)
+        expect(model_completion.failure_error).to eq("Raif::Errors::RefusalError")
+        expect(model_completion.response_finish_reason).to eq("refusal")
+      end
+
+      context "when the refusal arrives after partial output" do
+        let(:content) { [{ "type" => "text", "text" => "Here is the first part of" }] }
+
+        it "raises RefusalError rather than completing with the partial output" do
+          expect do
+            llm.chat(messages: [{ role: "user", content: "Hello" }])
+          end.to raise_error(Raif::Errors::RefusalError)
+
+          expect(Raif::ModelCompletion.last).to be_failed
+        end
       end
     end
 
@@ -340,6 +384,21 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
           " today? Is there anything I can help",
           " you with?"
         ])
+      end
+
+      it "raises RefusalError after the partial deltas of a streamed refusal",
+        vcr: { cassette_name: "anthropic/streaming_refusal", match_requests_on: [:method, :uri] } do
+        deltas = []
+
+        expect do
+          llm.chat(messages: [{ role: "user", content: "Hello" }]) do |_model_completion, delta, _sse_event|
+            deltas << delta
+          end
+        end.to raise_error(Raif::Errors::RefusalError)
+
+        expect(deltas).to eq(["Here is the first part of"])
+        expect(Raif::ModelCompletion.last).to be_failed
+        expect(Raif::ModelCompletion.last.retry_count).to eq(0)
       end
 
       it "streams a json response correctly", vcr: { cassette_name: "anthropic/streaming_json" } do
@@ -1131,6 +1190,23 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect do
           llm.send(:ensure_model_completion_present!, model_completion)
         end.to raise_error(Raif::Errors::BlankResponseError)
+      end
+
+      it "leaves truncated JSON from a refusal for the refusal handling" do
+        response_json = {
+          "id" => "msg_123",
+          "content" => [{ "type" => "text", "text" => "{\"sco" }],
+          "stop_reason" => "refusal",
+          "usage" => { "input_tokens" => 10, "output_tokens" => 3 }
+        }
+
+        expect do
+          llm.send(:update_model_completion, model_completion, response_json)
+        end.not_to raise_error
+
+        expect do
+          llm.send(:ensure_model_completion_present!, model_completion)
+        end.to raise_error(Raif::Errors::RefusalError)
       end
 
       it "does not validate an intermediate developer-managed tool response as final JSON" do
