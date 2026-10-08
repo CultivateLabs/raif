@@ -386,6 +386,21 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         ])
       end
 
+      it "raises RefusalError after the partial deltas of a streamed refusal",
+        vcr: { cassette_name: "anthropic/streaming_refusal", match_requests_on: [:method, :uri] } do
+        deltas = []
+
+        expect do
+          llm.chat(messages: [{ role: "user", content: "Hello" }]) do |_model_completion, delta, _sse_event|
+            deltas << delta
+          end
+        end.to raise_error(Raif::Errors::RefusalError)
+
+        expect(deltas).to eq(["Here is the first part of"])
+        expect(Raif::ModelCompletion.last).to be_failed
+        expect(Raif::ModelCompletion.last.retry_count).to eq(0)
+      end
+
       it "streams a json response correctly", vcr: { cassette_name: "anthropic/streaming_json" } do
         system_prompt = "You are a helpful assistant who specializes in telling jokes. Your response should be a properly formatted JSON object containing a single `joke` key and a single `answer` key. Do not include any other text in your response outside the JSON object." # rubocop:disable Layout/LineLength
 
@@ -1175,6 +1190,23 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         expect do
           llm.send(:ensure_model_completion_present!, model_completion)
         end.to raise_error(Raif::Errors::BlankResponseError)
+      end
+
+      it "leaves truncated JSON from a refusal for the refusal handling" do
+        response_json = {
+          "id" => "msg_123",
+          "content" => [{ "type" => "text", "text" => "{\"sco" }],
+          "stop_reason" => "refusal",
+          "usage" => { "input_tokens" => 10, "output_tokens" => 3 }
+        }
+
+        expect do
+          llm.send(:update_model_completion, model_completion, response_json)
+        end.not_to raise_error
+
+        expect do
+          llm.send(:ensure_model_completion_present!, model_completion)
+        end.to raise_error(Raif::Errors::RefusalError)
       end
 
       it "does not validate an intermediate developer-managed tool response as final JSON" do
