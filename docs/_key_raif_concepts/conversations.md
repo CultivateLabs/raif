@@ -284,3 +284,25 @@ conversation.update(llm_messages_max_length: nil)
 ---
 
 **Read next:** [Agents](agents)
+
+## Host execution context
+
+Each conversation entry has an `execution_context` JSON object for application metadata
+such as the configuration version or capabilities captured for that entry. It defaults
+to an independent empty object. The same entry retains its context when processing is
+retried; a later entry starts with a new empty object. Existing entries read as empty
+objects, so applications can distinguish them from entries carrying captured metadata.
+
+```ruby
+entry = conversation.entries.create!(
+  creator: current_user,
+  user_message: "Review the latest figures",
+  execution_context: { "configuration_ref" => configuration.uuid }
+)
+entry.reload.execution_context # => { "configuration_ref" => "..." }
+```
+
+Raif persists this object but does not interpret it or send it to a model. The host
+application owns validation, authorization, and any rules about changing its values.
+After upgrading, copy the engine migration with `bin/rails raif:install:migrations`
+and migrate before assigning execution context.

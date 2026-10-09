@@ -34,6 +34,38 @@ require "rails_helper"
 RSpec.describe Raif::ConversationEntry, type: :model do
   let(:creator) { Raif::TestUser.create!(email: "test@example.com") }
 
+  describe "execution_context" do
+    it "persists host metadata independently for each entry" do
+      conversation = FB.create(:raif_test_conversation, creator: creator)
+      first = conversation.entries.create!(creator: creator,
+        execution_context: { "policy_ref" => "version-1", "options" => { "retrieval" => false } })
+      second = conversation.entries.create!(creator: creator, execution_context: { "policy_ref" => "version-2" })
+
+      first.update!(failed_at: Time.current)
+      first.update!(failed_at: nil, started_at: Time.current)
+      expect(first.reload.execution_context).to eq("policy_ref" => "version-1", "options" => { "retrieval" => false })
+      expect(second.reload.execution_context).to eq("policy_ref" => "version-2")
+    end
+
+    it "gives new and historical entries independent empty objects" do
+      conversation = FB.create(:raif_test_conversation, creator: creator)
+      first = conversation.entries.create!(creator: creator)
+      first.update_column(:execution_context, nil)
+      second = conversation.entries.build(creator: creator)
+
+      expect(first.reload.execution_context).to eq({})
+      first.execution_context["option"] = true
+      expect(second.execution_context).to eq({})
+    end
+
+    it "rejects non-object metadata" do
+      conversation = FB.create(:raif_test_conversation, creator: creator)
+      entry = conversation.entries.build(creator: creator, execution_context: ["invalid"])
+      expect(entry).not_to be_valid
+      expect(entry.errors[:execution_context]).to be_present
+    end
+  end
+
   it "increments the conversation's entry count" do
     conversation = FB.create(:raif_conversation, creator: creator)
 
