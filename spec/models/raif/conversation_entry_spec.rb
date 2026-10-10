@@ -47,15 +47,28 @@ RSpec.describe Raif::ConversationEntry, type: :model do
       expect(second.reload.execution_context).to eq("policy_ref" => "version-2")
     end
 
-    it "gives new and historical entries independent empty objects" do
+    it "gives new entries independent empty objects" do
       conversation = FB.create(:raif_test_conversation, creator: creator)
-      first = conversation.entries.create!(creator: creator)
-      first.update_column(:execution_context, nil)
+      first = conversation.entries.build(creator: creator)
       second = conversation.entries.build(creator: creator)
 
-      expect(first.reload.execution_context).to eq({})
+      expect(first.execution_context).to eq({})
       first.execution_context["option"] = true
       expect(second.execution_context).to eq({})
+    end
+
+    it "preserves uncaptured context when loading and updating a historical entry" do
+      conversation = FB.create(:raif_test_conversation, creator: creator)
+      entry = conversation.entries.create!(creator: creator)
+      entry.update_column(:execution_context, nil)
+
+      historical = described_class.find(entry.id)
+      expect(historical.execution_context).to be_nil
+      expect(historical).not_to be_changed
+
+      historical.update!(user_message: "Updated message")
+      expect(historical.reload.execution_context).to be_nil
+      expect(described_class.where(id: entry.id).pick(:execution_context)).to be_nil
     end
 
     it "rejects non-object metadata" do
@@ -63,6 +76,45 @@ RSpec.describe Raif::ConversationEntry, type: :model do
       entry = conversation.entries.build(creator: creator, execution_context: ["invalid"])
       expect(entry).not_to be_valid
       expect(entry.errors[:execution_context]).to be_present
+    end
+
+    it "rejects replacing captured context with nil" do
+      conversation = FB.create(:raif_test_conversation, creator: creator)
+      entry = conversation.entries.create!(creator: creator, execution_context: { "configuration_ref" => "original" })
+
+      entry.execution_context = nil
+      expect(entry).not_to be_valid
+      expect(entry.errors[:execution_context]).to be_present
+      expect(entry.reload.execution_context).to eq("configuration_ref" => "original")
+    end
+
+    it "rejects false on new and persisted entries without replacing it" do
+      conversation = FB.create(:raif_test_conversation, creator: creator)
+      entry = conversation.entries.build(creator: creator, execution_context: false)
+      expect(entry.execution_context).to be(false)
+      expect(entry).not_to be_valid
+      expect(entry.errors[:execution_context]).to be_present
+
+      persisted = conversation.entries.create!(creator: creator)
+      persisted.update_column(:execution_context, false)
+      expect(persisted.reload.execution_context).to be(false)
+      expect(persisted).not_to be_valid
+      expect(persisted.errors[:execution_context]).to be_present
+    end
+
+    it "starts automatic follow-up entries with fresh context" do
+      conversation = FB.create(:raif_test_conversation, creator: creator)
+      entry = conversation.entries.create!(creator: creator, execution_context: { "configuration_ref" => "original" })
+
+      expect(Raif::ConversationEntryJob).to receive(:perform_later).with(
+        conversation_entry: have_attributes(execution_context: {})
+      )
+      entry.create_immediate_follow_up_entry!
+
+      follow_up = conversation.entries.where.not(id: entry.id).sole
+      expect(follow_up.execution_context).to eq({})
+      expect(follow_up.creator).to eq(creator)
+      expect(entry.reload.execution_context).to eq("configuration_ref" => "original")
     end
   end
 

@@ -281,17 +281,19 @@ conversation = Raif::Conversation.create(
 conversation.update(llm_messages_max_length: nil)
 ```
 
----
-
-**Read next:** [Agents](agents)
-
 ## Host execution context
 
 Each conversation entry has an `execution_context` JSON object for application metadata
-such as the configuration version or capabilities captured for that entry. It defaults
-to an independent empty object. The same entry retains its context when processing is
-retried; a later entry starts with a new empty object. Existing entries read as empty
-objects, so applications can distinguish them from entries carrying captured metadata.
+such as the configuration version or capabilities captured for that entry. New entries
+default to independent empty objects. Historical rows with a database `NULL` retain
+`nil` when loaded or updated, preserving the distinction between uncaptured historical
+context and a new empty object. Assigned metadata must be a JSON object; scalar and
+array values are rejected.
+
+The same entry retains its context when processing is retried. Later entries, including
+automatic immediate follow-up turns, start with fresh empty context. Follow-up entries
+run the normal ActiveRecord creation callbacks before they are enqueued. Hosts can
+populate entry-specific metadata in those callbacks.
 
 ```ruby
 entry = conversation.entries.create!(
@@ -305,4 +307,9 @@ entry.reload.execution_context # => { "configuration_ref" => "..." }
 Raif persists this object but does not interpret it or send it to a model. The host
 application owns validation, authorization, and any rules about changing its values.
 After upgrading, copy the engine migration with `bin/rails raif:install:migrations`
-and migrate before assigning execution context.
+and migrate before application processes using the upgraded gem create or load
+conversation entries, even if the host does not assign execution context.
+
+---
+
+**Read next:** [Agents](agents)
