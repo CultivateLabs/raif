@@ -76,6 +76,8 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   boolean_timestamp :failed_at
 
   after_initialize -> { self.citations ||= [] }
+  after_initialize -> { self.execution_context = {} if execution_context.nil? }, if: :new_record?
+  validate :execution_context_is_an_object
 
   before_validation :add_user_tool_invocation_to_user_message, on: :create
   after_create_commit :update_conversation_latest_entry_at
@@ -102,6 +104,12 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
           llm_model_key: completion.llm_model_key
         )
       end
+  end
+
+  def execution_context_is_an_object
+    return if persisted? && execution_context.nil? && !will_save_change_to_execution_context?
+
+    errors.add(:execution_context, :invalid) unless execution_context.is_a?(Hash)
   end
 
   def add_user_tool_invocation_to_user_message

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_28_145053) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_145838) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -108,6 +108,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_28_145053) do
     t.datetime "started_at"
     t.datetime "updated_at", null: false
     t.text "user_message"
+    t.jsonb "execution_context"
     t.index ["created_at"], name: "index_raif_conversation_entries_on_created_at"
     t.index ["creator_type", "creator_id"], name: "index_raif_conversation_entries_on_creator"
     t.index ["raif_conversation_id"], name: "index_raif_conversation_entries_on_raif_conversation_id"
