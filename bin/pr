@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+#
+# Push the current branch and open a ready-for-review pull request.
+#
+# Usage:
+#   bin/pr --title "<title>" --body-file <path> [options]
+#
+# Options:
+#   --title <title>      PR title (required). Keep it imperative, 72 characters or less.
+#   --body-file <path>   File holding the PR body (required).
+#   --base <branch>      Base branch. Default: main.
+#   --ready              Open the PR ready for review.
+#   --no-ready           Open the PR with the "not ready" label. Never opens a GitHub draft.
+#   --defaults           Do not prompt. Readiness falls back to PR_DEFAULT_READY (default: true).
+#   --dry-run            Print the title, body, and commands without pushing or opening anything.
+#
+# When the branch name holds an issue number (e.g. bugfix/622-some-slug), the title gets a
+# "622 - " prefix and the body gets a trailing "Closes #622".
+#
+# The PR gets no assignee and no reviewer.
+
+set -euo pipefail
+
+title=""
+body_file=""
+base="main"
+ready=""
+defaults=false
+dry_run=false
+
+die() {
+  echo "bin/pr: $*" >&2
+  exit 1
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --title) title="${2:-}"; shift 2 ;;
+    --body-file) body_file="${2:-}"; shift 2 ;;
+    --base) base="${2:-}"; shift 2 ;;
+    --ready) ready=true; shift ;;
+    --no-ready) ready=false; shift ;;
+    --defaults) defaults=true; shift ;;
+    --dry-run) dry_run=true; shift ;;
+    -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) die "unknown option: $1" ;;
+  esac
+done
+
+[ -n "$title" ] || die "--title is required"
+[ -n "$body_file" ] || die "--body-file is required"
+[ -f "$body_file" ] || die "body file not found: $body_file"
+[ ${#title} -le 72 ] || echo "bin/pr: warning: title is ${#title} characters (limit 72)" >&2
+
+if [ -z "$ready" ]; then
+  if [ "$defaults" = true ]; then
+    case "${PR_DEFAULT_READY:-true}" in
+      false|0|no) ready=false ;;
+      *) ready=true ;;
+    esac
+  else
+    read -r -p "Open ready for review? [Y/n] " answer
+    case "$answer" in
+      n|N|no) ready=false ;;
+      *) ready=true ;;
+    esac
+  fi
+fi
+
+branch="$(git branch --show-current)"
+[ -n "$branch" ] || die "not on a branch"
+[ "$branch" != "$base" ] || die "refusing to open a PR from $base into itself"
+
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+  die "the working copy has uncommitted changes; commit or stash them first"
+fi
+
+existing="$(gh pr list --head "$branch" --state open --json url --jq '.[0].url // empty')"
+[ -z "$existing" ] || die "a PR is already open for $branch: $existing"
+
+# The issue number is the leading digits of the branch name after any prefix/.
+issue=""
+if [[ "${branch##*/}" =~ ^([0-9]+)- ]]; then
+  issue="${BASH_REMATCH[1]}"
+fi
+
+if [ -n "$issue" ] && [[ "$title" != "$issue - "* ]]; then
+  title="$issue - $title"
+fi
+
+body="$(cat "$body_file")"
+if [ -n "$issue" ] && ! grep -qiE "(closes|fixes|resolves) #$issue\b" "$body_file"; then
+  body="$body"$'\n\n'"Closes #$issue"
+fi
+
+if [ "$dry_run" = true ]; then
+  echo "branch: $branch -> $base"
+  echo "ready:  $ready"
+  echo "title:  $title"
+  echo "--- body ---"
+  echo "$body"
+  echo "--- commands ---"
+  echo "git push -u origin $branch"
+  echo "gh pr create --base $base --head $branch --title <title> --body-file <body>"
+  [ "$ready" = true ] || echo "gh pr edit <url> --add-label \"not ready\""
+  exit 0
+fi
+
+git push -u origin "$branch"
+
+body_tmp="$(mktemp)"
+trap 'rm -f "$body_tmp"' EXIT
+printf '%s\n' "$body" > "$body_tmp"
+
+url="$(gh pr create --base "$base" --head "$branch" --title "$title" --body-file "$body_tmp")"
+
+if [ "$ready" = false ]; then
+  gh label create "not ready" --color FBCA04 --description "Not ready for review" >/dev/null 2>&1 || true
+  gh pr edit "$url" --add-label "not ready" >/dev/null
+fi
+
+echo "$url"
