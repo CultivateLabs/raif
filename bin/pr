@@ -59,6 +59,7 @@ if [ -z "$ready" ]; then
       *) ready=true ;;
     esac
   else
+    [ -t 0 ] || die "stdin is not a terminal; pass --ready, --no-ready, or --defaults"
     read -r -p "Open ready for review? [Y/n] " answer
     case "$answer" in
       n|N|no) ready=false ;;
@@ -101,8 +102,11 @@ if [ "$dry_run" = true ]; then
   echo "$body"
   echo "--- commands ---"
   echo "git push -u origin $branch"
-  echo "gh pr create --base $base --head $branch --title <title> --body-file <body>"
-  [ "$ready" = true ] || echo "gh pr edit <url> --add-label \"not ready\""
+  if [ "$ready" = true ]; then
+    echo "gh pr create --base $base --head $branch --title <title> --body-file <body>"
+  else
+    echo "gh pr create --base $base --head $branch --title <title> --body-file <body> --label \"not ready\""
+  fi
   exit 0
 fi
 
@@ -112,11 +116,14 @@ body_tmp="$(mktemp)"
 trap 'rm -f "$body_tmp"' EXIT
 printf '%s\n' "$body" > "$body_tmp"
 
-url="$(gh pr create --base "$base" --head "$branch" --title "$title" --body-file "$body_tmp")"
-
+# The label goes on at create time so it is in the `opened` event payload, which the
+# Claude Code Review workflow checks before it starts a review.
+label_args=()
 if [ "$ready" = false ]; then
   gh label create "not ready" --color FBCA04 --description "Not ready for review" >/dev/null 2>&1 || true
-  gh pr edit "$url" --add-label "not ready" >/dev/null
+  label_args=(--label "not ready")
 fi
+
+url="$(gh pr create --base "$base" --head "$branch" --title "$title" --body-file "$body_tmp" ${label_args[@]+"${label_args[@]}"})"
 
 echo "$url"

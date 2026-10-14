@@ -11,7 +11,8 @@ provider :google do |p|
     key: :google_gemini_4_argon,
     api_name: "gemini-4-argon",
     display_name: "Google Gemini 4 Argon",
-    max_completion_tokens: 32_768,
+    max_completion_tokens: 65_536,
+    batch_max_completion_tokens: 32_768,
     pricing: {
       cache_read_per_million: 0.1,
       input_per_million: 2.0,

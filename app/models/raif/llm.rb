@@ -10,6 +10,7 @@ module Raif
       :display_name,
       :default_temperature,
       :default_max_completion_tokens,
+      :batch_max_completion_tokens,
       :supports_native_tool_use,
       :provider_settings,
       :input_token_cost,
@@ -41,6 +42,7 @@ module Raif
       supports_native_tool_use: true,
       temperature: nil,
       max_completion_tokens: nil,
+      batch_max_completion_tokens: nil,
       input_token_cost: nil,
       output_token_cost: nil,
       deprecated: false,
@@ -58,6 +60,7 @@ module Raif
       @supports_native_tool_use = supports_native_tool_use
       @default_temperature = temperature || 0.7
       @default_max_completion_tokens = max_completion_tokens
+      @batch_max_completion_tokens = batch_max_completion_tokens
       @input_token_cost = input_token_cost
       @output_token_cost = output_token_cost
       @supported_provider_managed_tools = supported_provider_managed_tools.map(&:to_s)
@@ -262,6 +265,12 @@ module Raif
       open_router_zdr: nil, raif_model_completion_batch: nil, batch_custom_id: nil)
       temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
+      # Some Batch APIs accept fewer output tokens than the synchronous endpoint for the
+      # same model (Gemini 4 Argon: 32,768 vs 65,536), so batch entries are clamped here
+      # and the persisted completion records the value actually sent.
+      if raif_model_completion_batch && batch_max_completion_tokens && max_completion_tokens
+        max_completion_tokens = [max_completion_tokens, batch_max_completion_tokens].min
+      end
 
       model_completion = Raif::ModelCompletion.create!(
         messages: format_messages(messages),

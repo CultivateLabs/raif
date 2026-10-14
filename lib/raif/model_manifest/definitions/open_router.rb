@@ -11,7 +11,7 @@ provider :open_router do |p|
     key: :open_router_gemini_4_argon,
     api_name: "google/gemini-4-argon",
     display_name: "Gemini 4 Argon (via OpenRouter)",
-    max_completion_tokens: 32_768,
+    max_completion_tokens: 65_536,
     pricing: {
       cache_read_per_million: 0.1,
       input_per_million: 2.0,

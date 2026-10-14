@@ -89,7 +89,7 @@ module Raif
 
     Entry = Struct.new(
       :key, :provider_name, :endpoint, :adapter_class_name, :api_name,
-      :display_name, :max_completion_tokens, :pricing, :capabilities,
+      :display_name, :max_completion_tokens, :batch_max_completion_tokens, :pricing, :capabilities,
       :lifecycle, :source_path, :key_base,
       keyword_init: true
     ) do
@@ -231,6 +231,7 @@ module Raif
         api_name: model.api_name,
         display_name: model.display_name,
         max_completion_tokens: model.max_completion_tokens,
+        batch_max_completion_tokens: model.batch_max_completion_tokens,
         pricing: model.pricing,
         capabilities: capabilities,
         lifecycle: lifecycle,
