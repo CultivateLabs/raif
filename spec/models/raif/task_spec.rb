@@ -47,6 +47,12 @@ RSpec.describe Raif::Task, type: :model do
       expect(task.valid?).to eq(false)
       expect(task.errors[:requested_language_key]).to include("is not included in the list")
     end
+
+    it "permits a regional variant of a supported language" do
+      task = FB.build(:raif_task, requested_language_key: "en_gb")
+      expect(task.valid?).to eq(true)
+      expect(task.system_prompt_language_preference).to include("Please respond in British English.")
+    end
   end
 
   describe "#llm_model_key" do

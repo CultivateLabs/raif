@@ -28,17 +28,27 @@ en:
       da: Danish
       de: German
       en: English
+      en_au: Australian English
+      en_ca: Canadian English
+      en_gb: British English
+      en_us: American English
       es: Spanish
+      es_419: Latin American Spanish
+      es_mx: Mexican Spanish
       fi: Finnish
       fr: French
+      fr_ca: Canadian French
       he: Hebrew
       hi: Hindi
       it: Italian
       ja: Japanese
       ko: Korean
       nl: Dutch
+      'no': Norwegian
       pl: Polish
       pt: Portuguese
+      pt_br: Brazilian Portuguese
+      pt_pt: European Portuguese
       ru: Russian
       sv: Swedish
       th: Thai
@@ -46,3 +56,6 @@ en:
       uk: Ukrainian
       vi: Vietnamese
       zh: Chinese
+      zh_cn: Simplified Chinese
+      zh_hk: Traditional Chinese (Hong Kong)
+      zh_tw: Traditional Chinese
