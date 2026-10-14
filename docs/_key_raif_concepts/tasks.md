@@ -182,8 +182,8 @@ end
 ```
 
 - `llm_max_completion_tokens` sets the provider's output token limit for this task, on the synchronous path and the batch path.
-- `llm_stop_sequences` sends the strings as Anthropic `stop_sequences` and Google `stopSequences`. Other providers ignore them. Google reports a stop-sequence hit as a normal stop, so on Google the partial response completes the task even with `llm_fail_on_truncation`.
-- `llm_fail_on_truncation` fails the task when its completion ends at the output cap or on one of its stop sequences. The model completion gets `failure_error` `Raif::Errors::TruncatedResponseError`, and its `failure_reason` names the finish reason. Without it, a truncated response completes the task, and parsing a truncated JSON response raises.
+- `llm_stop_sequences` sends the strings as Anthropic `stop_sequences` and Google `stopSequences`. Other providers ignore them. Generation ends at the first stop sequence, and the task completes with the response up to that point.
+- `llm_fail_on_truncation` fails the task when its completion ends at the output cap. A stop-sequence hit does not fail the task. The model completion gets `failure_error` `Raif::Errors::TruncatedResponseError`, and its `failure_reason` names the finish reason. Without it, a truncated response completes the task, and parsing a truncated JSON response raises.
 
 # Task Language Preference
 

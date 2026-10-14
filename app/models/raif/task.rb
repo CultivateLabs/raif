@@ -364,19 +364,15 @@ module Raif
 
   private
 
-    # Ending at the output cap or on a declared stop sequence both leave a
-    # partial response. Raif::ModelCompletion::TRUNCATED_FINISH_REASONS omits
-    # "stop_sequence" on purpose: Raif::Agents::NativeToolCallingAgent reads
-    # truncated? and tells the model it ran out of output length, which would
-    # be the wrong correction for a stop sequence.
+    # A declared stop sequence is a terminator, so ending on one is not a truncation.
     def fail_truncated_completion!
       return if raif_model_completion.failed?
+      return unless raif_model_completion.truncated?
 
-      finish_reason = raif_model_completion.response_finish_reason
-      return unless raif_model_completion.truncated? || finish_reason == "stop_sequence"
-
+      # The provider adapter already marked the completion completed.
+      raif_model_completion.completed_at = nil
       raif_model_completion.record_failure!(
-        Raif::Errors::TruncatedResponseError.new("Response truncated (finish reason: #{finish_reason})")
+        Raif::Errors::TruncatedResponseError.new("Response truncated (finish reason: #{raif_model_completion.response_finish_reason})")
       )
     end
 

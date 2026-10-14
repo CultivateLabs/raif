@@ -162,6 +162,15 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     write_request_setting("open_router_zdr", value)
   end
 
+  # Google rejects a request with more than 5 stop sequences.
+  MAX_STOP_SEQUENCES = 5
+
+  def self.valid_stop_sequences?(stop_sequences)
+    stop_sequences.is_a?(Array) &&
+      stop_sequences.size.between?(1, MAX_STOP_SEQUENCES) &&
+      stop_sequences.all? { |sequence| sequence.is_a?(String) && sequence.present? }
+  end
+
   def stop_sequences
     request_settings["stop_sequences"]
   end
@@ -362,11 +371,11 @@ private
     end
 
     stop_sequences = request_settings["stop_sequences"]
-    return if stop_sequences.nil? || Raif::Concerns::LlmOutputLimits.valid_stop_sequences?(stop_sequences)
+    return if stop_sequences.nil? || self.class.valid_stop_sequences?(stop_sequences)
 
     errors.add(
       :request_settings,
-      "stop_sequences must be an array of 1 to #{Raif::Concerns::LlmOutputLimits::MAX_STOP_SEQUENCES} " \
+      "stop_sequences must be an array of 1 to #{MAX_STOP_SEQUENCES} " \
         "non-blank strings (got #{stop_sequences.inspect})"
     )
   end

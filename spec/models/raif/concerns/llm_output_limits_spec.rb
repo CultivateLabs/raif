@@ -144,12 +144,13 @@ RSpec.describe Raif::Concerns::LlmOutputLimits do
       task_class.run(creator: creator, llm_model_key: "anthropic_claude_4_5_haiku")
     end
 
-    %w[max_tokens MAX_TOKENS stop_sequence].each do |finish_reason|
+    %w[max_tokens MAX_TOKENS].each do |finish_reason|
       it "fails an opted-in task whose completion ends with #{finish_reason}" do
         task = run_with_finish_reason(Raif::TestOutputLimitsTask, finish_reason)
 
         expect(task).to be_failed
         expect(task.raif_model_completion).to be_failed
+        expect(task.raif_model_completion.reload.completed_at).to be_nil
         expect(task.raif_model_completion.failure_error).to eq("Raif::Errors::TruncatedResponseError")
         expect(task.raif_model_completion.failure_reason).to eq("Response truncated (finish reason: #{finish_reason})")
       end
@@ -165,6 +166,13 @@ RSpec.describe Raif::Concerns::LlmOutputLimits do
 
       expect(task).to be_completed
       expect(task.raif_model_completion.failure_error).to be_nil
+    end
+
+    it "completes an opted-in task whose completion ends on a stop sequence" do
+      task = run_with_finish_reason(Raif::TestOutputLimitsTask, "stop_sequence")
+
+      expect(task).to be_completed
+      expect(task.raif_model_completion).not_to be_failed
     end
 
     it "completes a task that did not opt in, as before" do
