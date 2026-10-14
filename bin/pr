@@ -76,8 +76,11 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   die "the working copy has uncommitted changes; commit or stash them first"
 fi
 
-existing="$(gh pr list --head "$branch" --state open --json url --jq '.[0].url // empty')"
-[ -z "$existing" ] || die "a PR is already open for $branch: $existing"
+# Untracked files that are not git-ignored are usually a new file that was never added.
+untracked="$(git ls-files --others --exclude-standard)"
+if [ -n "$untracked" ]; then
+  die "the working copy has untracked files; add, ignore, or delete them first:"$'\n'"$untracked"
+fi
 
 # The issue number is the leading digits of the branch name after any prefix/.
 issue=""
@@ -97,6 +100,7 @@ fi
 if [ "$dry_run" = true ]; then
   echo "branch: $branch -> $base"
   echo "ready:  $ready"
+  echo "note:   the dry run does not check GitHub for an open PR on this branch"
   echo "title:  $title"
   echo "--- body ---"
   echo "$body"
@@ -109,6 +113,9 @@ if [ "$dry_run" = true ]; then
   fi
   exit 0
 fi
+
+existing="$(gh pr list --head "$branch" --state open --json url --jq '.[0].url // empty')"
+[ -z "$existing" ] || die "a PR is already open for $branch: $existing"
 
 git push -u origin "$branch"
 
