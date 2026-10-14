@@ -77,6 +77,7 @@ private
 
     params[:temperature] = (model_completion.temperature || default_temperature).to_f if supports_temperature?
     params[:max_tokens] = model_completion.max_completion_tokens || default_max_completion_tokens
+    params[:stop_sequences] = model_completion.stop_sequences if model_completion.stop_sequences.present?
 
     params[:system] = model_completion.system_prompt if model_completion.system_prompt.present?
     params[:cache_control] = { type: "ephemeral" } if model_completion.anthropic_prompt_caching_enabled
@@ -148,11 +149,22 @@ private
     )
     return if validation_errors.empty?
 
+    raise_truncated_json_response!(model_completion)
     raise Raif::Errors::InvalidJsonResponseError,
       "Native JSON response did not satisfy the original schema: #{validation_errors.join("; ")}"
   rescue JSON::ParserError => e
+    raise_truncated_json_response!(model_completion)
     raise Raif::Errors::InvalidJsonResponseError,
       "Native JSON response could not be parsed: #{e.message}"
+  end
+
+  # JSON cut off at the output limit is invalid because it is incomplete, not because
+  # the model ignored the schema, so report it as a truncation.
+  def raise_truncated_json_response!(model_completion)
+    return unless model_completion.truncated?
+
+    raise Raif::Errors::TruncatedResponseError,
+      "Native JSON response was cut off at the output limit (finish reason: #{model_completion.response_finish_reason})"
   end
 
   def extract_text_response(resp)

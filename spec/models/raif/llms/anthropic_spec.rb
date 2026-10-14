@@ -1133,6 +1133,19 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
         end.to raise_error(Raif::Errors::BlankResponseError)
       end
 
+      it "reports JSON cut off at the output limit as a truncation" do
+        response_json = {
+          "id" => "msg_123",
+          "content" => [{ "type" => "text", "text" => "{\"sco" }],
+          "stop_reason" => "max_tokens",
+          "usage" => { "input_tokens" => 10, "output_tokens" => 3 }
+        }
+
+        expect do
+          llm.send(:update_model_completion, model_completion, response_json)
+        end.to raise_error(Raif::Errors::TruncatedResponseError, /cut off at the output limit \(finish reason: max_tokens\)/)
+      end
+
       it "does not validate an intermediate developer-managed tool response as final JSON" do
         response_json = {
           "id" => "msg_123",

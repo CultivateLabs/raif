@@ -209,7 +209,7 @@ module Raif::Concerns::Llms::Anthropic::BatchInference
       begin
         update_model_completion(mc, result["message"])
         mc.completed!
-      rescue Raif::Errors::InvalidJsonResponseError => e
+      rescue Raif::Errors::InvalidJsonResponseError, Raif::Errors::TruncatedResponseError => e
         mc.record_failure!(e)
       end
     else

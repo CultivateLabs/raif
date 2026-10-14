@@ -49,6 +49,7 @@ module Raif
     include Raif::Concerns::InvokesModelTools
     include Raif::Concerns::LlmResponseParsing
     include Raif::Concerns::LlmTemperature
+    include Raif::Concerns::LlmOutputLimits
     include Raif::Concerns::LlmPromptCaching
     include Raif::Concerns::LlmDataRetention
     include Raif::Concerns::JsonSchemaDefinition
@@ -166,6 +167,8 @@ module Raif
         response_format: response_format.to_sym,
         available_model_tools: available_model_tools,
         temperature: self.class.temperature,
+        max_completion_tokens: self.class.max_completion_tokens,
+        stop_sequences: self.class.stop_sequences,
         anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
         bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
         open_ai_store_responses: self.class.open_ai_store_responses,
@@ -195,6 +198,8 @@ module Raif
       self.raif_model_completion = model_completion.becomes(Raif::ModelCompletion)
 
       update(raw_response: raif_model_completion.raw_response)
+
+      fail_truncated_completion! if self.class.fail_on_truncation
 
       if raif_model_completion.failed?
         # Failure detail (failure_error / failure_reason) lives on the model
@@ -285,6 +290,8 @@ module Raif
         response_format: response_format.to_sym,
         available_model_tools: available_model_tools,
         temperature: self.class.temperature,
+        max_completion_tokens: self.class.max_completion_tokens,
+        stop_sequences: self.class.stop_sequences,
         anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
         bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
         open_ai_store_responses: self.class.open_ai_store_responses,
@@ -356,6 +363,18 @@ module Raif
     end
 
   private
+
+    # A declared stop sequence is a terminator, so ending on one is not a truncation.
+    def fail_truncated_completion!
+      return if raif_model_completion.failed?
+      return unless raif_model_completion.truncated?
+
+      # The provider adapter already marked the completion completed.
+      raif_model_completion.completed_at = nil
+      raif_model_completion.record_failure!(
+        Raif::Errors::TruncatedResponseError.new("Response truncated (finish reason: #{raif_model_completion.response_finish_reason})")
+      )
+    end
 
     def message_content
       # If there are no images or files, just return the message content can just be a string with the prompt
