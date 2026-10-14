@@ -33,6 +33,7 @@ en:
       en_gb: British English
       en_us: American English
       es: Spanish
+      es_419: Latin American Spanish
       es_mx: Mexican Spanish
       fi: Finnish
       fr: French
@@ -56,4 +57,5 @@ en:
       vi: Vietnamese
       zh: Chinese
       zh_cn: Simplified Chinese
+      zh_hk: Traditional Chinese (Hong Kong)
       zh_tw: Traditional Chinese

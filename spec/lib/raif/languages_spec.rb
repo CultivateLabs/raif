@@ -28,7 +28,11 @@ RSpec.describe Raif do
 
     it "adds the region to the base name when the variant has no name of its own" do
       expect(Raif.language_name("en_nz")).to eq("English (NZ)")
-      expect(Raif.language_name("es-419")).to eq("Spanish (419)")
+      expect(Raif.language_name("es-AR")).to eq("Spanish (AR)")
+    end
+
+    it "names a variant with a numeric region" do
+      expect(Raif.language_name("es-419")).to eq("Latin American Spanish")
     end
 
     it "returns nil for an unsupported key" do
