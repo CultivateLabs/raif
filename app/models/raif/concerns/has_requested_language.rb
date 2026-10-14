@@ -4,17 +4,23 @@ module Raif::Concerns::HasRequestedLanguage
   extend ActiveSupport::Concern
 
   included do
-    validates :requested_language_key, inclusion: { in: Raif.supported_languages, allow_blank: true }
+    validate :requested_language_key_supported, if: -> { requested_language_key.present? }
   end
 
   def requested_language_name
-    @requested_language_name ||= I18n.t("raif.languages.#{requested_language_key}", locale: "en")
+    @requested_language_name ||= Raif.language_name(requested_language_key)
   end
 
   def system_prompt_language_preference
     return if requested_language_key.blank?
 
     "\nYou're collaborating with teammate who speaks #{requested_language_name}. Please respond in #{requested_language_name}."
+  end
+
+private
+
+  def requested_language_key_supported
+    errors.add(:requested_language_key, :inclusion) unless Raif.supported_language_key?(requested_language_key)
   end
 
 end

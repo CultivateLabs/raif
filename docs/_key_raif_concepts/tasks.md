@@ -188,7 +188,7 @@ task = Raif::Tasks::DocumentSummarization.run(
 )
 ```
 
-The current list of valid language keys can be found [here](https://github.com/CultivateLabs/raif/blob/main/lib/raif/languages.rb).
+The current list of valid language keys can be found [here](https://github.com/CultivateLabs/raif/blob/main/lib/raif/languages.rb). A key can also carry a region, such as `en_gb`, `en-GB`, or `es-419`. Raif validates the language part and names the variant in the prompt, for example "British English". A region without its own name reads as the language plus the region, for example "English (NZ)".
 
 ---
 
