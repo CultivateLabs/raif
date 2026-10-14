@@ -81,6 +81,7 @@ private
 
     params[:temperature] = (model_completion.temperature || default_temperature).to_f if supports_temperature?
     params[:max_tokens] = model_completion.max_completion_tokens || default_max_completion_tokens
+    params[:stop_sequences] = model_completion.stop_sequences if model_completion.stop_sequences.present?
 
     params[:system] = model_completion.system_prompt if model_completion.system_prompt.present?
     params[:cache_control] = { type: "ephemeral" } if model_completion.anthropic_prompt_caching_enabled

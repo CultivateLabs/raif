@@ -168,6 +168,23 @@ end
 ```
 
 
+# Limiting Output
+
+A model can loop and generate until it reaches its output cap. Three optional class-level settings limit what a task's model completion may generate:
+
+```ruby
+class Raif::Tasks::DocumentSummarization < Raif::ApplicationTask
+  llm_response_format :json
+  llm_max_completion_tokens 8_000 # optional, defaults to the model's max_completion_tokens
+  llm_stop_sequences ["END_OF_SUMMARY"] # optional, 1 to 5 non-blank strings
+  llm_fail_on_truncation true # optional, defaults to false
+end
+```
+
+- `llm_max_completion_tokens` sets the provider's output token limit for this task, on the synchronous path and the batch path.
+- `llm_stop_sequences` sends the strings as Anthropic `stop_sequences` and Google `stopSequences`. Other providers ignore them. Google reports a stop-sequence hit as a normal stop, so on Google the partial response completes the task even with `llm_fail_on_truncation`.
+- `llm_fail_on_truncation` fails the task when its completion ends at the output cap or on one of its stop sequences. The model completion gets `failure_error` `Raif::Errors::TruncatedResponseError`, and its `failure_reason` names the finish reason. Without it, a truncated response completes the task, and parsing a truncated JSON response raises.
+
 # Task Language Preference
 
 Tasks support the ability to specify a language preference for the LLM response. When enabled, Raif will add a line to the system prompt that looks something like:

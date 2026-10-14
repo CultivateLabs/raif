@@ -72,12 +72,15 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   # Every key request_settings may carry, with the provider parameter each one
   # controls. Validated, so the bag stays a declared set rather than a place
-  # anything can be stashed. Each has a Raif.config default of the same name,
-  # and an absent key defers to it.
+  # anything can be stashed. The first three each have a Raif.config default
+  # of the same name, and an absent key defers to it. An absent stop_sequences
+  # sends none. It is persisted because a batch request is built from this row
+  # at submit time, not from the task that created it.
   #
   #   open_ai_store_responses      Raif::Llms::OpenAiResponses `store`
   #   open_router_data_collection  Raif::Llms::OpenRouter `provider.data_collection`
   #   open_router_zdr              Raif::Llms::OpenRouter `provider.zdr`
+  #   stop_sequences               Raif::Llms::Anthropic `stop_sequences`, Raif::Llms::Google `stopSequences`
   #
   # The prompt caching and parallel tool call flags below stay request-scoped.
   # Persisting Anthropic's would start sending `cache_control` on batched
@@ -90,6 +93,7 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     open_ai_store_responses
     open_router_data_collection
     open_router_zdr
+    stop_sequences
   ].freeze
 
   # Request-scoped (not persisted): when true, the provider request permits the
@@ -156,6 +160,14 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
 
   def open_router_zdr=(value)
     write_request_setting("open_router_zdr", value)
+  end
+
+  def stop_sequences
+    request_settings["stop_sequences"]
+  end
+
+  def stop_sequences=(value)
+    write_request_setting("stop_sequences", value.presence)
   end
 
   # Raw provider-reported finish/stop reasons that indicate the response was cut off
@@ -341,12 +353,21 @@ private
     end
 
     collection = request_settings["open_router_data_collection"]
-    return if collection.nil? || Raif::Configuration::OPEN_ROUTER_DATA_COLLECTION_VALUES.include?(collection.to_s)
+    unless collection.nil? || Raif::Configuration::OPEN_ROUTER_DATA_COLLECTION_VALUES.include?(collection.to_s)
+      errors.add(
+        :request_settings,
+        "open_router_data_collection must be one of: " \
+          "#{Raif::Configuration::OPEN_ROUTER_DATA_COLLECTION_VALUES.join(", ")} (got #{collection.inspect})"
+      )
+    end
+
+    stop_sequences = request_settings["stop_sequences"]
+    return if stop_sequences.nil? || Raif::Concerns::LlmOutputLimits.valid_stop_sequences?(stop_sequences)
 
     errors.add(
       :request_settings,
-      "open_router_data_collection must be one of: " \
-        "#{Raif::Configuration::OPEN_ROUTER_DATA_COLLECTION_VALUES.join(", ")} (got #{collection.inspect})"
+      "stop_sequences must be an array of 1 to #{Raif::Concerns::LlmOutputLimits::MAX_STOP_SEQUENCES} " \
+        "non-blank strings (got #{stop_sequences.inspect})"
     )
   end
 

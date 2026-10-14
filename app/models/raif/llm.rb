@@ -129,9 +129,9 @@ module Raif
     end
 
     def chat(message: nil, messages: nil, response_format: :text, available_model_tools: [], source: nil, system_prompt: nil, temperature: nil,
-      max_completion_tokens: nil, tool_choice: nil, allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
-      bedrock_prompt_caching_enabled: false, open_ai_store_responses: nil, open_router_data_collection: nil,
-      open_router_zdr: nil, &block)
+      max_completion_tokens: nil, stop_sequences: nil, tool_choice: nil, allow_parallel_tool_calls: false,
+      anthropic_prompt_caching_enabled: false, bedrock_prompt_caching_enabled: false, open_ai_store_responses: nil,
+      open_router_data_collection: nil, open_router_zdr: nil, &block)
       unless response_format.is_a?(Symbol)
         raise ArgumentError,
           "Raif::Llm#chat - Invalid response format: #{response_format}. Must be a symbol (you passed #{response_format.class}) and be one of: #{VALID_RESPONSE_FORMATS.join(", ")}" # rubocop:disable Layout/LineLength
@@ -212,6 +212,7 @@ module Raif
         system_prompt: system_prompt,
         temperature: temperature,
         max_completion_tokens: max_completion_tokens,
+        stop_sequences: stop_sequences,
         tool_choice: tool_choice,
         stream_response: stream_response,
         allow_parallel_tool_calls: allow_parallel_tool_calls,
@@ -256,7 +257,7 @@ module Raif
     #
     # @return [Raif::ModelCompletion] persisted, with started_at: nil
     def build_pending_model_completion(messages:, response_format: :text, available_model_tools: [], source: nil,
-      system_prompt: nil, temperature: nil, max_completion_tokens: nil, tool_choice: nil,
+      system_prompt: nil, temperature: nil, max_completion_tokens: nil, stop_sequences: nil, tool_choice: nil,
       stream_response: false, allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
       bedrock_prompt_caching_enabled: false, open_ai_store_responses: nil, open_router_data_collection: nil,
       open_router_zdr: nil, raif_model_completion_batch: nil, batch_custom_id: nil)
@@ -278,7 +279,8 @@ module Raif
         request_settings: {
           "open_ai_store_responses" => open_ai_store_responses,
           "open_router_data_collection" => open_router_data_collection&.to_s.presence,
-          "open_router_zdr" => open_router_zdr
+          "open_router_zdr" => open_router_zdr,
+          "stop_sequences" => stop_sequences.presence
         }.compact,
         raif_model_completion_batch: raif_model_completion_batch,
         batch_custom_id: batch_custom_id

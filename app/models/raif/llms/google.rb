@@ -148,6 +148,7 @@ private
 
     max_tokens = model_completion.max_completion_tokens || default_max_completion_tokens
     config[:maxOutputTokens] = max_tokens if max_tokens.present?
+    config[:stopSequences] = model_completion.stop_sequences if model_completion.stop_sequences.present?
 
     # Use native JSON schema support for structured output
     if model_completion.response_format_json? && model_completion.json_response_schema.present?
