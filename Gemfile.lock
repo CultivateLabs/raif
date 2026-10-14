@@ -230,8 +230,8 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     jmespath (1.6.2)
-    json (3.0.2)
-    json-schema (6.2.0)
+    json (3.1.0)
+    json-schema (6.2.1)
       addressable (~> 2.8)
       bigdecimal (>= 3.1, < 5)
     language_server-protocol (3.17.0.6)
@@ -294,7 +294,7 @@ GEM
       nenv (~> 0.1)
       shellany (~> 0.0)
     openssl (4.0.2)
-    pagy (43.6.3)
+    pagy (43.7.0)
       json
       uri
       yaml
@@ -442,10 +442,10 @@ GEM
     unicode-display_width (3.3.0)
       unicode-emoji (~> 4.3)
     unicode-emoji (4.3.0)
-    uri (1.1.1)
+    uri (1.1.2)
     useragent (0.16.11)
     vcr (6.4.0)
-    webmock (3.26.4)
+    webmock (3.29.0)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
