@@ -154,11 +154,22 @@ private
     )
     return if validation_errors.empty?
 
+    raise_truncated_json_response!(model_completion)
     raise Raif::Errors::InvalidJsonResponseError,
       "Native JSON response did not satisfy the original schema: #{validation_errors.join("; ")}"
   rescue JSON::ParserError => e
+    raise_truncated_json_response!(model_completion)
     raise Raif::Errors::InvalidJsonResponseError,
       "Native JSON response could not be parsed: #{e.message}"
+  end
+
+  # JSON cut off at the output limit is invalid because it is incomplete, not because
+  # the model ignored the schema, so report it as a truncation.
+  def raise_truncated_json_response!(model_completion)
+    return unless model_completion.truncated?
+
+    raise Raif::Errors::TruncatedResponseError,
+      "Native JSON response was cut off at the output limit (finish reason: #{model_completion.response_finish_reason})"
   end
 
   def extract_text_response(resp)

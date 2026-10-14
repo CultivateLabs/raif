@@ -358,6 +358,30 @@ RSpec.describe Raif::Llm, type: :model do
         expect(mc.failure_reason).to eq("Model completion #{mc.id} returned no text response and no tool calls (finish reason: none)")
         expect(mc.response_array).to eq([{ "text" => "" }])
       end
+
+      it "fails without retrying when the model reaches the output limit before producing a response" do
+        allow(Raif.config).to receive(:llm_request_max_retries).and_return(2)
+
+        allow(test_llm).to receive(:perform_model_completion!) do |model_completion|
+          model_completion.response_array = [{ "reasoning_content" => "..." }]
+          model_completion.response_finish_reason = "max_tokens"
+          model_completion.completion_tokens = 100
+          model_completion.save!
+        end
+
+        expect do
+          test_llm.chat(messages: messages, system_prompt: system_prompt)
+        end.to raise_error(Raif::Errors::TruncatedResponseError)
+
+        expect(test_llm).to have_received(:perform_model_completion!).once
+        mc = Raif::ModelCompletion.newest_first.first
+        expect(mc.failed?).to be true
+        expect(mc.retry_count).to eq(0)
+        expect(mc.failure_error).to eq("Raif::Errors::TruncatedResponseError")
+        expect(mc.failure_reason).to eq(
+          "Model completion #{mc.id} reached its output limit before producing a response (finish reason: max_tokens)"
+        )
+      end
     end
 
     context "with tool_choice: :required" do

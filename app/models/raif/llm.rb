@@ -466,6 +466,15 @@ module Raif
         model_completion.response_tool_calls.present? ||
         model_completion.provider_managed_image_output?
 
+      # Not retriable, unlike BlankResponseError: a model that spends the whole output
+      # limit before producing any output (typically on reasoning) does the same on a
+      # retry at the same limit, and each retry is billed for the full limit.
+      if model_completion.truncated?
+        raise Raif::Errors::TruncatedResponseError,
+          "Model completion #{model_completion.id} reached its output limit before producing a response " \
+            "(finish reason: #{model_completion.response_finish_reason})"
+      end
+
       raise Raif::Errors::BlankResponseError,
         "Model completion #{model_completion.id} returned no text response and no tool calls " \
           "(finish reason: #{model_completion.response_finish_reason.presence || "none"})"

@@ -437,6 +437,34 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       expect(valid_completion.raw_response).to eq({ joke: "A valid joke", answer: "A valid answer" }.to_json)
     end
 
+    it "fails a native JSON completion cut off at the output limit as a truncation" do
+      task = Raif::TestJsonTask.build_for_batch(
+        batch: batch,
+        batch_custom_id: "truncated_json",
+        creator: creator,
+        llm_model_key: "anthropic_claude_4_5_haiku"
+      )
+      body = {
+        custom_id: "truncated_json",
+        result: {
+          type: "succeeded",
+          message: {
+            id: "msg_truncated",
+            content: [{ type: "text", text: "{\"joke\": \"A cut" }],
+            stop_reason: "max_tokens",
+            usage: { input_tokens: 2, output_tokens: 4 }
+          }
+        }
+      }.to_json
+      stub_request(:get, results_url).to_return(status: 200, body: body)
+
+      expect { llm.fetch_batch_results!(batch) }.not_to raise_error
+
+      completion = task.raif_model_completion.reload
+      expect(completion.failed?).to be(true)
+      expect(completion.failure_error).to eq("Raif::Errors::TruncatedResponseError")
+    end
+
     it "fails any child completion that doesn't appear in the results stream" do
       partial_jsonl = [
         {
