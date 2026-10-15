@@ -503,4 +503,39 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
       expect(task_failure.raif_model_completion.reload.failed?).to be(true)
     end
   end
+  describe "batch_max_completion_tokens" do
+    # Gemini 4 Argon declares max_completion_tokens 65,536 and batch_max_completion_tokens 32,768 in the manifest.
+    let(:capped_llm) { Raif.llm(:google_gemini_4_argon) }
+
+    def build(llm, batch: nil, max_completion_tokens: nil)
+      llm.build_pending_model_completion(
+        messages: [{ role: "user", content: "Hello" }],
+        max_completion_tokens: max_completion_tokens,
+        raif_model_completion_batch: batch,
+        batch_custom_id: batch ? "entry_1" : nil
+      )
+    end
+
+    it "clamps the default max_completion_tokens for a batch entry" do
+      expect(build(capped_llm, batch: batch).max_completion_tokens).to eq(32_768)
+    end
+
+    it "clamps an explicit max_completion_tokens above the cap for a batch entry" do
+      expect(build(capped_llm, batch: batch, max_completion_tokens: 65_536).max_completion_tokens).to eq(32_768)
+    end
+
+    it "keeps an explicit max_completion_tokens below the cap for a batch entry" do
+      expect(build(capped_llm, batch: batch, max_completion_tokens: 1_000).max_completion_tokens).to eq(1_000)
+    end
+
+    it "does not clamp a synchronous completion" do
+      expect(build(capped_llm).max_completion_tokens).to eq(65_536)
+    end
+
+    it "sends the clamped value as maxOutputTokens" do
+      model_completion = build(capped_llm, batch: batch)
+      parameters = capped_llm.send(:build_request_parameters, model_completion)
+      expect(parameters[:generationConfig][:maxOutputTokens]).to eq(32_768)
+    end
+  end
 end

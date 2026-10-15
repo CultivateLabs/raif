@@ -550,6 +550,43 @@
         "checked_at": "2026-09-15T18:04:21Z"
       }
     },
+    "open_router_gemini_4_argon": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:56:03Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:56:03Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:56:03Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:56:03Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:56:03Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:56:03Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:56:03Z"
+      }
+    },
     "open_router_glm_5_2": {
       "completion": {
         "claimed": true,
@@ -1189,6 +1226,43 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T17:43:39Z"
+      }
+    },
+    "open_router_muse_wonder": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:48:45Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:48:45Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:55:39Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:48:45Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:48:45Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:48:45Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:48:45Z"
       }
     },
     "open_router_open_ai_gpt_oss_120b": {

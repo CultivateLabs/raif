@@ -57,6 +57,14 @@ RSpec.describe "model manifest definitions validity" do
         expect(entry.display_name).to be_present
       end
 
+      if entry.batch_max_completion_tokens
+        it "declares batch_max_completion_tokens only on a batch model, at or below max_completion_tokens" do
+          expect(entry.batch_max_completion_tokens).to be_a(Integer).and be_positive
+          expect(entry.capabilities.fetch(:batch_inference)).to be(true)
+          expect(entry.batch_max_completion_tokens).to be <= entry.max_completion_tokens if entry.max_completion_tokens
+        end
+      end
+
       it "has exactly the known capability keys, each a known boolean or tool list, and a recognized lifecycle status" do
         expect(entry.capabilities.keys.sort).to eq(Raif::ModelManifest::CAPABILITY_KEYS.sort)
         entry.capabilities.except(:provider_managed_tools).each_value do |value|

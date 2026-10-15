@@ -334,6 +334,56 @@
         "result": "pass",
         "checked_at": "2026-09-15T18:04:21Z"
       }
+    },
+    "google_gemini_4_argon": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T15:35:32Z"
+      },
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:47:47Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:47:47Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:47:47Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:47:47Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-10-14T14:47:47Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:47:47Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:47:47Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-14T14:47:47Z"
+      }
     }
   }
 }

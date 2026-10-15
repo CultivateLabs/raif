@@ -8,6 +8,34 @@ provider :open_router do |p|
   )
 
   p.model(
+    key: :open_router_gemini_4_argon,
+    api_name: "google/gemini-4-argon",
+    display_name: "Gemini 4 Argon (via OpenRouter)",
+    max_completion_tokens: 65_536,
+    pricing: {
+      cache_read_per_million: 0.1,
+      input_per_million: 2.0,
+      output_per_million: 10.0,
+      note: "Mirrors Google's introductory rate through 2026-11-30; standard rate 4.00 / 20.00 / 0.20 cached input from 2026-12-01",
+      valid_until: Date.new(2026, 11, 30)
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 10, 14)
+    }
+  )
+
+  p.model(
     key: :open_router_gemini_3_8_flash,
     api_name: "google/gemini-3.8-flash",
     display_name: "Gemini 3.8 Flash (via OpenRouter)",
@@ -772,6 +800,33 @@ provider :open_router do |p|
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :open_router_muse_wonder,
+    api_name: "meta/muse-wonder",
+    display_name: "Meta Muse Wonder (via OpenRouter)",
+    pricing: {
+      cache_read_per_million: 0.2,
+      input_per_million: 4.0,
+      output_per_million: 20.0
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      forced_tool_choice: false,
+      required_tool_choice: false,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 10, 14)
     }
   )
 
