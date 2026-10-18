@@ -128,7 +128,7 @@ module Raif
       task.run(&block)
       task
     rescue StandardError => e
-      task&.failed!
+      task&.fail_without_validation!
 
       # An authorization veto is intentional, not a model failure - re-raise it
       # to the caller instead of logging/reporting it as an error.
@@ -152,6 +152,11 @@ module Raif
       update_columns(started_at: Time.current) if started_at.nil?
 
       populate_prompts unless skip_prompt_population
+
+      # populate_prompts sets validated attributes (e.g. requested_language_key), so
+      # a task that passed validation on create can be invalid now. Raise before the
+      # LLM request rather than paying for a response that can't be saved.
+      validate!
 
       streaming_block = if block_given?
         proc do |model_completion, delta, sse_event|
@@ -197,19 +202,29 @@ module Raif
     def process_completion!(model_completion)
       self.raif_model_completion = model_completion.becomes(Raif::ModelCompletion)
 
-      update(raw_response: raif_model_completion.raw_response)
+      update!(raw_response: raif_model_completion.raw_response)
 
       fail_truncated_completion! if self.class.fail_on_truncation
 
       if raif_model_completion.failed?
         # Failure detail (failure_error / failure_reason) lives on the model
         # completion; the task's `failed_at` is just a state marker.
-        failed!
+        update!(failed_at: Time.current) unless failed_at?
       else
         process_model_tool_invocations
-        completed!
+        update!(completed_at: Time.current) unless completed_at?
       end
       self
+    end
+
+    # Marks a persisted task failed even when it is invalid, so a task that
+    # raised mid-run (including on a failed validation) still reaches a terminal
+    # state. Any raw_response already received is persisted along with it.
+    def fail_without_validation!
+      return unless persisted?
+      return if failed_at?
+
+      update_columns(failed_at: Time.current, raw_response: raw_response, updated_at: Time.current)
     end
 
     # Builds a Raif::Task and a pending Raif::ModelCompletion attached to the

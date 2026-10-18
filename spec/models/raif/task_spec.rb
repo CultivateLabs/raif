@@ -168,6 +168,47 @@ RSpec.describe Raif::Task, type: :model do
       end
     end
 
+    context "when populate_prompts makes the task invalid" do
+      before do
+        stub_raif_task(Raif::TestTask) do |_messages|
+          "This should never be reached"
+        end
+
+        allow(user).to receive(:preferred_language_key).and_return("zz")
+      end
+
+      it "marks the task failed without making the LLM request" do
+        task = Raif::TestTask.run(creator: user)
+
+        expect(task.raif_model_completion).to be_nil
+        expect(Raif::ModelCompletion.count).to eq(0)
+
+        task.reload
+        expect(task).to be_failed
+        expect(task.completed_at).to be_nil
+        expect(task.raw_response).to be_nil
+      end
+    end
+
+    context "when the task becomes invalid while the LLM request is in flight" do
+      before do
+        stub_raif_task(Raif::TestTask) do |_messages, _model_completion, task|
+          task.requested_language_key = "zz"
+          "A joke that arrived after the task went invalid"
+        end
+      end
+
+      it "marks the task failed and keeps the response" do
+        task = Raif::TestTask.run(creator: user)
+
+        task.reload
+        expect(task).to be_failed
+        expect(task.completed_at).to be_nil
+        expect(task.raw_response).to eq("A joke that arrived after the task went invalid")
+        expect(task.raif_model_completion.raw_response).to eq("A joke that arrived after the task went invalid")
+      end
+    end
+
     context "for a task requesting a JSON response" do
       before do
         stub_raif_task(Raif::TestJsonTask) do |_messages|
