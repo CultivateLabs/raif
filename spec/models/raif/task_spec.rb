@@ -168,6 +168,74 @@ RSpec.describe Raif::Task, type: :model do
       end
     end
 
+    context "when populate_prompts makes the task invalid" do
+      before do
+        stub_raif_task(Raif::TestTask) do |_messages|
+          "This should never be reached"
+        end
+
+        allow(user).to receive(:preferred_language_key).and_return("zz")
+      end
+
+      it "marks the task failed without making the LLM request" do
+        task = Raif::TestTask.run(creator: user)
+
+        expect(task.raif_model_completion).to be_nil
+        expect(Raif::ModelCompletion.count).to eq(0)
+
+        task.reload
+        expect(task).to be_failed
+        expect(task.completed_at).to be_nil
+        expect(task.raw_response).to be_nil
+      end
+    end
+
+    context "when the task becomes invalid while the LLM request is in flight" do
+      before do
+        stub_raif_task(Raif::TestTask) do |_messages, _model_completion, task|
+          task.requested_language_key = "zz"
+          "A joke that arrived after the task went invalid"
+        end
+      end
+
+      it "marks the task failed and keeps the response" do
+        task = Raif::TestTask.run(creator: user)
+
+        task.reload
+        expect(task).to be_failed
+        expect(task.completed_at).to be_nil
+        expect(task.raw_response).to eq("A joke that arrived after the task went invalid")
+        expect(task.raif_model_completion.raw_response).to eq("A joke that arrived after the task went invalid")
+      end
+    end
+
+    context "when the task is invalid only once it reaches a terminal state" do
+      before do
+        stub_raif_task(Raif::TestTask) do |_messages|
+          "A joke"
+        end
+
+        allow_any_instance_of(Raif::TestTask).to receive(:valid?).and_wrap_original do |original, *args|
+          task = original.receiver
+          result = original.call(*args)
+          task.errors.add(:base, "Terminal state is invalid") if task.completed_at? || task.failed_at?
+          task.errors.empty? && result
+        end
+      end
+
+      it "marks the task failed and drops the unsaved completed_at" do
+        task = Raif::TestTask.run(creator: user)
+
+        expect(task).to be_failed
+        expect(task).not_to be_completed
+
+        task.reload
+        expect(task).to be_failed
+        expect(task.completed_at).to be_nil
+        expect(task.raw_response).to eq("A joke")
+      end
+    end
+
     context "for a task requesting a JSON response" do
       before do
         stub_raif_task(Raif::TestJsonTask) do |_messages|
@@ -344,6 +412,45 @@ RSpec.describe Raif::Task, type: :model do
 
         expect(task.raif_model_completion.stream_response).to eq(true)
       end
+    end
+  end
+
+  describe "#run" do
+    let(:user) { FB.create(:raif_test_user) }
+
+    it "marks the task failed and re-raises when called directly on an invalid task" do
+      stub_raif_task(Raif::TestTask) { "This should never be reached" }
+      allow(user).to receive(:preferred_language_key).and_return("zz")
+      task = FB.create(:raif_test_task, creator: user, started_at: Time.current)
+
+      expect { task.run }.to raise_error(ActiveRecord::RecordInvalid)
+
+      task.reload
+      expect(task).to be_failed
+      expect(task.completed_at).to be_nil
+    end
+  end
+
+  describe "#process_completion!" do
+    let(:task) { FB.create(:raif_test_task, started_at: Time.current) }
+    let(:completion_attributes) { { llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", source: task } }
+
+    it "marks the task failed and saves the response when the model completion failed" do
+      model_completion = FB.create(:raif_model_completion, **completion_attributes, raw_response: "Partial", failed_at: Time.current)
+
+      task.process_completion!(model_completion)
+
+      task.reload
+      expect(task).to be_failed
+      expect(task.completed_at).to be_nil
+      expect(task.raw_response).to eq("Partial")
+    end
+
+    it "raises when the task is invalid" do
+      model_completion = FB.create(:raif_model_completion, **completion_attributes, raw_response: "A joke")
+      task.requested_language_key = "zz"
+
+      expect { task.process_completion!(model_completion) }.to raise_error(ActiveRecord::RecordInvalid)
     end
   end
 

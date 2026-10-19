@@ -10,7 +10,7 @@ module Raif
       logger.error "Error running prompt studio task: #{e.message}"
       logger.error e.backtrace&.join("\n")
 
-      task.update(failed_at: Time.current) unless task.failed_at?
+      task.fail_without_validation!
       broadcast_task_result(task)
     end
 
