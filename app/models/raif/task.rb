@@ -128,8 +128,6 @@ module Raif
       task.run(&block)
       task
     rescue StandardError => e
-      task&.fail_without_validation!
-
       # An authorization veto is intentional, not a model failure - re-raise it
       # to the caller instead of logging/reporting it as an error.
       raise if e.is_a?(Raif::Errors::ModelCompletionAuthorizationError)
@@ -183,6 +181,9 @@ module Raif
       )
 
       process_completion!(mc)
+    rescue StandardError
+      fail_without_validation!
+      raise
     end
 
     def re_run(&block)
@@ -222,8 +223,10 @@ module Raif
     # state. Any raw_response already received is persisted along with it.
     def fail_without_validation!
       return unless persisted?
-      return if failed_at?
+      # A failed update! leaves its unsaved values assigned, so check what was persisted.
+      return if failed_at_in_database.present?
 
+      restore_attributes([:completed_at]) if will_save_change_to_completed_at?
       update_columns(failed_at: Time.current, raw_response: raw_response, updated_at: Time.current)
     end
 
