@@ -86,6 +86,14 @@ RSpec.describe Raif::Concerns::HasPromptTemplates do
         expect { agent.build_system_prompt }.to raise_error(NotImplementedError)
       end
     end
+
+    # Agents take their input from #task, so no ancestor defines #build_prompt.
+    context "when no prompt template exists" do
+      it "raises NotImplementedError instead of NoMethodError" do
+        agent = Raif::TestTemplateAgent.new
+        expect { agent.build_prompt }.to raise_error(NotImplementedError)
+      end
+    end
   end
 
   describe "partials and Rails view helpers" do

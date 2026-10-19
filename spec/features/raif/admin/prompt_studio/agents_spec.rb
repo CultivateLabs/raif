@@ -69,6 +69,7 @@ RSpec.describe "Admin::PromptStudio::Agents", type: :feature do
       # System prompt comparison section present
       expect(page).to have_content(I18n.t("raif.admin.common.system_prompt"))
       expect(page).to have_content(agent.system_prompt.first(100))
+      expect(page).to have_no_content("Error rendering current prompt")
 
       # Task shown
       expect(page).to have_content("What is the capital of France?")

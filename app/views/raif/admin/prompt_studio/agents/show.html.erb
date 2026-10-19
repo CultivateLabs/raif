@@ -29,7 +29,9 @@
     <% if @agent.task.present? %>
       <div class="row mb-3">
         <div class="col-md-2"><strong><%= t("raif.admin.common.task") %>:</strong></div>
-        <div class="col-md-10"><%= @agent.task %></div>
+        <div class="col-md-10">
+          <pre class="pre-wrap border rounded p-3 bg-light mb-0"><%= @agent.task %></pre>
+        </div>
       </div>
     <% end %>
     <% if @agent.run_with.present? %>
