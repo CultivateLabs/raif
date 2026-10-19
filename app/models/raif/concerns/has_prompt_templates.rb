@@ -40,16 +40,20 @@ module Raif
       def build_prompt
         if prompt_template_exists?(:prompt)
           render_prompt_template(:prompt)
-        else
+        elsif defined?(super)
           super
+        else
+          raise NotImplementedError, "#{self.class.name} has no #build_prompt and no prompt template"
         end
       end
 
       def build_system_prompt
         if prompt_template_exists?(:system_prompt)
           render_prompt_template(:system_prompt)
-        else
+        elsif defined?(super)
           super
+        else
+          raise NotImplementedError, "#{self.class.name} has no #build_system_prompt and no system prompt template"
         end
       end
 
