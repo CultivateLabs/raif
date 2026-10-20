@@ -3,6 +3,7 @@ PATH
   specs:
     raif (1.6.0.pre)
       aws-sdk-bedrockruntime (>= 1.75.0)
+      diff-lcs (>= 1.5)
       event_stream_parser (>= 1.0)
       faraday (>= 2.0)
       faraday-multipart (>= 1.0)

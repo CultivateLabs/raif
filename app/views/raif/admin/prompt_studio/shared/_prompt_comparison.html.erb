@@ -20,16 +20,18 @@
     </div>
     <div class="card-body">
       <% if comparison[:system_prompt_changed] %>
-        <div class="row">
-          <div class="col-md-6">
-            <h6><%= t("raif.admin.prompt_studio.common.original_system_prompt") %></h6>
-            <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:original_system_prompt] %></pre>
+        <%= render layout: "raif/admin/prompt_studio/shared/prompt_diff_tabs", locals: { diff: comparison[:system_prompt_diff] } do %>
+          <div class="row">
+            <div class="col-md-6">
+              <h6><%= t("raif.admin.prompt_studio.common.original_system_prompt") %></h6>
+              <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:original_system_prompt] %></pre>
+            </div>
+            <div class="col-md-6">
+              <h6><%= t("raif.admin.prompt_studio.common.current_system_prompt") %></h6>
+              <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:current_system_prompt] %></pre>
+            </div>
           </div>
-          <div class="col-md-6">
-            <h6><%= t("raif.admin.prompt_studio.common.current_system_prompt") %></h6>
-            <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:current_system_prompt] %></pre>
-          </div>
-        </div>
+        <% end %>
       <% else %>
         <pre class="pre-wrap"><%= comparison[:current_system_prompt] || comparison[:original_system_prompt] %></pre>
       <% end %>
@@ -49,36 +51,38 @@
     </div>
     <div class="card-body">
       <% if comparison[:prompt_changed] %>
-        <div class="row">
-          <div class="col-md-6">
-            <h6 class="d-flex justify-content-between align-items-center">
-              <span><%= t("raif.admin.prompt_studio.common.original_prompt") %></span>
-              <span>
-                <% if comparison[:original_prompt_tokens].present? %>
-                  <span class="badge bg-secondary fw-normal"><%= t("raif.admin.prompt_studio.common.prompt_tokens", count: number_with_delimiter(comparison[:original_prompt_tokens])) %></span>
-                <% end %>
-                <% if comparison[:original_prompt_token_cost].present? %>
-                  <span class="badge bg-secondary fw-normal"><%= number_to_currency(comparison[:original_prompt_token_cost], precision: 4) %></span>
-                <% end %>
-              </span>
-            </h6>
-            <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:original_prompt] %></pre>
+        <%= render layout: "raif/admin/prompt_studio/shared/prompt_diff_tabs", locals: { diff: comparison[:prompt_diff] } do %>
+          <div class="row">
+            <div class="col-md-6">
+              <h6 class="d-flex justify-content-between align-items-center">
+                <span><%= t("raif.admin.prompt_studio.common.original_prompt") %></span>
+                <span>
+                  <% if comparison[:original_prompt_tokens].present? %>
+                    <span class="badge bg-secondary fw-normal"><%= t("raif.admin.prompt_studio.common.prompt_tokens", count: number_with_delimiter(comparison[:original_prompt_tokens])) %></span>
+                  <% end %>
+                  <% if comparison[:original_prompt_token_cost].present? %>
+                    <span class="badge bg-secondary fw-normal"><%= number_to_currency(comparison[:original_prompt_token_cost], precision: 4) %></span>
+                  <% end %>
+                </span>
+              </h6>
+              <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:original_prompt] %></pre>
+            </div>
+            <div class="col-md-6">
+              <h6 class="d-flex justify-content-between align-items-center">
+                <span><%= t("raif.admin.prompt_studio.common.current_prompt") %></span>
+                <span>
+                  <% if comparison[:current_prompt_token_estimate].present? %>
+                    <span class="badge bg-secondary fw-normal"><%= t("raif.admin.prompt_studio.common.estimated_tokens", count: number_with_delimiter(comparison[:current_prompt_token_estimate])) %></span>
+                  <% end %>
+                  <% if comparison[:current_prompt_cost_estimate].present? %>
+                    <span class="badge bg-secondary fw-normal"><%= t("raif.admin.prompt_studio.common.estimated_cost", cost: number_to_currency(comparison[:current_prompt_cost_estimate], precision: 4)) %></span>
+                  <% end %>
+                </span>
+              </h6>
+              <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:current_prompt] %></pre>
+            </div>
           </div>
-          <div class="col-md-6">
-            <h6 class="d-flex justify-content-between align-items-center">
-              <span><%= t("raif.admin.prompt_studio.common.current_prompt") %></span>
-              <span>
-                <% if comparison[:current_prompt_token_estimate].present? %>
-                  <span class="badge bg-secondary fw-normal"><%= t("raif.admin.prompt_studio.common.estimated_tokens", count: number_with_delimiter(comparison[:current_prompt_token_estimate])) %></span>
-                <% end %>
-                <% if comparison[:current_prompt_cost_estimate].present? %>
-                  <span class="badge bg-secondary fw-normal"><%= t("raif.admin.prompt_studio.common.estimated_cost", cost: number_to_currency(comparison[:current_prompt_cost_estimate], precision: 4)) %></span>
-                <% end %>
-              </span>
-            </h6>
-            <pre class="pre-wrap border rounded p-3 bg-light"><%= comparison[:current_prompt] %></pre>
-          </div>
-        </div>
+        <% end %>
       <% else %>
         <pre class="pre-wrap"><%= comparison[:current_prompt] || comparison[:original_prompt] %></pre>
       <% end %>

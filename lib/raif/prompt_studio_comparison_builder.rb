@@ -20,6 +20,8 @@ module Raif
         current_system_prompt: current_system_prompt,
         prompt_changed: changed?(original_prompt, current_prompt),
         system_prompt_changed: changed?(original_system_prompt, current_system_prompt),
+        prompt_diff: (Raif::PromptDiff.build(original_prompt, current_prompt) if prompt_changed?),
+        system_prompt_diff: (Raif::PromptDiff.build(original_system_prompt, current_system_prompt) if system_prompt_changed?),
         has_stale_references: has_stale_references?,
         warnings: warnings,
         original_prompt_tokens: original_prompt_tokens,
