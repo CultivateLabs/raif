@@ -65,7 +65,7 @@ RSpec.describe "Admin::PromptStudio::Tasks", type: :feature do
     end
 
     context "when the current prompt differs from the original prompt" do
-      before { task.update!(prompt: "Tell me a <b>long</b> joke") }
+      before { task.update!(prompt: "Tell me a joke <i>") }
 
       it "shows a diff of the prompts with a side-by-side toggle" do
         visit raif.admin_prompt_studio_task_path(task)
@@ -73,7 +73,7 @@ RSpec.describe "Admin::PromptStudio::Tasks", type: :feature do
         expect(page).to have_content(I18n.t("raif.admin.prompt_studio.common.prompt_changed"))
         expect(page).to have_button(I18n.t("raif.admin.prompt_studio.common.diff"))
         expect(page).to have_button(I18n.t("raif.admin.prompt_studio.common.side_by_side"))
-        expect(page).to have_css(".raif-prompt-diff-deleted mark", text: "<b>long</b>")
+        expect(page).to have_css(".raif-prompt-diff-deleted mark", text: "<i>")
         expect(page).to have_css(".raif-prompt-diff-added", text: "Tell me a joke")
       end
     end

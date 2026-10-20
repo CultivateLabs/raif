@@ -45,6 +45,15 @@ RSpec.describe Raif::PromptDiff do
     ])
   end
 
+  it "highlights the whole line pair when the lines share less than half of their words" do
+    lines = described_class.build("You are a helpful assistant.", "Return only valid JSON output.")
+
+    expect(summarize(lines)).to eq([
+      [:deleted, [["You are a helpful assistant.", true]]],
+      [:added, [["Return only valid JSON output.", true]]]
+    ])
+  end
+
   it "lists all deleted lines of a changed block before its added lines" do
     lines = described_class.build("a1\na2\nkeep", "b1\nb2\nkeep")
 

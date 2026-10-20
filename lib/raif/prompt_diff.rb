@@ -7,6 +7,9 @@ module Raif
     # Lines with more tokens than this skip the word diff and are highlighted as a whole.
     WORD_DIFF_TOKEN_LIMIT = 2_000
 
+    # Line pairs that share less than this fraction of their words are highlighted as a whole.
+    WORD_DIFF_MIN_SIMILARITY = 0.5
+
     Line = Struct.new(:action, :segments) # action: :unchanged, :deleted, :added
     Segment = Struct.new(:text, :changed)
 
@@ -52,19 +55,35 @@ module Raif
       new_tokens = tokenize(new_line)
 
       if old_tokens.size > WORD_DIFF_TOKEN_LIMIT || new_tokens.size > WORD_DIFF_TOKEN_LIMIT
-        return [[Segment.new(old_line, true)], [Segment.new(new_line, true)]]
+        return whole_line_segments(old_line, new_line)
       end
+
+      changes = Diff::LCS.sdiff(old_tokens, new_tokens)
+      return whole_line_segments(old_line, new_line) unless similar?(changes, old_tokens, new_tokens)
 
       old_segments = []
       new_segments = []
 
-      Diff::LCS.sdiff(old_tokens, new_tokens).each do |change|
+      changes.each do |change|
         unchanged = change.action == "="
         append_segment(old_segments, change.old_element, !unchanged) if change.old_element && change.action != "+"
         append_segment(new_segments, change.new_element, !unchanged) if change.new_element && change.action != "-"
       end
 
       [old_segments, new_segments]
+    end
+
+    def whole_line_segments(old_line, new_line)
+      [[Segment.new(old_line, true)], [Segment.new(new_line, true)]]
+    end
+
+    # Counts only non-whitespace tokens, since matching spaces say nothing about whether two lines are related.
+    def similar?(changes, old_tokens, new_tokens)
+      word_count = [old_tokens, new_tokens].map { |tokens| tokens.count { |token| token.match?(/\S/) } }.max
+      return true if word_count.zero?
+
+      matched_count = changes.count { |change| change.action == "=" && change.old_element.match?(/\S/) }
+      matched_count >= word_count * WORD_DIFF_MIN_SIMILARITY
     end
 
     def tokenize(line)

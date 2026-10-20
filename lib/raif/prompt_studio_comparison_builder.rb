@@ -96,7 +96,12 @@ module Raif
     end
 
     def changed?(original, current)
-      original.present? && current.present? && original.strip != current.strip
+      original.present? && current.present? && normalize(original) != normalize(current)
+    end
+
+    # Line endings are normalized so a CRLF-only difference does not count as a change the diff cannot show.
+    def normalize(text)
+      text.gsub("\r\n", "\n").strip
     end
 
     def original_prompt_tokens
