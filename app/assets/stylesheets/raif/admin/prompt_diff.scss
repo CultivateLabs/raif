@@ -1,0 +1,43 @@
+.raif-prompt-diff {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.875rem;
+  background-color: white;
+  overflow-x: auto;
+
+  .raif-prompt-diff-line {
+    display: flex;
+    min-height: 1.5em;
+  }
+
+  .raif-prompt-diff-gutter {
+    flex: 0 0 1.75rem;
+    text-align: center;
+    color: #8898aa;
+    user-select: none;
+  }
+
+  .raif-prompt-diff-text {
+    flex: 1;
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding-right: 0.75rem;
+  }
+
+  .raif-prompt-diff-deleted {
+    background-color: #ffebe9;
+
+    mark {
+      background-color: #ffc1bc;
+      padding: 0;
+    }
+  }
+
+  .raif-prompt-diff-added {
+    background-color: #e6ffec;
+
+    mark {
+      background-color: #abf2bc;
+      padding: 0;
+    }
+  }
+}

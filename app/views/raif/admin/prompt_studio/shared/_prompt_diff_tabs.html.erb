@@ -1,0 +1,25 @@
+<% tabs_id = "raif-prompt-diff-#{SecureRandom.hex(4)}" %>
+<ul class="nav nav-pills mb-3" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" type="button" role="tab" data-bs-toggle="pill" data-bs-target="#<%= tabs_id %>-diff" aria-controls="<%= tabs_id %>-diff" aria-selected="true">
+      <%= t("raif.admin.prompt_studio.common.diff") %>
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" type="button" role="tab" data-bs-toggle="pill" data-bs-target="#<%= tabs_id %>-side-by-side" aria-controls="<%= tabs_id %>-side-by-side" aria-selected="false">
+      <%= t("raif.admin.prompt_studio.common.side_by_side") %>
+    </button>
+  </li>
+</ul>
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="<%= tabs_id %>-diff" role="tabpanel">
+    <div class="raif-prompt-diff border rounded">
+      <% diff.each do |line| %>
+        <div class="raif-prompt-diff-line raif-prompt-diff-<%= line.action %>"><span class="raif-prompt-diff-gutter"><%= { deleted: "-", added: "+" }.fetch(line.action, " ") %></span><span class="raif-prompt-diff-text"><%= safe_join(line.segments.map { |segment| segment.changed && line.segments.size > 1 ? tag.mark(segment.text) : segment.text }) %></span></div>
+      <% end %>
+    </div>
+  </div>
+  <div class="tab-pane fade" id="<%= tabs_id %>-side-by-side" role="tabpanel">
+    <%= yield %>
+  </div>
+</div>
