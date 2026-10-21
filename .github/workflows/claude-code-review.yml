@@ -1,13 +1,15 @@
 # Runs an AI code review on pull requests using claude-code-action.
-# Triggers automatically when a PR is opened as ready for review, or when
-# an existing draft PR is marked ready for review (except for claude/*
-# branches and dependabot PRs). Can also be run by hand for one PR:
+# Triggers automatically when a PR is opened as ready for review, when
+# an existing draft PR is marked ready for review, or when the "not ready"
+# label is removed (except for claude/* branches and dependabot PRs). A PR
+# that carries the "not ready" label is not reviewed. Can also be run by
+# hand for one PR:
 #   gh workflow run claude-code-review.yml -f pr_number=<n>
 name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, ready_for_review]
+    types: [opened, ready_for_review, unlabeled]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -19,7 +21,9 @@ jobs:
   claude-review:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && !startsWith(github.head_ref, 'claude/') && github.actor != 'dependabot[bot]')
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && !startsWith(github.head_ref, 'claude/') && github.actor != 'dependabot[bot]' &&
+        !contains(github.event.pull_request.labels.*.name, 'not ready') &&
+        (github.event.action != 'unlabeled' || github.event.label.name == 'not ready'))
 
     runs-on: ubuntu-latest
     permissions:

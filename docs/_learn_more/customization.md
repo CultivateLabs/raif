@@ -164,6 +164,8 @@ Tool-choice support can vary independently of native tool use. Manifest capabili
 
 Use `llm.supports_forced_tool_choice?` and `llm.supports_required_tool_choice?` to inspect these settings. Agents also consult `supports_faithful_required_tool_choice?(tools)` for provider restrictions tied to the available tool types. Unsupported explicit choices raise `Raif::Errors::UnsupportedFeatureError` before a request is sent. Agents use automatic selection when neither constraint is supported and still validate that the expected tool was called.
 
+Some Batch APIs accept fewer output tokens than the synchronous endpoint for the same model. A manifest entry declares this with `batch_max_completion_tokens:`, and custom registrations can pass `batch_max_completion_tokens:` to `Raif.register_llm`. When a completion is built for a batch, Raif lowers its `max_completion_tokens` to that cap, whether the value came from the caller or from the model default. Synchronous and streaming completions keep the full `max_completion_tokens`.
+
 ---
 
 **Read next:** [Testing](testing)

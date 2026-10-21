@@ -8,6 +8,35 @@ provider :google do |p|
   )
 
   p.model(
+    key: :google_gemini_4_argon,
+    api_name: "gemini-4-argon",
+    display_name: "Google Gemini 4 Argon",
+    max_completion_tokens: 65_536,
+    batch_max_completion_tokens: 32_768,
+    pricing: {
+      cache_read_per_million: 0.1,
+      input_per_million: 2.0,
+      output_per_million: 10.0,
+      note: "Introductory rate through 2026-11-30; standard rate is 4.00 input / 20.00 output / 0.20 cached input from 2026-12-01",
+      valid_until: Date.new(2026, 11, 30)
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: true,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: %i[web_search code_execution]
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 10, 14)
+    }
+  )
+
+  p.model(
     key: :google_gemini_3_8_flash,
     api_name: "gemini-3.8-flash",
     display_name: "Google Gemini 3.8 Flash",

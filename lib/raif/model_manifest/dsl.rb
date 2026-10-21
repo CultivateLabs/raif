@@ -27,7 +27,7 @@ module Raif
       # capabilities for a single entry, or endpoints for one entry per
       # endpoint (see ProviderBuilder#model).
       ModelDeclaration = Struct.new(
-        :key, :key_base, :api_name, :display_name, :max_completion_tokens,
+        :key, :key_base, :api_name, :display_name, :max_completion_tokens, :batch_max_completion_tokens,
         :pricing, :capabilities, :endpoints, :lifecycle, :source_path, :adapter,
         keyword_init: true
       )
@@ -178,7 +178,8 @@ module Raif
         # OpenAI models reach both the completions and responses adapters).
         def model(
           api_name:, display_name:, pricing:, lifecycle:,
-          key: nil, key_base: nil, max_completion_tokens: nil, capabilities: nil, endpoints: nil, adapter: nil
+          key: nil, key_base: nil, max_completion_tokens: nil, batch_max_completion_tokens: nil, capabilities: nil, endpoints: nil,
+          adapter: nil
         )
           single_entry = !key.nil? && !capabilities.nil? && key_base.nil? && endpoints.nil?
           per_endpoint = !key_base.nil? && !endpoints.nil? && key.nil? && capabilities.nil?
@@ -193,6 +194,7 @@ module Raif
             api_name: api_name,
             display_name: display_name,
             max_completion_tokens: max_completion_tokens,
+            batch_max_completion_tokens: batch_max_completion_tokens,
             pricing: Dsl.normalize_pricing(pricing),
             capabilities: capabilities && Dsl.normalize_capabilities(capabilities),
             endpoints: endpoints && Dsl.normalize_endpoints(endpoints, source_path: @source_path),
