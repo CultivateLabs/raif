@@ -47,6 +47,7 @@ module Raif
           valid_until: entry.pricing[:valid_until]
         }
         pricing[:cache_read_per_million] = entry.pricing[:cache_read_per_million] if entry.pricing.key?(:cache_read_per_million)
+        pricing[:followed_by] = entry.pricing[:followed_by] if entry.pricing.key?(:followed_by)
         config[:pricing] = pricing.freeze
         config[:capabilities] = entry.capabilities
 

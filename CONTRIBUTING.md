@@ -46,7 +46,7 @@ bundle exec guard
 
 ### Model Pricing Annotations
 
-A manifest entry's `pricing` hash accepts two optional keys alongside the required rates: `note` (a string documenting promotional or otherwise unusual pricing, for example a launch discount or a surcharge above a token threshold) and `valid_until` (a `Date` recording when a documented rate is scheduled to end). Neither affects runtime costs; both are exposed to host apps through `Raif::Llm#pricing`. A past `valid_until` is a review prompt, never a CI failure. Plain Ruby comments in manifest files are also welcome for anything the fields do not fit.
+A manifest entry's `pricing` hash accepts three optional keys alongside the required rates: `note` (a string documenting promotional or otherwise unusual pricing, for example a launch discount or a surcharge above a token threshold), `valid_until` (a `Date` recording when a documented rate is scheduled to end), and `followed_by` (the rate that replaces it: a hash of `input_per_million`, `output_per_million`, and `cache_read_per_million` when the entry declares one). `note` and `valid_until` alone do not affect runtime costs. When an entry declares `followed_by`, a model completion created after the `valid_until` date (UTC) is costed at the `followed_by` rate, so recorded costs follow a scheduled price change without a new gem release. Declare `followed_by` only when the provider publishes both the end date and the next rate. All three are exposed to host apps through `Raif::Llm#pricing`. A past `valid_until` is a review prompt, never a CI failure: once it passes, promote the `followed_by` rate to the listed rate. Plain Ruby comments in manifest files are also welcome for anything the fields do not fit.
 
 ### Manual LLM Smoke Tests
 

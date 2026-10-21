@@ -94,7 +94,7 @@ RSpec.describe "model manifest definitions validity" do
       # documented rate is scheduled to end. A past valid_until is deliberately NOT a failure
       # here: it is a /model-check finding for a human to re-verify, not a build break.
       it "has well-typed optional pricing annotations" do
-        unknown = entry.pricing.keys - %i[input_per_million output_per_million cache_read_per_million note valid_until]
+        unknown = entry.pricing.keys - %i[input_per_million output_per_million cache_read_per_million note valid_until followed_by]
         expect(unknown).to be_empty, "unknown pricing keys: #{unknown.inspect}"
 
         note = entry.pricing[:note]
@@ -105,6 +105,24 @@ RSpec.describe "model manifest definitions validity" do
 
         cache_read_rate = entry.pricing[:cache_read_per_million]
         expect(cache_read_rate).to be_a(Numeric).and be >= 0 if cache_read_rate
+      end
+
+      # Costs switch to followed_by after valid_until, so it needs the date, and
+      # it declares a cached input rate exactly when the base rate does: otherwise
+      # cached tokens would silently fall back to the adapter multiplier after the date.
+      it "declares a complete follow-on rate when it declares one" do
+        followed_by = entry.pricing[:followed_by]
+        next unless followed_by
+
+        expect(entry.pricing[:valid_until]).to be_a(Date)
+
+        unknown = followed_by.keys - %i[input_per_million output_per_million cache_read_per_million]
+        expect(unknown).to be_empty, "unknown followed_by keys: #{unknown.inspect}"
+
+        expect(followed_by.fetch(:input_per_million)).to be_a(Numeric).and be > 0
+        expect(followed_by.fetch(:output_per_million)).to be_a(Numeric).and be > 0
+        expect(followed_by.key?(:cache_read_per_million)).to eq(entry.pricing.key?(:cache_read_per_million))
+        expect(followed_by[:cache_read_per_million]).to be_a(Numeric).and be >= 0 if followed_by.key?(:cache_read_per_million)
       end
 
       it "has Date objects for whichever lifecycle dates it declares" do

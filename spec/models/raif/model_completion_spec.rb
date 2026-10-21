@@ -359,6 +359,83 @@ RSpec.describe Raif::ModelCompletion, type: :model do
         expect(model_completion.total_cost).to be_nil
       end
 
+      describe "follow-on rate after pricing valid_until" do
+        include ActiveSupport::Testing::TimeHelpers
+
+        let(:llm_config) do
+          Raif.llm_config(:google_gemini_3_1_pro).merge(
+            input_token_cost: 2.0 / 1_000_000,
+            output_token_cost: 10.0 / 1_000_000,
+            pricing: {
+              input_per_million: 2.0,
+              output_per_million: 10.0,
+              cache_read_per_million: 0.1,
+              valid_until: Date.new(2026, 11, 30),
+              followed_by: { input_per_million: 4.0, output_per_million: 20.0, cache_read_per_million: 0.2 }
+            }
+          )
+        end
+
+        before { allow(Raif).to receive(:llm_config).and_return(llm_config) }
+
+        def build_completion(**attributes)
+          described_class.new(
+            llm_model_key: "google_gemini_3_1_pro",
+            model_api_name: "gemini-3.1-pro",
+            prompt_tokens: 1000,
+            completion_tokens: 500,
+            cache_read_input_tokens: 400,
+            **attributes
+          )
+        end
+
+        it "uses the listed rates for a completion created on the valid_until date" do
+          model_completion = build_completion(created_at: Time.utc(2026, 11, 30, 23, 59))
+          model_completion.save(validate: false)
+
+          expect(model_completion.prompt_token_cost.to_f).to be_within(1e-12).of(((600 * 2.0) + (400 * 0.1)) / 1_000_000)
+          expect(model_completion.output_token_cost.to_f).to be_within(1e-12).of(500 * 10.0 / 1_000_000)
+        end
+
+        it "uses the follow-on rates for a completion created after the valid_until date" do
+          model_completion = build_completion(created_at: Time.utc(2026, 12, 1, 0, 1))
+          model_completion.save(validate: false)
+
+          expect(model_completion.prompt_token_cost.to_f).to be_within(1e-12).of(((600 * 4.0) + (400 * 0.2)) / 1_000_000)
+          expect(model_completion.output_token_cost.to_f).to be_within(1e-12).of(500 * 20.0 / 1_000_000)
+          expect(model_completion.total_cost.to_f).to be_within(1e-12).of(((600 * 4.0) + (400 * 0.2) + (500 * 20.0)) / 1_000_000)
+        end
+
+        it "uses the current date for a completion that is not yet saved" do
+          travel_to(Time.utc(2026, 12, 2)) do
+            model_completion = build_completion
+            model_completion.save(validate: false)
+
+            expect(model_completion.output_token_cost.to_f).to be_within(1e-12).of(500 * 20.0 / 1_000_000)
+          end
+        end
+
+        it "keeps the listed rates when a completion created before the date is saved after it" do
+          model_completion = build_completion(created_at: Time.utc(2026, 11, 30, 12))
+          model_completion.save(validate: false)
+
+          travel_to(Time.utc(2026, 12, 2)) do
+            model_completion.completion_tokens = 600
+            model_completion.save(validate: false)
+          end
+
+          expect(model_completion.output_token_cost.to_f).to be_within(1e-12).of(600 * 10.0 / 1_000_000)
+        end
+
+        it "keeps the listed rates after valid_until when the entry declares no follow-on rate" do
+          llm_config[:pricing] = llm_config[:pricing].except(:followed_by)
+          model_completion = build_completion(created_at: Time.utc(2026, 12, 1, 0, 1))
+          model_completion.save(validate: false)
+
+          expect(model_completion.output_token_cost.to_f).to be_within(1e-12).of(500 * 10.0 / 1_000_000)
+        end
+      end
+
       describe "batch inference discount" do
         let(:batch) do
           FB.create(
