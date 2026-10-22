@@ -29,6 +29,14 @@ RSpec.describe Raif::ModelManifest::RegistryData do
       expect(pricing[:input_per_million]).to eq(1.25)
     end
 
+    it "carries a follow-on rate when the entry declares one" do
+      entry = manifest.llm_entries.find { |e| e.key == :open_ai_gpt_test }.dup
+      followed_by = { input_per_million: 2.5, output_per_million: 10.0 }
+      entry.pricing = entry.pricing.merge(valid_until: Date.new(2026, 11, 30), followed_by: followed_by)
+
+      expect(described_class.config_for(entry)[:pricing][:followed_by]).to eq(followed_by)
+    end
+
     it "converts integer pricing to a float per-token cost" do
       entry = Raif::ModelManifest::Entry.new(
         key: :integer_pricing_test_model,

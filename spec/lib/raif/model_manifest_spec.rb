@@ -231,6 +231,30 @@ RSpec.describe Raif::ModelManifest do
       expect(entry.capabilities.fetch(:provider_managed_tools)).to eq([:web_search])
     end
 
+    it "symbolizes the keys of a follow-on rate" do
+      manifest = load_manifest_source(<<~RUBY)
+        provider :anthropic do |p|
+          p.model(
+            key: :anthropic_follow_on_rate_model,
+            api_name: "claude-follow-on-1",
+            display_name: "Anthropic Follow-on Rate Model",
+            pricing: {
+              input_per_million: 1.0,
+              output_per_million: 2.0,
+              valid_until: Date.new(2026, 11, 30),
+              followed_by: { "input_per_million" => 2.0, "output_per_million" => 4.0 }
+            },
+            capabilities: { streaming: true },
+            lifecycle: { status: :active }
+          )
+        end
+      RUBY
+
+      followed_by = manifest.llm_entries.sole.pricing.fetch(:followed_by)
+      expect(followed_by).to eq(input_per_million: 2.0, output_per_million: 4.0)
+      expect(followed_by).to be_frozen
+    end
+
     it "merges endpoint lifecycle overrides without losing shared retirement dates" do
       manifest = load_manifest_source(<<~RUBY)
         provider :open_ai do |p|

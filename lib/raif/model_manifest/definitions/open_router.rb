@@ -16,8 +16,9 @@ provider :open_router do |p|
       cache_read_per_million: 0.1,
       input_per_million: 2.0,
       output_per_million: 10.0,
-      note: "Mirrors Google's introductory rate through 2026-11-30; standard rate 4.00 / 20.00 / 0.20 cached input from 2026-12-01",
-      valid_until: Date.new(2026, 11, 30)
+      note: "Mirrors Google's introductory rate through 2026-11-30; followed_by is Google's standard rate from 2026-12-01",
+      valid_until: Date.new(2026, 11, 30),
+      followed_by: { cache_read_per_million: 0.2, input_per_million: 4.0, output_per_million: 20.0 }
     },
     capabilities: {
       temperature: true,
@@ -43,8 +44,9 @@ provider :open_router do |p|
     pricing: {
       input_per_million: 0.75,
       output_per_million: 3.75,
-      note: "Mirrors Google's introductory rate through 2026-12-31; standard rate 1.50 / 7.50 from 2027-01-01",
-      valid_until: Date.new(2026, 12, 31)
+      note: "Mirrors Google's introductory rate through 2026-12-31; followed_by is Google's standard rate from 2027-01-01",
+      valid_until: Date.new(2026, 12, 31),
+      followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
       temperature: true,
@@ -259,9 +261,10 @@ provider :open_router do |p|
     pricing: {
       input_per_million: 0.75,
       output_per_million: 3.75,
-      note: "Mirrors Google's introductory rate through 2026-12-31 (standard rate 1.50 / 7.50 from 2027-01-01); " \
+      note: "Mirrors Google's introductory rate through 2026-12-31 (followed_by is Google's standard rate from 2027-01-01); " \
         "OpenRouter's Vertex-backed endpoint is currently discounted a further 75% to 0.375 / 1.875 depending on routing",
-      valid_until: Date.new(2026, 12, 31)
+      valid_until: Date.new(2026, 12, 31),
+      followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
       temperature: true,
@@ -286,8 +289,9 @@ provider :open_router do |p|
     pricing: {
       input_per_million: 0.75,
       output_per_million: 3.75,
-      note: "Mirrors Google's introductory rate through 2026-12-31; standard rate is 1.50 input / 7.50 output from 2027-01-01",
-      valid_until: Date.new(2026, 12, 31)
+      note: "Mirrors Google's introductory rate through 2026-12-31; followed_by is Google's standard rate from 2027-01-01",
+      valid_until: Date.new(2026, 12, 31),
+      followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
       temperature: true,

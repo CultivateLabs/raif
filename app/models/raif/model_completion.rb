@@ -260,13 +260,14 @@ class Raif::ModelCompletion < Raif::ApplicationRecord
     # Each retry resends the same prompt, so the provider charges input tokens
     # for every attempt. Factor in retry_count to reflect actual billing.
     total_attempts = (retry_count || 0) + 1
+    rates = token_rates
 
-    if prompt_tokens.present? && llm_config[:input_token_cost].present?
-      self.prompt_token_cost = calculate_prompt_token_cost(total_attempts)
+    if prompt_tokens.present? && rates[:input].present?
+      self.prompt_token_cost = calculate_prompt_token_cost(total_attempts, rates)
     end
 
-    if completion_tokens.present? && llm_config[:output_token_cost].present?
-      self.output_token_cost = llm_config[:output_token_cost] * completion_tokens
+    if completion_tokens.present? && rates[:output].present?
+      self.output_token_cost = rates[:output] * completion_tokens
     end
 
     if prompt_token_cost.present? || output_token_cost.present?
@@ -538,11 +539,39 @@ private
     Raif.logger.error("Raif::ModelCompletion##{id}: inference cost event sync failure handling failed: #{e.class}: #{e.message}")
   end
 
-  def calculate_prompt_token_cost(total_attempts)
-    input_cost = llm_config[:input_token_cost]
+  # Per-token rates for this completion. A manifest entry can declare in
+  # pricing[:followed_by] the rate that replaces a temporary one after its
+  # valid_until date. Keying the choice on created_at (UTC) rather than the
+  # save time keeps a completion's cost stable when it is saved again later,
+  # such as a batch completion whose results arrive after the date. That holds
+  # only while the entry declares the schedule: promoting followed_by to the
+  # listed rate is a price edit, and like any price edit it re-costs a
+  # completion that is saved again.
+  def token_rates
+    pricing = llm_config[:pricing] || {}
+    valid_until = pricing[:valid_until]
+    rates = pricing[:followed_by] if valid_until && (created_at || Time.current).utc.to_date > valid_until
+
+    if rates
+      {
+        input: rates.fetch(:input_per_million) / 1_000_000.0,
+        output: rates.fetch(:output_per_million) / 1_000_000.0,
+        cache_read_per_million: rates[:cache_read_per_million]
+      }
+    else
+      {
+        input: llm_config[:input_token_cost],
+        output: llm_config[:output_token_cost],
+        cache_read_per_million: pricing[:cache_read_per_million]
+      }
+    end
+  end
+
+  def calculate_prompt_token_cost(total_attempts, rates)
+    input_cost = rates[:input]
     llm_class = llm_config[:llm_class]
     cache_read_multiplier = llm_class&.cache_read_input_token_cost_multiplier
-    cache_read_rate = llm_config.dig(:pricing, :cache_read_per_million)
+    cache_read_rate = rates[:cache_read_per_million]
     cache_creation_multiplier = llm_class&.cache_creation_input_token_cost_multiplier
     cached_reads = cache_read_input_tokens.to_i
     cached_writes = cache_creation_input_tokens.to_i

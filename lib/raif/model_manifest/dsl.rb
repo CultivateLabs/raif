@@ -71,7 +71,9 @@ module Raif
         end
 
         def normalize_pricing(pricing)
-          deep_freeze(pricing.transform_keys(&:to_sym))
+          normalized = pricing.transform_keys(&:to_sym)
+          normalized[:followed_by] &&= normalized[:followed_by].transform_keys(&:to_sym)
+          deep_freeze(normalized)
         end
 
         # Endpoint names become strings because that is what the adapter and
