@@ -543,7 +543,10 @@ private
   # pricing[:followed_by] the rate that replaces a temporary one after its
   # valid_until date. Keying the choice on created_at (UTC) rather than the
   # save time keeps a completion's cost stable when it is saved again later,
-  # such as a batch completion whose results arrive after the date.
+  # such as a batch completion whose results arrive after the date. That holds
+  # only while the entry declares the schedule: promoting followed_by to the
+  # listed rate is a price edit, and like any price edit it re-costs a
+  # completion that is saved again.
   def token_rates
     pricing = llm_config[:pricing] || {}
     valid_until = pricing[:valid_until]

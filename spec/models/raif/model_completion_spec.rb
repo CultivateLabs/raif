@@ -406,6 +406,19 @@ RSpec.describe Raif::ModelCompletion, type: :model do
           expect(model_completion.total_cost.to_f).to be_within(1e-12).of(((600 * 4.0) + (400 * 0.2) + (500 * 20.0)) / 1_000_000)
         end
 
+        # OpenRouter has no cached-input multiplier, so only the declared rate keeps
+        # cached tokens off the full input rate.
+        it "bills cached tokens at a follow-on cached rate of zero" do
+          llm_config[:llm_class] = Raif::Llms::OpenRouter
+          llm_config[:pricing] = llm_config[:pricing].merge(
+            followed_by: { input_per_million: 4.0, output_per_million: 20.0, cache_read_per_million: 0.0 }
+          )
+          model_completion = build_completion(created_at: Time.utc(2026, 12, 1, 0, 1))
+          model_completion.save(validate: false)
+
+          expect(model_completion.prompt_token_cost.to_f).to be_within(1e-12).of(600 * 4.0 / 1_000_000)
+        end
+
         it "uses the current date for a completion that is not yet saved" do
           travel_to(Time.utc(2026, 12, 2)) do
             model_completion = build_completion
