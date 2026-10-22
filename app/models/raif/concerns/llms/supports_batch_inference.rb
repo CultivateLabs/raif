@@ -127,4 +127,39 @@ protected
     label << " (batch ##{batch_id})" if batch_id
     Raif::Utils::TransientRetry.call(label: label, &block)
   end
+
+  # The batch's child completions, checked and ready to serialize. Each
+  # adapter's #submit_batch! starts here.
+  #
+  # #build_pending_model_completion applies batch_max_completion_tokens only
+  # when the batch exists at build time. A completion built with batch: nil and
+  # attached later still carries the synchronous limit, which a provider whose
+  # Batch API accepts fewer output tokens rejects, so the cap is applied again
+  # here. A completion with no limit at all gets the cap too, since the provider
+  # default can exceed it. The cap is set in memory only; the adapter saves it
+  # with #persist_batch_completion_limits! once the provider accepts the batch.
+  def submittable_batch_completions(batch)
+    batch.assert_submittable!
+
+    completions = batch.raif_model_completions.to_a
+    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
+
+    if batch_max_completion_tokens
+      completions.each do |mc|
+        limit = mc.max_completion_tokens || default_max_completion_tokens
+        mc.max_completion_tokens = batch_max_completion_tokens if limit.nil? || limit > batch_max_completion_tokens
+      end
+    end
+
+    completions
+  end
+
+  # Called inside the adapter's post-submission transaction, so a submission that
+  # fails a local check or the provider call leaves each stored limit unchanged,
+  # and the stored value is always the limit that was sent.
+  def persist_batch_completion_limits!(completions)
+    completions.each do |mc|
+      mc.update_columns(max_completion_tokens: mc.max_completion_tokens) if mc.max_completion_tokens_changed?
+    end
+  end
 end
