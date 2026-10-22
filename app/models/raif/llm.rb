@@ -271,8 +271,8 @@ module Raif
       # and the persisted completion records the value actually sent. A completion built
       # without a batch and attached later is clamped at submission instead, in
       # SupportsBatchInference#submittable_batch_completions.
-      if raif_model_completion_batch && batch_max_completion_tokens && max_completion_tokens
-        max_completion_tokens = [max_completion_tokens, batch_max_completion_tokens].min
+      if raif_model_completion_batch && batch_max_completion_tokens
+        max_completion_tokens = [max_completion_tokens, batch_max_completion_tokens].compact.min
       end
 
       model_completion = Raif::ModelCompletion.create!(

@@ -563,5 +563,44 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
       expect(over_cap.reload.max_completion_tokens).to eq(32_768)
       expect(under_cap.reload.max_completion_tokens).to eq(1_000)
     end
+
+    it "leaves the stored limit unchanged when the submission fails before it is sent" do
+      capped_batch = capped_llm.create_batch(creator: creator)
+      over_cap = build(capped_llm, max_completion_tokens: 64_000)
+      over_cap.update!(raif_model_completion_batch: capped_batch, batch_custom_id: "over_cap")
+      build(capped_llm).update_columns(raif_model_completion_batch_id: capped_batch.id)
+
+      expect { capped_llm.submit_batch!(capped_batch) }.to raise_error(Raif::Errors::InvalidBatchError, /blank batch_custom_id/)
+      expect(over_cap.reload.max_completion_tokens).to eq(64_000)
+    end
+
+    context "when the model declares no default max_completion_tokens" do
+      before { allow(capped_llm).to receive(:default_max_completion_tokens).and_return(nil) }
+
+      it "caps a batch entry built with no limit" do
+        expect(build(capped_llm, batch: batch).max_completion_tokens).to eq(32_768)
+      end
+
+      it "caps a completion with no limit that is attached before submission" do
+        capped_batch = capped_llm.create_batch(creator: creator)
+        unlimited = build(capped_llm)
+        unlimited.update!(raif_model_completion_batch: capped_batch, batch_custom_id: "unlimited")
+
+        stub_request(:post, "#{base_url}/models/gemini-4-argon:batchGenerateContent")
+          .with { |request|
+            entry = JSON.parse(request.body).dig("batch", "input_config", "requests", "requests", 0)
+            entry.dig("request", "generationConfig", "maxOutputTokens") == 32_768
+          }
+          .to_return(
+            status: 200,
+            headers: { "Content-Type" => "application/json" },
+            body: { name: "batches/op_unlimited", metadata: { state: "JOB_STATE_PENDING" }, done: false }.to_json
+          )
+
+        capped_llm.submit_batch!(capped_batch)
+
+        expect(unlimited.reload.max_completion_tokens).to eq(32_768)
+      end
+    end
   end
 end
