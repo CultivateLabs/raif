@@ -44,10 +44,7 @@ module Raif::Concerns::Llms::Google::BatchInference
   # (e.g. the network call succeeds but the child started_at update raises)
   # leaves no submitted-but-unstamped state behind.
   def submit_batch!(batch)
-    batch.assert_submittable!
-
-    completions = batch.raif_model_completions.to_a
-    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
+    completions = submittable_batch_completions(batch)
 
     inline_requests = completions.map do |mc|
       if mc.batch_custom_id.blank?

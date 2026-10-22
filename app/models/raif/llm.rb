@@ -268,7 +268,9 @@ module Raif
       max_completion_tokens ||= default_max_completion_tokens
       # Some Batch APIs accept fewer output tokens than the synchronous endpoint for the
       # same model (Gemini 4 Argon: 32,768 vs 65,536), so batch entries are clamped here
-      # and the persisted completion records the value actually sent.
+      # and the persisted completion records the value actually sent. A completion built
+      # without a batch and attached later is clamped at submission instead, in
+      # SupportsBatchInference#submittable_batch_completions.
       if raif_model_completion_batch && batch_max_completion_tokens && max_completion_tokens
         max_completion_tokens = [max_completion_tokens, batch_max_completion_tokens].min
       end

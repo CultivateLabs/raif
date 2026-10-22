@@ -127,4 +127,28 @@ protected
     label << " (batch ##{batch_id})" if batch_id
     Raif::Utils::TransientRetry.call(label: label, &block)
   end
+
+  # The batch's child completions, checked and ready to serialize. Each
+  # adapter's #submit_batch! starts here.
+  #
+  # #build_pending_model_completion applies batch_max_completion_tokens only
+  # when the batch exists at build time. A completion built with batch: nil and
+  # attached later still carries the synchronous limit, which a provider whose
+  # Batch API accepts fewer output tokens rejects, so the cap is applied again
+  # here and persisted, so each completion records the limit actually sent.
+  def submittable_batch_completions(batch)
+    batch.assert_submittable!
+
+    completions = batch.raif_model_completions.to_a
+    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
+
+    if batch_max_completion_tokens
+      completions.each do |mc|
+        limit = mc.max_completion_tokens || default_max_completion_tokens
+        mc.update_columns(max_completion_tokens: batch_max_completion_tokens) if limit && limit > batch_max_completion_tokens
+      end
+    end
+
+    completions
+  end
 end

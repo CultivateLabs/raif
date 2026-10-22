@@ -37,10 +37,7 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
   # (e.g. the network call succeeds but the child started_at update raises)
   # leaves no submitted-but-unstamped state behind.
   def submit_batch!(batch)
-    batch.assert_submittable!
-
-    completions = batch.raif_model_completions.to_a
-    raise Raif::Errors::InvalidBatchError, "Batch ##{batch.id} has no child completions" if completions.empty?
+    completions = submittable_batch_completions(batch)
 
     jsonl = build_batch_jsonl(completions)
     input_file_id = with_batch_transient_retry(:submit_upload_input, batch_id: batch.id) do
