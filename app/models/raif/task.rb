@@ -317,20 +317,37 @@ module Raif
     # submission, so the provider receives what the task now holds, formatted
     # the same way #prepare_for_batch! formats it.
     #
-    # @param model_completion [Raif::ModelCompletion] a not-yet-started completion whose source is this task
+    # The state checks read the locked row, so a copy loaded before another
+    # process submitted or failed the batch is refused. They cannot see a
+    # submission whose provider request is still in flight, because
+    # submit_batch! stamps the batch only after the provider accepts it, so
+    # call this before submit_batch! or from an assert_submittable! override.
+    # The batch is not checked through assert_submittable! because such an
+    # override would then recurse.
+    #
+    # @param model_completion [Raif::ModelCompletion] a pending completion of this task in a batch that is not yet submitted
     # @return [Raif::ModelCompletion]
+    # @raise [ArgumentError] when the completion or its batch is no longer pending, or the task's model differs from the batch's
     def refresh_pending_model_completion!(model_completion)
-      unless model_completion.source == self && model_completion.started_at.nil?
-        raise ArgumentError, "Raif::ModelCompletion ##{model_completion.id} is not a pending completion of #{self.class.name} ##{id}"
-      end
+      model_completion.with_lock do
+        batch = model_completion.raif_model_completion_batch&.reload
+        unless model_completion.source == self && model_completion.pending? && batch&.status == "pending" && batch.provider_batch_id.blank?
+          raise ArgumentError, "Raif::ModelCompletion ##{model_completion.id} is not a pending batch completion of #{self.class.name} ##{id}"
+        end
 
-      model_completion.update!(
-        llm.pending_model_completion_attributes(
-          **batch_model_completion_attributes,
-          raif_model_completion_batch: model_completion.raif_model_completion_batch,
-          batch_custom_id: model_completion.batch_custom_id
+        unless batch.llm_model_key == llm_model_key
+          raise ArgumentError,
+            "#{self.class.name} ##{id} uses #{llm_model_key}, but Raif::ModelCompletionBatch ##{batch.id} uses #{batch.llm_model_key}"
+        end
+
+        model_completion.update!(
+          llm.pending_model_completion_attributes(
+            **batch_model_completion_attributes,
+            raif_model_completion_batch: batch,
+            batch_custom_id: model_completion.batch_custom_id
+          )
         )
-      )
+      end
       model_completion
     end
 
