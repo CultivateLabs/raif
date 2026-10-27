@@ -145,4 +145,31 @@ RSpec.describe "Raif::Task batch preparation" do
       expect(task.system_prompt).to eq(sentinel_system_prompt)
     end
   end
+
+  describe "#refresh_pending_model_completion!" do
+    let(:batch) { FB.create(:raif_model_completion_batch_google) }
+
+    it "rewrites the completion from the task's current prompts, formatted for the provider" do
+      task = Raif::TestTask.build_for_batch(batch: batch, creator: creator, llm_model_key: "google_gemini_2_5_flash",
+        batch_custom_id: "custom-1")
+      completion = task.raif_model_completion
+      task.update!(prompt: "Tell me a pun", system_prompt: "You tell puns.")
+
+      task.refresh_pending_model_completion!(completion)
+
+      completion.reload
+      expect(completion.messages).to eq([{ "role" => "user", "parts" => [{ "text" => "Tell me a pun" }] }])
+      expect(completion.system_prompt).to eq("You tell puns.")
+      expect(completion.raif_model_completion_batch).to eq(batch)
+      expect(completion.batch_custom_id).to eq("custom-1")
+    end
+
+    it "refuses a completion that already started" do
+      task = Raif::TestTask.build_for_batch(batch: batch, creator: creator, llm_model_key: "google_gemini_2_5_flash")
+      completion = task.raif_model_completion
+      completion.started!
+
+      expect { task.refresh_pending_model_completion!(completion) }.to raise_error(ArgumentError)
+    end
+  end
 end
