@@ -299,28 +299,56 @@ module Raif
       populate_prompts unless skip_prompt_population
       save! if changed?
 
-      effective_batch_custom_id = batch_custom_id.presence || "raif_task_#{id}"
-
       mc = llm.build_pending_model_completion(
-        messages: messages,
-        source: self,
-        system_prompt: system_prompt,
-        response_format: response_format.to_sym,
-        available_model_tools: available_model_tools,
-        temperature: self.class.temperature,
-        max_completion_tokens: self.class.max_completion_tokens,
-        stop_sequences: self.class.stop_sequences,
+        **batch_model_completion_attributes,
         anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
         bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
-        open_ai_store_responses: self.class.open_ai_store_responses,
-        open_router_data_collection: self.class.open_router_data_collection,
-        open_router_zdr: self.class.open_router_zdr,
         raif_model_completion_batch: batch,
-        batch_custom_id: effective_batch_custom_id
+        batch_custom_id: batch_custom_id.presence || "raif_task_#{id}"
       )
 
       self.raif_model_completion = mc
       mc
+    end
+
+    # Rewrites a pending batch completion built by #prepare_for_batch! from this
+    # task's current messages, system prompt, and tools, keeping its batch and
+    # custom_id. Use it when a host changes the task between batching and
+    # submission, so the provider receives what the task now holds, formatted
+    # the same way #prepare_for_batch! formats it.
+    #
+    # The state checks read the locked row, so a copy loaded before another
+    # process submitted or failed the batch is refused. They cannot see a
+    # submission whose provider request is still in flight, because
+    # submit_batch! stamps the batch only after the provider accepts it, so
+    # call this before submit_batch! or from an assert_submittable! override.
+    # The batch is not checked through assert_submittable! because such an
+    # override would then recurse.
+    #
+    # @param model_completion [Raif::ModelCompletion] a pending completion of this task in a batch that is not yet submitted
+    # @return [Raif::ModelCompletion]
+    # @raise [ArgumentError] when the completion or its batch is no longer pending, or the task's model differs from the batch's
+    def refresh_pending_model_completion!(model_completion)
+      model_completion.with_lock do
+        batch = model_completion.raif_model_completion_batch&.reload
+        unless model_completion.source == self && model_completion.pending? && batch&.status == "pending" && batch.provider_batch_id.blank?
+          raise ArgumentError, "Raif::ModelCompletion ##{model_completion.id} is not a pending batch completion of #{self.class.name} ##{id}"
+        end
+
+        unless batch.llm_model_key == llm_model_key
+          raise ArgumentError,
+            "#{self.class.name} ##{id} uses #{llm_model_key}, but Raif::ModelCompletionBatch ##{batch.id} uses #{batch.llm_model_key}"
+        end
+
+        model_completion.update!(
+          llm.pending_model_completion_attributes(
+            **batch_model_completion_attributes,
+            raif_model_completion_batch: batch,
+            batch_custom_id: model_completion.batch_custom_id
+          )
+        )
+      end
+      model_completion
     end
 
     def messages
@@ -381,6 +409,22 @@ module Raif
     end
 
   private
+
+    def batch_model_completion_attributes
+      {
+        messages: messages,
+        source: self,
+        system_prompt: system_prompt,
+        response_format: response_format.to_sym,
+        available_model_tools: available_model_tools,
+        temperature: self.class.temperature,
+        max_completion_tokens: self.class.max_completion_tokens,
+        stop_sequences: self.class.stop_sequences,
+        open_ai_store_responses: self.class.open_ai_store_responses,
+        open_router_data_collection: self.class.open_router_data_collection,
+        open_router_zdr: self.class.open_router_zdr
+      }
+    end
 
     # A declared stop sequence is a terminator, so ending on one is not a truncation.
     def fail_truncated_completion!

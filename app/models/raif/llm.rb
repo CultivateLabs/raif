@@ -259,11 +259,25 @@ module Raif
     # via Raif::Task.build_for_batch / Raif::Task#prepare_for_batch!.
     #
     # @return [Raif::ModelCompletion] persisted, with started_at: nil
-    def build_pending_model_completion(messages:, response_format: :text, available_model_tools: [], source: nil,
+    def build_pending_model_completion(allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
+      bedrock_prompt_caching_enabled: false, **attributes)
+      model_completion = Raif::ModelCompletion.create!(pending_model_completion_attributes(**attributes))
+      model_completion.allow_parallel_tool_calls = allow_parallel_tool_calls
+      model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled
+      model_completion.bedrock_prompt_caching_enabled = bedrock_prompt_caching_enabled
+      model_completion
+    end
+
+    # The persisted Raif::ModelCompletion columns #build_pending_model_completion
+    # derives from its arguments, with messages formatted for this provider.
+    # Raif::Task#refresh_pending_model_completion! rewrites a pending completion
+    # from the same hash, so the two cannot drift apart.
+    #
+    # @return [Hash]
+    def pending_model_completion_attributes(messages:, response_format: :text, available_model_tools: [], source: nil,
       system_prompt: nil, temperature: nil, max_completion_tokens: nil, stop_sequences: nil, tool_choice: nil,
-      stream_response: false, allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
-      bedrock_prompt_caching_enabled: false, open_ai_store_responses: nil, open_router_data_collection: nil,
-      open_router_zdr: nil, raif_model_completion_batch: nil, batch_custom_id: nil)
+      stream_response: false, open_ai_store_responses: nil, open_router_data_collection: nil, open_router_zdr: nil,
+      raif_model_completion_batch: nil, batch_custom_id: nil)
       temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
       # Some Batch APIs accept fewer output tokens than the synchronous endpoint for the
@@ -275,7 +289,7 @@ module Raif
         max_completion_tokens = [max_completion_tokens, batch_max_completion_tokens].compact.min
       end
 
-      model_completion = Raif::ModelCompletion.create!(
+      {
         messages: format_messages(messages),
         system_prompt: system_prompt,
         response_format: response_format,
@@ -295,12 +309,7 @@ module Raif
         }.compact,
         raif_model_completion_batch: raif_model_completion_batch,
         batch_custom_id: batch_custom_id
-      )
-
-      model_completion.allow_parallel_tool_calls = allow_parallel_tool_calls
-      model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled
-      model_completion.bedrock_prompt_caching_enabled = bedrock_prompt_caching_enabled
-      model_completion
+      }
     end
 
     def self.valid_response_formats
