@@ -77,7 +77,7 @@ task = Raif::Tasks::DocumentSummarization.run(document: document, creator: user)
 summary = task.parsed_response
 ```
 
-For the asynchronous batched alternative – submit many tasks at once through a provider Batch API in exchange for a ~50% discount, with results returned minutes-to-hours later – see [Task Batching](../learn_more/task_batching).
+For the asynchronous batched alternative – submit many tasks at once through a provider Batch API in exchange for a per-token discount (50% for most providers, 20% for xAI), with results returned minutes-to-hours later – see [Task Batching](../learn_more/task_batching).
 
 # JSON Response Format Tasks
 
