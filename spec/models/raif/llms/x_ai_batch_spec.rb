@@ -23,13 +23,20 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       expect(Raif.llm(:x_ai_grok_4_20_reasoning).supports_batch_inference?).to be(true)
       expect(Raif.llm(:x_ai_grok_4_20_non_reasoning).supports_batch_inference?).to be(true)
       expect(Raif.llm(:x_ai_grok_4_5).supports_batch_inference?).to be(true)
+      expect(Raif.llm(:x_ai_grok_4_6).supports_batch_inference?).to be(true)
       expect(Raif.llm(:x_ai_grok_4_7).supports_batch_inference?).to be(true)
     end
 
     # xAI can serve a model on /chat/completions but reject it at batch-file
     # validation, so the opt-out has to be per model, not per provider.
-    it "is false for a model the manifest opts out of batching" do
-      expect(Raif.llm(:x_ai_grok_4_6).supports_batch_inference?).to be(false)
+    it "is false for a model whose provider settings opt it out of batching" do
+      llm = Raif::Llms::XAi.new(
+        key: :x_ai_unbatchable,
+        api_name: "grok-unbatchable",
+        model_provider_settings: { supports_batch_inference: false }
+      )
+
+      expect(llm.supports_batch_inference?).to be(false)
     end
   end
 

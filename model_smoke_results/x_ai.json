@@ -135,35 +135,40 @@
       }
     },
     "x_ai_grok_4_6": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-10-28T18:17:48Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T16:09:36Z"
+        "checked_at": "2026-10-28T18:17:48Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T16:09:36Z"
+        "checked_at": "2026-10-28T18:17:48Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T16:09:36Z"
+        "checked_at": "2026-10-28T18:17:48Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T16:09:36Z"
+        "checked_at": "2026-10-28T18:17:48Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T16:09:36Z"
+        "checked_at": "2026-10-28T18:17:48Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T16:09:36Z"
+        "checked_at": "2026-10-28T18:17:48Z"
       }
     },
     "x_ai_grok_4_7": {
