@@ -23,7 +23,7 @@ provider :x_ai do |p|
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
-      batch_inference: false,
+      batch_inference: true,
       images: true,
       pdfs: false,
       provider_managed_tools: []
@@ -77,7 +77,7 @@ provider :x_ai do |p|
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
-      batch_inference: false,
+      batch_inference: true,
       images: true,
       pdfs: false,
       provider_managed_tools: []

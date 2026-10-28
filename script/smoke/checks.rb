@@ -32,6 +32,10 @@ module Smoke
     ].freeze
 
     COMPLETION_PROMPT = "Reply with exactly: ok"
+    # Without a system prompt, some models (Grok 4.7) intermittently refuse COMPLETION_PROMPT as a
+    # demand for dictated output ("No. I won't output an exact phrase on demand."). Real Raif
+    # requests nearly always carry a system prompt, so every COMPLETION_PROMPT request sends one.
+    COMPLETION_SYSTEM_PROMPT = "You are a helpful assistant."
     TOOL_CALL_PROMPT = "Use the wikipedia_search tool to look up the current Prime Minister of Canada."
 
     WEB_SEARCH_PROMPT = "You must use the web_search tool right now to search the web for the current year. Do not answer " \
@@ -230,7 +234,7 @@ module Smoke
 
     def self.check_completion(entry)
       llm = Raif.llm(entry.key)
-      model_completion = llm.chat(message: COMPLETION_PROMPT)
+      model_completion = llm.chat(message: COMPLETION_PROMPT, system_prompt: COMPLETION_SYSTEM_PROMPT)
       text = response_text(model_completion)
       { status: exact_ok?(text) ? :pass : :fail, detail: text.first(180) }
     rescue StandardError => e
@@ -243,11 +247,11 @@ module Smoke
     # entry said it would" -- a claim that doesn't exist on the claimed-true path.
     def self.check_temperature(entry, claimed:)
       if claimed
-        model_completion = Raif.llm(entry.key).chat(message: COMPLETION_PROMPT, temperature: 0.2)
+        model_completion = Raif.llm(entry.key).chat(message: COMPLETION_PROMPT, system_prompt: COMPLETION_SYSTEM_PROMPT, temperature: 0.2)
         { status: :pass, detail: response_text(model_completion).first(180) }
       else
         probe_claimed_false_direction(entry, :supports_temperature) do |llm|
-          llm.chat(message: COMPLETION_PROMPT, temperature: 0.2)
+          llm.chat(message: COMPLETION_PROMPT, system_prompt: COMPLETION_SYSTEM_PROMPT, temperature: 0.2)
           { status: :note, detail: "claimed unsupported but appears to work" }
         end
       end
@@ -321,8 +325,8 @@ module Smoke
     def self.check_streaming(entry)
       llm = Raif.llm(entry.key)
       deltas = 0
-      streamed = llm.chat(message: COMPLETION_PROMPT) { |_model_completion, _delta, _event| deltas += 1 }
-      unstreamed = llm.chat(message: COMPLETION_PROMPT)
+      streamed = llm.chat(message: COMPLETION_PROMPT, system_prompt: COMPLETION_SYSTEM_PROMPT) { |_model_completion, _delta, _event| deltas += 1 }
+      unstreamed = llm.chat(message: COMPLETION_PROMPT, system_prompt: COMPLETION_SYSTEM_PROMPT)
 
       streamed_ok = exact_ok?(response_text(streamed))
       unstreamed_ok = exact_ok?(response_text(unstreamed))
@@ -371,6 +375,7 @@ module Smoke
       expected_custom_ids.each do |custom_id|
         llm.build_pending_model_completion(
           messages: [{ "role" => "user", "content" => COMPLETION_PROMPT }],
+          system_prompt: COMPLETION_SYSTEM_PROMPT,
           raif_model_completion_batch: batch,
           batch_custom_id: custom_id
         )
