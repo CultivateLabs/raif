@@ -751,6 +751,15 @@ RSpec.describe Smoke::Checks do
 
         expect(described_class.check_completion(entry)).to include(status: :pass)
       end
+
+      it "sends COMPLETION_SYSTEM_PROMPT with the completion prompt" do
+        expect(llm).to receive(:chat).with(
+          message: described_class::COMPLETION_PROMPT,
+          system_prompt: described_class::COMPLETION_SYSTEM_PROMPT
+        ).and_return(instance_double(Raif::ModelCompletion, raw_response: "ok"))
+
+        described_class.check_completion(entry)
+      end
     end
 
     describe ".check_streaming" do
@@ -841,6 +850,13 @@ RSpec.describe Smoke::Checks do
         ])
 
         expect(described_class.check_batch_inference(entry, batch_timeout: 1)).to include(status: :pass)
+      end
+
+      it "sends COMPLETION_SYSTEM_PROMPT with each batch entry" do
+        described_class.check_batch_inference(entry, batch_timeout: 1)
+
+        expect(llm).to have_received(:build_pending_model_completion)
+          .with(hash_including(system_prompt: described_class::COMPLETION_SYSTEM_PROMPT)).twice
       end
     end
 

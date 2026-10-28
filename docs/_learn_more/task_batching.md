@@ -2,24 +2,27 @@
 layout: default
 title: Task Batching
 nav_order: 3.5
-description: "Submit many tasks through a provider Batch API in exchange for a ~50% discount"
+description: "Submit many tasks through a provider Batch API in exchange for a per-token discount"
 ---
 
 {% include table-of-contents.md %}
 
 # Task Batching
 
-Anthropic and OpenAI both expose a Batch API: you submit a JSONL of requests, the provider processes them asynchronously (typically minutes, with a 24-hour ceiling), and you fetch results in one go in exchange for ~50% off the per-token rate. Raif wraps both behind a single `Raif::ModelCompletionBatch` primitive so your task code doesn't have to care which provider it's talking to.
+Anthropic, OpenAI, Google, and xAI expose a Batch API: you submit a JSONL of requests, the provider processes them asynchronously (typically minutes, with a 24-hour ceiling), and you fetch results in one go in exchange for a discount on the per-token rate (50% for most providers, 20% for xAI). Raif wraps them behind a single `Raif::ModelCompletionBatch` primitive so your task code doesn't have to care which provider it's talking to.
 
 ## Provider support
 
-| Provider     | Batch support |
-|--------------|---------------|
-| Anthropic    | Yes (Messages Batches API) |
-| OpenAI       | Yes (Batch API, Completions and Responses) |
-| Bedrock      | No |
-| Google       | No |
-| OpenRouter   | No |
+| Provider     | Batch support | Discount |
+|--------------|---------------|----------|
+| Anthropic    | Yes (Messages Batches API) | 50% |
+| OpenAI       | Yes (Batch API, Completions and Responses) | 50% |
+| Google       | Yes (Gemini Batch API) | 50% |
+| xAI          | Yes (Batch API) | 20% |
+| Bedrock      | No | – |
+| OpenRouter   | No | – |
+
+Batch support can also vary per model within a provider. xAI batches can take about an hour to finish.
 
 Guard with `Raif.llm(model_key).supports_batch_inference?` if you need to fall back to `Raif::Task.run` for non-batch-capable providers.
 
@@ -242,7 +245,7 @@ batch.prompt_token_cost
 batch.output_token_cost
 ```
 
-Costs reflect the provider's batch discount – `apply_batch_result` halves the per-token rate before persisting it on each child completion, and `recalculate_costs!` rolls the children up to the batch.
+Costs reflect the provider's batch discount – each child completion's per-token cost is multiplied by the provider's `batch_inference_cost_multiplier` (0.5 for most providers, 0.8 for xAI) before it is persisted, and `recalculate_costs!` rolls the children up to the batch.
 
 # Testing
 
