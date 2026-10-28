@@ -344,8 +344,8 @@ module Raif
     end
 
     # Whether *this model* can be submitted through its provider's Batch API.
-    # Batch support is not uniformly provider-wide: xAI serves grok-4.5 on the
-    # synchronous endpoint but rejects it at batch-file validation, so the
+    # Batch support is not uniformly provider-wide: xAI can serve a model on the
+    # synchronous endpoint but reject it at batch-file validation, so the
     # registry entry needs to be able to opt a single model out of a provider
     # that otherwise supports batching. Defaults to the provider's capability.
     def supports_batch_inference?

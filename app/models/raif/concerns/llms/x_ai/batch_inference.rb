@@ -46,9 +46,11 @@ require "stringio"
 # elapsing). Note the counts are all zero both before xAI has parsed the input
 # file and after it has rejected it, so num_pending alone cannot be trusted.
 #
-# Not every model a provider serves synchronously can be batched: xAI rejects
-# grok-4.5 at JSONL validation, which is why Raif::Llm#supports_batch_inference?
-# is overridable per model via model_provider_settings.
+# Not every model a provider serves synchronously can be batched: xAI has
+# rejected models at JSONL validation ("Model grok-4.5 is not supported for
+# batch processing", until xAI enabled it), which is why
+# Raif::Llm#supports_batch_inference? is overridable per model via
+# model_provider_settings.
 module Raif::Concerns::Llms::XAi::BatchInference
   extend ActiveSupport::Concern
 
