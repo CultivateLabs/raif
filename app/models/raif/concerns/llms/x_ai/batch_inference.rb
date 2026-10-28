@@ -56,6 +56,14 @@ module Raif::Concerns::Llms::XAi::BatchInference
 
   include Raif::Concerns::Llms::SupportsBatchInference
 
+  class_methods do
+    # xAI discounts batch requests by 20%, not the 50% Anthropic and OpenAI
+    # charge, across input, cached, output and reasoning tokens.
+    def batch_inference_cost_multiplier
+      0.8
+    end
+  end
+
   def batch_class
     Raif::ModelCompletionBatches::XAi
   end
@@ -180,7 +188,7 @@ module Raif::Concerns::Llms::XAi::BatchInference
   # The success path feeds batch_result.response.chat_get_completion through the
   # host class's #update_model_completion (same parser used by the sync path),
   # so token counts, tool calls, and response shape are populated identically.
-  # The 50% batch discount is applied automatically by
+  # The 20% batch discount is applied automatically by
   # Raif::ModelCompletion#calculate_costs.
   def apply_batch_result(mc, raw_result)
     batch_result = raw_result["batch_result"] || {}

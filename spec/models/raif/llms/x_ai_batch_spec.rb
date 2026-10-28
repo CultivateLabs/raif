@@ -17,6 +17,38 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
     end
   end
 
+  describe ".batch_inference_cost_multiplier" do
+    it "is 0.8, matching xAI's 20% batch discount" do
+      expect(Raif::Llms::XAi.batch_inference_cost_multiplier).to eq(0.8)
+    end
+  end
+
+  describe "batch completion costs" do
+    let(:batch) do
+      FB.create(
+        :raif_model_completion_batch_x_ai,
+        llm_model_key: "x_ai_grok_4_7",
+        model_api_name: "grok-4.7"
+      )
+    end
+
+    it "charges 80% of the synchronous per-token costs" do
+      llm_config = Raif.llm_config(:x_ai_grok_4_7)
+      model_completion = Raif::ModelCompletion.new(
+        llm_model_key: "x_ai_grok_4_7",
+        model_api_name: "grok-4.7",
+        prompt_tokens: 100,
+        completion_tokens: 50,
+        raif_model_completion_batch: batch
+      )
+
+      model_completion.save(validate: false)
+
+      expect(model_completion.prompt_token_cost.to_f).to be_within(1e-9).of(llm_config[:input_token_cost] * 100 * 0.8)
+      expect(model_completion.output_token_cost.to_f).to be_within(1e-9).of(llm_config[:output_token_cost] * 50 * 0.8)
+    end
+  end
+
   describe "#supports_batch_inference?" do
     it "is true for models the provider will batch" do
       expect(Raif.llm(:x_ai_grok_4_3).supports_batch_inference?).to be(true)
