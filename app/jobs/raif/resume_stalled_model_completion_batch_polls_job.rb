@@ -53,12 +53,7 @@ module Raif
           )
           Raif.logger.error(e.backtrace.first(20).join("\n")) if e.backtrace.present?
 
-          if defined?(Airbrake)
-            notice = Airbrake.build_notice(e)
-            notice[:context][:component] = "raif_resume_stalled_model_completion_batch_polls_job"
-            notice[:params] = { batch_id: batch.id }
-            Airbrake.notify(notice)
-          end
+          Rails.error.report(e, context: { component: "raif_resume_stalled_model_completion_batch_polls_job", batch_id: batch.id })
         end
     end
 
