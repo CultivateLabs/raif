@@ -39,7 +39,8 @@ module Raif
           )
           Raif.logger.error(e.backtrace.first(20).join("\n")) if e.backtrace.present?
 
-          Rails.error.report(e, handled: true, severity: :error, context: { component: "raif_expire_stuck_model_completion_batches_job", batch_id: batch.id })
+          Rails.error.report(e, handled: true, severity: :error,
+            context: { component: "raif_expire_stuck_model_completion_batches_job", batch_id: batch.id })
         end
     end
 
