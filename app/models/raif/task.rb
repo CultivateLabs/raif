@@ -135,13 +135,7 @@ module Raif
       logger.error e.message
       logger.error e.backtrace.join("\n")
 
-      if defined?(Airbrake)
-        notice = Airbrake.build_notice(e)
-        notice[:context][:component] = "raif_task"
-        notice[:context][:action] = name
-
-        Airbrake.notify(notice)
-      end
+      Rails.error.report(e, handled: true, severity: :error, context: { component: "raif_task", action: name })
 
       task
     end

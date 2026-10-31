@@ -118,8 +118,16 @@ RSpec.describe Raif::ExpireStuckModelCompletionBatchesJob, type: :job do
 
     allow_any_instance_of(Raif::Llms::Anthropic).to receive(:cancel_batch!)
     allow(Raif.logger).to receive(:error)
+    allow(Rails.error).to receive(:report)
 
     described_class.perform_now
+
+    expect(Rails.error).to have_received(:report).with(
+      an_object_having_attributes(message: "synthetic handler failure"),
+      handled: true,
+      severity: :error,
+      context: { component: "raif_expire_stuck_model_completion_batches_job", batch_id: bad_batch.id }
+    ).once
 
     # Both batches should have expired locally despite the bad handler raising.
     expect(bad_batch.reload.status).to eq("failed")

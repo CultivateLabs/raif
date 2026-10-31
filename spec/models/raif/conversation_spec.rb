@@ -336,12 +336,19 @@ RSpec.describe Raif::Conversation, type: :model do
       stub_raif_conversation(conversation) do |_messages|
         raise StandardError, "Test error"
       end
+      allow(Rails.error).to receive(:report)
 
       entry = conversation.entries.first
       conversation.prompt_model_for_entry_response(entry: entry)
 
       entry.reload
       expect(entry.failed_at).to be_present
+      expect(Rails.error).to have_received(:report).with(
+        an_object_having_attributes(message: "Test error"),
+        handled: true,
+        severity: :error,
+        context: { component: "raif_conversation", action: "prompt_model_for_entry_response" }
+      )
     end
 
     it "manages generating_entry_response flag during successful completion" do

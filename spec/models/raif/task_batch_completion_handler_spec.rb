@@ -125,11 +125,24 @@ RSpec.describe Raif::TaskBatchCompletionHandler do
     end
 
     allow(Raif.logger).to receive(:error)
+    allow(Rails.error).to receive(:report)
 
     described_class.handle_batch_completion(batch)
 
     expect(good_task.reload).to be_completed
     expect(bad_task.reload).not_to be_completed
+
+    expect(Rails.error).to have_received(:report).with(
+      an_object_having_attributes(message: "synthetic-error"),
+      handled: true,
+      severity: :error,
+      context: {
+        component: "raif_task_batch_completion_handler",
+        batch_id: batch.id,
+        task_id: bad_task_id,
+        model_completion_id: bad_task.raif_model_completion.id,
+      }
+    ).once
 
     expect(Raif.logger).to have_received(:error).with(a_string_matching(/failed to process Raif::Task ##{bad_task_id}/)).once
   end

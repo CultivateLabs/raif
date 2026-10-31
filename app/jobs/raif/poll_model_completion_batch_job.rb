@@ -24,7 +24,7 @@ module Raif
   # reschedules itself instead of re-raising or notifying the host's error
   # tracker, so the chain self-heals across the kinds of failures that
   # ActiveJob retry policies typically cover without producing per-attempt
-  # noise. Non-transient errors are notified (Airbrake, if loaded) and
+  # noise. Non-transient errors are reported through Rails.error and
   # re-raised so the host's job adapter surfaces them.
   #
   # The self-reschedule uses `perform_later(wait: ...)`, so the configured
@@ -167,12 +167,7 @@ module Raif
     end
 
     def notify_error(batch_id, error)
-      return unless defined?(Airbrake)
-
-      notice = Airbrake.build_notice(error)
-      notice[:context][:component] = "raif_poll_model_completion_batch_job"
-      notice[:params] = { batch_id: batch_id }
-      Airbrake.notify(notice)
+      Rails.error.report(error, handled: false, context: { component: "raif_poll_model_completion_batch_job", batch_id: batch_id })
     end
 
   end

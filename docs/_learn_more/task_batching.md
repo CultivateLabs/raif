@@ -142,9 +142,9 @@ class MyApp::DocumentSummaryBatchHandler < Raif::TaskBatchCompletionHandler
     campaign = Campaign.find_by(id: batch.metadata["campaign_id"])
     next unless campaign
 
-    Airbrake.notify(
-      "Document summary batch ##{batch.id} failed: #{batch.status}",
-      params: { campaign_id: campaign.id, failure_reason: batch.failure_reason }
+    Rails.error.report(
+      RuntimeError.new("Document summary batch ##{batch.id} failed: #{batch.status}"),
+      context: { campaign_id: campaign.id, failure_reason: batch.failure_reason }
     )
   end
 end

@@ -145,13 +145,7 @@ class Raif::Conversation < Raif::ApplicationRecord
 
     entry.failed!
 
-    if defined?(Airbrake)
-      notice = Airbrake.build_notice(e)
-      notice[:context][:component] = "raif_conversation"
-      notice[:context][:action] = "prompt_model_for_entry_response"
-
-      Airbrake.notify(notice)
-    end
+    Rails.error.report(e, handled: true, severity: :error, context: { component: "raif_conversation", action: "prompt_model_for_entry_response" })
 
     nil
   end

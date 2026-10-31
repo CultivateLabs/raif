@@ -134,12 +134,12 @@ module Raif
             )
             Raif.logger.error(e.backtrace.first(20).join("\n")) if e.backtrace.present?
 
-            if defined?(Airbrake)
-              notice = Airbrake.build_notice(e)
-              notice[:context][:component] = "raif_task_batch_completion_handler"
-              notice[:params] = { batch_id: batch.id, task_id: task.id, model_completion_id: mc.id }
-              Airbrake.notify(notice)
-            end
+            Rails.error.report(e, handled: true, severity: :error, context: {
+              component: "raif_task_batch_completion_handler",
+              batch_id: batch.id,
+              task_id: task.id,
+              model_completion_id: mc.id,
+            })
           end
         end
 

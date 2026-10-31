@@ -171,28 +171,23 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
       end.not_to have_enqueued_job(described_class)
     end
 
-    describe "error notification" do
-      # Hosts that load airbrake-ruby get notified via the global Airbrake
-      # constant. We don't depend on the gem, so we stub a minimal interface to
-      # pin the behavior: transient errors stay silent (they self-heal via
-      # reschedule); non-transient errors notify before re-raising.
-      let(:airbrake_stub) { class_double("Airbrake", build_notice: notice, notify: nil) }
-      let(:notice) { { context: {}, params: {} } }
-
+    describe "error reporting" do
+      # Transient errors stay silent (they self-heal via reschedule);
+      # non-transient errors are reported before re-raising.
       before do
-        stub_const("Airbrake", airbrake_stub)
+        allow(Rails.error).to receive(:report)
       end
 
-      it "does not notify Airbrake when a transient error reschedules the chain" do
+      it "does not report a transient error that reschedules the chain" do
         allow(llm_double).to receive(:fetch_batch_status!).and_raise(Faraday::ServerError.new("503 from provider"))
         allow(Raif.config).to receive(:model_completion_batch_poll_schedule).and_return([60.seconds])
 
         described_class.perform_now(batch.id, attempt: 1)
 
-        expect(airbrake_stub).not_to have_received(:notify)
+        expect(Rails.error).not_to have_received(:report)
       end
 
-      it "does not notify Airbrake when a transient error fires against an already-finalized batch" do
+      it "does not report a transient error that fires against an already-finalized batch" do
         allow(llm_double).to receive(:fetch_batch_status!) do |b|
           Raif::ModelCompletionBatch.where(id: b.id).update_all(
             status: "failed", failed_at: Time.current, handler_dispatched_at: Time.current
@@ -202,20 +197,21 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
 
         described_class.perform_now(batch.id, attempt: 1)
 
-        expect(airbrake_stub).not_to have_received(:notify)
+        expect(Rails.error).not_to have_received(:report)
       end
 
-      it "notifies Airbrake before re-raising a non-transient error" do
+      it "reports a non-transient error before re-raising it" do
         allow(llm_double).to receive(:fetch_batch_status!).and_raise(StandardError, "non-transient")
 
         expect do
           described_class.perform_now(batch.id, attempt: 1)
         end.to raise_error(StandardError, "non-transient")
 
-        expect(airbrake_stub).to have_received(:build_notice).once
-        expect(airbrake_stub).to have_received(:notify).with(notice).once
-        expect(notice[:context][:component]).to eq("raif_poll_model_completion_batch_job")
-        expect(notice[:params]).to eq({ batch_id: batch.id })
+        expect(Rails.error).to have_received(:report).with(
+          an_instance_of(StandardError),
+          handled: false,
+          context: { component: "raif_poll_model_completion_batch_job", batch_id: batch.id }
+        ).once
       end
     end
 

@@ -178,7 +178,16 @@ RSpec.describe Raif::Task, type: :model do
       end
 
       it "marks the task failed without making the LLM request" do
+        allow(Rails.error).to receive(:report)
+
         task = Raif::TestTask.run(creator: user)
+
+        expect(Rails.error).to have_received(:report).with(
+          an_instance_of(ActiveRecord::RecordInvalid),
+          handled: true,
+          severity: :error,
+          context: { component: "raif_task", action: "Raif::TestTask" }
+        ).once
 
         expect(task.raif_model_completion).to be_nil
         expect(Raif::ModelCompletion.count).to eq(0)

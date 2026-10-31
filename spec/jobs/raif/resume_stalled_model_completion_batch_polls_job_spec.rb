@@ -102,10 +102,18 @@ RSpec.describe Raif::ResumeStalledModelCompletionBatchPollsJob, type: :job do
       allow(Raif::PollModelCompletionBatchJob).to receive(:perform_later).and_call_original
       allow(Raif::PollModelCompletionBatchJob).to receive(:perform_later).with(first.id).and_raise(StandardError, "synthetic queue failure")
       allow(Raif.logger).to receive(:error)
+      allow(Rails.error).to receive(:report)
 
       expect do
         described_class.perform_now
       end.to have_enqueued_job(Raif::PollModelCompletionBatchJob).with(second.id)
+
+      expect(Rails.error).to have_received(:report).with(
+        an_object_having_attributes(message: "synthetic queue failure"),
+        handled: true,
+        severity: :error,
+        context: { component: "raif_resume_stalled_model_completion_batch_polls_job", batch_id: first.id }
+      ).once
 
       expect(Raif.logger).to have_received(:error)
         .with(a_string_matching(/failed to enqueue poll for batch ##{first.id}.*synthetic queue failure/))
