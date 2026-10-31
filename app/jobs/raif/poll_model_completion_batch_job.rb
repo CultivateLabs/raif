@@ -167,7 +167,7 @@ module Raif
     end
 
     def notify_error(batch_id, error)
-      Rails.error.report(error, context: { component: "raif_poll_model_completion_batch_job", batch_id: batch_id })
+      Rails.error.report(error, handled: false, context: { component: "raif_poll_model_completion_batch_job", batch_id: batch_id })
     end
 
   end

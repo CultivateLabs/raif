@@ -145,7 +145,7 @@ class Raif::Conversation < Raif::ApplicationRecord
 
     entry.failed!
 
-    Rails.error.report(e, context: { component: "raif_conversation", action: "prompt_model_for_entry_response" })
+    Rails.error.report(e, handled: true, severity: :error, context: { component: "raif_conversation", action: "prompt_model_for_entry_response" })
 
     nil
   end

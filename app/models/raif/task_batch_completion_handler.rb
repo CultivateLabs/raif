@@ -134,7 +134,7 @@ module Raif
             )
             Raif.logger.error(e.backtrace.first(20).join("\n")) if e.backtrace.present?
 
-            Rails.error.report(e, context: {
+            Rails.error.report(e, handled: true, severity: :error, context: {
               component: "raif_task_batch_completion_handler",
               batch_id: batch.id,
               task_id: task.id,

@@ -209,6 +209,7 @@ RSpec.describe Raif::PollModelCompletionBatchJob, type: :job do
 
         expect(Rails.error).to have_received(:report).with(
           an_instance_of(StandardError),
+          handled: false,
           context: { component: "raif_poll_model_completion_batch_job", batch_id: batch.id }
         ).once
       end

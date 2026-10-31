@@ -135,7 +135,7 @@ module Raif
       logger.error e.message
       logger.error e.backtrace.join("\n")
 
-      Rails.error.report(e, context: { component: "raif_task", action: name })
+      Rails.error.report(e, handled: true, severity: :error, context: { component: "raif_task", action: name })
 
       task
     end
