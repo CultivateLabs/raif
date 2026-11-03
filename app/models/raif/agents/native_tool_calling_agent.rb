@@ -235,11 +235,18 @@ module Raif
           )
           add_conversation_history_entry(tool_call_message.to_h)
 
-          tool_invocation = validation.tool_klass.invoke_tool(
-            provider_tool_call_id: tool_call["provider_tool_call_id"],
-            tool_arguments: validation.prepared_arguments,
-            source: self
-          )
+          begin
+            tool_invocation = validation.tool_klass.invoke_tool(
+              provider_tool_call_id: tool_call["provider_tool_call_id"],
+              tool_arguments: validation.prepared_arguments,
+              source: self
+            )
+          rescue StandardError => e
+            raise unless self.class.recover_from_tool_errors && recoverable_tool_error?(e)
+
+            record_tool_error!(tool_call, validation.tool_name, e)
+            next
+          end
 
           if validation.tool_name == "agent_final_answer"
             self.final_answer = tool_invocation.result
@@ -263,12 +270,15 @@ module Raif
         # Pair by position rather than by provider_tool_call_id: a provider may reuse an
         # ID across calls, and every result entry is appended right after the invocation
         # that produced it. The tool name check makes a mismatch fall back to the stored
-        # value instead of sending another tool's result.
-        invocations = raif_model_tool_invocations.order(:id).to_a
+        # value instead of sending another tool's result. A failed call has an error
+        # entry and either a failed invocation or none, so neither side of the pairing
+        # counts it.
+        invocations = raif_model_tool_invocations.where(failed_at: nil).order(:id).to_a
         result_index = -1
 
         history.map do |entry|
           next entry unless entry["type"] == "tool_call_result"
+          next entry if entry["tool_error"]
 
           result_index += 1
           invocation = invocations[result_index]
@@ -277,6 +287,37 @@ module Raif
           result = invocation.format_result_for_llm.presence || invocation.result
           entry.merge("result" => strip_null_bytes(result))
         end
+      end
+
+      # Whether a tool exception becomes an error result for the model instead of
+      # failing the run. Override to fail the run on errors the model cannot work
+      # around, such as an authorization denial.
+      def recoverable_tool_error?(_error)
+        true
+      end
+
+      # The tool result the model receives for a call whose tool raised. Generic by
+      # default, because an exception message can carry internal details (SQL,
+      # hostnames, record ids) that should not reach the model.
+      def tool_error_result_message(tool_name, _error)
+        "Error: The #{tool_name} tool failed and returned no result. " \
+          "Try different arguments or another tool. Do not retry the same call unchanged."
+      end
+
+      def record_tool_error!(tool_call, tool_name, error)
+        Rails.error.report(error, handled: true, severity: :error, context: {
+          component: "raif_agent",
+          action: "invoke_tool",
+          agent_id: id,
+          tool_name: tool_name
+        })
+
+        result_message = Raif::Messages::ToolCallResult.new(
+          provider_tool_call_id: tool_call["provider_tool_call_id"],
+          name: tool_name,
+          result: tool_error_result_message(tool_name, error)
+        ).to_h
+        add_conversation_history_entry(result_message.merge("tool_error" => true))
       end
 
       # Permit parallel tool calls unless they're disallowed, or this iteration requires a

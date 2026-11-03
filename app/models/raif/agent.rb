@@ -57,6 +57,12 @@ module Raif
     # feedback rather than partially invoked.
     class_attribute :max_tool_calls_per_iteration, instance_writer: false, default: nil
 
+    # When true, an exception raised by a tool does not fail the run. The agent
+    # reports it through Rails.error, marks the invocation failed, and sends the
+    # model an error as that call's result so it can try another approach. Override
+    # #recoverable_tool_error? to let specific errors (e.g. authorization) still fail the run.
+    class_attribute :recover_from_tool_errors, instance_writer: false, default: true
+
     belongs_to :creator, polymorphic: true
     belongs_to :source, polymorphic: true, optional: true
 

@@ -181,22 +181,22 @@ class Raif::ModelTool
     def invoke_tool(provider_tool_call_id:, tool_arguments:, source:)
       prepared_arguments = prepare_tool_arguments_for_source(tool_arguments, source)
 
-      tool_invocation = Raif::ModelToolInvocation.new(
+      tool_invocation = Raif::ModelToolInvocation.create!(
         provider_tool_call_id: provider_tool_call_id,
         source: source,
         tool_type: name,
         tool_arguments: prepared_arguments
       )
 
-      ActiveRecord::Base.transaction do
-        tool_invocation.save!
-        process_invocation(tool_invocation)
-        tool_invocation.completed!
-      end
-
+      # Not wrapped in a transaction: tools make network calls, which would hold a
+      # transaction open for their whole duration, and on PostgreSQL one failed
+      # statement inside it aborts every later query the tool makes. A tool that
+      # needs its writes to be atomic opens its own transaction.
+      process_invocation(tool_invocation)
+      tool_invocation.completed!
       tool_invocation
     rescue StandardError => e
-      tool_invocation.failed!
+      tool_invocation.failed! if tool_invocation&.persisted?
       raise e
     end
 

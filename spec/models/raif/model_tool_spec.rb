@@ -48,6 +48,39 @@ RSpec.describe Raif::ModelTool, type: :model do
     end
   end
 
+  describe ".invoke_tool" do
+    let(:source) { FB.create(:raif_test_user) }
+    let(:arguments) { { "items" => [{ "title" => "foo", "description" => "bar" }] } }
+
+    it "marks the invocation failed and keeps the tool's earlier writes when the tool raises" do
+      allow(Raif::TestModelTool).to receive(:process_invocation) do |invocation|
+        invocation.update!(result: { "partial" => true })
+        raise StandardError, "tool exploded"
+      end
+
+      expect do
+        Raif::TestModelTool.invoke_tool(provider_tool_call_id: "call_1", tool_arguments: arguments, source: source)
+      end.to raise_error(StandardError, "tool exploded")
+
+      invocation = Raif::ModelToolInvocation.last
+      expect(invocation).to be_failed
+      expect(invocation.result).to eq("partial" => true)
+    end
+
+    it "does not open a transaction around the tool" do
+      open_transactions = nil
+      allow(Raif::TestModelTool).to receive(:process_invocation) do |_invocation|
+        open_transactions = ActiveRecord::Base.connection.open_transactions
+      end
+      baseline = ActiveRecord::Base.connection.open_transactions
+
+      Raif::TestModelTool.invoke_tool(provider_tool_call_id: "call_1", tool_arguments: arguments, source: source)
+
+      expect(open_transactions).to eq(baseline)
+      expect(Raif::ModelToolInvocation.last).to be_completed
+    end
+  end
+
   describe "tool_arguments_schema" do
     it "returns the tool_arguments_schema" do
       expect(Raif::TestModelTool.tool_arguments_schema).to eq({
