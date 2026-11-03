@@ -167,3 +167,19 @@ jobs:
       - name: Fail if specs failed
         if: steps.initial_run.outcome == 'failure' && steps.retry_run.outcome == 'failure'
         run: exit 1
+
+  # The single required check on main. It passes only if every lint and test job passes.
+  ci-status:
+    runs-on: ubuntu-latest
+    needs: [lint, test-postgres, test-mysql]
+    if: ${{ always() }}
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" || "${{ needs.test-postgres.result }}" != "success" || "${{ needs.test-mysql.result }}" != "success" ]]; then
+            echo "One or more jobs failed:"
+            echo "  lint: ${{ needs.lint.result }}"
+            echo "  test-postgres: ${{ needs.test-postgres.result }}"
+            echo "  test-mysql: ${{ needs.test-mysql.result }}"
+            exit 1
+          fi
