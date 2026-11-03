@@ -172,7 +172,7 @@ jobs:
   ci-status:
     runs-on: ubuntu-latest
     needs: [lint, test-postgres, test-mysql]
-    if: ${{ !cancelled() }}
+    if: ${{ always() }}
     steps:
       - name: Check results
         run: |
