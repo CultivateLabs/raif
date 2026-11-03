@@ -290,10 +290,12 @@ module Raif
       end
 
       # Whether a tool exception becomes an error result for the model instead of
-      # failing the run. Override to fail the run on errors the model cannot work
-      # around, such as an authorization denial.
-      def recoverable_tool_error?(_error)
-        true
+      # failing the run. A model_completion_authorizer veto from inside a tool (a
+      # nested task, say) always propagates, as it does from Raif::Task.run. Override
+      # to fail the run on other errors the model cannot work around; call super to
+      # keep the veto behavior.
+      def recoverable_tool_error?(error)
+        !error.is_a?(Raif::Errors::ModelCompletionAuthorizationError)
       end
 
       # The tool result the model receives for a call whose tool raised. Generic by

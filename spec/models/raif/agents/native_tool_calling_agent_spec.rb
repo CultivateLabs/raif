@@ -267,6 +267,28 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         expect(agent.failure_reason).to eq(tool_error.message)
       end
 
+      it "propagates a model completion authorizer veto without reporting it" do
+        veto = StandardError.new("completion not authorized").extend(Raif::Errors::ModelCompletionAuthorizationError)
+        allow(Raif::ModelTools::WikipediaSearch).to receive(:process_invocation).and_raise(veto)
+        allow(Rails.error).to receive(:report)
+        completions = 0
+
+        stub_raif_agent(agent) do |_messages, model_completion|
+          completions += 1
+          model_completion.response_tool_calls = [
+            search_call,
+            search_call.merge("provider_tool_call_id" => "call_search_2", "arguments" => { "query" => "Paris" })
+          ]
+          nil
+        end
+
+        expect { agent.run! }.to raise_error(veto)
+        expect(agent.reload).to be_failed
+        expect(completions).to eq(1)
+        expect(Raif::ModelTools::WikipediaSearch).to have_received(:process_invocation).once
+        expect(Rails.error).not_to have_received(:report)
+      end
+
       it "fails the run when the error is not recoverable" do
         allow(agent).to receive(:recoverable_tool_error?).with(tool_error).and_return(false)
         allow(Raif::ModelTools::WikipediaSearch).to receive(:process_invocation).and_raise(tool_error)

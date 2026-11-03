@@ -60,7 +60,8 @@ module Raif
     # When true, an exception raised by a tool does not fail the run. The agent
     # reports it through Rails.error, marks the invocation failed, and sends the
     # model an error as that call's result so it can try another approach. Override
-    # #recoverable_tool_error? to let specific errors (e.g. authorization) still fail the run.
+    # #recoverable_tool_error? to let other errors fail the run. A model_completion_authorizer
+    # veto fails the run by default.
     class_attribute :recover_from_tool_errors, instance_writer: false, default: true
 
     belongs_to :creator, polymorphic: true
