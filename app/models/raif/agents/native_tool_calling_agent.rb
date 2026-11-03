@@ -270,10 +270,10 @@ module Raif
         # Pair by position rather than by provider_tool_call_id: a provider may reuse an
         # ID across calls, and every result entry is appended right after the invocation
         # that produced it. The tool name check makes a mismatch fall back to the stored
-        # value instead of sending another tool's result. A failed call has an error
-        # entry and either a failed invocation or none, so neither side of the pairing
-        # counts it.
-        invocations = raif_model_tool_invocations.where(failed_at: nil).order(:id).to_a
+        # value instead of sending another tool's result. Only a completed invocation
+        # gets a result entry, so a failed call (an error entry and a failed invocation
+        # or none) is on neither side of the pairing.
+        invocations = raif_model_tool_invocations.where.not(completed_at: nil).order(:id).to_a
         result_index = -1
 
         history.map do |entry|

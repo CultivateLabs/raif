@@ -193,10 +193,12 @@ class Raif::ModelTool
       # statement inside it aborts every later query the tool makes. A tool that
       # needs its writes to be atomic opens its own transaction.
       process_invocation(tool_invocation)
-      tool_invocation.completed!
+      # Skip validation: a source-aware schema can change during the run, and a
+      # silently failed write breaks the agent's pairing of results to invocations.
+      tool_invocation.update_columns(completed_at: Time.current, updated_at: Time.current)
       tool_invocation
     rescue StandardError => e
-      tool_invocation.failed! if tool_invocation&.persisted?
+      tool_invocation.update_columns(failed_at: Time.current, updated_at: Time.current) if tool_invocation&.persisted?
       raise e
     end
 
