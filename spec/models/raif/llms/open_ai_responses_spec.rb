@@ -934,7 +934,14 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
     let(:reasoning_one) { { "type" => "reasoning", "id" => "rs_1", "summary" => [], "encrypted_content" => "enc-1" } }
     let(:reasoning_two) { { "type" => "reasoning", "id" => "rs_2", "summary" => [], "encrypted_content" => "enc-2" } }
     let(:search_call) do
-      { "type" => "function_call", "id" => "fc_1", "status" => "completed", "call_id" => "call_1", "name" => "search", "arguments" => "{\"q\":\"a\"}" }
+      {
+        "type" => "function_call",
+        "id" => "fc_1",
+        "status" => "completed",
+        "call_id" => "call_1",
+        "name" => "search",
+        "arguments" => "{\"q\":\"a\"}"
+      }
     end
     let(:read_call) { { "type" => "function_call", "call_id" => "call_2", "name" => "read", "arguments" => "{\"id\":1}" } }
 
