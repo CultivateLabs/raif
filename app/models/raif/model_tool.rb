@@ -181,22 +181,29 @@ class Raif::ModelTool
     def invoke_tool(provider_tool_call_id:, tool_arguments:, source:)
       prepared_arguments = prepare_tool_arguments_for_source(tool_arguments, source)
 
-      tool_invocation = Raif::ModelToolInvocation.new(
+      tool_invocation = Raif::ModelToolInvocation.create!(
         provider_tool_call_id: provider_tool_call_id,
         source: source,
         tool_type: name,
         tool_arguments: prepared_arguments
       )
 
-      ActiveRecord::Base.transaction do
-        tool_invocation.save!
-        process_invocation(tool_invocation)
-        tool_invocation.completed!
-      end
-
+      # Not wrapped in a transaction: tools make network calls, which would hold a
+      # transaction open for their whole duration, and on PostgreSQL one failed
+      # statement inside it aborts every later query the tool makes. A tool that
+      # needs its writes to be atomic opens its own transaction.
+      process_invocation(tool_invocation)
+      # Skip validation: a source-aware schema can change during the run, and a
+      # silently failed write breaks the agent's pairing of results to invocations.
+      # save! (not update_columns) also persists a result the tool set in memory.
+      tool_invocation.completed_at = Time.current
+      tool_invocation.save!(validate: false)
       tool_invocation
     rescue StandardError => e
-      tool_invocation.failed!
+      if tool_invocation&.persisted?
+        tool_invocation.failed_at = Time.current
+        tool_invocation.save!(validate: false)
+      end
       raise e
     end
 

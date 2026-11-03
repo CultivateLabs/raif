@@ -168,6 +168,141 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       end
     end
 
+    describe "tool errors" do
+      let(:search_call) do
+        { "provider_tool_call_id" => "call_search", "name" => "wikipedia_search", "arguments" => { "query" => "capital of France" } }
+      end
+      let(:final_answer_call) do
+        { "provider_tool_call_id" => "call_answer", "name" => "agent_final_answer", "arguments" => { "final_answer" => "Paris" } }
+      end
+      let(:tool_error) { StandardError.new("PG::UniqueViolation on documents.url at db-host-1") }
+      let(:error_result) do
+        "Error: The wikipedia_search tool failed and returned no result. " \
+          "Try different arguments or another tool. Do not retry the same call unchanged."
+      end
+
+      before do
+        stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
+          .to_return(status: 200, body: { query: { search: [] } }.to_json)
+      end
+
+      it "sends the model a generic error result and continues the run" do
+        allow(Raif::ModelTools::WikipediaSearch).to receive(:process_invocation).and_raise(tool_error)
+        allow(Rails.error).to receive(:report)
+        replayed_output = nil
+
+        stub_raif_agent(agent) do |messages, model_completion|
+          if messages.length == 1
+            model_completion.response_tool_calls = [search_call]
+          else
+            replayed_output = messages.find { |message| message["type"] == "function_call_output" }
+            model_completion.response_tool_calls = [final_answer_call]
+          end
+          nil
+        end
+
+        agent.run!
+
+        expect(agent.reload).to be_completed
+        expect(agent.final_answer).to eq("Paris")
+        expect(replayed_output).to eq("type" => "function_call_output", "call_id" => "call_search", "output" => error_result)
+        expect(agent.conversation_history).to include(
+          "type" => "tool_call_result",
+          "provider_tool_call_id" => "call_search",
+          "name" => "wikipedia_search",
+          "result" => error_result,
+          "tool_error" => true
+        )
+        expect(agent.raif_model_tool_invocations.find_by!(tool_type: "Raif::ModelTools::WikipediaSearch")).to be_failed
+        expect(Rails.error).to have_received(:report).with(tool_error, handled: true, severity: :error, context: hash_including(
+          component: "raif_agent", action: "invoke_tool", agent_id: agent.id, tool_name: "wikipedia_search"
+        ))
+      end
+
+      it "pairs the results of later calls with their own invocations" do
+        calls = 0
+        allow(Raif::ModelTools::WikipediaSearch).to receive(:process_invocation).and_wrap_original do |original, invocation|
+          calls += 1
+          raise tool_error if calls == 1
+
+          original.call(invocation)
+        end
+        allow(Raif::ModelTools::WikipediaSearch).to receive(:format_result_for_llm).and_return("second search result")
+        allow(Rails.error).to receive(:report)
+        outputs = nil
+
+        stub_raif_agent(agent) do |messages, model_completion|
+          if messages.length == 1
+            model_completion.response_tool_calls = [
+              search_call,
+              search_call.merge("provider_tool_call_id" => "call_search_2", "arguments" => { "query" => "Paris" })
+            ]
+          else
+            outputs = messages.select { |message| message["type"] == "function_call_output" }
+            model_completion.response_tool_calls = [final_answer_call]
+          end
+          nil
+        end
+
+        agent.run!
+
+        expect(agent.reload).to be_completed
+        expect(outputs).to eq([
+          { "type" => "function_call_output", "call_id" => "call_search", "output" => error_result },
+          { "type" => "function_call_output", "call_id" => "call_search_2", "output" => "second search result" }
+        ])
+      end
+
+      it "fails the run when the agent class disables recovery" do
+        allow(described_class).to receive(:recover_from_tool_errors).and_return(false)
+        allow(Raif::ModelTools::WikipediaSearch).to receive(:process_invocation).and_raise(tool_error)
+
+        stub_raif_agent(agent) do |_messages, model_completion|
+          model_completion.response_tool_calls = [search_call]
+          nil
+        end
+
+        expect { agent.run! }.to raise_error(tool_error)
+        expect(agent.reload).to be_failed
+        expect(agent.failure_reason).to eq(tool_error.message)
+      end
+
+      it "propagates a model completion authorizer veto without reporting it" do
+        veto = StandardError.new("completion not authorized").extend(Raif::Errors::ModelCompletionAuthorizationError)
+        allow(Raif::ModelTools::WikipediaSearch).to receive(:process_invocation).and_raise(veto)
+        allow(Rails.error).to receive(:report)
+        completions = 0
+
+        stub_raif_agent(agent) do |_messages, model_completion|
+          completions += 1
+          model_completion.response_tool_calls = [
+            search_call,
+            search_call.merge("provider_tool_call_id" => "call_search_2", "arguments" => { "query" => "Paris" })
+          ]
+          nil
+        end
+
+        expect { agent.run! }.to raise_error(veto)
+        expect(agent.reload).to be_failed
+        expect(completions).to eq(1)
+        expect(Raif::ModelTools::WikipediaSearch).to have_received(:process_invocation).once
+        expect(Rails.error).not_to have_received(:report)
+      end
+
+      it "fails the run when the error is not recoverable" do
+        allow(agent).to receive(:recoverable_tool_error?).with(tool_error).and_return(false)
+        allow(Raif::ModelTools::WikipediaSearch).to receive(:process_invocation).and_raise(tool_error)
+
+        stub_raif_agent(agent) do |_messages, model_completion|
+          model_completion.response_tool_calls = [search_call]
+          nil
+        end
+
+        expect { agent.run! }.to raise_error(tool_error)
+        expect(agent.reload).to be_failed
+      end
+    end
+
     it "re-formats a stored tool result on every iteration" do
       stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
         .to_return(status: 200, body: { query: { search: [] } }.to_json)
