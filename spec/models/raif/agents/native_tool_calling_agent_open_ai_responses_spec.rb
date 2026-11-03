@@ -182,6 +182,62 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         end
       end
 
+      context "with a reasoning model" do
+        let(:llm_model_key) { "open_ai_responses_gpt_6_luna" }
+
+        before do
+          allow(Raif.config).to receive(:llm_api_requests_enabled){ true }
+          stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})
+            .to_return(status: 200, body: { query: { search: [] } }.to_json)
+        end
+
+        it "requests the encrypted reasoning and replays it before its function call on the next step" do
+          reasoning = { "id" => "rs_1", "type" => "reasoning", "summary" => [], "encrypted_content" => "opaque-1" }
+          responses = [
+            {
+              "id" => "resp_1",
+              "status" => "completed",
+              "output" => [
+                reasoning,
+                {
+                  "id" => "fc_1", "type" => "function_call", "status" => "completed", "call_id" => "call_1",
+                  "name" => "wikipedia_search", "arguments" => "{\"query\":\"France\"}"
+                }
+              ],
+              "usage" => { "input_tokens" => 100, "output_tokens" => 30, "total_tokens" => 130 }
+            },
+            {
+              "id" => "resp_2",
+              "status" => "completed",
+              "output" => [
+                {
+                  "id" => "fc_2", "type" => "function_call", "status" => "completed", "call_id" => "call_2",
+                  "name" => "agent_final_answer", "arguments" => "{\"final_answer\":\"Paris.\"}"
+                }
+              ],
+              "usage" => { "input_tokens" => 120, "output_tokens" => 20, "total_tokens" => 140 }
+            }
+          ]
+          request_bodies = []
+          stub_request(:post, "https://api.openai.com/v1/responses").to_return do |request|
+            request_bodies << JSON.parse(request.body)
+            { status: 200, body: responses.shift.to_json, headers: { "Content-Type" => "application/json" } }
+          end
+
+          agent.run!
+
+          expect(agent).to be_completed
+          expect(request_bodies.map { |body| body["include"] }).to all(include("reasoning.encrypted_content"))
+          replayed = request_bodies.last["input"].reject { |item| item["role"] }
+          expect(replayed.map { |item| [item["type"], item["id"] || item["call_id"]] }).to eq([
+            ["reasoning", "rs_1"],
+            ["function_call", "call_1"],
+            ["function_call_output", "call_1"]
+          ])
+          expect(replayed.first).to eq(reasoning)
+        end
+      end
+
       context "when a response is cut off at the max output token limit" do
         before do
           allow(Raif.config).to receive(:llm_api_requests_enabled){ true }

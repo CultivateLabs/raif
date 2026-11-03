@@ -400,6 +400,10 @@ module Raif
       provider_settings.fetch(:supports_structured_outputs, true)
     end
 
+    def supports_encrypted_reasoning?
+      provider_settings.fetch(:supports_encrypted_reasoning, false)
+    end
+
     def validate_tool_choice_support!(choice)
       supported = choice == :required ? supports_required_tool_choice? : supports_forced_tool_choice?
       return if supported

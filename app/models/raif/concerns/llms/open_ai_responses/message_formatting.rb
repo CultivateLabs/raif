@@ -41,13 +41,22 @@ module Raif::Concerns::Llms::OpenAiResponses::MessageFormatting
     end
   end
 
+  def format_messages(messages)
+    super.flatten
+  end
+
+  # The reasoning items that preceded the call go back in front of it, in their
+  # original order, so the model continues from its own reasoning.
   def format_tool_call_message(tool_call)
-    {
+    function_call = {
       "type" => "function_call",
       "call_id" => tool_call["provider_tool_call_id"],
       "name" => tool_call["name"],
       "arguments" => JSON.generate(tool_call["arguments"])
     }
+
+    reasoning_items = Array(tool_call.dig("provider_metadata", "reasoning_items"))
+    reasoning_items.any? ? [*reasoning_items, function_call] : function_call
   end
 
   def format_tool_call_result_message(tool_call_result)

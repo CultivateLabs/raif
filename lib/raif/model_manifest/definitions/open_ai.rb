@@ -38,6 +38,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -82,6 +83,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -126,6 +128,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -170,6 +173,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -211,6 +215,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -247,6 +252,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -283,6 +289,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -319,6 +326,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -355,6 +363,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -391,6 +400,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -430,6 +440,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -466,6 +477,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -507,6 +519,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -543,6 +556,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -579,6 +593,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -620,6 +635,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -661,6 +677,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -928,6 +945,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -969,6 +987,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -1010,6 +1029,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -1051,6 +1071,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -1079,6 +1100,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -1107,6 +1129,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -1135,6 +1158,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -1159,6 +1183,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,
@@ -1183,6 +1208,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: false,
           native_tool_use: true,
           streaming: true,
@@ -1207,6 +1233,7 @@ provider :open_ai do |p|
       responses: {
         capabilities: {
           temperature: false,
+          encrypted_reasoning: true,
           structured_outputs: true,
           native_tool_use: true,
           streaming: true,

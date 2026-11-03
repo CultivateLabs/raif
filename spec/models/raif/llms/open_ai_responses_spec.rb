@@ -659,6 +659,51 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
         expect(parameters).not_to have_key(:include)
       end
     end
+
+    describe "encrypted reasoning" do
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: "Hello" }],
+          llm_model_key: llm.key.to_s,
+          model_api_name: llm.api_name,
+          response_format: "text",
+          available_model_tools: tools
+        )
+      end
+      let(:tools) { [Raif::TestModelTool] }
+
+      context "with a reasoning model and tools" do
+        let(:llm) { Raif.llm(:open_ai_responses_gpt_6_luna) }
+
+        it "asks for the encrypted reasoning" do
+          expect(parameters[:include]).to eq(["reasoning.encrypted_content"])
+        end
+      end
+
+      context "with a reasoning model and the WebSearch tool" do
+        let(:llm) { Raif.llm(:open_ai_responses_gpt_6_luna) }
+        let(:tools) { [Raif::ModelTools::ProviderManaged::WebSearch, Raif::TestModelTool] }
+
+        it "asks for the search sources and the encrypted reasoning" do
+          expect(parameters[:include]).to eq(["web_search_call.action.sources", "reasoning.encrypted_content"])
+        end
+      end
+
+      context "with a reasoning model and no tools" do
+        let(:llm) { Raif.llm(:open_ai_responses_gpt_6_luna) }
+        let(:tools) { [] }
+
+        it "does not ask for the encrypted reasoning" do
+          expect(parameters).not_to have_key(:include)
+        end
+      end
+
+      context "with a model that does not reason" do
+        it "does not ask for the encrypted reasoning" do
+          expect(parameters).not_to have_key(:include)
+        end
+      end
+    end
   end
 
   describe "#build_tools_parameter" do
@@ -871,6 +916,58 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
       it "returns nil" do
         expect(llm.send(:extract_response_tool_calls, response)).to be_nil
       end
+    end
+  end
+
+  describe "reasoning replay" do
+    let(:reasoning_one) { { "type" => "reasoning", "id" => "rs_1", "summary" => [], "encrypted_content" => "enc-1" } }
+    let(:reasoning_two) { { "type" => "reasoning", "id" => "rs_2", "summary" => [], "encrypted_content" => "enc-2" } }
+    let(:search_call) { { "type" => "function_call", "call_id" => "call_1", "name" => "search", "arguments" => "{\"q\":\"a\"}" } }
+    let(:read_call) { { "type" => "function_call", "call_id" => "call_2", "name" => "read", "arguments" => "{\"id\":1}" } }
+
+    it "attaches the reasoning that directly precedes a function call to that call only" do
+      tool_calls = llm.send(:extract_response_tool_calls, { "output" => [reasoning_one, search_call, read_call] })
+
+      expect(tool_calls).to eq([
+        {
+          "provider_tool_call_id" => "call_1",
+          "name" => "search",
+          "arguments" => { "q" => "a" },
+          "provider_metadata" => { "reasoning_items" => [reasoning_one] }
+        },
+        { "provider_tool_call_id" => "call_2", "name" => "read", "arguments" => { "id" => 1 } }
+      ])
+    end
+
+    it "drops reasoning that led to an item Raif does not replay, and reasoning with no encrypted content" do
+      web_search = { "type" => "web_search_call", "id" => "ws_1", "status" => "completed" }
+      unencrypted = { "type" => "reasoning", "id" => "rs_3", "summary" => [] }
+
+      tool_calls = llm.send(:extract_response_tool_calls, { "output" => [reasoning_one, web_search, unencrypted, reasoning_two, search_call] })
+
+      expect(tool_calls.first["provider_metadata"]).to eq("reasoning_items" => [reasoning_two])
+    end
+
+    it "replays the reasoning items in front of their function call" do
+      messages = [
+        { "role" => "user", "content" => "Hello" },
+        {
+          "type" => "tool_call",
+          "provider_tool_call_id" => "call_1",
+          "name" => "search",
+          "arguments" => { "q" => "a" },
+          "provider_metadata" => { "reasoning_items" => [reasoning_one, reasoning_two] }
+        },
+        { "type" => "tool_call_result", "provider_tool_call_id" => "call_1", "name" => "search", "result" => "found" }
+      ]
+
+      expect(llm.format_messages(messages)).to eq([
+        { "role" => "user", "content" => [{ "type" => "input_text", "text" => "Hello" }] },
+        reasoning_one,
+        reasoning_two,
+        { "type" => "function_call", "call_id" => "call_1", "name" => "search", "arguments" => "{\"q\":\"a\"}" },
+        { "type" => "function_call_output", "call_id" => "call_1", "output" => "found" }
+      ])
     end
   end
 
