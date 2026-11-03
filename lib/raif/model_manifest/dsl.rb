@@ -54,6 +54,7 @@ module Raif
           TOOL_CHOICE_CAPABILITY_KEYS.each do |key|
             normalized[key] = normalized.fetch(:native_tool_use, false) unless normalized.key?(key)
           end
+          OPTIONAL_CAPABILITY_KEYS.each { |key| normalized[key] = false unless normalized.key?(key) }
 
           deep_freeze(normalized)
         end

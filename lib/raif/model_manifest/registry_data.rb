@@ -79,6 +79,8 @@ module Raif
           settings[:"supports_#{capability}"] = false unless caps.fetch(capability)
         end
 
+        settings[:supports_encrypted_reasoning] = true if caps.fetch(:encrypted_reasoning, false)
+
         settings
       end
 

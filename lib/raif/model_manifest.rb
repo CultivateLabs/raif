@@ -51,7 +51,12 @@ module Raif
     ].freeze
 
     TOOL_CHOICE_CAPABILITY_KEYS = %i[forced_tool_choice required_tool_choice].freeze
-    CAPABILITY_KEYS = (SMOKE_CAPABILITY_KEYS + TOOL_CHOICE_CAPABILITY_KEYS).freeze
+
+    # Capabilities an entry declares only when true; the loader fills in false.
+    # encrypted_reasoning: the endpoint can return the model's reasoning as encrypted
+    # items that Raif sends back on later turns of a tool-calling loop.
+    OPTIONAL_CAPABILITY_KEYS = %i[encrypted_reasoning].freeze
+    CAPABILITY_KEYS = (SMOKE_CAPABILITY_KEYS + TOOL_CHOICE_CAPABILITY_KEYS + OPTIONAL_CAPABILITY_KEYS).freeze
 
     LIFECYCLE_STATUSES = %i[active deprecated retired].freeze
 

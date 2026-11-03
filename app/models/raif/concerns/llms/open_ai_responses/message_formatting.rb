@@ -41,13 +41,28 @@ module Raif::Concerns::Llms::OpenAiResponses::MessageFormatting
     end
   end
 
+  def format_messages(messages)
+    super.flatten
+  end
+
+  # The reasoning items that preceded the call go back in front of it, in their
+  # original order, so the model continues from its own reasoning. The call keeps its
+  # original id only then: OpenAI rejects an `fc_` id sent without its reasoning item.
   def format_tool_call_message(tool_call)
-    {
+    function_call = {
       "type" => "function_call",
       "call_id" => tool_call["provider_tool_call_id"],
       "name" => tool_call["name"],
       "arguments" => JSON.generate(tool_call["arguments"])
     }
+
+    metadata = tool_call["provider_metadata"] || {}
+    reasoning_items = Array(metadata["reasoning_items"])
+    return function_call if reasoning_items.empty?
+
+    function_call["id"] = metadata["item_id"] if metadata["item_id"].present?
+    function_call["status"] = metadata["item_status"] if metadata["item_status"].present?
+    [*reasoning_items, function_call]
   end
 
   def format_tool_call_result_message(tool_call_result)
