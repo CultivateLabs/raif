@@ -229,12 +229,13 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           expect(agent).to be_completed
           expect(request_bodies.map { |body| body["include"] }).to all(include("reasoning.encrypted_content"))
           replayed = request_bodies.last["input"].reject { |item| item["role"] }
-          expect(replayed.map { |item| [item["type"], item["id"] || item["call_id"]] }).to eq([
+          expect(replayed.map { |item| [item["type"], item["call_id"] || item["id"]] }).to eq([
             ["reasoning", "rs_1"],
             ["function_call", "call_1"],
             ["function_call_output", "call_1"]
           ])
           expect(replayed.first).to eq(reasoning)
+          expect(replayed.second.slice("id", "status")).to eq("id" => "fc_1", "status" => "completed")
         end
       end
 

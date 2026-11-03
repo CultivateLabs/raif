@@ -30,7 +30,14 @@ module Raif::Concerns::Llms::OpenAiResponses::ResponseToolCalls
           output_item["arguments"]
         end
       }
-      tool_call["provider_metadata"] = { "reasoning_items" => preceding_reasoning } if preceding_reasoning.any?
+      if preceding_reasoning.any?
+        # OpenAI pairs a reasoning item with the original item that followed it, so the call keeps its own id and status.
+        tool_call["provider_metadata"] = {
+          "reasoning_items" => preceding_reasoning,
+          "item_id" => output_item["id"],
+          "item_status" => output_item["status"]
+        }.compact
+      end
       preceding_reasoning = []
 
       tool_calls << tool_call

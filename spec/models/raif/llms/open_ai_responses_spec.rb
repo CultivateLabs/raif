@@ -667,10 +667,12 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
           llm_model_key: llm.key.to_s,
           model_api_name: llm.api_name,
           response_format: "text",
-          available_model_tools: tools
+          available_model_tools: tools,
+          source: source
         )
       end
       let(:tools) { [Raif::TestModelTool] }
+      let(:source) { Raif::Agents::NativeToolCallingAgent.new }
 
       context "with a reasoning model and tools" do
         let(:llm) { Raif.llm(:open_ai_responses_gpt_6_luna) }
@@ -686,6 +688,15 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
 
         it "asks for the search sources and the encrypted reasoning" do
           expect(parameters[:include]).to eq(["web_search_call.action.sources", "reasoning.encrypted_content"])
+        end
+      end
+
+      context "with a reasoning model and a source that does not replay the reasoning" do
+        let(:llm) { Raif.llm(:open_ai_responses_gpt_6_luna) }
+        let(:source) { Raif::Conversation.new }
+
+        it "does not ask for the encrypted reasoning" do
+          expect(parameters).not_to have_key(:include)
         end
       end
 
@@ -922,7 +933,9 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
   describe "reasoning replay" do
     let(:reasoning_one) { { "type" => "reasoning", "id" => "rs_1", "summary" => [], "encrypted_content" => "enc-1" } }
     let(:reasoning_two) { { "type" => "reasoning", "id" => "rs_2", "summary" => [], "encrypted_content" => "enc-2" } }
-    let(:search_call) { { "type" => "function_call", "call_id" => "call_1", "name" => "search", "arguments" => "{\"q\":\"a\"}" } }
+    let(:search_call) do
+      { "type" => "function_call", "id" => "fc_1", "status" => "completed", "call_id" => "call_1", "name" => "search", "arguments" => "{\"q\":\"a\"}" }
+    end
     let(:read_call) { { "type" => "function_call", "call_id" => "call_2", "name" => "read", "arguments" => "{\"id\":1}" } }
 
     it "attaches the reasoning that directly precedes a function call to that call only" do
@@ -933,7 +946,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
           "provider_tool_call_id" => "call_1",
           "name" => "search",
           "arguments" => { "q" => "a" },
-          "provider_metadata" => { "reasoning_items" => [reasoning_one] }
+          "provider_metadata" => { "reasoning_items" => [reasoning_one], "item_id" => "fc_1", "item_status" => "completed" }
         },
         { "provider_tool_call_id" => "call_2", "name" => "read", "arguments" => { "id" => 1 } }
       ])
@@ -945,10 +958,10 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
 
       tool_calls = llm.send(:extract_response_tool_calls, { "output" => [reasoning_one, web_search, unencrypted, reasoning_two, search_call] })
 
-      expect(tool_calls.first["provider_metadata"]).to eq("reasoning_items" => [reasoning_two])
+      expect(tool_calls.first["provider_metadata"]["reasoning_items"]).to eq([reasoning_two])
     end
 
-    it "replays the reasoning items in front of their function call" do
+    it "replays the reasoning items in front of their function call, with the call's original id and status" do
       messages = [
         { "role" => "user", "content" => "Hello" },
         {
@@ -956,7 +969,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
           "provider_tool_call_id" => "call_1",
           "name" => "search",
           "arguments" => { "q" => "a" },
-          "provider_metadata" => { "reasoning_items" => [reasoning_one, reasoning_two] }
+          "provider_metadata" => { "reasoning_items" => [reasoning_one, reasoning_two], "item_id" => "fc_1", "item_status" => "completed" }
         },
         { "type" => "tool_call_result", "provider_tool_call_id" => "call_1", "name" => "search", "result" => "found" }
       ]
@@ -965,7 +978,14 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
         { "role" => "user", "content" => [{ "type" => "input_text", "text" => "Hello" }] },
         reasoning_one,
         reasoning_two,
-        { "type" => "function_call", "call_id" => "call_1", "name" => "search", "arguments" => "{\"q\":\"a\"}" },
+        {
+          "type" => "function_call",
+          "call_id" => "call_1",
+          "name" => "search",
+          "arguments" => "{\"q\":\"a\"}",
+          "id" => "fc_1",
+          "status" => "completed"
+        },
         { "type" => "function_call_output", "call_id" => "call_1", "output" => "found" }
       ])
     end

@@ -129,7 +129,8 @@ private
       # With store: false, OpenAI keeps no reasoning between requests, so a tool-calling
       # loop loses the model's reasoning at every step unless the encrypted items are
       # requested here and replayed with their tool calls (see #format_tool_call_message).
-      if supports_encrypted_reasoning? && tools.present?
+      # Only NativeToolCallingAgent replays them, so other callers do not ask for them.
+      if supports_encrypted_reasoning? && tools.present? && model_completion.source.is_a?(Raif::Agents::NativeToolCallingAgent)
         parameters[:include] = [*parameters[:include], "reasoning.encrypted_content"]
       end
 
