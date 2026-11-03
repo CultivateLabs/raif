@@ -126,6 +126,14 @@ private
         parameters[:include] = ["web_search_call.action.sources"]
       end
 
+      # With store: false, OpenAI keeps no reasoning between requests, so a tool-calling
+      # loop loses the model's reasoning at every step unless the encrypted items are
+      # requested here and replayed with their tool calls (see #format_tool_call_message).
+      # Only NativeToolCallingAgent replays them, so other callers do not ask for them.
+      if supports_encrypted_reasoning? && tools.present? && model_completion.source.is_a?(Raif::Agents::NativeToolCallingAgent)
+        parameters[:include] = [*parameters[:include], "reasoning.encrypted_content"]
+      end
+
       if model_completion.tool_choice == "required"
         parameters[:tool_choice] = build_required_tool_choice
         parameters[:parallel_tool_calls] = (model_completion.allow_parallel_tool_calls == true) unless tools.blank?
