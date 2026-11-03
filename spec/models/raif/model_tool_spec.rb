@@ -79,6 +79,43 @@ RSpec.describe Raif::ModelTool, type: :model do
       expect(open_transactions).to eq(baseline)
       expect(Raif::ModelToolInvocation.last).to be_completed
     end
+
+    it "persists a result the tool assigned in memory without saving" do
+      allow(Raif::TestModelTool).to receive(:process_invocation) do |invocation|
+        invocation.result = { "assigned" => true }
+      end
+
+      Raif::TestModelTool.invoke_tool(provider_tool_call_id: "call_1", tool_arguments: arguments, source: source)
+
+      invocation = Raif::ModelToolInvocation.last
+      expect(invocation).to be_completed
+      expect(invocation.result).to eq("assigned" => true)
+    end
+
+    it "persists the completion even when the invocation is no longer valid" do
+      allow(Raif::TestModelTool).to receive(:process_invocation) do |invocation|
+        invocation.tool_arguments = { "unexpected" => true }
+      end
+
+      Raif::TestModelTool.invoke_tool(provider_tool_call_id: "call_1", tool_arguments: arguments, source: source)
+
+      expect(Raif::ModelToolInvocation.last).to be_completed
+    end
+
+    it "persists an in-memory result when the tool raises" do
+      allow(Raif::TestModelTool).to receive(:process_invocation) do |invocation|
+        invocation.result = { "partial" => true }
+        raise StandardError, "tool exploded"
+      end
+
+      expect do
+        Raif::TestModelTool.invoke_tool(provider_tool_call_id: "call_1", tool_arguments: arguments, source: source)
+      end.to raise_error(StandardError, "tool exploded")
+
+      invocation = Raif::ModelToolInvocation.last
+      expect(invocation).to be_failed
+      expect(invocation.result).to eq("partial" => true)
+    end
   end
 
   describe "tool_arguments_schema" do

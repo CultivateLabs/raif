@@ -195,10 +195,15 @@ class Raif::ModelTool
       process_invocation(tool_invocation)
       # Skip validation: a source-aware schema can change during the run, and a
       # silently failed write breaks the agent's pairing of results to invocations.
-      tool_invocation.update_columns(completed_at: Time.current, updated_at: Time.current)
+      # save! (not update_columns) also persists a result the tool set in memory.
+      tool_invocation.completed_at = Time.current
+      tool_invocation.save!(validate: false)
       tool_invocation
     rescue StandardError => e
-      tool_invocation.update_columns(failed_at: Time.current, updated_at: Time.current) if tool_invocation&.persisted?
+      if tool_invocation&.persisted?
+        tool_invocation.failed_at = Time.current
+        tool_invocation.save!(validate: false)
+      end
       raise e
     end
 
