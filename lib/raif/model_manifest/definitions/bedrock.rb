@@ -153,6 +153,33 @@ provider :bedrock do |p|
   )
 
   p.model(
+    key: :bedrock_grok_4_7,
+    api_name: "xai.grok-4.7",
+    display_name: "xAI Grok 4.7 (via AWS Bedrock)",
+    pricing: {
+      cache_read_per_million: 0.55,
+      input_per_million: 2.2,
+      output_per_million: 6.6,
+      note: "US geo cross-region inference rate; global routing costs 2.00 / 6.00 per million (0.50 cache read). No in-region inference; " \
+        "aws_bedrock_model_name_prefix must name a profile Bedrock offers for this model (us or global)."
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 8)
+    }
+  )
+
+  p.model(
     key: :bedrock_grok_4_3,
     adapter: :mantle,
     api_name: "xai.grok-4.3",

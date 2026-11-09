@@ -842,6 +842,38 @@
         "result": "pass",
         "checked_at": "2026-09-15T18:04:03Z"
       }
+    },
+    "bedrock_grok_4_7": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T00:18:12Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T00:18:12Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T00:18:12Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T00:18:12Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T00:18:12Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T00:18:12Z"
+      }
     }
   }
 }
