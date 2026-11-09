@@ -191,10 +191,12 @@ provider :open_ai do |p|
     api_name: "gpt-5.6-sol",
     display_name: "OpenAI GPT-5.6 Sol",
     pricing: {
+      cache_read_per_million: 0.4,
       input_per_million: 4.0,
       output_per_million: 20.0,
-      note: "Promotional short-context rate; list rate 5.00 / 30.00, long context (272K+) bills 8.00 / 30.00.",
-      valid_until: Date.new(2026, 11, 21)
+      note: "Promotional rate through 2026-11-30; OpenAI does not state the rate that follows. Above 272K input tokens " \
+        "the full request bills at 8.00 input / 0.80 cached input / 30.00 output per million.",
+      valid_until: Date.new(2026, 11, 30)
     },
     lifecycle: {
       status: :active
