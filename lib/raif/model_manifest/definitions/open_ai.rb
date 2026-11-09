@@ -251,7 +251,7 @@ provider :open_ai do |p|
         capabilities: {
           temperature: false,
           structured_outputs: true,
-          native_tool_use: true,
+          native_tool_use: false,
           streaming: true,
           batch_inference: true,
           images: true,
@@ -288,7 +288,7 @@ provider :open_ai do |p|
         capabilities: {
           temperature: false,
           structured_outputs: true,
-          native_tool_use: true,
+          native_tool_use: false,
           streaming: true,
           batch_inference: true,
           images: true,
@@ -325,7 +325,7 @@ provider :open_ai do |p|
         capabilities: {
           temperature: false,
           structured_outputs: true,
-          native_tool_use: true,
+          native_tool_use: false,
           streaming: true,
           batch_inference: true,
           images: true,
@@ -547,7 +547,8 @@ provider :open_ai do |p|
       deprecated_on: Date.new(2026, 6, 11),
       retirement_date: Date.new(2026, 12, 11),
       replacement_key: :open_ai_responses_gpt_5_6_sol,
-      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol."
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_5_6_sol for tools."
     },
     endpoints: {
       completions: {
@@ -663,7 +664,8 @@ provider :open_ai do |p|
       deprecated_on: Date.new(2026, 6, 11),
       retirement_date: Date.new(2026, 12, 11),
       replacement_key: :open_ai_responses_gpt_5_6_terra,
-      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-terra."
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-terra. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_5_6_terra for tools."
     },
     endpoints: {
       completions: {
@@ -705,7 +707,8 @@ provider :open_ai do |p|
       deprecated_on: Date.new(2026, 6, 11),
       retirement_date: Date.new(2026, 12, 11),
       replacement_key: :open_ai_responses_gpt_5_6_luna,
-      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-luna."
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-luna. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_5_6_luna for tools."
     },
     endpoints: {
       completions: {
@@ -1015,7 +1018,8 @@ provider :open_ai do |p|
       deprecated_on: Date.new(2026, 6, 11),
       retirement_date: Date.new(2026, 12, 11),
       replacement_key: :open_ai_responses_gpt_5_6_sol,
-      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol."
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_5_6_sol for tools."
     },
     endpoints: {
       completions: {
