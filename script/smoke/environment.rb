@@ -1,11 +1,10 @@
 # frozen_string_literal: true
 
-# Local setup checks the smoke runner makes before it calls any provider. Without them, a stale
-# database fails every check with an error such as ActiveModel::UnknownAttributeError, which
-# reads like a model failure.
+# Checked before any provider call: a stale database otherwise fails every smoke check with
+# errors that look like model failures.
 #
-# The dummy app's own migration context covers only spec/dummy/db/migrate. Engine migrations run
-# from db/migrate through `bin/rails app:db:migrate`, so the check reads both directories.
+# The dummy app's migration context covers only spec/dummy/db/migrate. Engine migrations run
+# from db/migrate through `bin/rails app:db:migrate`, so both directories are read.
 module Smoke
   module Environment
     def self.migration_context
@@ -13,7 +12,6 @@ module Smoke
       ActiveRecord::MigrationContext.new(paths.uniq)
     end
 
-    # Returns a message describing what is wrong with the local database, or nil when it is ready.
     def self.database_problem(context = migration_context)
       ran_versions = context.get_all_versions
       pending = context.migrations.reject { |migration| ran_versions.include?(migration.version) }
