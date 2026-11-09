@@ -911,7 +911,7 @@
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-11-09T00:18:12Z"
+        "checked_at": "2026-11-09T17:20:30Z"
       },
       "images": {
         "claimed": true,
@@ -921,12 +921,12 @@
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-11-09T00:18:12Z"
+        "checked_at": "2026-11-09T17:20:30Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-11-09T00:18:12Z"
+        "checked_at": "2026-11-09T17:20:30Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
@@ -936,7 +936,7 @@
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-11-09T00:18:12Z"
+        "checked_at": "2026-11-09T17:20:30Z"
       }
     }
   }
