@@ -101,10 +101,10 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
         ])
       end
 
-      context "when using o-series models" do
-        let(:llm) { Raif.llm(:open_ai_responses_o4_mini) }
+      context "when using a model without temperature support" do
+        let(:llm) { Raif.llm(:open_ai_responses_gpt_5_6_terra) }
 
-        it "makes a request to the OpenAI API and processes the response", vcr: { cassette_name: "open_ai_responses/format_text_o4_mini" } do
+        it "makes a request to the OpenAI API and processes the response", vcr: { cassette_name: "open_ai_responses/format_text_gpt_5_6_terra" } do
           model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], system_prompt: "You are a helpful assistant")
 
           expect(model_completion.raw_response).to eq("Hello! How can I assist you today?")
@@ -112,7 +112,7 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
           expect(model_completion.prompt_tokens).to eq(16)
           expect(model_completion.total_tokens).to eq(31)
           expect(model_completion).to be_persisted
-          expect(model_completion.temperature).to eq(nil) # o-series models do not support temperature
+          expect(model_completion.temperature).to eq(nil) # the model does not support temperature
         end
       end
     end
@@ -842,13 +842,14 @@ RSpec.describe Raif::Llms::OpenAiResponses, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           response_format: "json",
-          llm_model_key: "open_ai_responses_gpt_3_5_turbo",
-          model_api_name: "gpt-3.5-turbo"
+          llm_model_key: "open_ai_responses_gpt_6_luna",
+          model_api_name: "gpt-6-luna"
         )
       end
 
       it "returns json_object type when structured outputs are not supported" do
-        llm = Raif.llm(:open_ai_responses_gpt_3_5_turbo)
+        llm = Raif.llm(:open_ai_responses_gpt_6_luna)
+        allow(llm).to receive(:supports_structured_outputs?).and_return(false)
         result = llm.send(:determine_response_format, model_completion)
         expect(result).to eq({ type: "json_object" })
       end
