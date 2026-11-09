@@ -3,7 +3,8 @@
 # See bin/smoke for usage instructions.
 #
 # Runs the smoke capability checks (script/smoke/checks.rb) against the live models described in
-# lib/raif/model_manifest/definitions/*.rb, using script/smoke/selection.rb to resolve CLI selectors, script/smoke/credentials.rb
+# lib/raif/model_manifest/definitions/*.rb, using script/smoke/environment.rb to stop before any API call when the local
+# database has pending migrations, script/smoke/selection.rb to resolve CLI selectors, script/smoke/credentials.rb
 # to gate providers on configured credentials, script/smoke/options.rb to validate CLI options,
 # script/smoke/policy.rb to decide the process exit code, script/smoke/observation_recorder.rb (with
 # --record) to record successful smoke observations in model_smoke_results/*.json, and
@@ -15,6 +16,7 @@ require "raif/model_manifest"
 require "raif/model_manifest/smoke_observations"
 require_relative "smoke/selection"
 require_relative "smoke/credentials"
+require_relative "smoke/environment"
 require_relative "smoke/checks"
 require_relative "smoke/policy"
 require_relative "smoke/observation_recorder"
@@ -215,6 +217,11 @@ Smoke.validate_options!(options, parser)
 if options[:list]
   puts (Raif.available_llm_keys + Raif.available_embedding_model_keys).map(&:to_s).sort
   exit 0
+end
+
+if (database_problem = Smoke::Environment.database_problem)
+  warn database_problem
+  exit 1
 end
 
 Smoke::Credentials.configure_raif!
