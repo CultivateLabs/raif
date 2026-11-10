@@ -97,6 +97,51 @@ provider :open_ai do |p|
   )
 
   p.model(
+    key_base: :gpt_6_1_terra,
+    api_name: "gpt-6.1-terra",
+    display_name: "OpenAI GPT-6.1 Terra",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.05,
+      input_per_million: 1.0,
+      output_per_million: 5.0,
+      note: "Above 272K input tokens, input and cache rates double to 2.00 input / 0.10 cached input per million " \
+        "and output rises to 7.50 per million."
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 8)
+    },
+    endpoints: {
+      completions: {
+        capabilities: {
+          temperature: false,
+          structured_outputs: true,
+          native_tool_use: false,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: false,
+          provider_managed_tools: []
+        }
+      },
+      responses: {
+        capabilities: {
+          temperature: false,
+          encrypted_reasoning: true,
+          structured_outputs: true,
+          native_tool_use: true,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: true,
+          provider_managed_tools: %i[web_search code_execution image_generation]
+        }
+      }
+    }
+  )
+
+  p.model(
     key_base: :gpt_6_sol,
     api_name: "gpt-6-sol",
     display_name: "OpenAI GPT-6 Sol",
@@ -191,10 +236,12 @@ provider :open_ai do |p|
     api_name: "gpt-5.6-sol",
     display_name: "OpenAI GPT-5.6 Sol",
     pricing: {
+      cache_read_per_million: 0.4,
       input_per_million: 4.0,
       output_per_million: 20.0,
-      note: "Promotional short-context rate; list rate 5.00 / 30.00, long context (272K+) bills 8.00 / 30.00.",
-      valid_until: Date.new(2026, 11, 21)
+      note: "Promotional rate; OpenAI does not state the rate that follows. Above 272K input tokens " \
+        "the full request bills at 8.00 input / 0.80 cached input / 30.00 output per million.",
+      valid_until: Date.new(2026, 11, 30)
     },
     lifecycle: {
       status: :active

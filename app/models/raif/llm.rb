@@ -96,15 +96,20 @@ module Raif
     end
 
     def deprecation_message
-      message = +"Raif model :#{key} is deprecated"
-      message << " and will be removed after #{retirement_date}" if retirement_date
-      message << "."
-      if replacement_key
-        message << " Use :#{replacement_key} instead."
-      elsif migration_note
-        message << " #{migration_note}"
-      end
-      message
+      "Raif model :#{key} is deprecated" +
+        self.class.deprecation_details(retirement_date: retirement_date, replacement_key: replacement_key, migration_note: migration_note)
+    end
+
+    # Completes a "... is deprecated" sentence. Shared with the default_llm_model_key
+    # warning in Raif::Configuration#validate!, which has only the registry config, so
+    # both warnings carry the same retirement, replacement, and migration details.
+    def self.deprecation_details(retirement_date:, replacement_key:, migration_note:)
+      details = +""
+      details << " and will be removed after #{retirement_date}" if retirement_date
+      details << "."
+      details << " Use :#{replacement_key} instead." if replacement_key
+      details << " #{migration_note}" if migration_note.present?
+      details
     end
 
     def name
