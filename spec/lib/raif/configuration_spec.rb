@@ -150,6 +150,33 @@ RSpec.describe Raif::Configuration do
         Raif.config.validate!
       end
 
+      it "includes the migration note after the replacement" do
+        Raif.register_llm(Raif::Llms::TestLlm, key: :deprecated_default_test_llm, api_name: "dep-default-test",
+          deprecated: true, retirement_date: Date.new(2026, 12, 1), replacement_key: :anthropic_claude_5_sonnet,
+          migration_note: "Use the Responses key for tool calls.")
+        Raif.config.default_llm_model_key = :deprecated_default_test_llm
+
+        expect(Raif.logger).to receive(:warn).with(
+          "Raif.config.default_llm_model_key is set to :deprecated_default_test_llm, which is deprecated and will be removed " \
+            "after 2026-12-01. Use :anthropic_claude_5_sonnet instead. Use the Responses key for tool calls."
+        )
+
+        Raif.config.validate!
+      end
+
+      it "includes the migration note when there is no replacement" do
+        Raif.register_llm(Raif::Llms::TestLlm, key: :deprecated_default_test_llm, api_name: "dep-default-test",
+          deprecated: true, retirement_date: Date.new(2026, 12, 1), migration_note: "No direct replacement.")
+        Raif.config.default_llm_model_key = :deprecated_default_test_llm
+
+        expect(Raif.logger).to receive(:warn).with(
+          "Raif.config.default_llm_model_key is set to :deprecated_default_test_llm, which is deprecated and will be removed " \
+            "after 2026-12-01. No direct replacement."
+        )
+
+        Raif.config.validate!
+      end
+
       it "does not warn when the default llm model key is not deprecated" do
         expect(Raif.logger).not_to receive(:warn)
         Raif.config.validate!

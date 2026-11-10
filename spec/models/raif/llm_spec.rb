@@ -60,6 +60,19 @@ RSpec.describe Raif::Llm, type: :model do
       )
     end
 
+    it "appends the migration note after the replacement when both are set" do
+      llm = Raif::Llms::TestLlm.new(
+        key: :raif_test_llm, api_name: "raif-test-llm",
+        deprecated: true, retirement_date: Date.new(2026, 12, 1),
+        replacement_key: :anthropic_claude_5_sonnet,
+        migration_note: "Use the Responses key for tool calls."
+      )
+      expect(llm.deprecation_message).to eq(
+        "Raif model :raif_test_llm is deprecated and will be removed after 2026-12-01. " \
+          "Use :anthropic_claude_5_sonnet instead. Use the Responses key for tool calls."
+      )
+    end
+
     it "uses the migration note when there is no replacement" do
       llm = Raif::Llms::TestLlm.new(
         key: :raif_test_llm, api_name: "raif-test-llm",
@@ -425,6 +438,37 @@ RSpec.describe Raif::Llm, type: :model do
         expect do
           test_llm.chat(messages: messages, tool_choice: "required")
         end.to raise_error(ArgumentError, /tool_choice: :required requires at least one available model tool/)
+      end
+    end
+
+    context "with available model tools on an LLM without native tool use" do
+      before do
+        allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
+
+        stub_raif_llm(test_llm) do |_messages|
+          "This is a test response"
+        end
+      end
+
+      it "warns that the tools are not sent" do
+        allow(test_llm).to receive(:supports_native_tool_use?).and_return(false)
+        allow(Raif.logger).to receive(:warn)
+
+        test_llm.chat(messages: messages, available_model_tools: [Raif::ModelTools::WikipediaSearch])
+
+        expect(Raif.logger).to have_received(:warn).with(
+          "Raif::Llm - #{test_llm.key} does not support native tool use, so these tools are not sent: " \
+            "Raif::ModelTools::WikipediaSearch"
+        )
+      end
+
+      it "does not warn when the LLM supports native tool use" do
+        allow(test_llm).to receive(:supports_native_tool_use?).and_return(true)
+        allow(Raif.logger).to receive(:warn)
+
+        test_llm.chat(messages: messages, available_model_tools: [Raif::ModelTools::WikipediaSearch])
+
+        expect(Raif.logger).not_to have_received(:warn).with(/does not support native tool use/)
       end
     end
 
