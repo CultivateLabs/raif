@@ -39,3 +39,12 @@ class Raif::TestTemplateAgent < Raif::Agent
 
   after_initialize -> { self.agent_role ||= "researcher" }
 end
+
+class Raif::TestTemplateNativeToolCallingAgent < Raif::Agents::NativeToolCallingAgent
+  run_with :agent_role
+
+  after_initialize -> { self.agent_role ||= "researcher" }
+end
+
+class Raif::TestBlankTemplateNativeToolCallingAgent < Raif::Agents::NativeToolCallingAgent
+end
