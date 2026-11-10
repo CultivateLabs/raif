@@ -336,11 +336,25 @@ RSpec.describe Smoke::Checks do
       expect(result.fetch("streaming").fetch(:detail)).not_to include("claim confirmed")
     end
 
-    # Case 3: native_tool_use claimed false, explicitly requested; the default llm/model_completion
-    # stubs already represent a working tool call.
+    # Case 3: native_tool_use claimed false, explicitly requested. Raif.llm would leave the tools
+    # out of the request for this entry, so the check rebuilds the llm with native tool use forced
+    # on; the stubbed class records its kwargs and returns a working tool call.
     it "reports a working explicitly requested claimed-false native_tool_use check as :note" do
+      tool_call_completion = model_completion
+      received_kwargs = nil
+      tool_use_llm_class = Class.new do
+        define_method(:initialize) { |**kwargs| received_kwargs = kwargs }
+        define_method(:supports_forced_tool_choice?) { true }
+        define_method(:chat) { |**_kwargs| tool_call_completion }
+      end
+      allow(Raif).to receive(:llm_config).with(claimed_false_entry.key).and_return(
+        llm_class: tool_use_llm_class, supports_native_tool_use: false, model_provider_settings: {}
+      )
+
       result = described_class.run_for(claimed_false_entry, only: "native_tool_use")
 
+      expect(received_kwargs).to include(supports_native_tool_use: true)
+      expect(Raif).not_to have_received(:llm).with(claimed_false_entry.key)
       expect(result.fetch("native_tool_use")).to include(
         status: :note,
         detail: include("claimed unsupported but appears to work")
@@ -442,6 +456,7 @@ RSpec.describe Smoke::Checks do
     def raising_llm_class_for(exception)
       Class.new do
         define_method(:initialize) { |**_kwargs| }
+        define_method(:supports_forced_tool_choice?) { false }
         define_method(:chat) { |**_kwargs| raise exception }
       end
     end
@@ -595,6 +610,46 @@ RSpec.describe Smoke::Checks do
     # so its claimed-false rejections are matched on the exception message instead of a parsed
     # JSON body. Wordings pinned from production Bedrock rejections as of 2026-09-01
     # (bedrock_deepseek_r1).
+    # Production OpenAI Chat Completions rejection as of 2026-11-09 (gpt-5.6-terra), sent when
+    # function tools are passed without reasoning_effort "none".
+    it "classifies the OpenAI function tools rejection as :consistent for native_tool_use" do
+      stub_forced_llm_raising(bad_request_error({
+        error: {
+          message: "Function tools with reasoning_effort are not supported for gpt-5.6-terra in /v1/chat/completions. " \
+            "To use function tools, use /v1/responses or set reasoning_effort to 'none'.",
+          type: "invalid_request_error",
+          param: "reasoning_effort",
+          code: nil
+        }
+      }.to_json))
+
+      result = described_class.run_for(claimed_false_entry, only: "native_tool_use")
+
+      expect(result.fetch("native_tool_use")).to include(
+        status: :consistent,
+        detail: include("Function tools with reasoning_effort are not supported")
+      )
+    end
+
+    it "does not classify an unrelated 400 during the claimed-false native_tool_use probe (stays :fail)" do
+      stub_forced_llm_raising(bad_request_error(openai_rejection_body(
+        param: "messages", code: "invalid_value", message: "Invalid value for messages."
+      )))
+
+      result = described_class.run_for(claimed_false_entry, only: "native_tool_use")
+
+      expect(result.fetch("native_tool_use")).to include(status: :fail)
+    end
+
+    it "does not classify a tools rejection as :consistent for a different probe" do
+      result = described_class.send(
+        :classify_claimed_false_error, "temperature",
+        bad_request_error({ error: { message: "Function tools are not supported for this model.", code: nil } }.to_json)
+      )
+
+      expect(result[:status]).to eq(:fail)
+    end
+
     describe "Bedrock ValidationException classification" do
       def bedrock_validation_exception(message)
         Aws::BedrockRuntime::Errors::ValidationException.new(nil, message)
@@ -636,6 +691,14 @@ RSpec.describe Smoke::Checks do
         )
 
         expect(result[:status]).to eq(:fail)
+      end
+
+      it "classifies the tool use rejection as :consistent for native_tool_use" do
+        stub_forced_llm_raising(bedrock_validation_exception("This model doesn't support tool use."))
+
+        result = described_class.run_for(claimed_false_entry, only: "native_tool_use")
+
+        expect(result.fetch("native_tool_use")).to include(status: :consistent, detail: include("tool use"))
       end
 
       it "does not classify a ValidationException naming a different feature than the probe (stays :fail)" do
@@ -803,7 +866,7 @@ RSpec.describe Smoke::Checks do
           available_model_tools: [Raif::ModelTools::WikipediaSearch], tool_choice: nil
         ).and_return(model_completion)
 
-        expect(described_class.check_native_tool_use(entry)).to include(status: :pass)
+        expect(described_class.check_native_tool_use(entry, claimed: true)).to include(status: :pass)
       end
 
       it "fails when the parsed tool call arguments are not a hash" do
@@ -811,11 +874,11 @@ RSpec.describe Smoke::Checks do
           instance_double(Raif::ModelCompletion, response_tool_calls: [{ "name" => "wikipedia_search", "arguments" => "not a hash" }])
         )
 
-        expect(described_class.check_native_tool_use(entry)).to include(status: :fail)
+        expect(described_class.check_native_tool_use(entry, claimed: true)).to include(status: :fail)
       end
 
       it "passes on forced tool selection plus parsed hash arguments alone, without live tool execution" do
-        expect(described_class.check_native_tool_use(entry)).to include(status: :pass)
+        expect(described_class.check_native_tool_use(entry, claimed: true)).to include(status: :pass)
       end
     end
 

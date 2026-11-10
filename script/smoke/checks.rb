@@ -56,12 +56,11 @@ module Smoke
     # Faraday::ClientError, so its rejections are classified separately by exception message
     # via BEDROCK_CLAIMED_FALSE_REJECTION_SIGNATURES below.
     #
-    # Scoped to these two probes only: run_check dispatches every other claimed-false-eligible
-    # capability (native_tool_use, streaming, images, pdfs, batch_inference, provider_managed_tools)
-    # without a `claimed:` argument at all, so even when one is explicitly forced to run via
-    # --only despite being claimed false, a failure there is always a plain :fail, never
-    # :consistent -- by design, since none of them reject via one single named parameter the way
-    # temperature/response_format do.
+    # Scoped to temperature, structured_outputs, and native_tool_use: run_check dispatches every
+    # other claimed-false-eligible capability (streaming, images, pdfs, batch_inference,
+    # provider_managed_tools) without a `claimed:` argument at all, so even when one is explicitly
+    # forced to run via --only despite being claimed false, a failure there is always a plain
+    # :fail, never :consistent -- none of them has a provider rejection specific enough to match.
     CLAIMED_FALSE_REJECTION_SIGNATURES = {
       "temperature" => [
         # Anthropic: {"type"=>"error","error"=>{"type"=>"invalid_request_error","message"=>"...temperature...deprecated..."}}.
@@ -97,6 +96,16 @@ module Smoke
           error = openai_unsupported_parameter_error(parsed)
           error && (error["param"].to_s.match?(/response_format/i) || error["message"].to_s.match?(/response_format|json_schema/i))
         end
+      ],
+      "native_tool_use" => [
+        # OpenAI Chat Completions as of 2026-11-09 (gpt-5.6 and gpt-6 models), with
+        # param "reasoning_effort" and code null: "Function tools with reasoning_effort are not
+        # supported for gpt-5.6-terra in /v1/chat/completions. To use function tools, use
+        # /v1/responses or set reasoning_effort to 'none'."
+        lambda do |parsed|
+          message = extract_api_error_message(parsed).to_s
+          message.match?(/function tools?|tool calling|tool use/i) && message.match?(/not supported|unsupported|does not support/i)
+        end
       ]
     }.freeze
 
@@ -118,6 +127,9 @@ module Smoke
         # Anthropic models on Converse as of 2026-09-22 pass the model's own schema error through:
         # "The model returned the following errors: output_config.format: Extra inputs are not permitted"
         ->(message) { message.match?(/output_config\.format/) && message.match?(/Extra inputs are not permitted/) }
+      ],
+      "native_tool_use" => [
+        ->(message) { message.match?(/tool use|tools?\b/i) && message.match?(/doesn't support|not support|unsupported/i) }
       ]
     }.freeze
 
@@ -219,7 +231,7 @@ module Smoke
       when "completion" then check_completion(entry)
       when "temperature" then check_temperature(entry, claimed: claimed)
       when "structured_outputs" then check_structured_outputs(entry, claimed: claimed)
-      when "native_tool_use" then check_native_tool_use(entry)
+      when "native_tool_use" then check_native_tool_use(entry, claimed: claimed)
       when "streaming" then check_streaming(entry)
       when "streaming_tool_calls" then check_streaming_tool_calls(entry, iterations: iterations)
       when "batch_inference" then check_batch_inference(entry, batch_timeout: batch_timeout)
@@ -306,8 +318,11 @@ module Smoke
     end
     private_class_method :run_structured_outputs_probe
 
-    def self.check_native_tool_use(entry)
-      llm = Raif.llm(entry.key)
+    # Claimed false, Raif.llm would leave the tools out of the request, so the check would only
+    # observe Raif's own capability gate. Forcing native tool use on sends them, and the
+    # provider's answer decides: a rejection naming tools is :consistent, a tool call is a :note.
+    def self.check_native_tool_use(entry, claimed:)
+      llm = claimed ? Raif.llm(entry.key) : forced_native_tool_use_llm(entry)
       tools = [Raif::ModelTools::WikipediaSearch]
       model_completion = llm.chat(
         message: TOOL_CALL_PROMPT,
@@ -317,8 +332,16 @@ module Smoke
       arguments = model_completion&.response_tool_calls&.first&.dig("arguments")
       { status: arguments.is_a?(Hash) ? :pass : :fail, detail: arguments.inspect.first(180) }
     rescue StandardError => e
-      fail_result(e)
+      claimed ? fail_result(e) : classify_claimed_false_error("native_tool_use", e)
     end
+
+    # supports_native_tool_use is an Raif::Llm constructor argument, not a provider setting, so
+    # this overrides it directly instead of going through probe_claimed_false_direction.
+    def self.forced_native_tool_use_llm(entry)
+      config = Raif.llm_config(entry.key)
+      config[:llm_class].new(**config.except(:llm_class).merge(supports_native_tool_use: true))
+    end
+    private_class_method :forced_native_tool_use_llm
 
     # streaming_unsupported_model_keys is cleared once for the whole process in script/smoke.rb;
     # do not save/restore it here too (see the comment there for why).
