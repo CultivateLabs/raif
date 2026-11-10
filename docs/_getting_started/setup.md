@@ -154,7 +154,7 @@ When `tool_choice: :required` is used, Google can provider-enforce it only for d
 Raif.configure do |config|
   config.google_models_enabled = true
   config.google_api_key = ENV["GOOGLE_AI_API_KEY"].presence || ENV["GOOGLE_API_KEY"]
-  config.default_llm_model_key = "google_gemini_2_5_flash"
+  config.default_llm_model_key = "google_gemini_3_5_flash_lite"
 end
 ```
 
