@@ -250,7 +250,12 @@ provider :open_router do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 11, 9),
+      retirement_date: Date.new(2026, 12, 1),
+      replacement_key: :open_router_gemini_3_5_flash_lite,
+      migration_note: "Google routes gemini-2.5-flash to gemini-3.5-flash-lite from 2026-12-01. OpenRouter listed no " \
+        "expiration for google/gemini-2.5-flash on 2026-11-09; Raif removes this key after 2026-12-01."
     }
   )
 
@@ -374,8 +379,10 @@ provider :open_router do |p|
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 9, 28),
-      retirement_date: Date.new(2026, 10, 20),
-      replacement_key: :open_router_gemini_3_1_pro_preview
+      retirement_date: Date.new(2026, 12, 1),
+      replacement_key: :open_router_gemini_3_8_flash,
+      migration_note: "Google routes gemini-2.5-pro to gemini-3.8-flash from 2026-12-01. OpenRouter listed no expiration " \
+        "for google/gemini-2.5-pro on 2026-11-09; Raif removes this key after 2026-12-01."
     }
   )
 

@@ -408,69 +408,84 @@
       }
     },
     "open_ai_gpt_5_6_luna": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-15T18:04:21Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       }
     },
     "open_ai_gpt_5_6_sol": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       }
     },
     "open_ai_gpt_5_6_terra": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       }
     },
     "open_ai_gpt_5_mini": {
@@ -564,11 +579,58 @@
         "checked_at": "2026-09-29T18:26:38Z"
       }
     },
-    "open_ai_gpt_6_astra": {
+    "open_ai_gpt_6_1_terra": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-15T18:04:21Z"
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      }
+    },
+    "open_ai_gpt_6_astra": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
       }
     },
     "open_ai_gpt_6_luna": {
@@ -1306,114 +1368,156 @@
       }
     },
     "open_ai_responses_gpt_5_6_luna": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-09T17:37:46Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       }
     },
     "open_ai_responses_gpt_5_6_sol": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-09T17:37:46Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       }
     },
     "open_ai_responses_gpt_5_6_terra": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-09T17:37:46Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       },
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:28:51Z"
+        "checked_at": "2026-11-09T17:36:06Z"
       }
     },
     "open_ai_responses_gpt_5_mini": {
@@ -1578,11 +1682,106 @@
         "checked_at": "2026-09-29T18:28:05Z"
       }
     },
-    "open_ai_responses_gpt_6_astra": {
+    "open_ai_responses_gpt_6_1_terra": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-15T18:04:21Z"
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-09T02:28:05Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T02:27:21Z"
+      }
+    },
+    "open_ai_responses_gpt_6_astra": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-09T17:37:46Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-09T17:36:06Z"
       }
     },
     "open_ai_responses_gpt_6_luna": {

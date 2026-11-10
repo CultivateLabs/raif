@@ -292,7 +292,12 @@ provider :anthropic do |p|
       provider_managed_tools: %i[web_search code_execution]
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 9, 30),
+      retirement_date: Date.new(2026, 11, 30),
+      replacement_key: :anthropic_claude_5_5_sonnet,
+      migration_note: "Claude Sonnet 5.5 does not claim temperature or forced and required tool choice; " \
+        "passing tool_choice: to it raises Raif::Errors::UnsupportedFeatureError."
     }
   )
 

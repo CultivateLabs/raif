@@ -144,6 +144,24 @@ RSpec.describe "Raif::Task batch preparation" do
       expect(task.prompt).to eq(sentinel_prompt)
       expect(task.system_prompt).to eq(sentinel_system_prompt)
     end
+
+    it "warns when the task's tools cannot be sent to its LLM" do
+      task = Raif::TestTask.new(
+        creator: creator,
+        llm_model_key: "anthropic_claude_4_5_haiku",
+        available_model_tools: ["Raif::ModelTools::WikipediaSearch"]
+      )
+      task.save!
+      allow(task.llm).to receive(:supports_native_tool_use?).and_return(false)
+      allow(Raif.logger).to receive(:warn)
+
+      task.prepare_for_batch!(batch: batch)
+
+      expect(Raif.logger).to have_received(:warn).with(
+        "Raif::Llm - anthropic_claude_4_5_haiku does not support native tool use, so these tools are not sent: " \
+          "Raif::ModelTools::WikipediaSearch"
+      )
+    end
   end
 
   describe "#refresh_pending_model_completion!" do
