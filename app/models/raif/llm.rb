@@ -266,6 +266,11 @@ module Raif
     # @return [Raif::ModelCompletion] persisted, with started_at: nil
     def build_pending_model_completion(allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
       bedrock_prompt_caching_enabled: false, **attributes)
+      tools = attributes[:available_model_tools]
+      if tools.present? && !supports_native_tool_use?
+        Raif.logger.warn("Raif::Llm - #{key} does not support native tool use, so these tools are not sent: #{tools.join(", ")}")
+      end
+
       model_completion = Raif::ModelCompletion.create!(pending_model_completion_attributes(**attributes))
       model_completion.allow_parallel_tool_calls = allow_parallel_tool_calls
       model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled
