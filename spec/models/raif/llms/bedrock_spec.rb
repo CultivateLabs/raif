@@ -334,6 +334,38 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         }
       ])
     end
+
+    it "omits temperature for a model that does not support it" do
+      parameters = llm.send(:build_request_parameters, model_completion)
+
+      expect(parameters[:inference_config]).not_to have_key(:temperature)
+    end
+
+    context "when the model supports temperature" do
+      let(:llm){ Raif.llm(:bedrock_claude_4_5_haiku) }
+
+      def inference_config_for(temperature)
+        model_completion = Raif::ModelCompletion.new(
+          messages: [{ "role" => "user", "content" => [{ "text" => "Hello" }] }],
+          llm_model_key: "bedrock_claude_4_5_haiku",
+          model_api_name: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+          temperature: temperature
+        )
+        llm.send(:build_request_parameters, model_completion)[:inference_config]
+      end
+
+      it "sends the completion's temperature" do
+        expect(inference_config_for(0.2)).to eq(max_tokens: 8192, temperature: 0.2)
+      end
+
+      it "sends a temperature of zero" do
+        expect(inference_config_for(0)).to eq(max_tokens: 8192, temperature: 0.0)
+      end
+
+      it "sends the default temperature when the completion has none" do
+        expect(inference_config_for(nil)).to eq(max_tokens: 8192, temperature: 0.7)
+      end
+    end
   end
 
   describe "#resolve_model_api_name" do

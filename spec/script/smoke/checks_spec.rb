@@ -684,6 +684,20 @@ RSpec.describe Smoke::Checks do
         expect(result.fetch("temperature")).to include(status: :consistent, detail: include("temperature"))
       end
 
+      # Production rejections as of 2026-11-09 (bedrock_grok_4_7, bedrock_claude_5_sonnet).
+      [
+        "This model doesn't support the temperature field. Remove temperature and try again.",
+        "The model returned the following errors: `temperature` is deprecated for this model."
+      ].each do |message|
+        it "classifies the production temperature rejection #{message.inspect} as :consistent" do
+          stub_forced_llm_raising(bedrock_validation_exception(message))
+
+          result = described_class.run_for(claimed_false_entry, only: "temperature")
+
+          expect(result.fetch("temperature")).to include(status: :consistent, detail: include("temperature"))
+        end
+      end
+
       it "does not classify a ValidationException with an unrelated message (stays :fail)" do
         result = described_class.send(
           :classify_claimed_false_error, "structured_outputs",

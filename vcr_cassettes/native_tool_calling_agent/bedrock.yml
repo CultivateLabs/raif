@@ -24,7 +24,7 @@ http_interactions:
         If you''re unsure about something, explain your uncertainty, but do not make
         things up\n- Always provide a final answer that directly addresses the user''s
         request\n\nRemember: Your goal is to be helpful, accurate, and efficient in
-        solving the user''s request."}],"inferenceConfig":{"maxTokens":64000},"toolConfig":{"tools":[{"toolSpec":{"name":"wikipedia_search","description":"Search
+        solving the user''s request."}],"inferenceConfig":{"maxTokens":64000,"temperature":0.7},"toolConfig":{"tools":[{"toolSpec":{"name":"wikipedia_search","description":"Search
         Wikipedia for information","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"query":{"type":"string","description":"The
         query to search Wikipedia for"}},"required":["query"]}}}},{"toolSpec":{"name":"fetch_url","description":"Fetch
         a URL and return the page content as markdown","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
@@ -226,7 +226,7 @@ http_interactions:
         If you''re unsure about something, explain your uncertainty, but do not make
         things up\n- Always provide a final answer that directly addresses the user''s
         request\n\nRemember: Your goal is to be helpful, accurate, and efficient in
-        solving the user''s request."}],"inferenceConfig":{"maxTokens":64000},"toolConfig":{"tools":[{"toolSpec":{"name":"wikipedia_search","description":"Search
+        solving the user''s request."}],"inferenceConfig":{"maxTokens":64000,"temperature":0.7},"toolConfig":{"tools":[{"toolSpec":{"name":"wikipedia_search","description":"Search
         Wikipedia for information","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"query":{"type":"string","description":"The
         query to search Wikipedia for"}},"required":["query"]}}}},{"toolSpec":{"name":"fetch_url","description":"Fetch
         a URL and return the page content as markdown","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
@@ -2005,7 +2005,7 @@ http_interactions:
         If you''re unsure about something, explain your uncertainty, but do not make
         things up\n- Always provide a final answer that directly addresses the user''s
         request\n\nRemember: Your goal is to be helpful, accurate, and efficient in
-        solving the user''s request."}],"inferenceConfig":{"maxTokens":64000},"toolConfig":{"tools":[{"toolSpec":{"name":"wikipedia_search","description":"Search
+        solving the user''s request."}],"inferenceConfig":{"maxTokens":64000,"temperature":0.7},"toolConfig":{"tools":[{"toolSpec":{"name":"wikipedia_search","description":"Search
         Wikipedia for information","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"query":{"type":"string","description":"The
         query to search Wikipedia for"}},"required":["query"]}}}},{"toolSpec":{"name":"fetch_url","description":"Fetch
         a URL and return the page content as markdown","inputSchema":{"json":{"type":"object","additionalProperties":false,"properties":{"url":{"type":"string","description":"The
