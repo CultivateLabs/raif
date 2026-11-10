@@ -365,7 +365,12 @@ provider :bedrock do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 11, 9),
+      retirement_date: Date.new(2027, 4, 8),
+      replacement_key: :bedrock_claude_5_5_sonnet,
+      migration_note: "Bedrock sets its own schedule: Claude Sonnet 4.5 is Legacy on Bedrock with an end of life of " \
+        "2027-04-08, later than Anthropic's 2026-11-30 retirement on the Claude API."
     }
   )
 
