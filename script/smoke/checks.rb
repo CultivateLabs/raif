@@ -597,9 +597,10 @@ module Smoke
     private_class_method :probe_claimed_false_direction
 
     # Classifies an exception raised during the claimed-false direction of temperature,
-    # structured_outputs, or native_tool_use (the last reached only through --only) as :consistent -- the provider rejected the forced
-    # parameter with an error that specifically names it as unsupported, matching the manifest's
-    # claim -- or otherwise :fail, same as an unclassified error. Only an HTTP 4xx client error
+    # structured_outputs, or native_tool_use (the last reached only through --only) as
+    # :consistent -- the provider rejected the forced parameter with an error that specifically
+    # names it as unsupported, matching the manifest's claim -- or otherwise :fail, same as an
+    # unclassified error. Only an HTTP 4xx client error
     # is eligible: 5xx, timeouts, connection failures, and auth failures (401/403) are excluded
     # by status alone, before content is even considered, since none of them says anything about
     # whether the claim is accurate. Exclusion is by status/type, not by absence of a content
