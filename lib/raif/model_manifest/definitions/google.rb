@@ -251,7 +251,12 @@ provider :google do |p|
       provider_managed_tools: %i[web_search code_execution]
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 11, 9),
+      retirement_date: Date.new(2026, 12, 1),
+      replacement_key: :google_gemini_3_8_flash,
+      migration_note: "From 2026-12-01 Google routes gemini-2.5-pro requests to gemini-3.8-flash and bills them at " \
+        "Gemini 3.8 Flash rates; Raif removes this key after that date."
     }
   )
 
@@ -271,7 +276,12 @@ provider :google do |p|
       provider_managed_tools: %i[web_search code_execution]
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 11, 9),
+      retirement_date: Date.new(2026, 12, 1),
+      replacement_key: :google_gemini_3_5_flash_lite,
+      migration_note: "From 2026-12-01 Google routes gemini-2.5-flash requests to gemini-3.5-flash-lite and bills them at " \
+        "Gemini 3.5 Flash Lite rates; Raif removes this key after that date."
     }
   )
 end
