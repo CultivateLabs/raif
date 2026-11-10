@@ -194,7 +194,7 @@ provider :open_ai do |p|
       cache_read_per_million: 0.4,
       input_per_million: 4.0,
       output_per_million: 20.0,
-      note: "Promotional rate through 2026-11-30; OpenAI does not state the rate that follows. Above 272K input tokens " \
+      note: "Promotional rate; OpenAI does not state the rate that follows. Above 272K input tokens " \
         "the full request bills at 8.00 input / 0.80 cached input / 30.00 output per million.",
       valid_until: Date.new(2026, 11, 30)
     },
