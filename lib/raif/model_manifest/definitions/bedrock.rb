@@ -894,7 +894,8 @@ provider :bedrock do |p|
       replacement_key: :bedrock_deepseek_v3_2,
       migration_note: "DeepSeek-V3.1 has been Legacy on Bedrock since 2026-09-30 and reaches end of life on 2027-03-30. " \
         "While it is Legacy, an account that stops calling it can lose access. DeepSeek v3.2 claims the " \
-        "same capabilities and is also offered in us-east-1."
+        "same capabilities and is also offered in us-east-1. It costs 0.62 input / 1.85 output per million, " \
+        "against 0.58 / 1.68."
     }
   )
 end
