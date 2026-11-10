@@ -428,6 +428,37 @@ RSpec.describe Raif::Llm, type: :model do
       end
     end
 
+    context "with available model tools on an LLM without native tool use" do
+      before do
+        allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
+
+        stub_raif_llm(test_llm) do |_messages|
+          "This is a test response"
+        end
+      end
+
+      it "warns that the tools are not sent" do
+        allow(test_llm).to receive(:supports_native_tool_use?).and_return(false)
+        allow(Raif.logger).to receive(:warn)
+
+        test_llm.chat(messages: messages, available_model_tools: [Raif::ModelTools::WikipediaSearch])
+
+        expect(Raif.logger).to have_received(:warn).with(
+          "Raif::Llm#chat - #{test_llm.key} does not support native tool use, so these tools are not sent: " \
+            "Raif::ModelTools::WikipediaSearch"
+        )
+      end
+
+      it "does not warn when the LLM supports native tool use" do
+        allow(test_llm).to receive(:supports_native_tool_use?).and_return(true)
+        allow(Raif.logger).to receive(:warn)
+
+        test_llm.chat(messages: messages, available_model_tools: [Raif::ModelTools::WikipediaSearch])
+
+        expect(Raif.logger).not_to have_received(:warn).with(/does not support native tool use/)
+      end
+    end
+
     context "with invalid response_format" do
       it "raises an error when response_format is not a symbol" do
         expect do

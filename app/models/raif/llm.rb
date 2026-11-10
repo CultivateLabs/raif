@@ -174,6 +174,12 @@ module Raif
         validate_tool_choice_support!(:forced)
       end
 
+      if available_model_tools.present? && !supports_native_tool_use?
+        Raif.logger.warn(
+          "Raif::Llm#chat - #{key} does not support native tool use, so these tools are not sent: #{available_model_tools.join(", ")}"
+        )
+      end
+
       # Runs before the ModelCompletion is created or any provider call is made,
       # and before the llm_api_requests_enabled guard so authorization applies
       # even when API requests are disabled. Vetoes by raising. Any raised
