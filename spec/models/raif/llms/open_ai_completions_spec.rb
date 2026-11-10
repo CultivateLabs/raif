@@ -552,13 +552,15 @@ RSpec.describe Raif::Llms::OpenAiCompletions, type: :model do
         Raif::ModelCompletion.new(
           response_format: "json",
           llm_model_key: "open_ai_gpt_6_luna",
-          model_api_name: "gpt-6-luna"
+          model_api_name: "gpt-6-luna",
+          source: Raif::TestJsonTask.new
         )
       end
 
       it "returns json_object type when structured outputs are not supported" do
         llm = Raif.llm(:open_ai_gpt_6_luna)
-        allow(llm).to receive(:supports_structured_outputs?).and_return(false)
+        expect(llm).to receive(:supports_structured_outputs?).and_return(false)
+        expect(model_completion.json_response_schema).to be_present
         result = llm.send(:determine_response_format, model_completion)
         expect(result).to eq({ type: "json_object" })
       end
