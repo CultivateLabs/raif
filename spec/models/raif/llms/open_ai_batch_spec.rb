@@ -210,8 +210,10 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
         headers: { "Content-Type" => "application/json" }
       )
 
-      expect(Raif.logger).to receive(:warn).with(a_string_matching(/unknown OpenAI batch status "queued_in_some_new_state"/))
+      # The LLM key is deprecated, so Raif.llm can log its own warning first.
+      allow(Raif.logger).to receive(:warn)
       expect(llm.fetch_batch_status!(batch)).to eq("in_progress")
+      expect(Raif.logger).to have_received(:warn).with(a_string_matching(/unknown OpenAI batch status "queued_in_some_new_state"/))
     end
 
     it "maps cancelled -> canceled" do

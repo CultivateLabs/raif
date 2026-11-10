@@ -266,8 +266,10 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
         }.to_json
       )
 
-      expect(Raif.logger).to receive(:warn).with(a_string_matching(/unknown Gemini batch state "JOB_STATE_PARTIALLY_BAKED"/))
+      # The LLM key is deprecated, so Raif.llm can log its own warning first.
+      allow(Raif.logger).to receive(:warn)
       expect(llm.fetch_batch_status!(running_batch)).to eq("in_progress")
+      expect(Raif.logger).to have_received(:warn).with(a_string_matching(/unknown Gemini batch state "JOB_STATE_PARTIALLY_BAKED"/))
     end
 
     it "leaves an already-terminal batch alone even if the provider reports a non-terminal state (race guard)" do

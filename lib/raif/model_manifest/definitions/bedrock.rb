@@ -414,7 +414,13 @@ provider :bedrock do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 11, 10),
+      retirement_date: Date.new(2027, 1, 8),
+      replacement_key: :bedrock_claude_4_8_opus,
+      migration_note: "Claude Opus 4.1 has been Legacy on Bedrock since 2026-07-08 and reaches end of life on 2027-01-08. " \
+        "While it is Legacy, an account that stops calling it can lose access. Claude Opus 4.8 on Bedrock costs 5.00 " \
+        "input / 25.00 output per million, against 15.00 / 75.00."
     }
   )
 
@@ -435,7 +441,12 @@ provider :bedrock do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :retired,
+      retirement_date: Date.new(2026, 10, 14),
+      replacement_key: :bedrock_claude_4_6_sonnet,
+      migration_note: "Bedrock ended Claude Sonnet 4 on 2026-10-14, and requests to it fail with \"This model version has " \
+        "reached the end of its life\" (observed 2026-11-09). Claude Sonnet 4.6 on Bedrock has the same price and also " \
+        "claims temperature, plus native structured outputs."
     }
   )
 
@@ -592,11 +603,11 @@ provider :bedrock do |p|
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 9, 1),
-      retirement_date: Date.new(2026, 9, 30),
+      retirement_date: Date.new(2027, 3, 30),
       replacement_key: :bedrock_deepseek_v3_2,
-      migration_note: "AWS documents DeepSeek-R1's EOL as no sooner than 2026-03-10, a date now passed, so AWS may " \
-        "retire it with notice at any time. Raif removes this entry on 2026-09-30. DeepSeek v3.2 on Bedrock is " \
-        "newer, cheaper, and supports tool calling and structured outputs."
+      migration_note: "DeepSeek-R1 has been Legacy on Bedrock since 2026-09-30 and reaches end of life on 2027-03-30. " \
+        "While it is Legacy, an account that stops calling it can lose access. DeepSeek v3.2 on Bedrock " \
+        "is newer, cheaper, and supports tool calling and structured outputs."
     }
   )
 
@@ -876,8 +887,15 @@ provider :bedrock do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active,
-      added_on: Date.new(2026, 9, 21)
+      status: :deprecated,
+      added_on: Date.new(2026, 9, 21),
+      deprecated_on: Date.new(2026, 11, 10),
+      retirement_date: Date.new(2027, 3, 30),
+      replacement_key: :bedrock_deepseek_v3_2,
+      migration_note: "DeepSeek-V3.1 has been Legacy on Bedrock since 2026-09-30 and reaches end of life on 2027-03-30. " \
+        "While it is Legacy, an account that stops calling it can lose access. DeepSeek v3.2 claims the " \
+        "same capabilities and is also offered in us-east-1. It costs 0.62 input / 1.85 output per million, " \
+        "against 0.58 / 1.68."
     }
   )
 end
