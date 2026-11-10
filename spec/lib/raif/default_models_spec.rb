@@ -33,7 +33,8 @@ RSpec.describe "Raif default models" do
       expect(config[:input_token_cost]).to be_within(1e-12).of(2.5 / 1_000_000)
       expect(config[:output_token_cost]).to be_within(1e-12).of(10.0 / 1_000_000)
       expect(config[:pricing]).to eq({ input_per_million: 2.5, output_per_million: 10.0, note: nil, valid_until: nil })
-      expect(config[:lifecycle][:status]).to eq(:active)
+      expect(config[:lifecycle][:status]).to eq(:deprecated)
+      expect(config[:lifecycle][:retirement_date]).to eq(Date.new(2027, 1, 14))
       expect(config[:capabilities][:streaming]).to eq(true)
     end
 
