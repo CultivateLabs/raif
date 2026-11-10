@@ -807,6 +807,46 @@ RSpec.describe Smoke::Checks do
     end
   end
 
+  # Production rejection as of 2026-11-10 (bedrock_claude_5_fable, bedrock_claude_5_1_fable).
+  describe "Bedrock data retention block" do
+    let(:data_retention_error) do
+      Aws::BedrockRuntime::Errors::ValidationException.new(
+        nil, "The model returned the following errors: data retention mode 'default' is not available for this model"
+      )
+    end
+
+    it "reports a claimed-true check blocked by the account's data retention mode as :skip" do
+      allow(llm).to receive(:chat).and_raise(data_retention_error)
+
+      result = described_class.check_completion(entry)
+
+      expect(result).to include(status: :skip, detail: include("data retention"))
+    end
+
+    it "reports a claimed-false probe blocked by the account's data retention mode as :skip, not :consistent" do
+      error = data_retention_error
+      raising_llm_class = Class.new do
+        define_method(:initialize) { |**_kwargs| }
+        define_method(:chat) { |**_kwargs| raise error }
+      end
+      allow(Raif).to receive(:llm_config).with(claimed_false_entry.key).and_return(
+        llm_class: raising_llm_class, model_provider_settings: {}
+      )
+
+      result = described_class.run_for(claimed_false_entry, only: "temperature")
+
+      expect(result.fetch("temperature")).to include(status: :skip)
+    end
+
+    it "keeps other Bedrock ValidationExceptions as :fail" do
+      allow(llm).to receive(:chat).and_raise(
+        Aws::BedrockRuntime::Errors::ValidationException.new(nil, "The provided model identifier is invalid.")
+      )
+
+      expect(described_class.check_completion(entry)).to include(status: :fail)
+    end
+  end
+
   # Hardens the individual checks so a :pass always means concrete evidence, not a loose
   # substring match, a vacuous zero-iteration loop, or a non-nil object standing in for proof
   # the provider actually did the thing.

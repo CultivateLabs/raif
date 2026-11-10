@@ -103,7 +103,7 @@ end
 
 The Bedrock models Raif ships are defined in [`bedrock.rb`](https://github.com/CultivateLabs/raif/blob/main/lib/raif/model_manifest/definitions/bedrock.rb).
 
-Claude Fable 5 and Fable 5.1 on Bedrock (`bedrock_claude_5_fable`, `bedrock_claude_5_1_fable`) require the AWS account or Bedrock project to use the `aws_review` [data retention mode](https://docs.aws.amazon.com/bedrock/latest/userguide/data-retention.html). With the default mode every request fails with a `ValidationException` reading "data retention mode 'default' is not available for this model". This is an account-level setting (`bedrock:PutAccountDataRetention`); no request parameter changes it.
+Claude Fable 5 and Fable 5.1 on Bedrock (`bedrock_claude_5_fable`, `bedrock_claude_5_1_fable`) require the AWS account or Bedrock project to use the `aws_review` [data retention mode](https://docs.aws.amazon.com/bedrock/latest/userguide/data-retention.html). With the default mode every request fails with a `ValidationException` reading "data retention mode 'default' is not available for this model". This is an account-level setting (`bedrock:PutAccountDataRetention`); no request parameter changes it. Until the setting allows them, `bin/smoke` reports these models as SKIP rather than FAIL.
 
 ### Bedrock Mantle
 
