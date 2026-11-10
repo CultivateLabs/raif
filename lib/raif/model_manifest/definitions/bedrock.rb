@@ -203,7 +203,7 @@ provider :bedrock do |p|
     max_completion_tokens: 128_000,
     pricing: { input_per_million: 10.0, output_per_million: 50.0 },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: false,
       native_tool_use: true,
       streaming: true,
@@ -224,7 +224,7 @@ provider :bedrock do |p|
     max_completion_tokens: 128_000,
     pricing: { input_per_million: 5.0, output_per_million: 25.0 },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: false,
       native_tool_use: true,
       streaming: true,
@@ -250,7 +250,7 @@ provider :bedrock do |p|
       note: "Regional inference rate including the 10% premium; global routing costs 2.00 / 10.00 per million."
     },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: false,
       native_tool_use: true,
       streaming: true,
@@ -271,7 +271,7 @@ provider :bedrock do |p|
     max_completion_tokens: 128_000,
     pricing: { input_per_million: 5.0, output_per_million: 25.0 },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: false,
       native_tool_use: true,
       streaming: true,
@@ -420,7 +420,8 @@ provider :bedrock do |p|
       replacement_key: :bedrock_claude_4_8_opus,
       migration_note: "Claude Opus 4.1 has been Legacy on Bedrock since 2026-07-08 and reaches end of life on 2027-01-08. " \
         "While it is Legacy, an account that stops calling it can lose access. Claude Opus 4.8 on Bedrock costs 5.00 " \
-        "input / 25.00 output per million, against 15.00 / 75.00."
+        "input / 25.00 output per million, against 15.00 / 75.00. Claude Opus 4.8 does not claim temperature, so Raif " \
+        "does not send one."
     }
   )
 
