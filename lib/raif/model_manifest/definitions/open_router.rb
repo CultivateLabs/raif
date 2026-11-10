@@ -282,8 +282,13 @@ provider :open_router do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active,
-      added_on: Date.new(2026, 8, 26)
+      status: :deprecated,
+      added_on: Date.new(2026, 8, 26),
+      deprecated_on: Date.new(2026, 11, 10),
+      retirement_date: Date.new(2026, 12, 1),
+      replacement_key: :open_router_gemini_3_8_flash,
+      migration_note: "OpenRouter serves this model through Google. As of 2026-11-10, Google's deprecations page says requests to " \
+        "gemini-3.7-flash are routed to gemini-3.8-flash, and its pricing page no longer lists gemini-3.7-flash."
     }
   )
 
@@ -330,7 +335,12 @@ provider :open_router do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 11, 10),
+      retirement_date: Date.new(2026, 12, 1),
+      replacement_key: :open_router_gemini_3_6_flash,
+      migration_note: "OpenRouter serves this model through Google. As of 2026-11-10, Google's deprecations page says requests to " \
+        "gemini-3.5-flash are routed to gemini-3.6-flash, and its pricing page no longer lists gemini-3.5-flash."
     }
   )
 
