@@ -165,7 +165,7 @@ provider :bedrock do |p|
         "aws_bedrock_model_name_prefix must name a profile Bedrock offers for this model (us or global)."
     },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
