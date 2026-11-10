@@ -55,7 +55,10 @@ module Raif
         end
       }
 
+      # A .system_prompt.erb template, when the subclass has one, replaces this default prompt.
       def build_system_prompt
+        return super if prompt_template_exists?(:system_prompt)
+
         step_two = if self.class.parallel_tool_calls
           limit = self.class.max_tool_calls_per_iteration
           batch_phrase = if limit.present?

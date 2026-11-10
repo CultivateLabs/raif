@@ -80,6 +80,21 @@ RSpec.describe Raif::Concerns::HasPromptTemplates do
       end
     end
 
+    context "when a NativeToolCallingAgent subclass has a .system_prompt.erb template" do
+      it "uses the template instead of the default ReAct system prompt" do
+        agent = Raif::TestTemplateNativeToolCallingAgent.new(agent_role: "research")
+        expect(agent.build_system_prompt).to eq("You are a research agent with tools. Complete the assigned task thoroughly.")
+      end
+    end
+
+    context "when a NativeToolCallingAgent subclass has no template" do
+      it "keeps the default ReAct system prompt" do
+        expect(Raif::Agents::NativeToolCallingAgent.new.build_system_prompt).to start_with(
+          "You are an AI agent that follows the ReAct (Reasoning + Acting) framework"
+        )
+      end
+    end
+
     context "when no system prompt template exists on the base Agent class" do
       it "raises NotImplementedError (unchanged behavior)" do
         agent = Raif::Agent.new
