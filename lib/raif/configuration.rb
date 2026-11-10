@@ -342,9 +342,12 @@ module Raif
       default_llm_config = Raif.llm_config(default_llm_model_key.to_sym)
       if default_llm_config && default_llm_config[:deprecated]
         Raif.logger.warn(
-          "Raif.config.default_llm_model_key is set to :#{default_llm_model_key}, which is deprecated" \
-            "#{default_llm_config[:retirement_date] ? " and will be removed after #{default_llm_config[:retirement_date]}" : ""}." \
-            "#{default_llm_config[:replacement_key] ? " Use :#{default_llm_config[:replacement_key]} instead." : ""}"
+          "Raif.config.default_llm_model_key is set to :#{default_llm_model_key}, which is deprecated" +
+            Raif::Llm.deprecation_details(
+              retirement_date: default_llm_config[:retirement_date],
+              replacement_key: default_llm_config[:replacement_key],
+              migration_note: default_llm_config[:migration_note]
+            )
         )
       end
 

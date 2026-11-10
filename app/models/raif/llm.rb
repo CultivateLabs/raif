@@ -96,15 +96,20 @@ module Raif
     end
 
     def deprecation_message
-      message = +"Raif model :#{key} is deprecated"
-      message << " and will be removed after #{retirement_date}" if retirement_date
-      message << "."
-      if replacement_key
-        message << " Use :#{replacement_key} instead."
-      elsif migration_note
-        message << " #{migration_note}"
-      end
-      message
+      "Raif model :#{key} is deprecated" +
+        self.class.deprecation_details(retirement_date: retirement_date, replacement_key: replacement_key, migration_note: migration_note)
+    end
+
+    # Completes a "... is deprecated" sentence. Shared with the default_llm_model_key
+    # warning in Raif::Configuration#validate!, which has only the registry config, so
+    # both warnings carry the same retirement, replacement, and migration details.
+    def self.deprecation_details(retirement_date:, replacement_key:, migration_note:)
+      details = +""
+      details << " and will be removed after #{retirement_date}" if retirement_date
+      details << "."
+      details << " Use :#{replacement_key} instead." if replacement_key
+      details << " #{migration_note}" if migration_note.present?
+      details
     end
 
     def name
@@ -261,6 +266,11 @@ module Raif
     # @return [Raif::ModelCompletion] persisted, with started_at: nil
     def build_pending_model_completion(allow_parallel_tool_calls: false, anthropic_prompt_caching_enabled: false,
       bedrock_prompt_caching_enabled: false, **attributes)
+      tools = attributes[:available_model_tools]
+      if tools.present? && !supports_native_tool_use?
+        Raif.logger.warn("Raif::Llm - #{key} does not support native tool use, so these tools are not sent: #{tools.join(", ")}")
+      end
+
       model_completion = Raif::ModelCompletion.create!(pending_model_completion_attributes(**attributes))
       model_completion.allow_parallel_tool_calls = allow_parallel_tool_calls
       model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled
