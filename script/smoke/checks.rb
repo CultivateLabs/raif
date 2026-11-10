@@ -335,7 +335,7 @@ module Smoke
       claimed ? fail_result(e) : classify_claimed_false_error("native_tool_use", e)
     end
 
-    # supports_native_tool_use is an Raif::Llm constructor argument, not a provider setting, so
+    # supports_native_tool_use is a Raif::Llm constructor argument, not a provider setting, so
     # this overrides it directly instead of going through probe_claimed_false_direction.
     def self.forced_native_tool_use_llm(entry)
       config = Raif.llm_config(entry.key)
