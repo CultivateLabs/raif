@@ -648,8 +648,7 @@ module Smoke
       if bedrock_validation_error?(exception) && exception.message.to_s.match?(BEDROCK_DATA_RETENTION_BLOCK)
         return {
           status: :skip,
-          detail: "account data retention mode does not allow this model; see Bedrock data retention in " \
-            "docs/_getting_started/setup.md (#{exception.message})".first(180)
+          detail: "data retention mode blocks this model (see setup.md, Bedrock): #{exception.message}".first(180)
         }
       end
 
