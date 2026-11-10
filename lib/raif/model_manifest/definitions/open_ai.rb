@@ -251,7 +251,7 @@ provider :open_ai do |p|
         capabilities: {
           temperature: false,
           structured_outputs: true,
-          native_tool_use: true,
+          native_tool_use: false,
           streaming: true,
           batch_inference: true,
           images: true,
@@ -288,7 +288,7 @@ provider :open_ai do |p|
         capabilities: {
           temperature: false,
           structured_outputs: true,
-          native_tool_use: true,
+          native_tool_use: false,
           streaming: true,
           batch_inference: true,
           images: true,
@@ -325,7 +325,7 @@ provider :open_ai do |p|
         capabilities: {
           temperature: false,
           structured_outputs: true,
-          native_tool_use: true,
+          native_tool_use: false,
           streaming: true,
           batch_inference: true,
           images: true,
@@ -506,10 +506,16 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5.1",
     pricing: { input_per_million: 1.25, output_per_million: 10.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 10, 1),
+      retirement_date: Date.new(2027, 4, 1),
+      replacement_key: :open_ai_responses_gpt_6_sol,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-6-sol. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_6_sol for tools."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_6_sol },
         capabilities: {
           temperature: false,
           structured_outputs: true,
@@ -547,7 +553,8 @@ provider :open_ai do |p|
       deprecated_on: Date.new(2026, 6, 11),
       retirement_date: Date.new(2026, 12, 11),
       replacement_key: :open_ai_responses_gpt_5_6_sol,
-      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol."
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_5_6_sol for tools."
     },
     endpoints: {
       completions: {
@@ -622,10 +629,16 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-5.4 Nano",
     pricing: { input_per_million: 0.2, output_per_million: 1.25 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 10, 1),
+      retirement_date: Date.new(2027, 4, 1),
+      replacement_key: :open_ai_responses_gpt_6_luna,
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-6-luna. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_6_luna for tools."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_6_luna },
         capabilities: {
           temperature: false,
           structured_outputs: true,
@@ -663,7 +676,8 @@ provider :open_ai do |p|
       deprecated_on: Date.new(2026, 6, 11),
       retirement_date: Date.new(2026, 12, 11),
       replacement_key: :open_ai_responses_gpt_5_6_terra,
-      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-terra."
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-terra. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_5_6_terra for tools."
     },
     endpoints: {
       completions: {
@@ -705,7 +719,8 @@ provider :open_ai do |p|
       deprecated_on: Date.new(2026, 6, 11),
       retirement_date: Date.new(2026, 12, 11),
       replacement_key: :open_ai_responses_gpt_5_6_luna,
-      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-luna."
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-luna. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_5_6_luna for tools."
     },
     endpoints: {
       completions: {
@@ -743,10 +758,16 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-4o Mini",
     pricing: { input_per_million: 0.15, output_per_million: 0.6 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 10, 14),
+      retirement_date: Date.new(2027, 1, 14),
+      replacement_key: :open_ai_responses_gpt_6_luna,
+      migration_note: "OpenAI's notice lists the gpt-4o-mini-2024-07-18 snapshot behind this alias. Use gpt-6-luna. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_6_luna for tools."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_6_luna },
         capabilities: {
           temperature: true,
           structured_outputs: true,
@@ -779,10 +800,16 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-4o",
     pricing: { input_per_million: 2.5, output_per_million: 10.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 10, 14),
+      retirement_date: Date.new(2027, 1, 14),
+      replacement_key: :open_ai_responses_gpt_6_luna,
+      migration_note: "OpenAI's notice lists the gpt-4o-2024-08-06 and gpt-4o-2024-11-20 snapshots behind this alias. Use gpt-6-luna. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_6_luna for tools."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_6_luna },
         capabilities: {
           temperature: true,
           structured_outputs: true,
@@ -856,10 +883,16 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-4.1",
     pricing: { input_per_million: 2.0, output_per_million: 8.0 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 10, 14),
+      retirement_date: Date.new(2027, 1, 14),
+      replacement_key: :open_ai_responses_gpt_6_luna,
+      migration_note: "OpenAI's notice lists the gpt-4.1-2025-04-14 snapshot behind this alias. Use gpt-6-luna. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_6_luna for tools."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_6_luna },
         capabilities: {
           temperature: true,
           structured_outputs: true,
@@ -892,10 +925,16 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-4.1 Mini",
     pricing: { input_per_million: 0.4, output_per_million: 1.6 },
     lifecycle: {
-      status: :active
+      status: :deprecated,
+      deprecated_on: Date.new(2026, 10, 14),
+      retirement_date: Date.new(2027, 1, 14),
+      replacement_key: :open_ai_responses_gpt_6_luna,
+      migration_note: "OpenAI's notice lists the gpt-4.1-mini-2025-04-14 snapshot behind this alias. Use gpt-6-luna. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_6_luna for tools."
     },
     endpoints: {
       completions: {
+        lifecycle: { replacement_key: :open_ai_gpt_6_luna },
         capabilities: {
           temperature: true,
           structured_outputs: true,
@@ -1015,7 +1054,8 @@ provider :open_ai do |p|
       deprecated_on: Date.new(2026, 6, 11),
       retirement_date: Date.new(2026, 12, 11),
       replacement_key: :open_ai_responses_gpt_5_6_sol,
-      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol."
+      migration_note: "Use the matching Chat Completions or Responses endpoint for gpt-5.6-sol. " \
+        "Its Chat Completions endpoint does not claim tool calls; use open_ai_responses_gpt_5_6_sol for tools."
     },
     endpoints: {
       completions: {
