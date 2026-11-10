@@ -344,7 +344,8 @@ module Raif
         Raif.logger.warn(
           "Raif.config.default_llm_model_key is set to :#{default_llm_model_key}, which is deprecated" \
             "#{default_llm_config[:retirement_date] ? " and will be removed after #{default_llm_config[:retirement_date]}" : ""}." \
-            "#{default_llm_config[:replacement_key] ? " Use :#{default_llm_config[:replacement_key]} instead." : ""}"
+            "#{default_llm_config[:replacement_key] ? " Use :#{default_llm_config[:replacement_key]} instead." : ""}" \
+            "#{default_llm_config[:migration_note].present? ? " #{default_llm_config[:migration_note]}" : ""}"
         )
       end
 

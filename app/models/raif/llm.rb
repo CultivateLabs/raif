@@ -99,11 +99,8 @@ module Raif
       message = +"Raif model :#{key} is deprecated"
       message << " and will be removed after #{retirement_date}" if retirement_date
       message << "."
-      if replacement_key
-        message << " Use :#{replacement_key} instead."
-      elsif migration_note
-        message << " #{migration_note}"
-      end
+      message << " Use :#{replacement_key} instead." if replacement_key
+      message << " #{migration_note}" if migration_note.present?
       message
     end
 
