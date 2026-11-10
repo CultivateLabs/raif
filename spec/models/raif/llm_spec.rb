@@ -444,7 +444,7 @@ RSpec.describe Raif::Llm, type: :model do
         test_llm.chat(messages: messages, available_model_tools: [Raif::ModelTools::WikipediaSearch])
 
         expect(Raif.logger).to have_received(:warn).with(
-          "Raif::Llm#chat - #{test_llm.key} does not support native tool use, so these tools are not sent: " \
+          "Raif::Llm - #{test_llm.key} does not support native tool use, so these tools are not sent: " \
             "Raif::ModelTools::WikipediaSearch"
         )
       end
