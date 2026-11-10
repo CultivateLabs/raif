@@ -11,10 +11,11 @@ require "json"
 # result (see fail_result/fail_detail; enriched with the provider's own error message when the
 # exception carries an HTTP body): a live API call can fail in ways specific to each provider
 # (timeouts, auth errors, malformed payloads), and the caller (bin/smoke) just needs a
-# status/detail pair to report, not a raised exception to rescue itself. The claimed-false
-# direction of temperature, structured_outputs, and (only when forced with --only)
-# native_tool_use additionally classifies some failures as :consistent -- see
-# classify_claimed_false_error.
+# status/detail pair to report, not a raised exception to rescue itself. A Bedrock data retention
+# block is the one exception: it reports :skip, because it is an account setting rather than a
+# capability (see BEDROCK_DATA_RETENTION_BLOCK). The claimed-false direction of temperature,
+# structured_outputs, and (only when forced with --only) native_tool_use additionally
+# classifies some failures as :consistent -- see classify_claimed_false_error.
 module Smoke
   module Checks
     NONCE = "RAIF-SMOKE-7391"
@@ -636,7 +637,21 @@ module Smoke
     end
     private_class_method :classify_bedrock_claimed_false_error
 
+    # Bedrock rejects every request to a model whose required data retention mode is above the
+    # account's or project's effective mode (Claude Fable requires aws_review). That is an AWS
+    # account setting, not something the request or the manifest controls, so it reports as
+    # :skip rather than as a capability failure. Wording as of 2026-11-10: "The model returned
+    # the following errors: data retention mode 'default' is not available for this model".
+    BEDROCK_DATA_RETENTION_BLOCK = /data retention mode '[^']*' is not available for this model/i
+
     def self.fail_result(exception)
+      if bedrock_validation_error?(exception) && exception.message.to_s.match?(BEDROCK_DATA_RETENTION_BLOCK)
+        return {
+          status: :skip,
+          detail: "data retention mode blocks this model (see setup.md, Bedrock): #{exception.message}".first(180)
+        }
+      end
+
       { status: :fail, detail: fail_detail(exception) }
     end
     private_class_method :fail_result
