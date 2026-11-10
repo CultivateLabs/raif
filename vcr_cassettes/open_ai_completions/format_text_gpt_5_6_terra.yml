@@ -5,7 +5,7 @@ http_interactions:
     uri: https://api.openai.com/v1/chat/completions
     body:
       encoding: UTF-8
-      string: '{"model":"o4-mini","messages":[{"role":"system","content":"You are
+      string: '{"model":"gpt-5.6-terra","messages":[{"role":"system","content":"You are
         a helpful assistant"},{"role":"user","content":[{"type":"text","text":"Hello"}]}]}'
     headers:
       Authorization:

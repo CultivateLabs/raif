@@ -815,7 +815,7 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-3.5 Turbo",
     pricing: { input_per_million: 0.5, output_per_million: 1.5 },
     lifecycle: {
-      status: :deprecated,
+      status: :retired,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
       replacement_key: :open_ai_responses_gpt_5_6_terra,
@@ -928,7 +928,7 @@ provider :open_ai do |p|
     display_name: "OpenAI GPT-4.1 Nano",
     pricing: { input_per_million: 0.1, output_per_million: 0.4 },
     lifecycle: {
-      status: :deprecated,
+      status: :retired,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
       replacement_key: :open_ai_responses_gpt_5_6_luna,
@@ -969,7 +969,7 @@ provider :open_ai do |p|
     display_name: "OpenAI o1",
     pricing: { input_per_million: 15.0, output_per_million: 60.0 },
     lifecycle: {
-      status: :deprecated,
+      status: :retired,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
       replacement_key: :open_ai_responses_gpt_5_6_sol,
@@ -1053,7 +1053,7 @@ provider :open_ai do |p|
     display_name: "OpenAI o3 Mini",
     pricing: { input_per_million: 1.1, output_per_million: 4.4 },
     lifecycle: {
-      status: :deprecated,
+      status: :retired,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
       replacement_key: :open_ai_responses_gpt_5_6_sol,
@@ -1095,7 +1095,7 @@ provider :open_ai do |p|
     display_name: "OpenAI o4 Mini",
     pricing: { input_per_million: 1.1, output_per_million: 4.4 },
     lifecycle: {
-      status: :deprecated,
+      status: :retired,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
       replacement_key: :open_ai_responses_gpt_5_6_terra,
@@ -1137,7 +1137,7 @@ provider :open_ai do |p|
     display_name: "OpenAI o1 Pro",
     pricing: { input_per_million: 150.0, output_per_million: 600.0 },
     lifecycle: {
-      status: :deprecated,
+      status: :retired,
       deprecated_on: Date.new(2026, 4, 22),
       retirement_date: Date.new(2026, 10, 23),
       replacement_key: :open_ai_responses_gpt_5_6_sol,
