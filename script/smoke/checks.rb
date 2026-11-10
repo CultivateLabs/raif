@@ -12,8 +12,9 @@ require "json"
 # exception carries an HTTP body): a live API call can fail in ways specific to each provider
 # (timeouts, auth errors, malformed payloads), and the caller (bin/smoke) just needs a
 # status/detail pair to report, not a raised exception to rescue itself. The claimed-false
-# direction of a cheap probe (temperature, structured_outputs) additionally classifies some
-# failures as :consistent -- see classify_claimed_false_error.
+# direction of temperature, structured_outputs, and (only when forced with --only)
+# native_tool_use additionally classifies some failures as :consistent -- see
+# classify_claimed_false_error.
 module Smoke
   module Checks
     NONCE = "RAIF-SMOKE-7391"
@@ -129,7 +130,7 @@ module Smoke
         ->(message) { message.match?(/output_config\.format/) && message.match?(/Extra inputs are not permitted/) }
       ],
       "native_tool_use" => [
-        ->(message) { message.match?(/tool use|tools?\b/i) && message.match?(/doesn't support|not support|unsupported/i) }
+        ->(message) { message.match?(/(?:doesn't|does not) support tool use/i) }
       ]
     }.freeze
 
@@ -595,8 +596,8 @@ module Smoke
     end
     private_class_method :probe_claimed_false_direction
 
-    # Classifies an exception raised during the claimed-false direction of a cheap probe
-    # (temperature, structured_outputs) as :consistent -- the provider rejected the forced
+    # Classifies an exception raised during the claimed-false direction of temperature,
+    # structured_outputs, or native_tool_use (the last reached only through --only) as :consistent -- the provider rejected the forced
     # parameter with an error that specifically names it as unsupported, matching the manifest's
     # claim -- or otherwise :fail, same as an unclassified error. Only an HTTP 4xx client error
     # is eligible: 5xx, timeouts, connection failures, and auth failures (401/403) are excluded

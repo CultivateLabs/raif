@@ -606,10 +606,6 @@ RSpec.describe Smoke::Checks do
       expect(result[:status]).to eq(:fail)
     end
 
-    # Bedrock's adapter raises Aws::BedrockRuntime service errors rather than Faraday errors,
-    # so its claimed-false rejections are matched on the exception message instead of a parsed
-    # JSON body. Wordings pinned from production Bedrock rejections as of 2026-09-01
-    # (bedrock_deepseek_r1).
     # Production OpenAI Chat Completions rejection as of 2026-11-09 (gpt-5.6-terra), sent when
     # function tools are passed without reasoning_effort "none".
     it "classifies the OpenAI function tools rejection as :consistent for native_tool_use" do
@@ -650,6 +646,10 @@ RSpec.describe Smoke::Checks do
       expect(result[:status]).to eq(:fail)
     end
 
+    # Bedrock's adapter raises Aws::BedrockRuntime service errors rather than Faraday errors,
+    # so its claimed-false rejections are matched on the exception message instead of a parsed
+    # JSON body. Wordings pinned from production Bedrock rejections as of 2026-09-01
+    # (bedrock_deepseek_r1).
     describe "Bedrock ValidationException classification" do
       def bedrock_validation_exception(message)
         Aws::BedrockRuntime::Errors::ValidationException.new(nil, message)
@@ -699,6 +699,15 @@ RSpec.describe Smoke::Checks do
         result = described_class.run_for(claimed_false_entry, only: "native_tool_use")
 
         expect(result.fetch("native_tool_use")).to include(status: :consistent, detail: include("tool use"))
+      end
+
+      it "does not classify a forced tool choice field rejection as :consistent for native_tool_use" do
+        result = described_class.send(
+          :classify_claimed_false_error, "native_tool_use",
+          bedrock_validation_exception("This model doesn't support the toolConfig.toolChoice.tool field. Remove it and try again.")
+        )
+
+        expect(result[:status]).to eq(:fail)
       end
 
       it "does not classify a ValidationException naming a different feature than the probe (stays :fail)" do
