@@ -60,6 +60,19 @@ RSpec.describe Raif::Llm, type: :model do
       )
     end
 
+    it "appends the migration note after the replacement when both are set" do
+      llm = Raif::Llms::TestLlm.new(
+        key: :raif_test_llm, api_name: "raif-test-llm",
+        deprecated: true, retirement_date: Date.new(2026, 12, 1),
+        replacement_key: :anthropic_claude_5_sonnet,
+        migration_note: "Use the Responses key for tool calls."
+      )
+      expect(llm.deprecation_message).to eq(
+        "Raif model :raif_test_llm is deprecated and will be removed after 2026-12-01. " \
+          "Use :anthropic_claude_5_sonnet instead. Use the Responses key for tool calls."
+      )
+    end
+
     it "uses the migration note when there is no replacement" do
       llm = Raif::Llms::TestLlm.new(
         key: :raif_test_llm, api_name: "raif-test-llm",
