@@ -56,8 +56,13 @@ module Raif
       }
 
       # A .system_prompt.erb template, when the subclass has one, replaces this default prompt.
+      # A template that renders blank, such as the comment-only stub from `rails g raif:agent`,
+      # falls back to the default so the agent still passes the system_prompt presence validation.
       def build_system_prompt
-        return super if prompt_template_exists?(:system_prompt)
+        if prompt_template_exists?(:system_prompt)
+          template_prompt = super
+          return template_prompt if template_prompt.present?
+        end
 
         step_two = if self.class.parallel_tool_calls
           limit = self.class.max_tool_calls_per_iteration

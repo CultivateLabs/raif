@@ -87,6 +87,15 @@ RSpec.describe Raif::Concerns::HasPromptTemplates do
       end
     end
 
+    context "when a NativeToolCallingAgent subclass has a template that renders blank" do
+      it "falls back to the default ReAct system prompt" do
+        agent = Raif::TestBlankTemplateNativeToolCallingAgent.new
+        expect(agent.build_system_prompt).to start_with(
+          "You are an AI agent that follows the ReAct (Reasoning + Acting) framework"
+        )
+      end
+    end
+
     context "when a NativeToolCallingAgent subclass has no template" do
       it "keeps the default ReAct system prompt" do
         expect(Raif::Agents::NativeToolCallingAgent.new.build_system_prompt).to start_with(
