@@ -101,12 +101,12 @@ Raif.configure do |config|
   # Whether xAI models are enabled.
   # config.x_ai_models_enabled = ENV["XAI_API_KEY"].present? || ENV["X_AI_API_KEY"].present?
 
-  # The default LLM model to use. Defaults to "open_ai_gpt_4o"
+  # The default LLM model to use. Defaults to "open_ai_responses_gpt_6_1_terra"
   # Available keys: run `Raif.available_llm_keys` in a console, or read the
   # model definitions in lib/raif/model_manifest/definitions/ in the Raif
   # repository for each model's pricing and capabilities.
   #
-  # config.default_llm_model_key = "open_ai_gpt_4o"
+  # config.default_llm_model_key = "open_ai_responses_gpt_6_1_terra"
 
   # The default embedding model to use when calling Raif.generate_embedding!
   # Defaults to "open_ai_text_embedding_3_small"

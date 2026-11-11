@@ -13,7 +13,7 @@ In Raif, **all** calls to the LLM generate a `Raif::ModelCompletion` record. Thi
 
 Call `Raif::Llm#chat` with either a `message` string or `messages` array:
 ```ruby
-llm = Raif.llm(:open_ai_gpt_4o) # will return a Raif::Llm instance
+llm = Raif.llm(:open_ai_responses_gpt_6_1_terra) # will return a Raif::Llm instance
 model_completion = llm.chat(message: "Hello")
 puts model_completion.raw_response
 # => "Hello! How can I assist you today?"
@@ -23,7 +23,7 @@ The `Raif::ModelCompletion` class will handle [parsing the response](../learn_mo
 
 You can also provide a `system_prompt` to the `chat` method:
 ```ruby
-llm = Raif.llm(:open_ai_gpt_4o)
+llm = Raif.llm(:open_ai_responses_gpt_6_1_terra)
 messages = [
   { role: "user", content: "Hello" },
   { role: "assistant", content: "Hello! How can I assist you today?" },

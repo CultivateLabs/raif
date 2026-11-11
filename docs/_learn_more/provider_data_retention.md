@@ -85,7 +85,7 @@ end
 `Raif::Llm#chat` takes the same three keywords for a one-off override:
 
 ```ruby
-Raif.llm(:open_ai_responses_gpt_4o).chat(
+Raif.llm(:open_ai_responses_gpt_6_1_terra).chat(
   message: "Summarize the following press release: ...",
   open_ai_store_responses: true
 )

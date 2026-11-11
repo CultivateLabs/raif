@@ -4,6 +4,9 @@ module Raif
   class Configuration
     CAPTURE_MODEL_COMPLETION_MODES = ["full", "summary", "none"].freeze
     OPEN_ROUTER_DATA_COLLECTION_VALUES = ["allow", "deny"].freeze
+    # The built-in default_llm_model_key outside the test environment. A spec checks that it is an
+    # active manifest entry, so deprecating this model fails the suite until the default changes.
+    DEFAULT_LLM_MODEL_KEY = "open_ai_responses_gpt_6_1_terra"
 
     attr_accessor :agent_types,
       :anthropic_api_key,
@@ -133,7 +136,11 @@ module Raif
       @conversations_controller = "Raif::ConversationsController"
       @current_user_method = :current_user
       @default_embedding_model_key = "open_ai_text_embedding_3_small"
-      @default_llm_model_key = default_disable_llm_api_requests? ? :raif_test_llm : (ENV["RAIF_DEFAULT_LLM_MODEL_KEY"].presence || "open_ai_gpt_4o")
+      @default_llm_model_key = if default_disable_llm_api_requests?
+        :raif_test_llm
+      else
+        ENV["RAIF_DEFAULT_LLM_MODEL_KEY"].presence || DEFAULT_LLM_MODEL_KEY
+      end
       # :full captures every prompt, message, and response - what you want debugging one eval,
       # unmanageable for a dataset run. :summary keeps tokens and cost, :none omits the
       # per-call array. Usage totals are identical in all three modes.

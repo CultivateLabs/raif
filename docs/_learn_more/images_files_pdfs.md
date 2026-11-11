@@ -25,7 +25,7 @@ image = Raif::ModelImageInput.new(url: "https://example.com/image.png")
 image = Raif::ModelImageInput.new(input: user.avatar)
 
 # Then chat with the LLM
-llm = Raif.llm(:open_ai_gpt_4o)
+llm = Raif.llm(:open_ai_responses_gpt_6_1_terra)
 model_completion = llm.chat(messages: [
   { role: "user", content: ["What's in this image?", image]}
 ])
@@ -43,7 +43,7 @@ file = Raif::ModelFileInput.new(url: "https://example.com/file.pdf")
 file = Raif::ModelFileInput.new(input: document.pdf)
 
 # Then chat with the LLM
-llm = Raif.llm(:open_ai_gpt_4o)
+llm = Raif.llm(:open_ai_responses_gpt_6_1_terra)
 model_completion = llm.chat(messages: [
   { role: "user", content: ["What's in this file?", file]}
 ])

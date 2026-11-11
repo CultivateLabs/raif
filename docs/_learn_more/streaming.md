@@ -12,7 +12,7 @@ You can enable streaming for any chat call by passing a block to the `chat` meth
 Streaming is enabled by default in [conversations](../key_raif_concepts/conversations).
 
 ```ruby
-llm = Raif.llm(:open_ai_gpt_4o)
+llm = Raif.llm(:open_ai_responses_gpt_6_1_terra)
 model_completion = llm.chat(message: "Tell me a story") do |model_completion, delta, sse_event|
   # This block is called multiple times as the response streams in.
   # You could broadcast these updates via Turbo Streams, WebSockets, etc.

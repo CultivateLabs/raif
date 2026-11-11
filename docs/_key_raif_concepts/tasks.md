@@ -150,7 +150,7 @@ By passing a different model key to the `run` method:
 task = Raif::Tasks::DocumentSummarization.run(
   document: document,
   creator: user,
-  llm_model_key: "open_ai_gpt_4_1"
+  llm_model_key: "open_ai_responses_gpt_6_1_terra"
 )
 ```
 
@@ -159,9 +159,9 @@ Or by overriding `default_llm_model_key`in the task definition:
 class MyTask < Raif::Task
   def default_llm_model_key
     if Rails.env.production?
-      :open_ai_gpt_4_1
+      :open_ai_responses_gpt_6_1_terra
     else
-      :open_ai_gpt_4_1_mini
+      :open_ai_responses_gpt_6_luna
     end
   end
 end
