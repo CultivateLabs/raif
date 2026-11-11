@@ -52,7 +52,7 @@ embeddings do |e|
   e.provider :google, adapter: "Raif::EmbeddingModels::Google" do |p|
     p.model(
       key: :google_gemini_embedding_2,
-      api_name: "gemini-embedding-2-preview",
+      api_name: "gemini-embedding-2",
       display_name: "Google Gemini Embedding 2",
       input_per_million: 0.2,
       default_output_vector_size: 3072,

@@ -384,6 +384,13 @@
         "result": "pass",
         "checked_at": "2026-10-14T14:47:47Z"
       }
+    },
+    "google_gemini_embedding_2": {
+      "embedding": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:10:17Z"
+      }
     }
   }
 }
