@@ -63,7 +63,7 @@ jobs:
 
             Always end your final message with a short summary, whether or not there were findings: what you swept, findings found, the weekly issue opened or edited, older weekly issues closed, and findings skipped as ignored or addressed by an open PR. For a quiet run, say what you checked and found clean. If any tool call was denied by the permission allowlist, list the exact denied commands so the allowlist can be corrected. This final message is published to the job summary, so a run that reports no findings stays distinguishable from a run that did no work.
           claude_args: |
-            --max-turns 80
+            --max-turns 100
             --disallowedTools "Agent"
             --allowedTools "Read,Glob,Grep,WebFetch,WebSearch,Bash(script/drift/manifest_coverage.rb:*),Bash(ruby script/drift/manifest_coverage.rb:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh issue close:*),Bash(gh label list:*),Bash(gh label create:*),Bash(gh search issues:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr diff:*)"
 
