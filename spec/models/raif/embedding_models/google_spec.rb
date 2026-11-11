@@ -27,6 +27,13 @@ RSpec.describe Raif::EmbeddingModels::Google, type: :model do
     end
   end
 
+  describe "#connection" do
+    it "uses the pinned v1beta base URL" do
+      expect(Raif.embedding_model(:google_gemini_embedding_2).send(:connection).url_prefix.to_s)
+        .to eq("https://generativelanguage.googleapis.com/v1beta")
+    end
+  end
+
   describe "#generate_embedding!" do
     context "with a string input" do
       let(:input) { "This is a test sentence" }

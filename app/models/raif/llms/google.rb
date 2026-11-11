@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Raif::Llms::Google < Raif::Llm
+  API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+
   include Raif::Concerns::Llms::Google::MessageFormatting
   include Raif::Concerns::Llms::Google::ToolFormatting
   include Raif::Concerns::Llms::Google::ResponseToolCalls
@@ -36,7 +38,7 @@ class Raif::Llms::Google < Raif::Llm
 private
 
   def connection
-    @connection ||= Faraday.new(url: "https://generativelanguage.googleapis.com/v1beta", request: Raif.default_request_options) do |f|
+    @connection ||= Faraday.new(url: API_BASE_URL, request: Raif.default_request_options) do |f|
       f.headers["x-goog-api-key"] = Raif.config.google_api_key
       f.request :json
       f.response :json

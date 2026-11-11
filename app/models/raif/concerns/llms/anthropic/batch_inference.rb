@@ -226,7 +226,7 @@ private
   def batch_connection
     @batch_connection ||= Faraday.new(url: "https://api.anthropic.com/v1", request: Raif.default_request_options) do |f|
       f.headers["x-api-key"] = Raif.config.anthropic_api_key
-      f.headers["anthropic-version"] = "2023-06-01"
+      f.headers["anthropic-version"] = Raif::Llms::Anthropic::API_VERSION
       if Raif.config.anthropic_message_batches_beta_header.present?
         f.headers["anthropic-beta"] = Raif.config.anthropic_message_batches_beta_header
       end
@@ -242,7 +242,7 @@ private
   def batch_results_connection
     @batch_results_connection ||= Faraday.new(request: Raif.default_request_options) do |f|
       f.headers["x-api-key"] = Raif.config.anthropic_api_key
-      f.headers["anthropic-version"] = "2023-06-01"
+      f.headers["anthropic-version"] = Raif::Llms::Anthropic::API_VERSION
       if Raif.config.anthropic_message_batches_beta_header.present?
         f.headers["anthropic-beta"] = Raif.config.anthropic_message_batches_beta_header
       end

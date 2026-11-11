@@ -252,7 +252,7 @@ module Raif::Concerns::Llms::Google::BatchInference
 private
 
   def batch_connection
-    @batch_connection ||= Faraday.new(url: "https://generativelanguage.googleapis.com/v1beta", request: Raif.default_request_options) do |f|
+    @batch_connection ||= Faraday.new(url: Raif::Llms::Google::API_BASE_URL, request: Raif.default_request_options) do |f|
       f.headers["x-goog-api-key"] = Raif.config.google_api_key
       f.request :json
       f.response :json
