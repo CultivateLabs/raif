@@ -4,7 +4,8 @@ provider :anthropic do |p|
   p.references(
     models_doc: "https://docs.claude.com/en/docs/about-claude/models",
     pricing: "https://claude.com/pricing",
-    deprecations: "https://docs.claude.com/en/docs/about-claude/model-deprecations"
+    deprecations: "https://docs.claude.com/en/docs/about-claude/model-deprecations",
+    api_versions: "https://platform.claude.com/docs/en/api/versioning"
   )
 
   p.model(
