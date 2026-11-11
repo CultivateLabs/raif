@@ -219,11 +219,6 @@ if options[:list]
   exit 0
 end
 
-if (database_problem = Smoke::Environment.database_problem)
-  warn database_problem
-  exit 1
-end
-
 Smoke::Credentials.configure_raif!
 
 # The runner must exercise the real streaming path, not have it silently swapped out by the
@@ -255,6 +250,11 @@ if selectors.empty? && options[:stale_days].nil?
   puts "  bin/smoke --stale 30"
   puts "  bin/smoke x_ai --only batch_inference"
   puts "  bin/smoke anthropic_claude_5_sonnet --record"
+  exit 1
+end
+
+if (database_problem = Smoke::Environment.database_problem)
+  warn database_problem
   exit 1
 end
 
