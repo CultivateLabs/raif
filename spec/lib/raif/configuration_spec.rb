@@ -30,6 +30,23 @@ RSpec.describe Raif::Configuration do
     end
   end
 
+  describe "built-in default_llm_model_key" do
+    it "is an active model in the manifest" do
+      config = Raif.llm_config(described_class::DEFAULT_LLM_MODEL_KEY.to_sym)
+
+      expect(config).to be_present
+      expect(config[:lifecycle][:status]).to eq(:active)
+    end
+
+    it "is the default outside the test environment when RAIF_DEFAULT_LLM_MODEL_KEY is unset" do
+      allow_any_instance_of(described_class).to receive(:default_disable_llm_api_requests?).and_return(false)
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("RAIF_DEFAULT_LLM_MODEL_KEY").and_return(nil)
+
+      expect(described_class.new.default_llm_model_key).to eq("open_ai_responses_gpt_6_1_terra")
+    end
+  end
+
   describe "#validate!" do
     describe "model_completion_authorizer" do
       around do |example|

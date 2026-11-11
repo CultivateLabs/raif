@@ -55,7 +55,7 @@ Raif sends `store: false` on every Responses API request, so OpenAI does not kee
 Raif.configure do |config|
   config.open_ai_models_enabled = true
   config.open_ai_api_key = ENV["OPENAI_API_KEY"]
-  config.default_llm_model_key = "open_ai_responses_gpt_4o"
+  config.default_llm_model_key = "open_ai_responses_gpt_6_1_terra"
 end
 ```
 
@@ -69,7 +69,7 @@ This adapter utilizes OpenAI's legacy [Completions API](https://platform.openai.
 Raif.configure do |config|
   config.open_ai_models_enabled = true
   config.open_ai_api_key = ENV["OPENAI_API_KEY"]
-  config.default_llm_model_key = "open_ai_gpt_4o"
+  config.default_llm_model_key = "open_ai_gpt_6_1_terra"
 end
 ```
 

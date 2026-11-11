@@ -483,19 +483,19 @@ For each eval, the results include:
     "prompt_tokens": 1200,
     "completion_tokens": 300,
     "total_tokens": 1500,
-    "total_cost": 0.0075
+    "total_cost": 0.0027
   },
   "model_completions": [
     {
-      "llm_model_key": "open_ai_gpt_4o",
-      "model_api_name": "gpt-4o",
+      "llm_model_key": "open_ai_responses_gpt_6_1_terra",
+      "model_api_name": "gpt-6.1-terra",
       "system_prompt": "...",
       "messages": [ ... ],
       "response": "...",
       "prompt_tokens": 1200,
       "completion_tokens": 300,
       "total_tokens": 1500,
-      "total_cost": 0.0075
+      "total_cost": 0.0027
     }
   ]
 }

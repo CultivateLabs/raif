@@ -224,7 +224,7 @@ class MyTask < Raif::Task
 end
 
 # Or directly in a chat
-llm = Raif.llm(:open_ai_responses_gpt_4_1)
+llm = Raif.llm(:open_ai_responses_gpt_6_1_terra)
 model_completion = llm.chat(
   messages: [{ role: "user", content: "What are the latest developments in Ruby on Rails?" }], 
   available_model_tools: ["Raif::ModelTools::ProviderManaged::WebSearch"]
