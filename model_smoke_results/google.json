@@ -385,6 +385,56 @@
         "checked_at": "2026-10-14T14:47:47Z"
       }
     },
+    "google_gemini_4_carbon": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:11:33Z"
+      },
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:06:49Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:06:49Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:06:49Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:06:49Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-11T19:06:49Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:06:49Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:06:49Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:06:49Z"
+      }
+    },
     "google_gemini_embedding_2": {
       "embedding": {
         "claimed": true,
