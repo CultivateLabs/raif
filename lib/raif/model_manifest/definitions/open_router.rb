@@ -698,7 +698,10 @@ provider :open_router do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :retired,
+      replacement_key: :open_router_minimax_m2_5,
+      migration_note: "OpenRouter no longer serves minimax/minimax-m2: on 2026-11-11 requests returned 404 \"no provider serves " \
+        "this model anymore\", and the model listed no endpoints. Migrate to MiniMax M2.5."
     }
   )
 
@@ -718,7 +721,10 @@ provider :open_router do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active
+      status: :retired,
+      replacement_key: :open_router_minimax_m2_5,
+      migration_note: "OpenRouter no longer serves minimax/minimax-m2.1: on 2026-11-11 requests returned 404 \"no provider serves " \
+        "this model anymore\", and the model listed no endpoints. Migrate to MiniMax M2.5."
     }
   )
 
