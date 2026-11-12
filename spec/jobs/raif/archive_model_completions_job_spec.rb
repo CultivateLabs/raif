@@ -219,6 +219,102 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
     end
   end
 
+  describe "eligibility predicate" do
+    let(:creator) { FB.create(:raif_test_user) }
+    let(:conversation) { FB.create(:raif_test_conversation, creator: creator) }
+    let(:citations) { [{ "url" => "https://example.com" }] }
+
+    def create_entry(citations: nil)
+      entry = FB.create(:raif_conversation_entry, raif_conversation: conversation, creator: creator)
+      entry.update_columns(citations: citations)
+      entry
+    end
+
+    def create_nonterminal_completion(**attrs)
+      completion = FB.create(:raif_model_completion, llm_model_key: "raif_test_llm", model_api_name: "raif-test-llm", **attrs)
+      completion.update_columns(created_at: 8.months.ago, updated_at: 8.months.ago)
+      completion
+    end
+
+    # One completion per edge of each guard. The NULL cases matter most:
+    # the predicate must never evaluate to NULL, or eligible_scope would
+    # silently retain the row and dry_run would miscount it.
+    let!(:records) do
+      active_batch = FB.create(:raif_model_completion_batch_anthropic, status: "in_progress")
+      ended_batch = FB.create(:raif_model_completion_batch_anthropic, status: "ended")
+      dangling = create_terminal_completion(source: create_entry, citations: citations)
+      dangling.update_columns(source_id: -1)
+
+      {
+        eligible: {
+          no_batch: create_terminal_completion,
+          ended_batch: create_terminal_completion(raif_model_completion_batch: ended_batch),
+          nonterminal_without_event: create_nonterminal_completion,
+          copied_citations: create_terminal_completion(source: create_entry(citations: citations), citations: citations),
+          empty_citations: create_terminal_completion(source: create_entry, citations: []),
+          citations_on_non_entry_source: create_terminal_completion(source: FB.create(:raif_test_task), citations: citations),
+          citations_on_missing_entry: dangling
+        },
+        excluded: {
+          active_batch: create_terminal_completion(raif_model_completion_batch: active_batch),
+          nonterminal_active_batch: create_nonterminal_completion(raif_model_completion_batch: active_batch),
+          missing_event: create_terminal_completion.tap { |c| c.raif_inference_cost_event.destroy! },
+          stale_event: create_terminal_completion.tap do |c|
+            c.raif_inference_cost_event.update_columns(updated_at: c.updated_at - 1.day)
+          end,
+          uncopied_null_citations: create_terminal_completion(source: create_entry, citations: citations),
+          uncopied_empty_citations: create_terminal_completion(source: create_entry(citations: []), citations: citations)
+        }
+      }
+    end
+
+    def ids(group)
+      records.fetch(group).values.map(&:id).sort
+    end
+
+    it "selects exactly the completions that pass every guard" do
+      expect(described_class.eligible_scope(retention_period.ago).order(:id).pluck(:id)).to eq(ids(:eligible))
+    end
+
+    it "uses correlated EXISTS guards rather than id IN subqueries" do
+      sql = described_class.eligible_scope(retention_period.ago).to_sql
+
+      expect(sql).to include("EXISTS")
+      expect(sql).not_to match(/\bIN \(SELECT/i)
+    end
+
+    it "counts each guard's exclusions in dry_run from a single query" do
+      selects = []
+      callback = ->(*, payload) { selects << payload[:sql] if payload[:sql].start_with?("SELECT") && payload[:name] != "SCHEMA" }
+      result = ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { described_class.dry_run }
+
+      expect(selects.size).to eq(1)
+      expect(result).to include(
+        eligible: 7,
+        eligible_terminal: 6,
+        eligible_nonterminal: 1,
+        excluded_by_quiescence: 0,
+        excluded_by_active_batch: 2,
+        excluded_missing_cost_event: 1,
+        excluded_stale_cost_event: 1,
+        excluded_uncopied_citations: 2
+      )
+    end
+
+    it "keeps dry_run to a single query when partitioned" do
+      allow(Raif.config).to receive_messages(archive_partition_column: :llm_model_key, archive_partition_fallback: nil)
+
+      selects = []
+      callback = ->(*, payload) { selects << payload[:sql] if payload[:sql].start_with?("SELECT") && payload[:name] != "SCHEMA" }
+      result = ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { described_class.dry_run }
+
+      expect(selects.size).to eq(1)
+      expect(result[:partitions]).to eq("raif_test_llm" => { eligible_terminal: 6, eligible_nonterminal: 1 })
+      expect(result[:eligible]).to eq(7)
+      expect(result[:excluded_by_missing_partition]).to eq(0)
+    end
+  end
+
   describe "invariant: a batch is deleted only after this run uploaded it" do
     let!(:old_completions) { 2.times.map { create_terminal_completion } }
 

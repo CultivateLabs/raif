@@ -85,15 +85,26 @@ module Raif
         raise NotImplementedError, "#{name} must implement .resource_key_segment"
       end
 
-      # Every guard that makes a record safe to archive AND delete. Called on
-      # every pass, and again under row locks inside the cull transaction, so
-      # it must be a pure relation with no side effects.
-      def eligible_scope(_cutoff)
-        raise NotImplementedError, "#{name} must implement .eligible_scope"
+      # SQL boolean, TRUE when a record passes every resource-specific guard
+      # that makes it safe to archive AND delete (age and quiescence are
+      # applied by eligible_scope). It is evaluated once per pass and again
+      # under row locks in the cull transaction.
+      #
+      # Write each guard as a correlated EXISTS / NOT EXISTS against an
+      # indexed column, not an id IN / NOT IN subquery. Postgres builds an
+      # uncorrelated NOT IN as a hashed subplan over the whole subquery
+      # result on every evaluation, so the guard costs as much as the
+      # largest table it reads, even for a LIMITed batch. The predicate must
+      # also never evaluate to NULL: dry_run counts it inside CASE, and
+      # eligible_scope would silently drop a NULL row.
+      def eligibility_sql
+        raise NotImplementedError, "#{name} must implement .eligibility_sql"
       end
 
-      # Per-guard exclusion counts for dry_run, as a Hash. Optional.
-      def dry_run_exclusions(_cutoff)
+      # Per-guard exclusion predicates for dry_run, as { report_key => SQL }.
+      # Each counts the cutoff-aged records it matches, independently of
+      # the other guards. Optional.
+      def dry_run_exclusion_sql
         {}
       end
 
@@ -105,22 +116,39 @@ module Raif
       # run this before enabling archiving (it defaults to the configured
       # retention period so it can be previewed while archive_enabled is
       # still false).
+      #
+      # Every count comes from one aggregate pass over the cutoff-aged
+      # records (grouped by the partition column when one is set), rather
+      # than a separate scan for each reported number.
       def dry_run(cutoff: retention_period&.ago)
         raise ArgumentError, "Provide a cutoff: or set Raif.config.#{retention_config_name}" if cutoff.nil?
 
         validate_partition_column!
 
-        eligible = eligible_scope(cutoff)
+        quiescent = quiescent_sql
+        eligible = "#{quiescent} AND (#{eligibility_sql})"
+        counted = {
+          eligible_terminal: "#{eligible} AND #{terminal_sql}",
+          eligible_nonterminal: "#{eligible} AND NOT #{terminal_sql}",
+          excluded_by_quiescence: "NOT (#{quiescent})"
+        }.merge(dry_run_exclusion_sql)
+
+        aggregates = counted.values.map { |predicate| Arel.sql("COUNT(CASE WHEN #{predicate} THEN 1 END)") }
+        col = partition_column
+        rows = if col
+          base_scope(cutoff).group(col).pluck(resource_table[col], *aggregates)
+        else
+          base_scope(cutoff).pluck(*aggregates).map { |counts| [nil, *counts] }
+        end
+
+        totals = counted.keys.each_with_index.to_h { |key, i| [key, rows.sum { |row| row[i + 1].to_i }] }
 
         result = {
           cutoff: cutoff,
-          eligible: eligible.count,
-          eligible_terminal: eligible.where("completed_at IS NOT NULL OR failed_at IS NOT NULL").count,
-          eligible_nonterminal: eligible.where(completed_at: nil, failed_at: nil).count,
-          excluded_by_quiescence: base_scope(cutoff).where(resource_table[:updated_at].gteq(self::QUIESCENCE_PERIOD.ago)).count
-        }.merge(dry_run_exclusions(cutoff))
+          eligible: totals[:eligible_terminal] + totals[:eligible_nonterminal]
+        }.merge(totals)
 
-        add_partition_report!(result, eligible)
+        add_partition_report!(result, rows) if col
         result
       end
 
@@ -146,16 +174,28 @@ module Raif
             "has no #{partition_column} column"
       end
 
+      # Every guard that makes a record safe to archive AND delete. Called on
+      # every pass, and again under row locks inside the cull transaction, so
+      # it must stay a pure relation with no side effects.
+      def eligible_scope(cutoff)
+        base_scope(cutoff).where(quiescent_sql).where(eligibility_sql)
+      end
+
       def base_scope(cutoff)
         archived_class.where(resource_table[:created_at].lt(cutoff))
       end
 
-      def terminal_scope(cutoff)
-        base_scope(cutoff).where("completed_at IS NOT NULL OR failed_at IS NOT NULL")
+      # Table-qualified, so the predicate stays unambiguous next to the
+      # correlated subqueries in eligibility_sql.
+      def terminal_sql
+        table = archived_class.quoted_table_name
+        "(#{table}.completed_at IS NOT NULL OR #{table}.failed_at IS NOT NULL)"
       end
 
-      def quiescent_scope(cutoff)
-        base_scope(cutoff).where(resource_table[:updated_at].lt(self::QUIESCENCE_PERIOD.ago))
+      def quiescent_sql
+        archived_class.sanitize_sql_array(
+          ["#{archived_class.quoted_table_name}.updated_at < ?", self::QUIESCENCE_PERIOD.ago]
+        )
       end
 
       def resource_table
@@ -170,25 +210,23 @@ module Raif
       # matches archival exactly; the report keys real partitions by their
       # normalized value and the ungrouped partition (fallback opt-in only)
       # by nil, mirroring its NULL partition_value on Raif::Archive rows.
-      def add_partition_report!(result, eligible)
-        col = partition_column
-        return if col.nil?
-
+      # rows are dry_run's grouped [raw, eligible_terminal,
+      # eligible_nonterminal, ...] counts; a group with nothing eligible is
+      # left out of the report.
+      def add_partition_report!(result, rows)
         partitions = {}
         missing = { eligible_terminal: 0, eligible_nonterminal: 0 }
 
-        {
-          eligible_terminal: eligible.where("completed_at IS NOT NULL OR failed_at IS NOT NULL").group(col).count,
-          eligible_nonterminal: eligible.where(completed_at: nil, failed_at: nil).group(col).count
-        }.each do |kind, counts|
-          counts.each do |raw, count|
-            if raw.to_s.blank? && !ungrouped_fallback?
-              missing[kind] += count
-            else
-              key = raw.to_s.blank? ? nil : raw.to_s
-              partitions[key] ||= { eligible_terminal: 0, eligible_nonterminal: 0 }
-              partitions[key][kind] += count
-            end
+        rows.each do |raw, terminal_count, nonterminal_count|
+          counts = { eligible_terminal: terminal_count.to_i, eligible_nonterminal: nonterminal_count.to_i }
+          next if counts.values.sum.zero?
+
+          if raw.to_s.blank? && !ungrouped_fallback?
+            counts.each { |kind, count| missing[kind] += count }
+          else
+            key = raw.to_s.blank? ? nil : raw.to_s
+            partitions[key] ||= { eligible_terminal: 0, eligible_nonterminal: 0 }
+            counts.each { |kind, count| partitions[key][kind] += count }
           end
         end
 

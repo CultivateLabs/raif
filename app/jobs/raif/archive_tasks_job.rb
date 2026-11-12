@@ -64,29 +64,29 @@ module Raif
       # Nonterminal tasks (the residue of killed processes and crashed jobs)
       # are archived like any other, so "every deleted task exists in an
       # archive" holds without exception.
-      def eligible_scope(cutoff)
-        quiescent_scope(cutoff)
-          .where.not(id: tasks_with_live_model_completion)
-          .where.not(prompt_studio_referenced_sql)
+      def eligibility_sql
+        "NOT #{live_model_completion_sql} AND NOT #{prompt_studio_referenced_sql}"
       end
 
-      def dry_run_exclusions(cutoff)
+      def dry_run_exclusion_sql
         {
-          excluded_by_live_model_completion: base_scope(cutoff).where(id: tasks_with_live_model_completion).count,
-          excluded_by_prompt_studio: base_scope(cutoff).where(prompt_studio_referenced_sql).count
+          excluded_by_live_model_completion: live_model_completion_sql,
+          excluded_by_prompt_studio: prompt_studio_referenced_sql
         }
       end
 
     private
 
-      # source_id is nullable on raif_model_completions, and a single NULL in
-      # a NOT IN subquery makes the whole predicate never true, so the NULLs
-      # are filtered out here rather than in the caller.
-      def tasks_with_live_model_completion
-        Raif::ModelCompletion
-          .where(source_type: "Raif::Task")
-          .where.not(source_id: nil)
-          .select(:source_id)
+      # Correlated EXISTS (see ArchiveJob.eligibility_sql for why), probing
+      # the [source_type, source_id] index on raif_model_completions. A NULL
+      # source_id simply matches nothing, where a NOT IN subquery had to
+      # filter NULLs out to stay true.
+      def live_model_completion_sql
+        completions = Raif::ModelCompletion.table_name
+        tasks = Raif::Task.table_name
+
+        "EXISTS (SELECT 1 FROM #{completions} WHERE #{completions}.source_type = 'Raif::Task' " \
+          "AND #{completions}.source_id = #{tasks}.id)"
       end
 
       # EXISTS rather than three NOT IN subqueries: it spans all three
