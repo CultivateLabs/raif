@@ -4,6 +4,7 @@ class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::MessageFormatting
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
   include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
+  include Raif::Concerns::Llms::NativeJsonResponseValidation
 
   # Cross-region inference profile prefixes. A manifest api_name that already
   # starts with one names its profile, as global-only models such as Claude
@@ -103,6 +104,7 @@ private
     model_completion.cache_read_input_tokens = resp.usage.try(:cache_read_input_tokens)
     model_completion.cache_creation_input_tokens = resp.usage.try(:cache_write_input_tokens)
     model_completion.save!
+    validate_native_json_response!(model_completion)
   end
 
   def build_request_parameters(model_completion)
