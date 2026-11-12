@@ -458,7 +458,32 @@
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-15T18:04:03Z"
+        "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
       }
     },
     "bedrock_claude_5_sonnet": {
@@ -897,14 +922,71 @@
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-15T18:04:03Z"
+        "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
       }
     },
     "bedrock_grok_4_6": {
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-15T18:04:03Z"
+        "checked_at": "2026-11-12T03:53:01Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:53:01Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:53:01Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:53:01Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:53:01Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:53:01Z"
+      }
+    },
+    "bedrock_titan_embed_text_v2": {
+      "embedding": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
       }
     },
     "bedrock_grok_4_7": {
