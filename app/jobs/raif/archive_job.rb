@@ -86,17 +86,13 @@ module Raif
       end
 
       # SQL boolean, TRUE when a record passes every resource-specific guard
-      # that makes it safe to archive AND delete (age and quiescence are
-      # applied by eligible_scope). It is evaluated once per pass and again
-      # under row locks in the cull transaction.
+      # (eligible_scope adds age and quiescence). Evaluated every pass and
+      # again under row locks in the cull transaction.
       #
-      # Write each guard as a correlated EXISTS / NOT EXISTS against an
-      # indexed column, not an id IN / NOT IN subquery. Postgres builds an
-      # uncorrelated NOT IN as a hashed subplan over the whole subquery
-      # result on every evaluation, so the guard costs as much as the
-      # largest table it reads, even for a LIMITed batch. The predicate must
-      # also never evaluate to NULL: dry_run counts it inside CASE, and
-      # eligible_scope would silently drop a NULL row.
+      # Write guards as correlated EXISTS on an indexed column, not
+      # id NOT IN (subquery): Postgres evaluates NOT IN over the whole
+      # subquery result, even for a LIMITed batch. Must never be NULL, or
+      # eligible_scope drops the row and dry_run miscounts it.
       def eligibility_sql
         raise NotImplementedError, "#{name} must implement .eligibility_sql"
       end
@@ -116,10 +112,8 @@ module Raif
       # run this before enabling archiving (it defaults to the configured
       # retention period so it can be previewed while archive_enabled is
       # still false).
-      #
-      # Every count comes from one aggregate pass over the cutoff-aged
-      # records (grouped by the partition column when one is set), rather
-      # than a separate scan for each reported number.
+      # Every count comes from one aggregate query, so the guards are not
+      # re-run for each reported number.
       def dry_run(cutoff: retention_period&.ago)
         raise ArgumentError, "Provide a cutoff: or set Raif.config.#{retention_config_name}" if cutoff.nil?
 

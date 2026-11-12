@@ -236,9 +236,8 @@ RSpec.describe Raif::ArchiveModelCompletionsJob, type: :job do
       completion
     end
 
-    # One completion per edge of each guard. The NULL cases matter most:
-    # the predicate must never evaluate to NULL, or eligible_scope would
-    # silently retain the row and dry_run would miscount it.
+    # One completion per edge of each guard. The NULL cases matter most: a
+    # NULL predicate would silently retain the row and skew dry_run.
     let!(:records) do
       active_batch = FB.create(:raif_model_completion_batch_anthropic, status: "in_progress")
       ended_batch = FB.create(:raif_model_completion_batch_anthropic, status: "ended")

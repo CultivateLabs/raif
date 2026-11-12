@@ -77,10 +77,8 @@ module Raif
 
     private
 
-      # Correlated EXISTS (see ArchiveJob.eligibility_sql for why), probing
-      # the [source_type, source_id] index on raif_model_completions. A NULL
-      # source_id simply matches nothing, where a NOT IN subquery had to
-      # filter NULLs out to stay true.
+      # Correlated EXISTS (see ArchiveJob.eligibility_sql) on the
+      # [source_type, source_id] index of raif_model_completions.
       def live_model_completion_sql
         completions = Raif::ModelCompletion.table_name
         tasks = Raif::Task.table_name

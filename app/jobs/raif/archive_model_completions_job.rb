@@ -84,9 +84,8 @@ module Raif
 
     private
 
-      # Each guard is a correlated EXISTS (see ArchiveJob.eligibility_sql for
-      # why) and so never NULL. Unlike a NOT IN subquery it is also safe
-      # against the NULL batch ids most completions have.
+      # Guards are correlated EXISTS (see ArchiveJob.eligibility_sql), so
+      # never NULL.
       def active_batch_member_sql
         batches = Raif::ModelCompletionBatch.table_name
         member = Raif::ModelCompletionBatch.non_terminal
@@ -95,10 +94,9 @@ module Raif
         "EXISTS (#{member.select("1").to_sql})"
       end
 
-      # Probes the unique index on raif_inference_cost_events.raif_model_completion_id.
-      # Cost events are never culled, so a guard that read the whole table
-      # would get slower on every run, long after the completion backlog
-      # drains. fresh: true requires an event at least as fresh as its
+      # Probes the unique index on raif_model_completion_id: cost events are
+      # never culled, so a guard that read the whole table would slow down
+      # forever. fresh: true requires an event at least as fresh as its
       # completion. An older event means a post-terminal completion
       # update committed but its event re-sync failed: the durable spend
       # data may be stale, so the row is not safe to cull until the repair
