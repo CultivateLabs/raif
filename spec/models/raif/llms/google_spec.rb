@@ -69,6 +69,44 @@ RSpec.describe Raif::Llms::Google, type: :model do
       end
     end
 
+    context "on a model that does not claim temperature" do
+      let(:llm) { Raif.llm(:google_gemini_4_hydrogen) }
+      let(:stubs) { Faraday::Adapter::Test::Stubs.new }
+      let(:sent_bodies) { [] }
+
+      before do
+        stubs.post("models/gemini-4-hydrogen:generateContent") do |env|
+          sent_bodies << JSON.parse(env.request_body)
+          [
+            200,
+            { "Content-Type" => "application/json" },
+            {
+              candidates: [{ content: { role: "model", parts: [{ text: "Hi" }] }, finishReason: "STOP" }],
+              usageMetadata: { promptTokenCount: 3, candidatesTokenCount: 1, totalTokenCount: 4 }
+            }.to_json
+          ]
+        end
+
+        allow(llm).to receive(:connection).and_return(
+          Faraday.new do |builder|
+            builder.adapter :test, stubs
+            builder.request :json
+            builder.response :json
+            builder.response :raise_error
+          end
+        )
+      end
+
+      it "neither sends nor saves a temperature, even when the caller sets one" do
+        model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], temperature: 0.4)
+
+        expect(sent_bodies.size).to eq(1)
+        expect(sent_bodies.first["generationConfig"]).not_to have_key("temperature")
+        expect(model_completion.raw_response).to eq("Hi")
+        expect(model_completion.reload.temperature).to be_nil
+      end
+    end
+
     context "when the response format is json" do
       it "makes a request to the Google API and processes the response", vcr: { cassette_name: "google/format_json" } do
         messages = [

@@ -13,6 +13,8 @@ class Raif::Llms::Google < Raif::Llm
   end
 
   def perform_model_completion!(model_completion, &block)
+    # Raif::Llm#chat fills in a default temperature, so clear it to keep the saved row matching the request.
+    model_completion.temperature = nil unless supports_temperature?
     params = build_request_parameters(model_completion)
     endpoint = build_endpoint(model_completion)
 
