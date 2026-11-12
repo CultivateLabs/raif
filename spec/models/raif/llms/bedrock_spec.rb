@@ -1151,30 +1151,100 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         expect(tool_names).not_to include("json_response")
       end
 
+      let(:bedrock_client) { instance_double(Aws::BedrockRuntime::Client) }
+
+      before do
+        allow(llm).to receive(:bedrock_client).and_return(bedrock_client)
+      end
+
+      def stub_converse(text, stop_reason:)
+        allow(bedrock_client).to receive(:converse).and_return(converse_text_response(text, stop_reason: stop_reason))
+      end
+
       it "accepts native output that satisfies the original schema" do
-        expect do
-          llm.send(:update_model_completion, model_completion, converse_text_response({ score: 0.5 }.to_json, stop_reason: "end_turn"))
-        end.not_to raise_error
+        stub_converse({ score: 0.5 }.to_json, stop_reason: "end_turn")
+
+        expect { llm.perform_model_completion!(model_completion) }.not_to raise_error
       end
 
       it "rejects native output that violates constraints removed from the provider schema" do
+        stub_converse({ score: 2 }.to_json, stop_reason: "end_turn")
+
         expect do
-          llm.send(:update_model_completion, model_completion, converse_text_response({ score: 2 }.to_json, stop_reason: "end_turn"))
+          llm.perform_model_completion!(model_completion)
         end.to raise_error(Raif::Errors::InvalidJsonResponseError, /score/)
 
         expect(model_completion.reload.raw_response).to eq({ score: 2 }.to_json)
       end
 
       it "reports JSON cut off at the output limit as a truncation" do
+        stub_converse("{\"sco", stop_reason: "max_tokens")
+
         expect do
-          llm.send(:update_model_completion, model_completion, converse_text_response("{\"sco", stop_reason: "max_tokens"))
+          llm.perform_model_completion!(model_completion)
         end.to raise_error(Raif::Errors::TruncatedResponseError, /cut off at the output limit \(finish reason: max_tokens\)/)
       end
 
-      it "does not validate a streaming update before the stream finishes" do
-        expect do
-          llm.send(:update_model_completion, model_completion, converse_text_response("{\"sco", stop_reason: nil))
-        end.not_to raise_error
+      context "when streaming" do
+        let(:model_completion) do
+          Raif::ModelCompletion.new(
+            messages: [{ role: "user", content: [{ text: "Score this" }] }],
+            llm_model_key: "bedrock_claude_5_sonnet",
+            model_api_name: "anthropic.claude-sonnet-5",
+            response_format: "json",
+            source: scored_task,
+            stream_response: true
+          )
+        end
+
+        def stub_converse_stream(text)
+          types = Aws::BedrockRuntime::Types
+          events = [
+            types::MessageStartEvent.new(role: "assistant", event_type: :message_start),
+            types::ContentBlockDeltaEvent.new(
+              content_block_index: 0,
+              delta: types::ContentBlockDelta::Text.new(text: text),
+              event_type: :content_block_delta
+            ),
+            types::MessageStopEvent.new(stop_reason: "end_turn", event_type: :message_stop),
+            types::ConverseStreamMetadataEvent.new(
+              usage: types::TokenUsage.new(input_tokens: 10, output_tokens: 5, total_tokens: 15),
+              event_type: :metadata
+            )
+          ]
+
+          allow(bedrock_client).to receive(:converse_stream) do |_params, &setup|
+            handlers = {}
+            stream = double("stream")
+            allow(stream).to receive(:on_error_event)
+            allow(stream).to receive(:on_event) { |&handler| handlers[:event] = handler }
+            setup.call(stream)
+            events.each { |event| handlers[:event].call(event) }
+          end
+        end
+
+        it "records the stream's usage before rejecting output that violates the original schema" do
+          stub_converse_stream({ score: 2 }.to_json)
+
+          expect do
+            llm.perform_model_completion!(model_completion) { |_mc, _delta, _event| nil }
+          end.to raise_error(Raif::Errors::InvalidJsonResponseError, /score/)
+
+          model_completion.reload
+          expect(model_completion.raw_response).to eq({ score: 2 }.to_json)
+          expect(model_completion.prompt_tokens).to eq(10)
+          expect(model_completion.completion_tokens).to eq(5)
+          expect(model_completion.total_tokens).to eq(15)
+        end
+
+        it "accepts streamed output that satisfies the original schema" do
+          stub_converse_stream({ score: 0.5 }.to_json)
+
+          expect do
+            llm.perform_model_completion!(model_completion) { |_mc, _delta, _event| nil }
+          end.not_to raise_error
+          expect(model_completion.reload.total_tokens).to eq(15)
+        end
       end
     end
   end

@@ -49,6 +49,10 @@ class Raif::Llms::Bedrock < Raif::Llm
       update_model_completion(model_completion, response)
     end
 
+    # Not in update_model_completion: a stream reports usage in a metadata event after
+    # message_stop, and raising at message_stop would save the completion with zero tokens.
+    validate_native_json_response!(model_completion)
+
     model_completion
   end
 
@@ -104,7 +108,6 @@ private
     model_completion.cache_read_input_tokens = resp.usage.try(:cache_read_input_tokens)
     model_completion.cache_creation_input_tokens = resp.usage.try(:cache_write_input_tokens)
     model_completion.save!
-    validate_native_json_response!(model_completion)
   end
 
   def build_request_parameters(model_completion)
