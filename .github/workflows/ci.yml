@@ -62,8 +62,7 @@ jobs:
       # REDIS_URL: redis://localhost:6379/0
 
     steps:
-      # The runner image already ships Chrome, and pg installs precompiled.
-      # Running apt-get here only added the risk of a mirror stall (#535).
+      # Use the runner image's Chrome instead of apt-get, whose mirror stalls have hung CI (#535).
       - name: Verify preinstalled toolchain
         run: google-chrome --version
 
@@ -122,9 +121,8 @@ jobs:
       DATABASE_URL: mysql2://127.0.0.1:3306
 
     steps:
-      # The runner image already ships Chrome, the build toolchain, and the MySQL
-      # client headers. Running apt-get here only added the risk of a mirror stall (#535).
-      # mysql2 compiles against mysql_config, so check it before setup-ruby runs the bundle.
+      # Use the runner image's Chrome and MySQL headers instead of apt-get, whose mirror stalls
+      # have hung CI (#535). Runs before setup-ruby so a missing mysql_config fails here, not in the mysql2 build.
       - name: Verify preinstalled toolchain
         run: |
           google-chrome --version
