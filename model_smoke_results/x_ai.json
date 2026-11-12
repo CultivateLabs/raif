@@ -2,6 +2,11 @@
   "schema_version": 1,
   "models": {
     "x_ai_grok_4_20_non_reasoning": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:14:58Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -34,6 +39,11 @@
       }
     },
     "x_ai_grok_4_20_reasoning": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:15:06Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -66,6 +76,11 @@
       }
     },
     "x_ai_grok_4_3": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:15:03Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
