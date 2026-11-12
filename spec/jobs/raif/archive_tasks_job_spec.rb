@@ -329,6 +329,28 @@ RSpec.describe Raif::ArchiveTasksJob, type: :job do
     end
   end
 
+  describe "eligibility predicate" do
+    it "gates only on a completion that names the task as its source" do
+      eligible = create_task
+      with_completion = create_task
+      create_completion(source: with_completion)
+
+      # A NULL source_id must not block every task (the NOT IN pitfall), and
+      # another source type sharing the task's id must not block this one.
+      create_completion(source: create_task(created_at: 1.month.ago)).update_columns(source_id: nil)
+      create_completion(source: FB.create(:raif_test_task)).update_columns(source_type: "Raif::Agent", source_id: eligible.id)
+
+      expect(described_class.eligible_scope(retention_period.ago).pluck(:id)).to eq([eligible.id])
+    end
+
+    it "uses correlated EXISTS guards rather than id IN subqueries" do
+      sql = described_class.eligible_scope(retention_period.ago).to_sql
+
+      expect(sql).to include("EXISTS")
+      expect(sql).not_to match(/\bIN \(SELECT/i)
+    end
+  end
+
   describe ".dry_run" do
     it "reports eligible rows and per-guard exclusions without writing anything" do
       3.times { create_task }

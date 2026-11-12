@@ -67,70 +67,67 @@ module Raif
       # - durable-citations guard: its citations, if any, have been copied to
       #   its Raif::ConversationEntry source (protects hosts that haven't run
       #   the conversation entry backfill)
-      def eligible_scope(cutoff)
-        quiescent_scope(cutoff)
-          .where.not(id: active_batch_members)
-          .where.not(id: terminal_without_fresh_cost_event(cutoff))
-          .where.not(id: completions_with_uncopied_citations)
+      def eligibility_sql
+        "NOT #{active_batch_member_sql} " \
+          "AND (NOT #{terminal_sql} OR #{cost_event_sql(fresh: true)}) " \
+          "AND NOT #{uncopied_citations_sql}"
       end
 
-      def dry_run_exclusions(cutoff)
+      def dry_run_exclusion_sql
         {
-          excluded_by_active_batch: base_scope(cutoff).where(id: active_batch_members).count,
-          excluded_missing_cost_event: terminal_scope(cutoff).where.not(id: completions_with_cost_event).count,
-          excluded_stale_cost_event: terminal_scope(cutoff)
-            .where(id: completions_with_cost_event)
-            .where.not(id: completions_with_fresh_cost_event).count,
-          excluded_uncopied_citations: base_scope(cutoff).where(id: completions_with_uncopied_citations).count
+          excluded_by_active_batch: active_batch_member_sql,
+          excluded_missing_cost_event: "#{terminal_sql} AND NOT #{cost_event_sql}",
+          excluded_stale_cost_event: "#{terminal_sql} AND #{cost_event_sql} AND NOT #{cost_event_sql(fresh: true)}",
+          excluded_uncopied_citations: uncopied_citations_sql
         }
       end
 
     private
 
-      # Subquery, not a where.not(raif_model_completion_batch_id: ...)
-      # clause: NOT IN mishandles the NULL batch ids most completions have.
-      def active_batch_members
-        Raif::ModelCompletion.where(
-          raif_model_completion_batch_id: Raif::ModelCompletionBatch.non_terminal.select(:id)
-        )
+      # Guards are correlated EXISTS (see ArchiveJob.eligibility_sql), so
+      # never NULL.
+      def active_batch_member_sql
+        batches = Raif::ModelCompletionBatch.table_name
+        member = Raif::ModelCompletionBatch.non_terminal
+          .where("#{batches}.id = #{Raif::ModelCompletion.table_name}.raif_model_completion_batch_id")
+
+        "EXISTS (#{member.select("1").to_sql})"
       end
 
-      def completions_with_cost_event
-        Raif::InferenceCostEvent.where.not(raif_model_completion_id: nil).select(:raif_model_completion_id)
-      end
+      # Probes the unique index on raif_model_completion_id: cost events are
+      # never culled, so a guard that read the whole table would slow down
+      # forever. fresh: true requires an event at least as fresh as its
+      # completion. An older event means a post-terminal completion
+      # update committed but its event re-sync failed: the durable spend
+      # data may be stale, so the row is not safe to cull until the repair
+      # job re-syncs (or freshness-certifies) it.
+      def cost_event_sql(fresh: false)
+        events = Raif::InferenceCostEvent.table_name
+        completions = Raif::ModelCompletion.table_name
+        freshness = fresh ? " AND #{events}.updated_at >= #{completions}.updated_at" : ""
 
-      # Events at least as fresh as their completion. An older event means a
-      # post-terminal completion update committed but its event re-sync
-      # failed: the durable spend data may be stale, so the row is not safe
-      # to cull until the repair job re-syncs (or freshness-certifies) it.
-      def completions_with_fresh_cost_event
-        Raif::InferenceCostEvent
-          .joins("INNER JOIN raif_model_completions ON raif_model_completions.id = raif_inference_cost_events.raif_model_completion_id")
-          .where("raif_inference_cost_events.updated_at >= raif_model_completions.updated_at")
-          .select(:raif_model_completion_id)
-      end
-
-      def terminal_without_fresh_cost_event(cutoff)
-        terminal_scope(cutoff).where.not(id: completions_with_fresh_cost_event)
+        "EXISTS (SELECT 1 FROM #{events} WHERE #{events}.raif_model_completion_id = #{completions}.id#{freshness})"
       end
 
       # Completions with citations whose Raif::ConversationEntry source has
       # an empty local citations column: culling them would erase citation
-      # chips from historical conversations.
-      def completions_with_uncopied_citations
-        completion_citations_length = json_array_length_sql("raif_model_completions.citations")
-        entry_citations_length = json_array_length_sql("raif_conversation_entries.citations")
+      # chips from historical conversations. The completion-side conditions
+      # sit inside the EXISTS so the predicate stays TRUE or FALSE when
+      # source_type or citations is NULL.
+      def uncopied_citations_sql
+        completions = Raif::ModelCompletion.table_name
+        entries = Raif::ConversationEntry.table_name
 
-        Raif::ModelCompletion
-          .where(source_type: "Raif::ConversationEntry")
-          .joins("INNER JOIN raif_conversation_entries ON raif_conversation_entries.id = raif_model_completions.source_id")
-          .where("raif_model_completions.citations IS NOT NULL AND #{completion_citations_length} > 0")
-          .where("raif_conversation_entries.citations IS NULL OR #{entry_citations_length} = 0")
+        "EXISTS (SELECT 1 FROM #{entries} WHERE #{entries}.id = #{completions}.source_id " \
+          "AND #{completions}.source_type = 'Raif::ConversationEntry' " \
+          "AND #{completions}.citations IS NOT NULL " \
+          "AND #{json_array_length_sql("#{completions}.citations")} > 0 " \
+          "AND (#{entries}.citations IS NULL OR #{json_array_length_sql("#{entries}.citations")} = 0))"
       end
 
       # Table-qualified equivalent of
       # Raif::ApplicationRecord.where_json_not_blank, which can't be used
-      # inside the entries join above (both tables have a citations column).
+      # inside the entries subquery above (both tables have a citations column).
       def json_array_length_sql(qualified_column)
         case Raif::ModelCompletion.connection.adapter_name.downcase
         when "postgresql"
