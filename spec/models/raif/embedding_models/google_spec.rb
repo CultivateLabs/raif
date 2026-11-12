@@ -21,7 +21,7 @@ RSpec.describe Raif::EmbeddingModels::Google, type: :model do
   describe "initialization" do
     it "sets the correct attributes" do
       expect(model.key).to eq(:google_gemini_embedding_2)
-      expect(model.api_name).to eq("gemini-embedding-2-preview")
+      expect(model.api_name).to eq("gemini-embedding-2")
       expect(model.input_token_cost).to eq(0.20 / 1_000_000)
       expect(model.default_output_vector_size).to eq(3072)
     end
@@ -41,7 +41,7 @@ RSpec.describe Raif::EmbeddingModels::Google, type: :model do
       let(:response_body) { { "embedding" => { "values" => embedding_vector } } }
 
       it "makes a request to the Google API with the correct parameters" do
-        stubs.post("models/gemini-embedding-2-preview:embedContent") do |env|
+        stubs.post("models/gemini-embedding-2:embedContent") do |env|
           expect(JSON.parse(env.body)).to eq({
             "content" => {
               "parts" => [{ "text" => input }]
@@ -58,7 +58,7 @@ RSpec.describe Raif::EmbeddingModels::Google, type: :model do
         let(:dimensions) { 768 }
 
         before do
-          stubs.post("models/gemini-embedding-2-preview:embedContent") do |env|
+          stubs.post("models/gemini-embedding-2:embedContent") do |env|
             expect(JSON.parse(env.body)).to eq({
               "content" => {
                 "parts" => [{ "text" => input }]
@@ -103,7 +103,7 @@ RSpec.describe Raif::EmbeddingModels::Google, type: :model do
       let(:input) { "Test input" }
 
       before do
-        stubs.post("models/gemini-embedding-2-preview:embedContent") do |_env|
+        stubs.post("models/gemini-embedding-2:embedContent") do |_env|
           raise Faraday::ClientError.new(
             "Rate limited",
             { status: 429, body: '{"error": {"message": "Rate limited"}}' }
@@ -124,7 +124,7 @@ RSpec.describe Raif::EmbeddingModels::Google, type: :model do
       let(:input) { "Test input" }
 
       before do
-        stubs.post("models/gemini-embedding-2-preview:embedContent") do |_env|
+        stubs.post("models/gemini-embedding-2:embedContent") do |_env|
           raise Faraday::ServerError.new(
             "Internal server error",
             { status: 500, body: '{"error": {"message": "Internal server error"}}' }
