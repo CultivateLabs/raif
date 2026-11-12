@@ -153,6 +153,34 @@ provider :bedrock do |p|
   )
 
   p.model(
+    key: :bedrock_grok_4_7,
+    api_name: "xai.grok-4.7",
+    display_name: "xAI Grok 4.7 (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.55,
+      input_per_million: 2.2,
+      output_per_million: 6.6,
+      note: "US geo cross-region inference rate; global routing costs 2.00 / 6.00 per million (0.50 cache read). No in-region inference; " \
+        "aws_bedrock_model_name_prefix must name a profile Bedrock offers for this model (us or global)."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 8)
+    }
+  )
+
+  p.model(
     key: :bedrock_grok_4_3,
     adapter: :mantle,
     api_name: "xai.grok-4.3",
@@ -651,6 +679,64 @@ provider :bedrock do |p|
     },
     lifecycle: {
       status: :active
+    }
+  )
+
+  p.model(
+    key: :bedrock_gpt_6_1_sol,
+    api_name: "openai.gpt-6.1-sol",
+    display_name: "OpenAI GPT-6.1 Sol (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.11,
+      input_per_million: 2.2,
+      output_per_million: 11.0,
+      note: "US geo inference rate including the 10% fee; global routing costs 2.00 / 10.00 per million (0.10 cache read). Above 272K input " \
+        "tokens, the full request costs 4.40 / 16.50 per million (0.22 cache read). " \
+        "No in-region inference; aws_bedrock_model_name_prefix must name a profile Bedrock offers for this model (us or global)."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 8)
+    }
+  )
+
+  p.model(
+    key: :bedrock_gpt_6_1_terra,
+    api_name: "openai.gpt-6.1-terra",
+    display_name: "OpenAI GPT-6.1 Terra (via AWS Bedrock)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.055,
+      input_per_million: 1.1,
+      output_per_million: 5.5,
+      note: "US geo inference rate including the 10% fee; global routing costs 1.00 / 5.00 per million (0.05 cache read). Above 272K input " \
+        "tokens, the full request costs 2.20 / 8.25 per million (0.11 cache read). " \
+        "No in-region inference; aws_bedrock_model_name_prefix must name a profile Bedrock offers for this model (us or global)."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: false,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 8)
     }
   )
 
