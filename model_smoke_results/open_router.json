@@ -621,7 +621,37 @@
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-15T18:04:21Z"
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
       }
     },
     "open_router_gemini_4_argon": {
@@ -1068,24 +1098,59 @@
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:03:23Z"
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:03:23Z"
+        "checked_at": "2026-11-12T04:02:59Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T22:03:23Z"
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
       }
     },
     "open_router_meta_muse_glimmer_30b": {
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-16T13:14:10Z"
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
       }
     },
     "open_router_minimax_m2": {
@@ -1508,7 +1573,32 @@
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-16T13:14:10Z"
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:59Z"
       }
     },
     "open_router_qwen_qwen3_8_max": {
