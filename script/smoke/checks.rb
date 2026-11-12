@@ -120,7 +120,9 @@ module Smoke
     # name the probed feature and say it is unsupported.
     BEDROCK_CLAIMED_FALSE_REJECTION_SIGNATURES = {
       "temperature" => [
-        ->(message) { message.match?(/temperature/i) && message.match?(/doesn't support|not support|unsupported/i) }
+        # Anthropic models on Converse as of 2026-11-09 pass Anthropic's own rejection through:
+        # "The model returned the following errors: `temperature` is deprecated for this model."
+        ->(message) { message.match?(/temperature/i) && message.match?(/doesn't support|not support|unsupported|deprecated/i) }
       ],
       "structured_outputs" => [
         lambda do |message|

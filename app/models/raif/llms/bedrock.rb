@@ -110,9 +110,12 @@ private
     messages_param = model_completion.messages.map(&:deep_symbolize_keys)
     replace_tmp_base64_data_with_bytes(messages_param)
 
+    inference_config = { max_tokens: model_completion.max_completion_tokens || 8192 }
+    inference_config[:temperature] = (model_completion.temperature || default_temperature).to_f if supports_temperature?
+
     params = {
       model_id: model_completion.model_api_name,
-      inference_config: { max_tokens: model_completion.max_completion_tokens || 8192 },
+      inference_config: inference_config,
       messages: messages_param
     }
 
