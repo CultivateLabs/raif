@@ -65,6 +65,54 @@ provider :open_router do |p|
   )
 
   p.model(
+    key: :open_router_claude_5_5_opus,
+    api_name: "anthropic/claude-opus-5.5",
+    display_name: "Anthropic Claude 5.5 Opus (via OpenRouter)",
+    max_completion_tokens: 128_000,
+    pricing: { cache_read_per_million: 0.2, input_per_million: 4.0, output_per_million: 20.0 },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      forced_tool_choice: false,
+      required_tool_choice: false,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 11)
+    }
+  )
+
+  p.model(
+    key: :open_router_claude_5_1_fable,
+    api_name: "anthropic/claude-fable-5.1",
+    display_name: "Anthropic Claude Fable 5.1 (via OpenRouter)",
+    max_completion_tokens: 128_000,
+    pricing: { cache_read_per_million: 0.25, input_per_million: 10.0, output_per_million: 50.0 },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      forced_tool_choice: false,
+      required_tool_choice: false,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 11)
+    }
+  )
+
+  p.model(
     key: :open_router_claude_5_fable,
     api_name: "anthropic/claude-fable-5",
     display_name: "Anthropic Claude Fable 5 (via OpenRouter)",
@@ -854,6 +902,89 @@ provider :open_router do |p|
     lifecycle: {
       status: :active,
       added_on: Date.new(2026, 10, 14)
+    }
+  )
+
+  p.model(
+    key: :open_router_open_ai_gpt_6_astra,
+    api_name: "openai/gpt-6-astra",
+    display_name: "OpenAI GPT-6 Astra (via OpenRouter)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 1.0,
+      input_per_million: 10.0,
+      output_per_million: 50.0,
+      note: "Above 272K input tokens, the full request costs 20.00 input / 75.00 output per million tokens."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 11)
+    }
+  )
+
+  p.model(
+    key: :open_router_open_ai_gpt_6_1_sol,
+    api_name: "openai/gpt-6.1-sol",
+    display_name: "OpenAI GPT-6.1 Sol (via OpenRouter)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.1,
+      input_per_million: 2.0,
+      output_per_million: 10.0,
+      note: "Above 272K input tokens, input and cache rates double to 4.00 input / 0.20 cached input per million " \
+        "and output rises to 15.00 per million."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 11)
+    }
+  )
+
+  p.model(
+    key: :open_router_open_ai_gpt_6_1_terra,
+    api_name: "openai/gpt-6.1-terra",
+    display_name: "OpenAI GPT-6.1 Terra (via OpenRouter)",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.05,
+      input_per_million: 1.0,
+      output_per_million: 5.0,
+      note: "Above 272K input tokens, input and cache rates double to 2.00 input / 0.10 cached input per million " \
+        "and output rises to 7.50 per million."
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 11)
     }
   )
 

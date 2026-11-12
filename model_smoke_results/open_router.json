@@ -38,6 +38,80 @@
         "checked_at": "2026-09-01T22:03:23Z"
       }
     },
+    "open_router_claude_5_1_fable": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      }
+    },
+    "open_router_claude_5_5_opus": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      }
+    },
     "open_router_claude_5_fable": {
       "completion": {
         "claimed": true,
@@ -1263,6 +1337,117 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-10-14T14:48:45Z"
+      }
+    },
+    "open_router_open_ai_gpt_6_1_sol": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      }
+    },
+    "open_router_open_ai_gpt_6_1_terra": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      }
+    },
+    "open_router_open_ai_gpt_6_astra": {
+      "completion": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T19:12:27Z"
       }
     },
     "open_router_open_ai_gpt_oss_120b": {
