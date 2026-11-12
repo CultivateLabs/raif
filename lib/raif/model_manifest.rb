@@ -55,7 +55,9 @@ module Raif
     # Capabilities an entry declares only when true; the loader fills in false.
     # encrypted_reasoning: the endpoint can return the model's reasoning as encrypted
     # items that Raif sends back on later turns of a tool-calling loop.
-    OPTIONAL_CAPABILITY_KEYS = %i[encrypted_reasoning].freeze
+    # strict_structured_outputs: the model's Bedrock card says JSON schema output on Converse also
+    # needs additionalModelRequestFields.text.format.strict set to true (the OpenAI GPT models).
+    OPTIONAL_CAPABILITY_KEYS = %i[encrypted_reasoning strict_structured_outputs].freeze
     CAPABILITY_KEYS = (SMOKE_CAPABILITY_KEYS + TOOL_CHOICE_CAPABILITY_KEYS + OPTIONAL_CAPABILITY_KEYS).freeze
 
     LIFECYCLE_STATUSES = %i[active deprecated retired].freeze

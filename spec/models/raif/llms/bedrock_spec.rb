@@ -1034,6 +1034,11 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         expect(tool_names).not_to include("json_response")
       end
 
+      it "does NOT send the strict flag, which only the OpenAI GPT model cards call for" do
+        params = llm.send(:build_request_parameters, model_completion)
+        expect(params).not_to have_key(:additional_model_request_fields)
+      end
+
       it "sets model_completion.response_format_parameter to 'json_schema'" do
         llm.send(:build_request_parameters, model_completion)
         expect(model_completion.response_format_parameter).to eq("json_schema")
@@ -1059,6 +1064,54 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         expect(schema.dig("properties", "probabilities", "minItems")).to eq(1)
         expect(schema.dig("properties", "probability", "description")).to eq("Must be at least 0. Must be at most 100.")
       end
+    end
+
+    context "with a json_response_schema on an OpenAI GPT model" do
+      let(:llm){ Raif.llm(:bedrock_gpt_6_luna) }
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: [{ text: "Tell me a joke" }] }],
+          llm_model_key: "bedrock_gpt_6_luna",
+          model_api_name: "openai.gpt-6-luna",
+          response_format: "json",
+          source: test_task
+        )
+      end
+
+      it "sends additional_model_request_fields.text.format.strict alongside output_config" do
+        params = llm.send(:build_request_parameters, model_completion)
+
+        expect(params[:additional_model_request_fields]).to eq({ text: { format: { strict: true } } })
+        expect(params.dig(:output_config, :text_format, :type)).to eq("json_schema")
+        expect(model_completion.response_format_parameter).to eq("json_schema")
+      end
+
+      it "sends the flag on streaming requests too" do
+        model_completion.stream_response = true
+
+        params = llm.send(:build_request_parameters, model_completion)
+
+        expect(params[:additional_model_request_fields]).to eq({ text: { format: { strict: true } } })
+      end
+
+      it "does not send the flag without a json_response_schema" do
+        model_completion.response_format = "text"
+        model_completion.source = nil
+
+        params = llm.send(:build_request_parameters, model_completion)
+
+        expect(params).not_to have_key(:additional_model_request_fields)
+      end
+    end
+
+    it "sends the strict flag for exactly the Bedrock GPT models whose model cards call for it" do
+      keys = Raif.available_llm_keys.select { |key| Raif.llm(key).supports_strict_structured_outputs? }
+
+      expect(keys.map(&:to_s)).to match_array(%w[
+        bedrock_gpt_5_6_sol bedrock_gpt_5_6_terra bedrock_gpt_5_6_luna
+        bedrock_gpt_6_sol bedrock_gpt_6_luna bedrock_gpt_6_astra
+        bedrock_gpt_6_1_sol bedrock_gpt_6_1_terra
+      ])
     end
 
     context "with a json_response_schema but a non-supporting model" do
