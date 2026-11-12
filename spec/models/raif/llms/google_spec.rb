@@ -38,6 +38,14 @@ RSpec.describe Raif::Llms::Google, type: :model do
       expect(model_completion).to be_truncated
     end
 
+    # Gemini 4 reports this when a non-streaming request reaches Google's per-request output cap.
+    it "flags a CONTINUATION response as truncated" do
+      llm.send(:update_model_completion, model_completion, response_json_with_finish_reason("CONTINUATION"))
+
+      expect(model_completion.response_finish_reason).to eq("CONTINUATION")
+      expect(model_completion).to be_truncated
+    end
+
     it "does not flag a normally completed response as truncated" do
       llm.send(:update_model_completion, model_completion, response_json_with_finish_reason("STOP"))
 

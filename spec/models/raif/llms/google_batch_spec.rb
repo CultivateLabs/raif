@@ -552,8 +552,12 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
     end
   end
   describe "batch_max_completion_tokens" do
-    # Gemini 4 Argon declares max_completion_tokens 65,536 and batch_max_completion_tokens 32,768 in the manifest.
-    let(:capped_llm) { Raif.llm(:google_gemini_4_argon) }
+    # Gemini 4 Argon's manifest entry now defaults to the same 32,768 as its batch cap, so raise the
+    # synchronous default here to keep the two limits distinct.
+    let(:capped_llm) do
+      config = Raif.llm_config(:google_gemini_4_argon)
+      config[:llm_class].new(**config.except(:llm_class).merge(max_completion_tokens: 65_536))
+    end
 
     def build(llm, batch: nil, max_completion_tokens: nil)
       llm.build_pending_model_completion(
