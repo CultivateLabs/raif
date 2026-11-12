@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::Google, type: :model do
-  let(:llm) { Raif.llm(:google_gemini_2_5_flash) }
+  let(:llm) { Raif.llm(:google_gemini_3_8_flash) }
 
   before do
     allow(Raif.config).to receive(:llm_api_requests_enabled) { true }
@@ -14,8 +14,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
   describe "#update_model_completion" do
     let(:model_completion) do
       Raif::ModelCompletion.new(
-        llm_model_key: "google_gemini_2_5_flash",
-        model_api_name: "gemini-2.5-flash"
+        llm_model_key: "google_gemini_3_8_flash",
+        model_api_name: "gemini-3.8-flash"
       )
     end
 
@@ -51,21 +51,25 @@ RSpec.describe Raif::Llms::Google, type: :model do
       it "makes a request to the Google API and processes the response", vcr: { cassette_name: "google/format_text" } do
         model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], system_prompt: "You are a helpful assistant")
 
-        expect(model_completion.raw_response).to eq("Hello there! How can I help you today?")
-        expect(model_completion.completion_tokens).to eq(10)
+        expect(model_completion.raw_response).to eq("Hello! How can I help you today?")
+        # candidatesTokenCount (9) + thoughtsTokenCount (80) -- Gemini reports
+        # thinking tokens separately but bills them at the output rate.
+        expect(model_completion.completion_tokens).to eq(89)
         expect(model_completion.prompt_tokens).to eq(7)
-        expect(model_completion.total_tokens).to eq(17)
+        expect(model_completion.total_tokens).to eq(96)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([{ "role" => "user", "parts" => [{ "text" => "Hello" }] }])
         expect(model_completion.system_prompt).to eq("You are a helpful assistant")
         expect(model_completion.temperature).to eq(0.7)
-        expect(model_completion.max_completion_tokens).to eq(nil)
+        expect(model_completion.max_completion_tokens).to eq(65_536)
         expect(model_completion.response_format).to eq("text")
         expect(model_completion.source).to be_nil
-        expect(model_completion.llm_model_key).to eq("google_gemini_2_5_flash")
-        expect(model_completion.model_api_name).to eq("gemini-2.5-flash")
+        expect(model_completion.llm_model_key).to eq("google_gemini_3_8_flash")
+        expect(model_completion.model_api_name).to eq("gemini-3.8-flash")
         expect(model_completion.response_format_parameter).to be_nil
-        expect(model_completion.response_array).to eq([{ "text" => "Hello there! How can I help you today?" }])
+        expect(model_completion.response_array).to eq([
+          { "text" => "Hello! How can I help you today?", "thoughtSignature" => "<GOOGLE_THOUGHT_SIGNATURE>" }
+        ])
       end
     end
 
@@ -86,21 +90,19 @@ RSpec.describe Raif::Llms::Google, type: :model do
         model_completion = llm.chat(messages: messages, response_format: :json, system_prompt: system_prompt)
 
         expected_raw_response = <<~RESPONSE.chomp
-          ```json
           {
-            "joke": "Why don't scientists trust atoms? Because they make up everything!"
+            "joke": "Why do programmers prefer dark mode? Because light attracts bugs."
           }
-          ```
         RESPONSE
         expect(model_completion.raw_response).to eq(expected_raw_response)
         expect(model_completion.parsed_response).to eq({
-          "joke" => "Why don't scientists trust atoms? Because they make up everything!"
+          "joke" => "Why do programmers prefer dark mode? Because light attracts bugs."
         })
-        # candidatesTokenCount (28) + thoughtsTokenCount (44) -- Gemini reports
+        # candidatesTokenCount (21) + thoughtsTokenCount (189) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(72)
+        expect(model_completion.completion_tokens).to eq(210)
         expect(model_completion.prompt_tokens).to eq(66)
-        expect(model_completion.total_tokens).to eq(138)
+        expect(model_completion.total_tokens).to eq(276)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([
           { "role" => "user", "parts" => [{ "text" => "Hello" }] },
@@ -109,11 +111,11 @@ RSpec.describe Raif::Llms::Google, type: :model do
         ])
         expect(model_completion.system_prompt).to eq(system_prompt)
         expect(model_completion.temperature).to eq(0.7)
-        expect(model_completion.max_completion_tokens).to eq(nil)
+        expect(model_completion.max_completion_tokens).to eq(65_536)
         expect(model_completion.response_format).to eq("json")
         expect(model_completion.source).to be_nil
-        expect(model_completion.llm_model_key).to eq("google_gemini_2_5_flash")
-        expect(model_completion.model_api_name).to eq("gemini-2.5-flash")
+        expect(model_completion.llm_model_key).to eq("google_gemini_3_8_flash")
+        expect(model_completion.model_api_name).to eq("gemini-3.8-flash")
       end
     end
 
@@ -129,12 +131,12 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.response_tool_calls.first["name"]).to eq("fetch_url")
         expect(model_completion.response_tool_calls.first["arguments"]).to eq({ "url" => "https://www.wsj.com" })
         expect(model_completion.response_tool_calls.first["provider_tool_call_id"]).to be_present
-        # candidatesTokenCount (22) + thoughtsTokenCount (54) -- Gemini reports
+        # candidatesTokenCount (23) + thoughtsTokenCount (47) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(76)
-        expect(model_completion.prompt_tokens).to eq(65)
-        # total_tokens includes thoughtsTokenCount (54) in addition to prompt + completion
-        expect(model_completion.total_tokens).to eq(141)
+        expect(model_completion.completion_tokens).to eq(70)
+        expect(model_completion.prompt_tokens).to eq(76)
+        # total_tokens = prompt + candidates + thoughts
+        expect(model_completion.total_tokens).to eq(146)
         # raw_response should be blank when only tool calls are returned
         expect(model_completion.raw_response).to be_blank
       end
@@ -165,30 +167,26 @@ RSpec.describe Raif::Llms::Google, type: :model do
         )
 
         expect(model_completion.raw_response).to be_present
-        expect(model_completion.raw_response).to include("Ruby on Rails 8.1")
-        expect(model_completion.raw_response).to include("Ruby on Rails 8.0")
-        expect(model_completion.raw_response).to include("Ruby on Rails 7.2")
-        expect(model_completion.raw_response).to include("Ruby on Rails 7.1")
+        expect(model_completion.raw_response).to include("Ruby on Rails")
+        expect(model_completion.raw_response).to include("Rails 8.0")
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::ProviderManaged::WebSearch"])
-        # candidatesTokenCount (1038) + thoughtsTokenCount (208) -- Gemini reports
+        # candidatesTokenCount (1376) + thoughtsTokenCount (926) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(1246)
-        # promptTokenCount (11) + toolUsePromptTokenCount (157) -- grounding-tool
-        # prompt tokens are billed at the input rate but reported separately.
-        expect(model_completion.prompt_tokens).to eq(168)
-        # total_tokens = prompt + candidates + thoughts + toolUsePrompt
-        expect(model_completion.total_tokens).to eq(1414)
+        expect(model_completion.completion_tokens).to eq(2302)
+        # promptTokenCount (186); this recording reports no separate toolUsePromptTokenCount.
+        expect(model_completion.prompt_tokens).to eq(186)
+        # total_tokens = prompt + candidates + thoughts
+        expect(model_completion.total_tokens).to eq(2488)
 
         # Test that citations are extracted from grounding metadata
         expect(model_completion.citations).to be_an(Array)
-        expect(model_completion.citations.length).to eq(12)
+        expect(model_completion.citations.length).to eq(7)
         expect(model_completion.citations.first).to have_key("url")
         expect(model_completion.citations.first).to have_key("title")
-        expect(model_completion.citations.first["title"]).to eq("wikipedia.org")
+        expect(model_completion.citations.first["title"]).to eq("rubyroidlabs.com")
 
         # Verify citation sources include expected domains
         citation_titles = model_completion.citations.map { |c| c["title"] }
-        expect(citation_titles).to include("wikipedia.org")
         expect(citation_titles).to include("rubyonrails.org")
       end
     end
@@ -207,18 +205,23 @@ RSpec.describe Raif::Llms::Google, type: :model do
         end
 
         expect(deltas).to eq([
-          "The world awakes with whispered sigh,\nA gentle breath upon the air.\nWhere morning mists begin to lie,\nAnd banish shadows everywhere.\n\nThe sunbeams stretch their golden fingers,\nTo paint the dew on leaf and", # rubocop:disable Layout/LineLength
-          " bloom,\nWhile distant song a robin lingers,\nDispelling all the fading gloom.\n\nA quiet peace begins to settle,\nUpon the heart, a gentle balm.\nNo urgency, no need to meddle,\nJust nature", # rubocop:disable Layout/LineLength
-          "'s soft and timeless calm.\n\nSo take a moment, soft and deep,\nTo breathe it in, this world so fair.\nWhile secret promises it keeps,\nAnd wonders wait beyond compare." # rubocop:disable Layout/LineLength
+          "The edge of night begins",
+          " to fray,  \nIn threads of silver, then of gray.  \nThe stars fold up their quiet light,",
+          "  \nAnd slip beyond the reach of sight.  \n\nA breath of wind stirs through the pine,  \nWhere",
+          " shadows soften their design.  \nUpon the grass, the dew clings low,  \nTo catch the morning’s",
+          " earliest glow.  \n\nThen comes the amber, soft and wide,  \nA golden wave, a quiet tide,",
+          "  \nThat spills across the windowsill  \nAnd warms what once was pale and still.  \n\nAnd every sorrow turns to run  ",
+          "\nBeneath the promise of the sun;  \nA brand-new world, unwritten, clean,  \n",
+          "Stepping out from what has been."
         ])
 
-        expect(model_completion.raw_response).to eq("The world awakes with whispered sigh,\nA gentle breath upon the air.\nWhere morning mists begin to lie,\nAnd banish shadows everywhere.\n\nThe sunbeams stretch their golden fingers,\nTo paint the dew on leaf and bloom,\nWhile distant song a robin lingers,\nDispelling all the fading gloom.\n\nA quiet peace begins to settle,\nUpon the heart, a gentle balm.\nNo urgency, no need to meddle,\nJust nature's soft and timeless calm.\n\nSo take a moment, soft and deep,\nTo breathe it in, this world so fair.\nWhile secret promises it keeps,\nAnd wonders wait beyond compare.") # rubocop:disable Layout/LineLength
-        # candidatesTokenCount (139) + thoughtsTokenCount (1338) -- Gemini reports
+        expect(model_completion.raw_response).to eq("The edge of night begins to fray,  \nIn threads of silver, then of gray.  \nThe stars fold up their quiet light,  \nAnd slip beyond the reach of sight.  \n\nA breath of wind stirs through the pine,  \nWhere shadows soften their design.  \nUpon the grass, the dew clings low,  \nTo catch the morning’s earliest glow.  \n\nThen comes the amber, soft and wide,  \nA golden wave, a quiet tide,  \nThat spills across the windowsill  \nAnd warms what once was pale and still.  \n\nAnd every sorrow turns to run  \nBeneath the promise of the sun;  \nA brand-new world, unwritten, clean,  \nStepping out from what has been.") # rubocop:disable Layout/LineLength
+        # candidatesTokenCount (160) + thoughtsTokenCount (1052) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(1477)
+        expect(model_completion.completion_tokens).to eq(1212)
         expect(model_completion.prompt_tokens).to eq(6)
-        # total_tokens includes thoughtsTokenCount (1338) in addition to prompt + completion
-        expect(model_completion.total_tokens).to eq(1483)
+        # total_tokens includes thoughtsTokenCount (1052) in addition to prompt + completion
+        expect(model_completion.total_tokens).to eq(1218)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([{ "role" => "user", "parts" => [{ "text" => "Please write me a poem" }] }])
       end
@@ -240,22 +243,20 @@ RSpec.describe Raif::Llms::Google, type: :model do
         end
 
         expected_raw_response = <<~RESPONSE.chomp
-          ```json
           {
-            "joke": "Why don't scientists trust atoms? Because they make up everything!"
+            "joke": "Why do programmers prefer dark mode? Because light attracts bugs."
           }
-          ```
         RESPONSE
         expect(model_completion.raw_response).to eq(expected_raw_response)
         expect(model_completion.parsed_response).to eq({
-          "joke" => "Why don't scientists trust atoms? Because they make up everything!"
+          "joke" => "Why do programmers prefer dark mode? Because light attracts bugs."
         })
-        # candidatesTokenCount (28) + thoughtsTokenCount (50) -- Gemini reports
+        # candidatesTokenCount (21) + thoughtsTokenCount (225) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(78)
+        expect(model_completion.completion_tokens).to eq(246)
         expect(model_completion.prompt_tokens).to eq(54)
-        # total_tokens includes thoughtsTokenCount (50) in addition to prompt + completion
-        expect(model_completion.total_tokens).to eq(132)
+        # total_tokens includes thoughtsTokenCount (225) in addition to prompt + completion
+        expect(model_completion.total_tokens).to eq(300)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([{
           "role" => "user",
@@ -279,11 +280,11 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.response_tool_calls.first["name"]).to eq("fetch_url")
         expect(model_completion.response_tool_calls.first["arguments"]).to eq({ "url" => "https://www.wsj.com" })
         expect(model_completion.response_tool_calls.first["provider_tool_call_id"]).to be_present
-        # candidatesTokenCount (22) + thoughtsTokenCount (54) -- Gemini reports
+        # candidatesTokenCount (23) + thoughtsTokenCount (42) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(76)
-        expect(model_completion.prompt_tokens).to eq(65)
-        # total_tokens includes thoughtsTokenCount (54) in addition to prompt + completion
+        expect(model_completion.completion_tokens).to eq(65)
+        expect(model_completion.prompt_tokens).to eq(76)
+        # total_tokens = prompt + candidates + thoughts
         expect(model_completion.total_tokens).to eq(141)
         # raw_response should be blank when only tool calls are returned
         expect(model_completion.raw_response).to be_blank
@@ -380,8 +381,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
-          llm_model_key: "google_gemini_2_5_flash",
-          model_api_name: "gemini-2.5-flash",
+          llm_model_key: "google_gemini_3_8_flash",
+          model_api_name: "gemini-3.8-flash",
           temperature: 0.8,
           response_format: "text",
           system_prompt: system_prompt
@@ -414,8 +415,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
           system_prompt: system_prompt,
-          llm_model_key: "google_gemini_2_5_flash",
-          model_api_name: "gemini-2.5-flash",
+          llm_model_key: "google_gemini_3_8_flash",
+          model_api_name: "gemini-3.8-flash",
           temperature: 0.5,
           response_format: "json"
         )
@@ -459,8 +460,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
-          llm_model_key: "google_gemini_2_5_flash",
-          model_api_name: "gemini-2.5-flash",
+          llm_model_key: "google_gemini_3_8_flash",
+          model_api_name: "gemini-3.8-flash",
           temperature: 0.8,
           response_format: "text",
           max_completion_tokens: 1000
@@ -476,8 +477,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
       let(:model_completion) do
         mc = Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
-          llm_model_key: "google_gemini_2_5_flash",
-          model_api_name: "gemini-2.5-flash",
+          llm_model_key: "google_gemini_3_8_flash",
+          model_api_name: "gemini-3.8-flash",
           temperature: 0.8,
           response_format: "text"
         )
@@ -520,8 +521,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
       let(:model_completion) do
         mc = Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
-          llm_model_key: "google_gemini_2_5_flash",
-          model_api_name: "gemini-2.5-flash",
+          llm_model_key: "google_gemini_3_8_flash",
+          model_api_name: "gemini-3.8-flash",
           temperature: 0.8,
           response_format: "text",
           tool_choice: "Raif::TestModelTool"
@@ -554,8 +555,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
     let(:model_completion) do
       Raif::ModelCompletion.new(
         messages: [{ role: "user", content: "Hello" }],
-        llm_model_key: "google_gemini_2_5_flash",
-        model_api_name: "gemini-2.5-flash",
+        llm_model_key: "google_gemini_3_8_flash",
+        model_api_name: "gemini-3.8-flash",
         available_model_tools: available_model_tools
       )
     end
@@ -987,8 +988,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
-          llm_model_key: "google_gemini_2_5_flash",
-          model_api_name: "gemini-2.5-flash",
+          llm_model_key: "google_gemini_3_8_flash",
+          model_api_name: "gemini-3.8-flash",
           temperature: 0.8,
           response_format: "text",
           system_prompt: "You are a helpful assistant",
@@ -1010,8 +1011,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
-          llm_model_key: "google_gemini_2_5_flash",
-          model_api_name: "gemini-2.5-flash",
+          llm_model_key: "google_gemini_3_8_flash",
+          model_api_name: "gemini-3.8-flash",
           temperature: 0.8,
           response_format: "text",
           system_prompt: "You are a helpful assistant",
@@ -1032,8 +1033,8 @@ RSpec.describe Raif::Llms::Google, type: :model do
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: "Hello" }],
-          llm_model_key: "google_gemini_2_5_flash",
-          model_api_name: "gemini-2.5-flash",
+          llm_model_key: "google_gemini_3_8_flash",
+          model_api_name: "gemini-3.8-flash",
           temperature: 0.8,
           response_format: "text",
           system_prompt: "You are a helpful assistant",

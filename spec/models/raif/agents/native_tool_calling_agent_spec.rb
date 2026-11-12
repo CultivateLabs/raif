@@ -983,7 +983,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
         task: task,
         max_iterations: 2,
         available_model_tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::ProviderManaged::WebSearch],
-        llm_model_key: "google_gemini_2_5_flash"
+        llm_model_key: "google_gemini_3_8_flash"
       )
 
       stub_request(:get, %r{en\.wikipedia\.org/w/api\.php})

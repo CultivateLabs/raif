@@ -20,8 +20,8 @@ FactoryBot.define do
   end
 
   factory :raif_model_completion_batch_google, class: "Raif::ModelCompletionBatches::Google" do
-    llm_model_key { "google_gemini_2_5_flash" }
-    model_api_name { "gemini-2.5-flash" }
+    llm_model_key { "google_gemini_3_8_flash" }
+    model_api_name { "gemini-3.8-flash" }
     status { "pending" }
   end
 

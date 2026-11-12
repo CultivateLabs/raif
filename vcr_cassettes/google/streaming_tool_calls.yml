@@ -2,18 +2,18 @@
 http_interactions:
 - request:
     method: post
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse
     body:
       encoding: UTF-8
       string: '{"contents":[{"role":"user","parts":[{"text":"What''s on the homepage
-        of https://www.wsj.com today?"}]}],"generationConfig":{"temperature":0.7},"tools":[{"functionDeclarations":[{"name":"fetch_url","description":"Fetch
+        of https://www.wsj.com today?"}]}],"generationConfig":{"temperature":0.7,"maxOutputTokens":65536},"tools":[{"functionDeclarations":[{"name":"fetch_url","description":"Fetch
         a URL and return the page content as markdown","parameters":{"type":"object","properties":{"url":{"type":"string","description":"The
         URL to fetch content from"}},"required":["url"]}}]}]}'
     headers:
       X-Goog-Api-Key:
       - "<GOOGLE_API_KEY>"
       User-Agent:
-      - Faraday v2.14.0
+      - Faraday v2.15.1
       Content-Type:
       - application/json
       Accept-Encoding:
@@ -36,7 +36,7 @@ http_interactions:
       Transfer-Encoding:
       - chunked
       Date:
-      - Thu, 18 Dec 2025 18:16:43 GMT
+      - Thu, 12 Nov 2026 22:10:24 GMT
       Server:
       - scaffolding on HTTPServer2
       X-Xss-Protection:
@@ -46,17 +46,22 @@ http_interactions:
       X-Content-Type-Options:
       - nosniff
       Server-Timing:
-      - gfet4t7; dur=808
+      - gfet4t7; dur=2057
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
     body:
       encoding: UTF-8
       string: "data: {\"candidates\": [{\"content\": {\"parts\": [{\"functionCall\":
-        {\"name\": \"fetch_url\",\"args\": {\"url\": \"https://www.wsj.com\"}},\"thoughtSignature\":
-        \"<GOOGLE_THOUGHT_SIGNATURE>\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\":
-        0,\"finishMessage\": \"Model generated function call(s).\"}],\"usageMetadata\":
-        {\"promptTokenCount\": 65,\"candidatesTokenCount\": 22,\"totalTokenCount\":
-        141,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 65}],\"thoughtsTokenCount\":
-        54},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\": \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\n"
-  recorded_at: Thu, 18 Dec 2025 18:16:43 GMT
-recorded_with: VCR 6.3.1
+        {\"name\": \"fetch_url\",\"args\": {\"url\": \"https://www.wsj.com\"},\"id\":
+        \"call_abc123\"},\"thoughtSignature\": \"<GOOGLE_THOUGHT_SIGNATURE>\"}],\"role\":
+        \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 76,\"candidatesTokenCount\":
+        23,\"totalTokenCount\": 141,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        76}],\"thoughtsTokenCount\": 42,\"serviceTier\": \"standard\"},\"modelVersion\":
+        \"gemini-3.8-flash\",\"responseId\": \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\ndata:
+        {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"\"}],\"role\": \"model\"},\"finishReason\":
+        \"STOP\",\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 76,\"candidatesTokenCount\":
+        23,\"totalTokenCount\": 141,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        76}],\"thoughtsTokenCount\": 42,\"serviceTier\": \"standard\"},\"modelVersion\":
+        \"gemini-3.8-flash\",\"responseId\": \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\n"
+  recorded_at: Thu, 12 Nov 2026 22:10:24 GMT
+recorded_with: VCR 6.4.1

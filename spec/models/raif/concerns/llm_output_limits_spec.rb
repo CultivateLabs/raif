@@ -62,8 +62,8 @@ RSpec.describe Raif::Concerns::LlmOutputLimits do
       end
 
       it "sends the cap and the stop sequences to Google" do
-        task = run_task(Raif::TestOutputLimitsTask, "google_gemini_2_5_flash")
-        parameters = request_parameters("google_gemini_2_5_flash", task.raif_model_completion)
+        task = run_task(Raif::TestOutputLimitsTask, "google_gemini_3_8_flash")
+        parameters = request_parameters("google_gemini_3_8_flash", task.raif_model_completion)
 
         expect(parameters[:generationConfig][:maxOutputTokens]).to eq(8_000)
         expect(parameters[:generationConfig][:stopSequences]).to eq(["END_OF_ANSWER", "<<halt>>"])
@@ -117,8 +117,8 @@ RSpec.describe Raif::Concerns::LlmOutputLimits do
       end
 
       it "sends the cap and the stop sequences to Google" do
-        completion = build_reloaded_completion("google_gemini_2_5_flash", Raif::ModelCompletionBatches::Google)
-        parameters = request_parameters("google_gemini_2_5_flash", completion)
+        completion = build_reloaded_completion("google_gemini_3_8_flash", Raif::ModelCompletionBatches::Google)
+        parameters = request_parameters("google_gemini_3_8_flash", completion)
 
         expect(parameters[:generationConfig][:maxOutputTokens]).to eq(8_000)
         expect(parameters[:generationConfig][:stopSequences]).to eq(["END_OF_ANSWER", "<<halt>>"])

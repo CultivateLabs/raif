@@ -2,18 +2,18 @@
 http_interactions:
 - request:
     method: post
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent
     body:
       encoding: UTF-8
       string: '{"contents":[{"role":"user","parts":[{"text":"What''s on the homepage
-        of https://www.wsj.com today?"}]}],"generationConfig":{"temperature":0.7},"tools":[{"functionDeclarations":[{"name":"fetch_url","description":"Fetch
+        of https://www.wsj.com today?"}]}],"generationConfig":{"temperature":0.7,"maxOutputTokens":65536},"tools":[{"functionDeclarations":[{"name":"fetch_url","description":"Fetch
         a URL and return the page content as markdown","parameters":{"type":"object","properties":{"url":{"type":"string","description":"The
         URL to fetch content from"}},"required":["url"]}}]}]}'
     headers:
       X-Goog-Api-Key:
       - "<GOOGLE_API_KEY>"
       User-Agent:
-      - Faraday v2.14.0
+      - Faraday v2.15.1
       Content-Type:
       - application/json
       Accept-Encoding:
@@ -25,6 +25,8 @@ http_interactions:
       code: 200
       message: OK
     headers:
+      X-Gemini-Service-Tier:
+      - standard
       Content-Type:
       - application/json; charset=UTF-8
       Vary:
@@ -32,7 +34,7 @@ http_interactions:
       - Referer
       - X-Origin
       Date:
-      - Thu, 18 Dec 2025 18:13:59 GMT
+      - Thu, 12 Nov 2026 22:10:44 GMT
       Server:
       - scaffolding on HTTPServer2
       X-Xss-Protection:
@@ -42,7 +44,7 @@ http_interactions:
       X-Content-Type-Options:
       - nosniff
       Server-Timing:
-      - gfet4t7; dur=888
+      - gfet4t7; dur=1880
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Transfer-Encoding:
@@ -60,7 +62,8 @@ http_interactions:
                       "name": "fetch_url",
                       "args": {
                         "url": "https://www.wsj.com"
-                      }
+                      },
+                      "id": "call_abc123"
                     },
                     "thoughtSignature": "<GOOGLE_THOUGHT_SIGNATURE>"
                   }
@@ -73,19 +76,20 @@ http_interactions:
             }
           ],
           "usageMetadata": {
-            "promptTokenCount": 65,
-            "candidatesTokenCount": 22,
-            "totalTokenCount": 141,
+            "promptTokenCount": 76,
+            "candidatesTokenCount": 23,
+            "totalTokenCount": 146,
             "promptTokensDetails": [
               {
                 "modality": "TEXT",
-                "tokenCount": 65
+                "tokenCount": 76
               }
             ],
-            "thoughtsTokenCount": 54
+            "thoughtsTokenCount": 47,
+            "serviceTier": "standard"
           },
-          "modelVersion": "gemini-2.5-flash",
+          "modelVersion": "gemini-3.8-flash",
           "responseId": "<GOOGLE_RESPONSE_ID>"
         }
-  recorded_at: Thu, 18 Dec 2025 18:13:59 GMT
-recorded_with: VCR 6.3.1
+  recorded_at: Thu, 12 Nov 2026 22:10:44 GMT
+recorded_with: VCR 6.4.1
