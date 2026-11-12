@@ -104,6 +104,8 @@ en:
         no_model_tool_invocations: No model tool invocations found.
         no_tasks: No tasks found.
         no_tool_calls: No tool calls
+        no_user_message: No user message
+        no_user_message_hint: This entry has no user message. Raif creates entries like this to prompt the model again after a tool call.
         none: None
         output: Output
         output_token_cost: Output Token Cost
