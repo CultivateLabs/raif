@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Raif::Llms::Anthropic < Raif::Llm
+  API_VERSION = "2023-06-01"
+
   include Raif::Concerns::Llms::Anthropic::MessageFormatting
   include Raif::Concerns::Llms::Anthropic::ToolFormatting
   include Raif::Concerns::Llms::Anthropic::ResponseToolCalls
@@ -41,7 +43,7 @@ private
   def connection
     @connection ||= Faraday.new(url: "https://api.anthropic.com/v1", request: Raif.default_request_options) do |f|
       f.headers["x-api-key"] = Raif.config.anthropic_api_key
-      f.headers["anthropic-version"] = "2023-06-01"
+      f.headers["anthropic-version"] = API_VERSION
       f.request :json
       f.response :json
       f.response :raise_error

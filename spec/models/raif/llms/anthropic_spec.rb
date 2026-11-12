@@ -33,6 +33,12 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
     ))
   end
 
+  describe "#connection" do
+    it "sends the pinned anthropic-version header" do
+      expect(llm.send(:connection).headers["anthropic-version"]).to eq("2023-06-01")
+    end
+  end
+
   describe "#update_model_completion" do
     let(:model_completion) do
       Raif::ModelCompletion.new(

@@ -4,7 +4,8 @@ provider :google do |p|
   p.references(
     models_doc: "https://ai.google.dev/gemini-api/docs/models",
     pricing: "https://ai.google.dev/gemini-api/docs/pricing",
-    deprecations: "https://ai.google.dev/gemini-api/docs/deprecations"
+    deprecations: "https://ai.google.dev/gemini-api/docs/deprecations",
+    api_versions: "https://aistudio.google.com/api-reference/api-versions"
   )
 
   p.model(
