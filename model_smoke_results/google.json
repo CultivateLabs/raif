@@ -42,57 +42,80 @@
       }
     },
     "google_gemini_3_0_flash": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
       }
     },
     "google_gemini_3_1_flash_lite": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:46Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -100,39 +123,49 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
       }
     },
     "google_gemini_3_1_pro": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -140,17 +173,22 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-01T21:59:27Z"
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
       }
     },
     "google_gemini_3_5_flash": {
@@ -197,27 +235,27 @@
       "batch_inference": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -225,44 +263,49 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-27T14:56:56Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-27T14:56:56Z"
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
       }
     },
     "google_gemini_3_6_flash": {
       "batch_inference": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "images": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "native_tool_use": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "pdfs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "provider_managed_tools": {
         "claimed": [
@@ -270,17 +313,22 @@
           "web_search"
         ],
         "result": "pass",
-        "checked_at": "2026-08-27T14:56:56Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "streaming": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-26T21:12:01Z"
+        "checked_at": "2026-11-11T23:56:30Z"
       },
       "streaming_tool_calls": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-08-27T14:56:56Z"
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
       }
     },
     "google_gemini_3_7_flash": {
@@ -329,10 +377,53 @@
       }
     },
     "google_gemini_3_8_flash": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-15T18:04:21Z"
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "images": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "native_tool_use": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "pdfs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "streaming": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "streaming_tool_calls": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-11T23:56:30Z"
       }
     },
     "google_gemini_4_argon": {
