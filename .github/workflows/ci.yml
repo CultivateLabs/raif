@@ -8,6 +8,7 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       matrix:
         ruby-version: [ruby-3.3, ruby-3.4.2]
@@ -29,6 +30,7 @@ jobs:
 
   test-postgres:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         include:
@@ -60,8 +62,9 @@ jobs:
       # REDIS_URL: redis://localhost:6379/0
 
     steps:
-      - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libpq-dev pkg-config google-chrome-stable
+      # Use the runner image's Chrome instead of apt-get, whose mirror stalls have hung CI (#535).
+      - name: Verify preinstalled toolchain
+        run: google-chrome --version
 
       - name: Checkout code
         uses: actions/checkout@v7
@@ -71,6 +74,7 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+          cache-version: 1
 
       - name: Create database
         run: bin/rails app:db:create
@@ -94,6 +98,7 @@ jobs:
 
   test-mysql:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         include:
@@ -116,8 +121,12 @@ jobs:
       DATABASE_URL: mysql2://127.0.0.1:3306
 
     steps:
-      - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential default-libmysqlclient-dev git libyaml-dev pkg-config google-chrome-stable
+      # Use the runner image's Chrome and MySQL headers instead of apt-get, whose mirror stalls
+      # have hung CI (#535). Runs before setup-ruby so a missing mysql_config fails here, not in the mysql2 build.
+      - name: Verify preinstalled toolchain
+        run: |
+          google-chrome --version
+          mysql_config --version
 
       - name: Checkout code
         uses: actions/checkout@v7
@@ -127,6 +136,7 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+          cache-version: 1
 
       - name: Update database.yml for MySQL
         run: |
@@ -171,6 +181,7 @@ jobs:
   # The single required check on main. It passes only if every lint and test job passes.
   ci-status:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [lint, test-postgres, test-mysql]
     if: ${{ always() }}
     steps:
