@@ -576,6 +576,8 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
 
     context "with JSON response format and schema" do
+      # A model without native structured outputs, so the json_response tool fallback applies.
+      let(:llm) { Raif.llm(:bedrock_amazon_nova_pro) }
       let(:available_model_tools) { [] }
       let(:response_format) { "json" }
       let(:source) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
@@ -676,6 +678,7 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
 
     context "with mixed tool types and JSON response" do
+      let(:llm) { Raif.llm(:bedrock_amazon_nova_pro) }
       let(:available_model_tools) { [Raif::TestModelTool] }
       let(:response_format) { "json" }
       let(:source) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
@@ -1062,12 +1065,12 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
 
     context "with a json_response_schema but a non-supporting model" do
-      let(:llm){ Raif.llm(:bedrock_claude_5_sonnet) }
+      let(:llm){ Raif.llm(:bedrock_amazon_nova_pro) }
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: [{ text: "Tell me a joke" }] }],
-          llm_model_key: "bedrock_claude_5_sonnet",
-          model_api_name: "anthropic.claude-sonnet-5",
+          llm_model_key: "bedrock_amazon_nova_pro",
+          model_api_name: "amazon.nova-pro-v1:0",
           response_format: "json",
           source: test_task
         )
