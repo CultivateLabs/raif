@@ -248,6 +248,11 @@
       }
     },
     "open_ai_gpt_5_2": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:06:56Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -280,6 +285,11 @@
       }
     },
     "open_ai_gpt_5_4": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:00:49Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -312,6 +322,11 @@
       }
     },
     "open_ai_gpt_5_4_mini": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:11Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -376,6 +391,11 @@
       }
     },
     "open_ai_gpt_5_5": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:03:49Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -1077,6 +1097,11 @@
       }
     },
     "open_ai_responses_gpt_5_2": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:06:18Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -1097,6 +1122,15 @@
         "result": "pass",
         "checked_at": "2026-09-01T22:28:51Z"
       },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-12T04:06:18Z"
+      },
       "streaming": {
         "claimed": true,
         "result": "pass",
@@ -1114,6 +1148,11 @@
       }
     },
     "open_ai_responses_gpt_5_2_pro": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:03:45Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -1151,6 +1190,11 @@
       }
     },
     "open_ai_responses_gpt_5_4": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:01:42Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -1170,6 +1214,15 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:28:51Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-12T04:01:42Z"
       },
       "streaming": {
         "claimed": true,
@@ -1188,6 +1241,11 @@
       }
     },
     "open_ai_responses_gpt_5_4_mini": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:31Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -1207,6 +1265,15 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:28:51Z"
+      },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-12T04:02:31Z"
       },
       "streaming": {
         "claimed": true,
@@ -1262,6 +1329,11 @@
       }
     },
     "open_ai_responses_gpt_5_4_pro": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:03:18Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -1294,6 +1366,11 @@
       }
     },
     "open_ai_responses_gpt_5_5": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:03:41Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -1314,6 +1391,15 @@
         "result": "pass",
         "checked_at": "2026-09-01T22:28:51Z"
       },
+      "provider_managed_tools": {
+        "claimed": [
+          "code_execution",
+          "image_generation",
+          "web_search"
+        ],
+        "result": "pass",
+        "checked_at": "2026-11-12T04:03:41Z"
+      },
       "streaming": {
         "claimed": true,
         "result": "pass",
@@ -1331,6 +1417,11 @@
       }
     },
     "open_ai_responses_gpt_5_5_pro": {
+      "batch_inference": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:01:18Z"
+      },
       "completion": {
         "claimed": true,
         "result": "pass",
@@ -2101,6 +2192,27 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:28:51Z"
+      }
+    },
+    "open_ai_text_embedding_3_large": {
+      "embedding": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:01:04Z"
+      }
+    },
+    "open_ai_text_embedding_3_small": {
+      "embedding": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:01:04Z"
+      }
+    },
+    "open_ai_text_embedding_ada_002": {
+      "embedding": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T04:01:04Z"
       }
     }
   }
