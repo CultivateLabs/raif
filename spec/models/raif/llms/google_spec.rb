@@ -406,6 +406,25 @@ RSpec.describe Raif::Llms::Google, type: :model do
           expect(parameters).not_to have_key(:system_instruction)
         end
       end
+
+      context "on a model that does not claim temperature" do
+        let(:llm) { Raif.llm(:google_gemini_4_hydrogen) }
+        let(:system_prompt) { nil }
+        let(:model_completion) do
+          Raif::ModelCompletion.new(
+            messages: [{ role: "user", content: "Hello" }],
+            llm_model_key: "google_gemini_4_hydrogen",
+            model_api_name: "gemini-4-hydrogen",
+            temperature: 0.8,
+            response_format: "text"
+          )
+        end
+
+        it "omits temperature even when the completion sets one" do
+          expect(parameters[:generationConfig]).not_to have_key(:temperature)
+          expect(parameters[:generationConfig][:maxOutputTokens]).to eq(65_536)
+        end
+      end
     end
 
     context "for JSON response format" do

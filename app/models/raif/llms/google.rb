@@ -145,8 +145,10 @@ private
   def build_generation_config(model_completion)
     config = {}
 
-    temperature = model_completion.temperature || default_temperature
-    config[:temperature] = temperature.to_f if temperature.present?
+    if supports_temperature?
+      temperature = model_completion.temperature || default_temperature
+      config[:temperature] = temperature.to_f if temperature.present?
+    end
 
     max_tokens = model_completion.max_completion_tokens || default_max_completion_tokens
     config[:maxOutputTokens] = max_tokens if max_tokens.present?
