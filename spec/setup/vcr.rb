@@ -123,6 +123,8 @@ VCR.configure do |config|
     interaction.response.headers.delete("Set-Cookie")
     interaction.response.headers.delete("Request-Id")
     interaction.response.headers.delete("Anthropic-Organization-Id")
+    # Some fetched pages echo the recording machine's public IP back in this header.
+    interaction.response.headers.delete_if { |name, _| name.casecmp?("X-Client-Ip") }
   end
 
   # Filter Google responseId in response bodies
