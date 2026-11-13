@@ -11,6 +11,7 @@ module Raif
       :default_temperature,
       :default_max_completion_tokens,
       :batch_max_completion_tokens,
+      :non_streaming_max_completion_tokens,
       :supports_native_tool_use,
       :provider_settings,
       :input_token_cost,
@@ -43,6 +44,7 @@ module Raif
       temperature: nil,
       max_completion_tokens: nil,
       batch_max_completion_tokens: nil,
+      non_streaming_max_completion_tokens: nil,
       input_token_cost: nil,
       output_token_cost: nil,
       deprecated: false,
@@ -61,6 +63,7 @@ module Raif
       @default_temperature = temperature || 0.7
       @default_max_completion_tokens = max_completion_tokens
       @batch_max_completion_tokens = batch_max_completion_tokens
+      @non_streaming_max_completion_tokens = non_streaming_max_completion_tokens
       @input_token_cost = input_token_cost
       @output_token_cost = output_token_cost
       @supported_provider_managed_tools = supported_provider_managed_tools.map(&:to_s)
@@ -210,6 +213,13 @@ module Raif
           "Raif::Llm#chat: streaming requested but disabled for model key #{key.inspect} " \
             "via Raif.config.streaming_unsupported_model_keys; falling back to non-streaming."
         )
+      end
+
+      # Some models stop a non-streaming response short of the limit they allow when streamed
+      # (Gemini 4 Carbon and Argon: 32,768 vs 65,536), so the completion records the limit
+      # that actually applies.
+      if !stream_response && non_streaming_max_completion_tokens
+        max_completion_tokens = [max_completion_tokens, non_streaming_max_completion_tokens].compact.min
       end
 
       model_completion = build_pending_model_completion(
