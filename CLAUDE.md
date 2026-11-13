@@ -71,6 +71,7 @@ Model definitions live in `lib/raif/model_manifest/definitions/*.rb`, a constrai
 ### Testing Patterns
 - Uses RSpec with FactoryBot
 - VCR for recording LLM API interactions
+- Cassettes are committed to a public repo: scrub keys, ids, and client IP addresses with filters or `before_record` hooks in `spec/setup/vcr.rb`. `spec/vcr_cassettes_spec.rb` fails if a cassette contains a client IP header or a public IP address.
 - Test helpers: `stubbed_llm`, `stub_raif_task`, `stub_raif_conversation`, `stub_raif_agent`
 - Shortcut: `FB = FactoryBot`
 

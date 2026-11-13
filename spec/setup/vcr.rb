@@ -2,6 +2,13 @@
 
 require "vcr"
 
+# Headers that can carry the recording machine's IP address: some servers and fetched pages
+# echo it back. spec/vcr_cassettes_spec.rb fails if one is ever recorded.
+VCR_CLIENT_IP_HEADERS = %w[
+  X-Client-Ip X-Forwarded-For X-Real-Ip X-Originating-Ip X-Remote-Addr X-Remote-Ip
+  Cf-Connecting-Ip True-Client-Ip Fastly-Client-Ip Forwarded
+].freeze
+
 VCR.configure do |config|
   config.cassette_library_dir = "vcr_cassettes"
   config.hook_into :webmock
@@ -123,8 +130,9 @@ VCR.configure do |config|
     interaction.response.headers.delete("Set-Cookie")
     interaction.response.headers.delete("Request-Id")
     interaction.response.headers.delete("Anthropic-Organization-Id")
-    # Some fetched pages echo the recording machine's public IP back in this header.
-    interaction.response.headers.delete_if { |name, _| name.casecmp?("X-Client-Ip") }
+    [interaction.request.headers, interaction.response.headers].each do |headers|
+      headers.delete_if { |name, _| VCR_CLIENT_IP_HEADERS.any? { |ip_header| name.casecmp?(ip_header) } }
+    end
   end
 
   # Filter Google responseId in response bodies
