@@ -4,6 +4,7 @@ class Raif::Llms::Bedrock < Raif::Llm
   include Raif::Concerns::Llms::Bedrock::MessageFormatting
   include Raif::Concerns::Llms::Bedrock::ToolFormatting
   include Raif::Concerns::Llms::Bedrock::ResponseToolCalls
+  include Raif::Concerns::Llms::NativeJsonResponseValidation
 
   # Cross-region inference profile prefixes. A manifest api_name that already
   # starts with one names its profile, as global-only models such as Claude
@@ -47,6 +48,10 @@ class Raif::Llms::Bedrock < Raif::Llm
       response = bedrock_client.converse(params)
       update_model_completion(model_completion, response)
     end
+
+    # Not in update_model_completion: a stream reports usage in a metadata event after
+    # message_stop, and raising at message_stop would save the completion with zero tokens.
+    validate_native_json_response!(model_completion)
 
     model_completion
   end

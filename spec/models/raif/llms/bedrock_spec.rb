@@ -556,8 +556,8 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     let(:model_completion) do
       Raif::ModelCompletion.new(
         messages: [{ role: "user", content: "Hello" }],
-        llm_model_key: "bedrock_claude_5_sonnet",
-        model_api_name: "us.anthropic.claude-sonnet-5",
+        llm_model_key: llm.key.to_s,
+        model_api_name: llm.api_name,
         available_model_tools: available_model_tools,
         response_format: response_format,
         source: source
@@ -576,6 +576,8 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
 
     context "with JSON response format and schema" do
+      # A model without native structured outputs, so the json_response tool fallback applies.
+      let(:llm) { Raif.llm(:bedrock_amazon_nova_pro) }
       let(:available_model_tools) { [] }
       let(:response_format) { "json" }
       let(:source) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
@@ -676,6 +678,7 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
 
     context "with mixed tool types and JSON response" do
+      let(:llm) { Raif.llm(:bedrock_amazon_nova_pro) }
       let(:available_model_tools) { [Raif::TestModelTool] }
       let(:response_format) { "json" }
       let(:source) { Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)) }
@@ -1062,12 +1065,12 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
     end
 
     context "with a json_response_schema but a non-supporting model" do
-      let(:llm){ Raif.llm(:bedrock_claude_5_sonnet) }
+      let(:llm){ Raif.llm(:bedrock_amazon_nova_pro) }
       let(:model_completion) do
         Raif::ModelCompletion.new(
           messages: [{ role: "user", content: [{ text: "Tell me a joke" }] }],
-          llm_model_key: "bedrock_claude_5_sonnet",
-          model_api_name: "anthropic.claude-sonnet-5",
+          llm_model_key: "bedrock_amazon_nova_pro",
+          model_api_name: "amazon.nova-pro-v1:0",
           response_format: "json",
           source: test_task
         )
@@ -1100,6 +1103,148 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
       it "does NOT include output_config (no schema to enforce)" do
         params = llm.send(:build_request_parameters, model_completion)
         expect(params).not_to have_key(:output_config)
+      end
+    end
+
+    context "with a json_response_schema on a Claude 4.7-and-later model" do
+      let(:llm){ Raif.llm(:bedrock_claude_5_sonnet) }
+      let(:scored_task) do
+        Raif::TestJsonTask.new(creator: FB.build(:raif_test_user)).tap do |task|
+          allow(task).to receive(:json_response_schema).and_return({
+            type: "object",
+            additionalProperties: false,
+            required: ["score"],
+            properties: {
+              score: { type: "number", minimum: 0, maximum: 1 }
+            }
+          })
+        end
+      end
+      let(:model_completion) do
+        Raif::ModelCompletion.new(
+          messages: [{ role: "user", content: [{ text: "Score this" }] }],
+          llm_model_key: "bedrock_claude_5_sonnet",
+          model_api_name: "anthropic.claude-sonnet-5",
+          response_format: "json",
+          source: scored_task
+        )
+      end
+
+      def converse_text_response(text, stop_reason:)
+        Aws::BedrockRuntime::Types::ConverseResponse.new(
+          output: Aws::BedrockRuntime::Types::ConverseOutput::Message.new(
+            message: Aws::BedrockRuntime::Types::Message.new(
+              role: "assistant",
+              content: [Aws::BedrockRuntime::Types::ContentBlock::Text.new(text: text)]
+            )
+          ),
+          usage: Aws::BedrockRuntime::Types::TokenUsage.new(input_tokens: 10, output_tokens: 5, total_tokens: 15),
+          stop_reason: stop_reason
+        )
+      end
+
+      it "uses output_config and no json_response tool" do
+        params = llm.send(:build_request_parameters, model_completion)
+        tool_names = (params.dig(:tool_config, :tools) || []).map { |t| t.dig(:tool_spec, :name) }
+
+        expect(params).to have_key(:output_config)
+        expect(tool_names).not_to include("json_response")
+      end
+
+      let(:bedrock_client) { instance_double(Aws::BedrockRuntime::Client) }
+
+      before do
+        allow(llm).to receive(:bedrock_client).and_return(bedrock_client)
+      end
+
+      def stub_converse(text, stop_reason:)
+        allow(bedrock_client).to receive(:converse).and_return(converse_text_response(text, stop_reason: stop_reason))
+      end
+
+      it "accepts native output that satisfies the original schema" do
+        stub_converse({ score: 0.5 }.to_json, stop_reason: "end_turn")
+
+        expect { llm.perform_model_completion!(model_completion) }.not_to raise_error
+      end
+
+      it "rejects native output that violates constraints removed from the provider schema" do
+        stub_converse({ score: 2 }.to_json, stop_reason: "end_turn")
+
+        expect do
+          llm.perform_model_completion!(model_completion)
+        end.to raise_error(Raif::Errors::InvalidJsonResponseError, /score/)
+
+        expect(model_completion.reload.raw_response).to eq({ score: 2 }.to_json)
+      end
+
+      it "reports JSON cut off at the output limit as a truncation" do
+        stub_converse("{\"sco", stop_reason: "max_tokens")
+
+        expect do
+          llm.perform_model_completion!(model_completion)
+        end.to raise_error(Raif::Errors::TruncatedResponseError, /cut off at the output limit \(finish reason: max_tokens\)/)
+      end
+
+      context "when streaming" do
+        let(:model_completion) do
+          Raif::ModelCompletion.new(
+            messages: [{ role: "user", content: [{ text: "Score this" }] }],
+            llm_model_key: "bedrock_claude_5_sonnet",
+            model_api_name: "anthropic.claude-sonnet-5",
+            response_format: "json",
+            source: scored_task,
+            stream_response: true
+          )
+        end
+
+        def stub_converse_stream(text)
+          types = Aws::BedrockRuntime::Types
+          events = [
+            types::MessageStartEvent.new(role: "assistant", event_type: :message_start),
+            types::ContentBlockDeltaEvent.new(
+              content_block_index: 0,
+              delta: types::ContentBlockDelta::Text.new(text: text),
+              event_type: :content_block_delta
+            ),
+            types::MessageStopEvent.new(stop_reason: "end_turn", event_type: :message_stop),
+            types::ConverseStreamMetadataEvent.new(
+              usage: types::TokenUsage.new(input_tokens: 10, output_tokens: 5, total_tokens: 15),
+              event_type: :metadata
+            )
+          ]
+
+          allow(bedrock_client).to receive(:converse_stream) do |_params, &setup|
+            handlers = {}
+            stream = double("stream")
+            allow(stream).to receive(:on_error_event)
+            allow(stream).to receive(:on_event) { |&handler| handlers[:event] = handler }
+            setup.call(stream)
+            events.each { |event| handlers[:event].call(event) }
+          end
+        end
+
+        it "records the stream's usage before rejecting output that violates the original schema" do
+          stub_converse_stream({ score: 2 }.to_json)
+
+          expect do
+            llm.perform_model_completion!(model_completion) { |_mc, _delta, _event| nil }
+          end.to raise_error(Raif::Errors::InvalidJsonResponseError, /score/)
+
+          model_completion.reload
+          expect(model_completion.raw_response).to eq({ score: 2 }.to_json)
+          expect(model_completion.prompt_tokens).to eq(10)
+          expect(model_completion.completion_tokens).to eq(5)
+          expect(model_completion.total_tokens).to eq(15)
+        end
+
+        it "accepts streamed output that satisfies the original schema" do
+          stub_converse_stream({ score: 0.5 }.to_json)
+
+          expect do
+            llm.perform_model_completion!(model_completion) { |_mc, _delta, _event| nil }
+          end.not_to raise_error
+          expect(model_completion.reload.total_tokens).to eq(15)
+        end
       end
     end
   end
