@@ -8,6 +8,61 @@ provider :open_router do |p|
   )
 
   p.model(
+    key: :open_router_gemini_4_hydrogen,
+    api_name: "google/gemini-4-hydrogen",
+    display_name: "Gemini 4 Hydrogen (via OpenRouter)",
+    max_completion_tokens: 65_536,
+    pricing: {
+      cache_read_per_million: 0.075,
+      input_per_million: 1.5,
+      output_per_million: 7.5
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 12)
+    }
+  )
+
+  p.model(
+    key: :open_router_gemini_4_carbon,
+    api_name: "google/gemini-4-carbon",
+    display_name: "Gemini 4 Carbon (via OpenRouter)",
+    max_completion_tokens: 32_768,
+    pricing: {
+      cache_read_per_million: 0.1,
+      input_per_million: 2.0,
+      output_per_million: 10.0,
+      note: "Mirrors Google's introductory rate through 2026-11-30; followed_by is Google's standard rate from 2026-12-01",
+      valid_until: Date.new(2026, 11, 30),
+      followed_by: { cache_read_per_million: 0.2, input_per_million: 4.0, output_per_million: 20.0 }
+    },
+    capabilities: {
+      temperature: true,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: false,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: []
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 12)
+    }
+  )
+
+  p.model(
     key: :open_router_gemini_4_argon,
     api_name: "google/gemini-4-argon",
     display_name: "Gemini 4 Argon (via OpenRouter)",
