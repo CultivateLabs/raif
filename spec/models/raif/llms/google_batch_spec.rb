@@ -116,6 +116,50 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
       end
     end
 
+    context "on a model that does not claim temperature" do
+      let(:llm) { Raif.llm(:google_gemini_4_hydrogen) }
+      let(:batch) do
+        FB.create(
+          :raif_model_completion_batch_google,
+          llm_model_key: "google_gemini_4_hydrogen",
+          model_api_name: "gemini-4-hydrogen"
+        )
+      end
+      let!(:task1) do
+        Raif::TestTask.build_for_batch(batch: batch, batch_custom_id: "task_1", creator: creator, llm_model_key: "google_gemini_4_hydrogen")
+      end
+      let!(:task2) do
+        Raif::TestTask.build_for_batch(batch: batch, batch_custom_id: "task_2", creator: creator, llm_model_key: "google_gemini_4_hydrogen")
+      end
+
+      it "neither sends nor saves a temperature" do
+        expect(task1.raif_model_completion.temperature).to be_present
+
+        sent_body = nil
+        stub_request(:post, "#{base_url}/models/gemini-4-hydrogen:batchGenerateContent").to_return do |request|
+          sent_body = JSON.parse(request.body)
+          {
+            status: 200,
+            headers: { "Content-Type" => "application/json" },
+            body: { name: "batches/op_hydrogen", metadata: { state: "JOB_STATE_PENDING" }, done: false }.to_json
+          }
+        end
+
+        llm.submit_batch!(batch)
+
+        configs = sent_body.dig("batch", "input_config", "requests", "requests").map { |r| r.dig("request", "generationConfig") }
+        expect(configs.length).to eq(2)
+        configs.each do |config|
+          expect(config).not_to have_key("temperature")
+          expect(config["maxOutputTokens"]).to eq(32_768)
+        end
+
+        [task1, task2].each do |t|
+          expect(t.raif_model_completion.reload.temperature).to be_nil
+        end
+      end
+    end
+
     it "tolerates a top-level state field (in case the API returns the un-wrapped shape)" do
       stub_request(:post, create_endpoint).to_return(
         status: 200,
