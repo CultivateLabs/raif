@@ -324,6 +324,11 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:07:02Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T16:02:13Z"
       }
     },
     "bedrock_claude_4_8_opus": {
@@ -356,6 +361,11 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:07:02Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T16:02:13Z"
       }
     },
     "bedrock_claude_5_5_haiku": {
@@ -388,6 +398,11 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-10-07T19:31:10Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T16:02:13Z"
       }
     },
     "bedrock_claude_5_5_opus": {
@@ -420,6 +435,11 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-22T18:38:01Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T16:02:13Z"
       }
     },
     "bedrock_claude_5_5_sonnet": {
@@ -452,6 +472,11 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-28T20:18:10Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T16:02:13Z"
       }
     },
     "bedrock_claude_5_opus": {
@@ -484,6 +509,11 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-11-12T03:22:01Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T16:02:13Z"
       }
     },
     "bedrock_claude_5_sonnet": {
@@ -516,6 +546,11 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-09-01T22:07:02Z"
+      },
+      "structured_outputs": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T16:02:13Z"
       }
     },
     "bedrock_deepseek_r1": {
@@ -613,7 +648,7 @@
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-21T18:37:20Z"
+        "checked_at": "2026-11-12T20:02:22Z"
       }
     },
     "bedrock_gpt_5_6_sol": {
@@ -645,7 +680,7 @@
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-21T18:47:24Z"
+        "checked_at": "2026-11-12T20:02:22Z"
       }
     },
     "bedrock_gpt_5_6_terra": {
@@ -677,7 +712,7 @@
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-21T18:47:24Z"
+        "checked_at": "2026-11-12T20:02:22Z"
       }
     },
     "bedrock_gpt_6_1_sol": {
@@ -709,7 +744,7 @@
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-11-09T00:18:12Z"
+        "checked_at": "2026-11-12T20:02:22Z"
       }
     },
     "bedrock_gpt_6_1_terra": {
@@ -741,7 +776,7 @@
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-11-09T00:18:12Z"
+        "checked_at": "2026-11-12T20:02:22Z"
       }
     },
     "bedrock_gpt_6_astra": {
@@ -773,7 +808,7 @@
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-21T18:47:24Z"
+        "checked_at": "2026-11-12T20:02:22Z"
       }
     },
     "bedrock_gpt_6_luna": {
@@ -805,7 +840,7 @@
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-28T18:28:45Z"
+        "checked_at": "2026-11-12T20:02:22Z"
       }
     },
     "bedrock_gpt_6_sol": {
@@ -837,7 +872,7 @@
       "structured_outputs": {
         "claimed": true,
         "result": "pass",
-        "checked_at": "2026-09-28T18:28:45Z"
+        "checked_at": "2026-11-12T20:02:22Z"
       }
     },
     "bedrock_gpt_oss_120b": {
@@ -982,13 +1017,6 @@
         "checked_at": "2026-11-12T03:53:01Z"
       }
     },
-    "bedrock_titan_embed_text_v2": {
-      "embedding": {
-        "claimed": true,
-        "result": "pass",
-        "checked_at": "2026-11-12T03:22:01Z"
-      }
-    },
     "bedrock_grok_4_7": {
       "completion": {
         "claimed": true,
@@ -1019,6 +1047,13 @@
         "claimed": true,
         "result": "pass",
         "checked_at": "2026-11-09T17:20:30Z"
+      }
+    },
+    "bedrock_titan_embed_text_v2": {
+      "embedding": {
+        "claimed": true,
+        "result": "pass",
+        "checked_at": "2026-11-12T03:22:01Z"
       }
     }
   }

@@ -366,6 +366,37 @@ RSpec.describe Raif::Llms::OpenAiCompletions, type: :model do
           end.to raise_error(Faraday::ServerError, "Internal server error")
         end
       end
+
+      context "when the API returns a 429 for exhausted quota" do
+        let(:requests) { [] }
+
+        before do
+          body = {
+            error: { message: "You exceeded your current quota", type: "insufficient_quota", param: nil, code: "insufficient_quota" }
+          }.to_json
+
+          stubs.post("chat/completions") do |env|
+            requests << env
+            [429, { "Content-Type" => "application/json" }, body]
+          end
+
+          allow(Raif::Utils::TransientRetry).to receive(:sleep_for)
+        end
+
+        it "fails without retrying and records the provider's body" do
+          expect do
+            llm.chat(messages: [{ role: "user", content: "Hello" }])
+          end.to raise_error(Faraday::TooManyRequestsError)
+
+          expect(requests.size).to eq(1)
+
+          model_completion = Raif::ModelCompletion.last
+          expect(model_completion.retry_count).to eq(0)
+          expect(model_completion.failure_error).to eq("Faraday::TooManyRequestsError")
+          expect(model_completion.failure_response_status).to eq(429)
+          expect(model_completion.failure_response_body).to include("insufficient_quota")
+        end
+      end
     end
   end
 
