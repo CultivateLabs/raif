@@ -81,6 +81,13 @@ RSpec.describe "model manifest definitions validity" do
         expect(unknown).to be_empty
       end
 
+      if entry.capabilities.fetch(:strict_structured_outputs)
+        it "declares strict_structured_outputs only on a Bedrock Converse entry that claims structured outputs" do
+          expect(entry.adapter_class_name).to eq("Raif::Llms::Bedrock")
+          expect(entry.capabilities.fetch(:structured_outputs)).to be(true)
+        end
+      end
+
       it "has positive numeric pricing unless retired" do
         next if entry.retired?
 

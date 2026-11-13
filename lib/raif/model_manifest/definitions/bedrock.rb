@@ -698,6 +698,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -727,6 +728,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -755,6 +757,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -783,6 +786,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -811,6 +815,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -839,6 +844,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -867,6 +873,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -895,6 +902,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,

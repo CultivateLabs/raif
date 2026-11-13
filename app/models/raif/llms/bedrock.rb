@@ -161,6 +161,10 @@ private
           }
         }
       }
+
+      # The OpenAI GPT model cards on Bedrock call for this flag alongside output_config.
+      params[:additional_model_request_fields] = { text: { format: { strict: true } } } if supports_strict_structured_outputs?
+
       model_completion.response_format_parameter = "json_schema"
     end
 
