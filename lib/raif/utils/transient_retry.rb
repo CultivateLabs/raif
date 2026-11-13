@@ -52,6 +52,13 @@ class Raif::Utils::TransientRetry
     begin
       yield
     rescue *retriable_exceptions => e
+      if quota_exhausted?(e)
+        Raif.logger.error(
+          "Raif::Utils::TransientRetry[#{label}]: not retrying #{e.class}: the provider reports exhausted quota (insufficient_quota)."
+        )
+        raise
+      end
+
       attempt += 1
       if attempt <= max_retries
         delay = delay_for(e, attempt: attempt, base_delay: base_delay, max_delay: max_delay, jitter: jitter)
@@ -99,6 +106,24 @@ class Raif::Utils::TransientRetry
     (delay + (delay * jitter * rand)).round(3)
   end
   private_class_method :jittered_up
+
+  # OpenAI sends 429 both for a rate limit and for an account out of credit or over its billing
+  # limit, and only the body tells them apart. Waiting cannot fix the second, so retrying it just
+  # holds the caller through the whole backoff. A streamed request's error body goes to the chunk
+  # handler rather than the error, so this only catches non-streaming requests.
+  def self.quota_exhausted?(error)
+    return false unless error.is_a?(Faraday::TooManyRequestsError)
+
+    body = error.response_body
+    body = JSON.parse(body) if body.is_a?(String)
+    details = body.is_a?(Hash) ? body["error"] : nil
+    return false unless details.is_a?(Hash)
+
+    details["code"] == "insufficient_quota" || details["type"] == "insufficient_quota"
+  rescue JSON::ParserError
+    false
+  end
+  private_class_method :quota_exhausted?
 
   # Seconds only. Retry-After also allows an HTTP date, which no LLM provider sends and which
   # would need a trusted clock to act on.

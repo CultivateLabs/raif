@@ -80,6 +80,7 @@ module Raif
         end
 
         settings[:supports_encrypted_reasoning] = true if caps.fetch(:encrypted_reasoning, false)
+        settings[:supports_strict_structured_outputs] = true if caps.fetch(:strict_structured_outputs, false)
 
         settings
       end

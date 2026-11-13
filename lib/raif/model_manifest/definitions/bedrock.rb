@@ -23,7 +23,7 @@ provider :bedrock do |p|
     },
     capabilities: {
       temperature: false,
-      structured_outputs: false,
+      structured_outputs: true,
       native_tool_use: true,
       forced_tool_choice: false,
       required_tool_choice: false,
@@ -53,7 +53,7 @@ provider :bedrock do |p|
     },
     capabilities: {
       temperature: false,
-      structured_outputs: false,
+      structured_outputs: true,
       native_tool_use: true,
       forced_tool_choice: false,
       required_tool_choice: false,
@@ -83,7 +83,7 @@ provider :bedrock do |p|
     },
     capabilities: {
       temperature: false,
-      structured_outputs: false,
+      structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -109,7 +109,7 @@ provider :bedrock do |p|
     },
     capabilities: {
       temperature: false,
-      structured_outputs: false,
+      structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -136,7 +136,7 @@ provider :bedrock do |p|
     },
     capabilities: {
       temperature: false,
-      structured_outputs: false,
+      structured_outputs: true,
       native_tool_use: true,
       forced_tool_choice: false,
       required_tool_choice: false,
@@ -232,7 +232,7 @@ provider :bedrock do |p|
     pricing: { input_per_million: 10.0, output_per_million: 50.0 },
     capabilities: {
       temperature: false,
-      structured_outputs: false,
+      structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -253,7 +253,7 @@ provider :bedrock do |p|
     pricing: { input_per_million: 5.0, output_per_million: 25.0 },
     capabilities: {
       temperature: false,
-      structured_outputs: false,
+      structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -279,7 +279,7 @@ provider :bedrock do |p|
     },
     capabilities: {
       temperature: false,
-      structured_outputs: false,
+      structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -300,7 +300,7 @@ provider :bedrock do |p|
     pricing: { input_per_million: 5.0, output_per_million: 25.0 },
     capabilities: {
       temperature: false,
-      structured_outputs: false,
+      structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -399,8 +399,8 @@ provider :bedrock do |p|
       replacement_key: :bedrock_claude_5_5_sonnet,
       migration_note: "Bedrock sets its own schedule: Claude Sonnet 4.5 is Legacy on Bedrock with an end of life of " \
         "2027-04-08, later than Anthropic's 2026-11-30 retirement on the Claude API. bedrock_claude_5_5_sonnet does " \
-        "not claim temperature, native structured outputs, or forced and required tool choice: JSON responses with a " \
-        "schema fall back to the json_response tool, and passing tool_choice: raises Raif::Errors::UnsupportedFeatureError."
+        "not claim temperature or forced and required tool choice: Raif sends no temperature, and passing tool_choice: " \
+        "raises Raif::Errors::UnsupportedFeatureError."
     }
   )
 
@@ -698,6 +698,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -727,6 +728,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -755,6 +757,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -783,6 +786,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -811,6 +815,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -839,6 +844,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -867,6 +873,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
@@ -895,6 +902,7 @@ provider :bedrock do |p|
     capabilities: {
       temperature: false,
       structured_outputs: true,
+      strict_structured_outputs: true,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
