@@ -90,6 +90,49 @@ RSpec.describe Raif::Utils::TransientRetry do
       expect(attempts).to eq(1)
     end
 
+    context "with a 429" do
+      def attempts_for(body)
+        attempts = 0
+
+        begin
+          described_class.call(label: "test", max_retries: 2, retriable_exceptions: [Faraday::TooManyRequestsError], jitter: 0) do
+            attempts += 1
+            raise Faraday::TooManyRequestsError.new("the server responded with status 429", { status: 429, body: body })
+          end
+        rescue Faraday::TooManyRequestsError
+          nil
+        end
+
+        attempts
+      end
+
+      before { allow(described_class).to receive(:sleep_for) }
+
+      it "fails on the first attempt when the parsed body reports insufficient_quota" do
+        body = { "error" => { "message" => "You exceeded your current quota", "type" => "insufficient_quota", "code" => "insufficient_quota" } }
+
+        expect(attempts_for(body)).to eq(1)
+        expect(described_class).not_to have_received(:sleep_for)
+      end
+
+      it "fails on the first attempt when an unparsed JSON body reports insufficient_quota" do
+        body = { error: { message: "You exceeded your current quota", type: "insufficient_quota", code: "insufficient_quota" } }.to_json
+
+        expect(attempts_for(body)).to eq(1)
+      end
+
+      it "still retries a rate limit" do
+        body = { "error" => { "message" => "Rate limit reached", "type" => "requests", "code" => "rate_limit_exceeded" } }
+
+        expect(attempts_for(body)).to eq(3)
+      end
+
+      it "still retries when the body is empty or not JSON, as for a streamed request" do
+        expect(attempts_for("")).to eq(3)
+        expect(attempts_for("<html>Too Many Requests</html>")).to eq(3)
+      end
+    end
+
     it "invokes on_retry with (error, attempt, max_retries, delay) before each sleep" do
       observed = []
       attempts = 0
