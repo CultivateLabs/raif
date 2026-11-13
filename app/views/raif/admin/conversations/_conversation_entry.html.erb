@@ -11,6 +11,9 @@
       <% else %>
         <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
       <% end %>
+      <% if entry.user_message.blank? %>
+        <span class="badge bg-light text-muted border" title="<%= t("raif.admin.common.no_user_message_hint") %>"><%= t("raif.admin.common.no_user_message") %></span>
+      <% end %>
     </div>
 
     <span><%= entry.llm_model_key %></span>
@@ -49,10 +52,12 @@
     <% end %>
   </div>
 
-  <div class="mb-3">
-    <strong><%= t("raif.admin.common.user_message") %>:</strong>
-    <pre class="mt-2"><%= entry.user_message %></pre>
-  </div>
+  <% if entry.user_message.present? %>
+    <div class="mb-3">
+      <strong><%= t("raif.admin.common.user_message") %>:</strong>
+      <pre class="mt-2"><%= entry.user_message %></pre>
+    </div>
+  <% end %>
   <% if entry.model_response_message.present? %>
     <div class="mb-3">
       <strong><%= t("raif.admin.common.model_response") %>:</strong>
