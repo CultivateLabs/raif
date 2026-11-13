@@ -73,6 +73,22 @@ RSpec.describe "Admin::Conversations", type: :feature do
       expect(page).to have_css(".badge.bg-success", text: I18n.t("raif.admin.common.completed"), count: 3)
 
       expect(page).to have_link(I18n.t("raif.admin.conversations.show.back_to_conversations"), href: raif.admin_conversations_path)
+      expect(page).to have_content(I18n.t("raif.admin.common.user_message"), count: 3)
+      expect(page).not_to have_content(I18n.t("raif.admin.common.no_user_message"))
+    end
+
+    it "labels an entry without a user message, such as a tool follow-up, instead of showing an empty box" do
+      follow_up = FB.create(:raif_conversation_entry, :completed, raif_conversation: conversation, creator: creator, user_message: nil)
+
+      visit raif.admin_conversation_path(conversation)
+
+      expect(page).to have_content(I18n.t("raif.admin.common.user_message"), count: 3)
+      expect(page).to have_css(
+        ".badge[title='#{I18n.t("raif.admin.common.no_user_message_hint")}']",
+        text: I18n.t("raif.admin.common.no_user_message"),
+        count: 1
+      )
+      expect(page).to have_content(follow_up.model_response_message)
     end
   end
 end
