@@ -7,7 +7,9 @@ require "ipaddr"
 # scrub what we know about, and this spec catches whatever they miss: a new header, a page
 # that prints the caller's address in its body, or a hand-edited cassette.
 RSpec.describe "VCR cassettes" do
-  ipv4 = /(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])/
+  # A trailing period ends a match only when a digit follows it, so "8.8.8.8." at the end of a
+  # sentence is caught while a version string such as 0.25.0.0.1 is not.
+  ipv4 = /(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?!\w|\.\d)/
   # Addresses that cannot identify the recording machine: private, loopback, link-local,
   # documentation, and reserved ranges.
   non_public = %w[
@@ -63,7 +65,15 @@ RSpec.describe "VCR cassettes" do
             end
           end
 
-          public_ipv4s.call(interaction.dig(side, "body", "string")).each do |ip|
+          encoding = (interaction.dig(side, "headers") || {}).find { |header, _| header.casecmp?("Content-Encoding") }&.last
+          encoding = Array(encoding).join(", ")
+          if encoding.present? && !encoding.casecmp?("identity")
+            problems << "interaction #{index} #{side} body is #{encoding}-encoded, so it cannot be scanned"
+          end
+
+          body = interaction.dig(side, "body") || {}
+          text = body["string"] || body["base64_string"]&.unpack1("m")
+          public_ipv4s.call(text).each do |ip|
             problems << "interaction #{index} #{side} body: #{ip}"
           end
         end
