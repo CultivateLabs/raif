@@ -238,6 +238,8 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
         }.to_json
       )
 
+      # Build the LLM first: google_gemini_2_5_flash is deprecated, and the first build in a process warns once.
+      llm
       expect(Raif.logger).not_to receive(:warn)
       expect(llm.fetch_batch_status!(running_batch)).to eq("in_progress")
 
