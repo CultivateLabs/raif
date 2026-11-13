@@ -323,6 +323,11 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
   end
 
   describe "#fetch_batch_results! / #apply_batch_result" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    # Inside gemini-3.8-flash's introductory pricing window, so the cost example's expected rates stay fixed.
+    around { |example| travel_to(Time.zone.local(2026, 11, 15, 12)) { example.run } }
+
     let!(:task_success) do
       Raif::TestTask.build_for_batch(
         batch: batch,
@@ -389,16 +394,15 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
       expect(win_mc.completion_tokens).to eq(12)
       expect(win_mc.total_tokens).to eq(29)
 
-      # The rate in effect on the completion's created_at; gemini-3.8-flash moves to its followed_by rate after 2026-12-31.
-      rates = win_mc.send(:token_rates)
-      expected_prompt_cost = (rates[:input] * 17) * 0.5
-      expected_output_cost = (rates[:output] * 12) * 0.5
+      config = Raif.llm_config(:google_gemini_3_8_flash)
+      expected_prompt_cost = (config[:input_token_cost] * 17) * 0.5
+      expected_output_cost = (config[:output_token_cost] * 12) * 0.5
       expect(win_mc.prompt_token_cost.to_f).to be_within(1e-6).of(expected_prompt_cost.to_f)
       expect(win_mc.output_token_cost.to_f).to be_within(1e-6).of(expected_output_cost.to_f)
       # Each cost column is stored to 6 decimal places, and total_cost sums the stored values.
       expect(win_mc.total_cost).to eq(win_mc.prompt_token_cost + win_mc.output_token_cost)
 
-      no_discount_total = (rates[:input] * 17) + (rates[:output] * 12)
+      no_discount_total = (config[:input_token_cost] * 17) + (config[:output_token_cost] * 12)
       expect(win_mc.total_cost.to_f).to be < no_discount_total.to_f
 
       lose_mc = task_failure.raif_model_completion.reload
