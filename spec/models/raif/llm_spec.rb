@@ -839,7 +839,7 @@ RSpec.describe Raif::Llm, type: :model do
     end
 
     it "reads the cap from the manifest" do
-      %i[google_gemini_4_carbon google_gemini_4_argon open_router_gemini_4_argon].each do |key|
+      %i[google_gemini_4_carbon google_gemini_4_argon open_router_gemini_4_argon open_router_gemini_4_carbon].each do |key|
         llm = Raif.llm(key)
         expect([llm.default_max_completion_tokens, llm.non_streaming_max_completion_tokens]).to eq([65_536, 32_768])
       end
