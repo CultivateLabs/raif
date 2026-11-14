@@ -25,6 +25,9 @@ module Raif
         }
         config[:max_completion_tokens] = entry.max_completion_tokens if entry.max_completion_tokens
         config[:batch_max_completion_tokens] = entry.batch_max_completion_tokens if entry.batch_max_completion_tokens
+        if entry.non_streaming_max_completion_tokens
+          config[:non_streaming_max_completion_tokens] = entry.non_streaming_max_completion_tokens
+        end
 
         settings = provider_settings_for(entry)
         config[:model_provider_settings] = settings if settings.any?

@@ -793,4 +793,56 @@ RSpec.describe Raif::Llm, type: :model do
       end
     end
   end
+
+  describe "#chat non_streaming_max_completion_tokens" do
+    let(:messages) { [{ role: "user", content: "Hello" }] }
+    let(:test_llm) do
+      Raif::Llms::TestLlm.new(
+        key: :raif_test_llm,
+        api_name: "test_api",
+        max_completion_tokens: 65_536,
+        non_streaming_max_completion_tokens: 32_768
+      )
+    end
+
+    before do
+      allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
+      allow(Raif.config).to receive(:streaming_unsupported_model_keys).and_return([])
+      stub_raif_llm(test_llm) { |_messages| "hi" }
+    end
+
+    it "lowers the default limit of a non-streaming request to the cap" do
+      expect(test_llm.chat(messages: messages).max_completion_tokens).to eq(32_768)
+    end
+
+    it "lowers a caller limit above the cap on a non-streaming request" do
+      expect(test_llm.chat(messages: messages, max_completion_tokens: 60_000).max_completion_tokens).to eq(32_768)
+    end
+
+    it "keeps a caller limit below the cap" do
+      expect(test_llm.chat(messages: messages, max_completion_tokens: 1_000).max_completion_tokens).to eq(1_000)
+    end
+
+    it "leaves a streamed request at the full limit" do
+      model_completion = test_llm.chat(messages: messages) { |_mc, _delta, _event| nil }
+
+      expect(model_completion.stream_response).to be(true)
+      expect(model_completion.max_completion_tokens).to eq(65_536)
+    end
+
+    it "applies the cap when streaming falls back to non-streaming" do
+      allow(Raif.config).to receive(:streaming_unsupported_model_keys).and_return([:raif_test_llm])
+      model_completion = test_llm.chat(messages: messages) { |_mc, _delta, _event| nil }
+
+      expect(model_completion.stream_response).to be(false)
+      expect(model_completion.max_completion_tokens).to eq(32_768)
+    end
+
+    it "reads the cap from the manifest" do
+      %i[google_gemini_4_carbon google_gemini_4_argon open_router_gemini_4_argon open_router_gemini_4_carbon].each do |key|
+        llm = Raif.llm(key)
+        expect([llm.default_max_completion_tokens, llm.non_streaming_max_completion_tokens]).to eq([65_536, 32_768])
+      end
+    end
+  end
 end
