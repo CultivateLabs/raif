@@ -18,7 +18,9 @@ RSpec.describe "VCR cassettes" do
   ].map { |range| IPAddr.new(range) }
 
   public_ipv4s = lambda do |text|
-    text.to_s.scan(ipv4).select do |candidate|
+    # Bodies are mostly JSON, where an escape such as \n or \u003e can come right before an
+    # address; its last character would fail the lookbehind, so replace escapes with a space.
+    text.to_s.gsub(/\\(?:[nrtbf"\/\\]|u\h{4})/, " ").scan(ipv4).select do |candidate|
       address = IPAddr.new(candidate)
       non_public.none? { |range| range.include?(address) }
     rescue IPAddr::InvalidAddressError
@@ -45,6 +47,10 @@ RSpec.describe "VCR cassettes" do
 
     expect(interaction.request.headers.keys).to eq(["Accept"])
     expect(interaction.response.headers.keys).to eq(["Content-Type"])
+  end
+
+  it "finds a public address that follows a JSON escape" do
+    expect(public_ipv4s.call('{"a":"IP:\\n8.8.8.8","b":"<td\\u003e9.9.9.9"}')).to eq(%w[8.8.8.8 9.9.9.9])
   end
 
   cassettes.each do |path|
