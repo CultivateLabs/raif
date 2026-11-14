@@ -2,7 +2,7 @@
 http_interactions:
 - request:
     method: post
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent
     body:
       encoding: UTF-8
       string: '{"contents":[{"role":"user","parts":[{"text":"Hello"}]},{"role":"model","parts":[{"text":"Hello!
@@ -10,12 +10,12 @@ http_interactions:
         me a joke? Respond in json."}]}],"system_instruction":{"parts":[{"text":"You
         are a helpful assistant who specializes in telling jokes. Your response should
         be a properly formatted JSON object containing a single `joke` key. Do not
-        include any other text in your response outside the JSON object."}]},"generationConfig":{"temperature":0.7}}'
+        include any other text in your response outside the JSON object."}]},"generationConfig":{"temperature":0.7,"maxOutputTokens":65536}}'
     headers:
       X-Goog-Api-Key:
       - "<GOOGLE_API_KEY>"
       User-Agent:
-      - Faraday v2.14.0
+      - Faraday v2.15.1
       Content-Type:
       - application/json
       Accept-Encoding:
@@ -27,6 +27,8 @@ http_interactions:
       code: 200
       message: OK
     headers:
+      X-Gemini-Service-Tier:
+      - standard
       Content-Type:
       - application/json; charset=UTF-8
       Vary:
@@ -34,7 +36,7 @@ http_interactions:
       - Referer
       - X-Origin
       Date:
-      - Thu, 18 Dec 2025 18:01:13 GMT
+      - Thu, 12 Nov 2026 22:10:39 GMT
       Server:
       - scaffolding on HTTPServer2
       X-Xss-Protection:
@@ -44,7 +46,7 @@ http_interactions:
       X-Content-Type-Options:
       - nosniff
       Server-Timing:
-      - gfet4t7; dur=1020
+      - gfet4t7; dur=2872
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Transfer-Encoding:
@@ -58,7 +60,8 @@ http_interactions:
               "content": {
                 "parts": [
                   {
-                    "text": "```json\n{\n  \"joke\": \"Why don't scientists trust atoms? Because they make up everything!\"\n}\n```"
+                    "text": "{\n  \"joke\": \"Why do programmers prefer dark mode? Because light attracts bugs.\"\n}",
+                    "thoughtSignature": "<GOOGLE_THOUGHT_SIGNATURE>"
                   }
                 ],
                 "role": "model"
@@ -69,18 +72,19 @@ http_interactions:
           ],
           "usageMetadata": {
             "promptTokenCount": 66,
-            "candidatesTokenCount": 28,
-            "totalTokenCount": 138,
+            "candidatesTokenCount": 21,
+            "totalTokenCount": 276,
             "promptTokensDetails": [
               {
                 "modality": "TEXT",
                 "tokenCount": 66
               }
             ],
-            "thoughtsTokenCount": 44
+            "thoughtsTokenCount": 189,
+            "serviceTier": "standard"
           },
-          "modelVersion": "gemini-2.5-flash",
+          "modelVersion": "gemini-3.8-flash",
           "responseId": "<GOOGLE_RESPONSE_ID>"
         }
-  recorded_at: Thu, 18 Dec 2025 18:01:13 GMT
-recorded_with: VCR 6.3.1
+  recorded_at: Thu, 12 Nov 2026 22:10:39 GMT
+recorded_with: VCR 6.4.1

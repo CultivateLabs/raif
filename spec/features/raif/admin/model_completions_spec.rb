@@ -309,8 +309,8 @@ RSpec.describe "Admin::ModelCompletions", type: :feature do
       let!(:provider_managed_completion) do
         Raif::ModelCompletion.create!(
           source: task,
-          llm_model_key: "google_gemini_2_5_flash",
-          model_api_name: "gemini-2.5-flash",
+          llm_model_key: "google_gemini_3_8_flash",
+          model_api_name: "gemini-3.8-flash",
           response_format: "text",
           raw_response: "Rails 8.1 was recently released.",
           total_tokens: 250,

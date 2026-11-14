@@ -168,7 +168,7 @@ RSpec.describe "Raif::Task batch preparation" do
     let(:batch) { FB.create(:raif_model_completion_batch_google) }
 
     it "rewrites the completion from the task's current prompts, formatted for the provider" do
-      task = Raif::TestTask.build_for_batch(batch: batch, creator: creator, llm_model_key: "google_gemini_2_5_flash",
+      task = Raif::TestTask.build_for_batch(batch: batch, creator: creator, llm_model_key: "google_gemini_3_8_flash",
         batch_custom_id: "custom-1")
       completion = task.raif_model_completion
       task.update!(prompt: "Tell me a pun", system_prompt: "You tell puns.")
@@ -183,7 +183,7 @@ RSpec.describe "Raif::Task batch preparation" do
     end
 
     context "when the completion can no longer be refreshed" do
-      let(:task) { Raif::TestTask.build_for_batch(batch: batch, creator: creator, llm_model_key: "google_gemini_2_5_flash") }
+      let(:task) { Raif::TestTask.build_for_batch(batch: batch, creator: creator, llm_model_key: "google_gemini_3_8_flash") }
       let(:completion) { task.raif_model_completion }
 
       before { task.update!(prompt: "Tell me a pun") }
@@ -208,7 +208,7 @@ RSpec.describe "Raif::Task batch preparation" do
       end
 
       it "refuses a completion whose source is another task" do
-        other_task = Raif::TestTask.build_for_batch(batch: batch, creator: creator, llm_model_key: "google_gemini_2_5_flash",
+        other_task = Raif::TestTask.build_for_batch(batch: batch, creator: creator, llm_model_key: "google_gemini_3_8_flash",
           batch_custom_id: "other")
 
         expect_refusal(other_task)

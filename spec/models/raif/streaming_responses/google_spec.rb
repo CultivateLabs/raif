@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe Raif::StreamingResponses::Google, type: :model do
   subject(:streaming_response) { described_class.new }
 
-  let(:llm) { Raif.llm(:google_gemini_2_5_flash) }
+  let(:llm) { Raif.llm(:google_gemini_3_8_flash) }
 
   before do
     allow(Raif.config).to receive(:llm_api_requests_enabled).and_return(true)
@@ -14,8 +14,8 @@ RSpec.describe Raif::StreamingResponses::Google, type: :model do
 
   def model_completion
     @model_completion ||= Raif::ModelCompletion.new(
-      llm_model_key: "google_gemini_2_5_flash",
-      model_api_name: "gemini-2.5-flash"
+      llm_model_key: "google_gemini_3_8_flash",
+      model_api_name: "gemini-3.8-flash"
     )
   end
 

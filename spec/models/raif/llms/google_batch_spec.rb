@@ -3,13 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Raif::Llms::Google, "batch inference" do
-  let(:llm) { Raif.llm(:google_gemini_2_5_flash) }
+  let(:llm) { Raif.llm(:google_gemini_3_8_flash) }
   let(:creator) { FB.build(:raif_test_user) }
   let(:batch) do
     FB.create(
       :raif_model_completion_batch_google,
-      llm_model_key: "google_gemini_2_5_flash",
-      model_api_name: "gemini-2.5-flash"
+      llm_model_key: "google_gemini_3_8_flash",
+      model_api_name: "gemini-3.8-flash"
     )
   end
 
@@ -54,7 +54,7 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
         batch: batch,
         batch_custom_id: "task_1",
         creator: creator,
-        llm_model_key: "google_gemini_2_5_flash"
+        llm_model_key: "google_gemini_3_8_flash"
       )
     end
 
@@ -63,11 +63,11 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
         batch: batch,
         batch_custom_id: "task_2",
         creator: creator,
-        llm_model_key: "google_gemini_2_5_flash"
+        llm_model_key: "google_gemini_3_8_flash"
       )
     end
 
-    let(:create_endpoint) { "#{base_url}/models/gemini-2.5-flash:batchGenerateContent" }
+    let(:create_endpoint) { "#{base_url}/models/gemini-3.8-flash:batchGenerateContent" }
 
     it "POSTs to :batchGenerateContent with one inlined request per child completion, each tagged with its batch_custom_id" do
       stub = stub_request(:post, create_endpoint)
@@ -369,12 +369,17 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
   end
 
   describe "#fetch_batch_results! / #apply_batch_result" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    # Inside gemini-3.8-flash's introductory pricing window, so the cost example's expected rates stay fixed.
+    around { |example| travel_to(Time.zone.local(2026, 11, 15, 12)) { example.run } }
+
     let!(:task_success) do
       Raif::TestTask.build_for_batch(
         batch: batch,
         batch_custom_id: "win",
         creator: creator,
-        llm_model_key: "google_gemini_2_5_flash"
+        llm_model_key: "google_gemini_3_8_flash"
       )
     end
 
@@ -383,7 +388,7 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
         batch: batch,
         batch_custom_id: "lose",
         creator: creator,
-        llm_model_key: "google_gemini_2_5_flash"
+        llm_model_key: "google_gemini_3_8_flash"
       )
     end
 
@@ -435,14 +440,15 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
       expect(win_mc.completion_tokens).to eq(12)
       expect(win_mc.total_tokens).to eq(29)
 
-      llm_config = Raif.llm_config(:google_gemini_2_5_flash)
-      expected_prompt_cost = (llm_config[:input_token_cost] * 17) * 0.5
-      expected_output_cost = (llm_config[:output_token_cost] * 12) * 0.5
+      config = Raif.llm_config(:google_gemini_3_8_flash)
+      expected_prompt_cost = (config[:input_token_cost] * 17) * 0.5
+      expected_output_cost = (config[:output_token_cost] * 12) * 0.5
       expect(win_mc.prompt_token_cost.to_f).to be_within(1e-6).of(expected_prompt_cost.to_f)
       expect(win_mc.output_token_cost.to_f).to be_within(1e-6).of(expected_output_cost.to_f)
-      expect(win_mc.total_cost.to_f).to be_within(1e-6).of((expected_prompt_cost + expected_output_cost).to_f)
+      # Each cost column is stored to 6 decimal places, and total_cost sums the stored values.
+      expect(win_mc.total_cost).to eq(win_mc.prompt_token_cost + win_mc.output_token_cost)
 
-      no_discount_total = (llm_config[:input_token_cost] * 17) + (llm_config[:output_token_cost] * 12)
+      no_discount_total = (config[:input_token_cost] * 17) + (config[:output_token_cost] * 12)
       expect(win_mc.total_cost.to_f).to be < no_discount_total.to_f
 
       lose_mc = task_failure.raif_model_completion.reload

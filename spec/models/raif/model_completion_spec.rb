@@ -1124,8 +1124,8 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
     it "infers google web search usage from citations when no explicit tool block is stored" do
       model_completion = described_class.new(
-        llm_model_key: "google_gemini_2_5_flash",
-        model_api_name: "gemini-2.5-flash",
+        llm_model_key: "google_gemini_3_8_flash",
+        model_api_name: "gemini-3.8-flash",
         available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
         response_array: [{ "text" => "Rails 8.1 was recently released." }],
         citations: [
@@ -1156,8 +1156,8 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
     it "extracts google-style provider-managed code execution details" do
       model_completion = described_class.new(
-        llm_model_key: "google_gemini_2_5_flash",
-        model_api_name: "gemini-2.5-flash",
+        llm_model_key: "google_gemini_3_8_flash",
+        model_api_name: "gemini-3.8-flash",
         available_model_tools: [Raif::ModelTools::ProviderManaged::CodeExecution],
         response_array: [
           {
@@ -1184,8 +1184,8 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
     it "pairs google code execution results with their preceding code part when no ids are present" do
       model_completion = described_class.new(
-        llm_model_key: "google_gemini_2_5_flash",
-        model_api_name: "gemini-2.5-flash",
+        llm_model_key: "google_gemini_3_8_flash",
+        model_api_name: "gemini-3.8-flash",
         available_model_tools: [Raif::ModelTools::ProviderManaged::CodeExecution],
         response_array: [
           { "executableCode" => { "language" => "PYTHON", "code" => "print(1)\n" } },
@@ -1203,8 +1203,8 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
     it "still infers google web search from citations when code execution was also reported" do
       model_completion = described_class.new(
-        llm_model_key: "google_gemini_2_5_flash",
-        model_api_name: "gemini-2.5-flash",
+        llm_model_key: "google_gemini_3_8_flash",
+        model_api_name: "gemini-3.8-flash",
         available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch, Raif::ModelTools::ProviderManaged::CodeExecution],
         response_array: [
           { "executableCode" => { "language" => "PYTHON", "code" => "print(2024 - 1993)\n" } },
@@ -1223,8 +1223,8 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
     it "ignores google code execution parts when the tool was not made available" do
       model_completion = described_class.new(
-        llm_model_key: "google_gemini_2_5_flash",
-        model_api_name: "gemini-2.5-flash",
+        llm_model_key: "google_gemini_3_8_flash",
+        model_api_name: "gemini-3.8-flash",
         available_model_tools: [],
         response_array: [
           { "executableCode" => { "language" => "PYTHON", "code" => "print(7 * 6)\n" } },
@@ -1302,8 +1302,8 @@ RSpec.describe Raif::ModelCompletion, type: :model do
 
     it "returns the citations for google, which stores no uncited pages" do
       model_completion = described_class.new(
-        llm_model_key: "google_gemini_2_5_flash",
-        model_api_name: "gemini-2.5-flash",
+        llm_model_key: "google_gemini_3_8_flash",
+        model_api_name: "gemini-3.8-flash",
         available_model_tools: [Raif::ModelTools::ProviderManaged::WebSearch],
         response_array: [{ "text" => "Rails 8.1 was recently released." }],
         citations: [{ "title" => "wikipedia.org", "url" => "https://en.wikipedia.org/wiki/Ruby_on_Rails" }]

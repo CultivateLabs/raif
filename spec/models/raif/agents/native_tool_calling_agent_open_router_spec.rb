@@ -55,7 +55,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
 
     context "with OpenRouter/Gemini" do
       let(:task) { "Tell me some interesting facts from the James Webb Space Telescope's Wikipedia page" }
-      let(:llm_model_key) { "open_router_gemini_2_5_flash" }
+      let(:llm_model_key) { "open_router_gemini_3_8_flash" }
 
       # Match on method+URI rather than the full request body: the request body embeds
       # non-deterministic provider tool-call ids and Wikipedia search results, which makes

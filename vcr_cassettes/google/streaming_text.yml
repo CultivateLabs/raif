@@ -2,15 +2,15 @@
 http_interactions:
 - request:
     method: post
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse
     body:
       encoding: UTF-8
-      string: '{"contents":[{"role":"user","parts":[{"text":"Please write me a poem"}]}],"generationConfig":{"temperature":0.7}}'
+      string: '{"contents":[{"role":"user","parts":[{"text":"Please write me a poem"}]}],"generationConfig":{"temperature":0.7,"maxOutputTokens":65536}}'
     headers:
       X-Goog-Api-Key:
       - "<GOOGLE_API_KEY>"
       User-Agent:
-      - Faraday v2.14.0
+      - Faraday v2.15.1
       Content-Type:
       - application/json
       Accept-Encoding:
@@ -33,7 +33,7 @@ http_interactions:
       Transfer-Encoding:
       - chunked
       Date:
-      - Thu, 18 Dec 2025 18:39:45 GMT
+      - Thu, 12 Nov 2026 22:10:35 GMT
       Server:
       - scaffolding on HTTPServer2
       X-Xss-Protection:
@@ -43,32 +43,12 @@ http_interactions:
       X-Content-Type-Options:
       - nosniff
       Server-Timing:
-      - gfet4t7; dur=7405
+      - gfet4t7; dur=11247
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
     body:
-      encoding: UTF-8
-      string: "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"The
-        world awakes with whispered sigh,\\nA gentle breath upon the air.\\nWhere
-        morning mists begin to lie,\\nAnd banish shadows everywhere.\\n\\nThe sunbeams
-        stretch their golden fingers,\\nTo paint the dew on leaf and\"}],\"role\":
-        \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 6,\"candidatesTokenCount\":
-        49,\"totalTokenCount\": 1393,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
-        6}],\"thoughtsTokenCount\": 1338},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
-        \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\ndata: {\"candidates\": [{\"content\": {\"parts\":
-        [{\"text\": \" bloom,\\nWhile distant song a robin lingers,\\nDispelling all
-        the fading gloom.\\n\\nA quiet peace begins to settle,\\nUpon the heart, a
-        gentle balm.\\nNo urgency, no need to meddle,\\nJust nature\"}],\"role\":
-        \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 6,\"candidatesTokenCount\":
-        97,\"totalTokenCount\": 1441,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
-        6}],\"thoughtsTokenCount\": 1338},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
-        \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\ndata: {\"candidates\": [{\"content\": {\"parts\":
-        [{\"text\": \"'s soft and timeless calm.\\n\\nSo take a moment, soft and deep,\\nTo
-        breathe it in, this world so fair.\\nWhile secret promises it keeps,\\nAnd
-        wonders wait beyond compare.\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\":
-        0}],\"usageMetadata\": {\"promptTokenCount\": 6,\"candidatesTokenCount\":
-        139,\"totalTokenCount\": 1483,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
-        6}],\"thoughtsTokenCount\": 1338},\"modelVersion\": \"gemini-2.5-flash\",\"responseId\":
-        \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\n"
-  recorded_at: Thu, 18 Dec 2025 18:39:46 GMT
-recorded_with: VCR 6.3.1
+      encoding: ASCII-8BIT
+      string: !binary |-
+        ZGF0YTogeyJjYW5kaWRhdGVzIjogW3siY29udGVudCI6IHsicGFydHMiOiBbeyJ0ZXh0IjogIlRoZSBlZGdlIG9mIG5pZ2h0IGJlZ2lucyJ9XSwicm9sZSI6ICJtb2RlbCJ9LCJpbmRleCI6IDB9XSwidXNhZ2VNZXRhZGF0YSI6IHsicHJvbXB0VG9rZW5Db3VudCI6IDYsImNhbmRpZGF0ZXNUb2tlbkNvdW50IjogNSwidG90YWxUb2tlbkNvdW50IjogMTA2MywicHJvbXB0VG9rZW5zRGV0YWlscyI6IFt7Im1vZGFsaXR5IjogIlRFWFQiLCJ0b2tlbkNvdW50IjogNn1dLCJ0aG91Z2h0c1Rva2VuQ291bnQiOiAxMDUyLCJzZXJ2aWNlVGllciI6ICJzdGFuZGFyZCJ9LCJtb2RlbFZlcnNpb24iOiAiZ2VtaW5pLTMuOC1mbGFzaCIsInJlc3BvbnNlSWQiOiAiPEdPT0dMRV9SRVNQT05TRV9JRD4ifQ0KDQpkYXRhOiB7ImNhbmRpZGF0ZXMiOiBbeyJjb250ZW50IjogeyJwYXJ0cyI6IFt7InRleHQiOiAiIHRvIGZyYXksICBcbkluIHRocmVhZHMgb2Ygc2lsdmVyLCB0aGVuIG9mIGdyYXkuICBcblRoZSBzdGFycyBmb2xkIHVwIHRoZWlyIHF1aWV0IGxpZ2h0LCJ9XSwicm9sZSI6ICJtb2RlbCJ9LCJpbmRleCI6IDB9XSwidXNhZ2VNZXRhZGF0YSI6IHsicHJvbXB0VG9rZW5Db3VudCI6IDYsImNhbmRpZGF0ZXNUb2tlbkNvdW50IjogMjksInRvdGFsVG9rZW5Db3VudCI6IDEwODcsInByb21wdFRva2Vuc0RldGFpbHMiOiBbeyJtb2RhbGl0eSI6ICJURVhUIiwidG9rZW5Db3VudCI6IDZ9XSwidGhvdWdodHNUb2tlbkNvdW50IjogMTA1Miwic2VydmljZVRpZXIiOiAic3RhbmRhcmQifSwibW9kZWxWZXJzaW9uIjogImdlbWluaS0zLjgtZmxhc2giLCJyZXNwb25zZUlkIjogIjxHT09HTEVfUkVTUE9OU0VfSUQ+In0NCg0KZGF0YTogeyJjYW5kaWRhdGVzIjogW3siY29udGVudCI6IHsicGFydHMiOiBbeyJ0ZXh0IjogIiAgXG5BbmQgc2xpcCBiZXlvbmQgdGhlIHJlYWNoIG9mIHNpZ2h0LiAgXG5cbkEgYnJlYXRoIG9mIHdpbmQgc3RpcnMgdGhyb3VnaCB0aGUgcGluZSwgIFxuV2hlcmUifV0sInJvbGUiOiAibW9kZWwifSwiaW5kZXgiOiAwfV0sInVzYWdlTWV0YWRhdGEiOiB7InByb21wdFRva2VuQ291bnQiOiA2LCJjYW5kaWRhdGVzVG9rZW5Db3VudCI6IDUzLCJ0b3RhbFRva2VuQ291bnQiOiAxMTExLCJwcm9tcHRUb2tlbnNEZXRhaWxzIjogW3sibW9kYWxpdHkiOiAiVEVYVCIsInRva2VuQ291bnQiOiA2fV0sInRob3VnaHRzVG9rZW5Db3VudCI6IDEwNTIsInNlcnZpY2VUaWVyIjogInN0YW5kYXJkIn0sIm1vZGVsVmVyc2lvbiI6ICJnZW1pbmktMy44LWZsYXNoIiwicmVzcG9uc2VJZCI6ICI8R09PR0xFX1JFU1BPTlNFX0lEPiJ9DQoNCmRhdGE6IHsiY2FuZGlkYXRlcyI6IFt7ImNvbnRlbnQiOiB7InBhcnRzIjogW3sidGV4dCI6ICIgc2hhZG93cyBzb2Z0ZW4gdGhlaXIgZGVzaWduLiAgXG5VcG9uIHRoZSBncmFzcywgdGhlIGRldyBjbGluZ3MgbG93LCAgXG5UbyBjYXRjaCB0aGUgbW9ybmluZ+KAmXMifV0sInJvbGUiOiAibW9kZWwifSwiaW5kZXgiOiAwfV0sInVzYWdlTWV0YWRhdGEiOiB7InByb21wdFRva2VuQ291bnQiOiA2LCJjYW5kaWRhdGVzVG9rZW5Db3VudCI6IDc3LCJ0b3RhbFRva2VuQ291bnQiOiAxMTM1LCJwcm9tcHRUb2tlbnNEZXRhaWxzIjogW3sibW9kYWxpdHkiOiAiVEVYVCIsInRva2VuQ291bnQiOiA2fV0sInRob3VnaHRzVG9rZW5Db3VudCI6IDEwNTIsInNlcnZpY2VUaWVyIjogInN0YW5kYXJkIn0sIm1vZGVsVmVyc2lvbiI6ICJnZW1pbmktMy44LWZsYXNoIiwicmVzcG9uc2VJZCI6ICI8R09PR0xFX1JFU1BPTlNFX0lEPiJ9DQoNCmRhdGE6IHsiY2FuZGlkYXRlcyI6IFt7ImNvbnRlbnQiOiB7InBhcnRzIjogW3sidGV4dCI6ICIgZWFybGllc3QgZ2xvdy4gIFxuXG5UaGVuIGNvbWVzIHRoZSBhbWJlciwgc29mdCBhbmQgd2lkZSwgIFxuQSBnb2xkZW4gd2F2ZSwgYSBxdWlldCB0aWRlLCJ9XSwicm9sZSI6ICJtb2RlbCJ9LCJpbmRleCI6IDB9XSwidXNhZ2VNZXRhZGF0YSI6IHsicHJvbXB0VG9rZW5Db3VudCI6IDYsImNhbmRpZGF0ZXNUb2tlbkNvdW50IjogMTAxLCJ0b3RhbFRva2VuQ291bnQiOiAxMTU5LCJwcm9tcHRUb2tlbnNEZXRhaWxzIjogW3sibW9kYWxpdHkiOiAiVEVYVCIsInRva2VuQ291bnQiOiA2fV0sInRob3VnaHRzVG9rZW5Db3VudCI6IDEwNTIsInNlcnZpY2VUaWVyIjogInN0YW5kYXJkIn0sIm1vZGVsVmVyc2lvbiI6ICJnZW1pbmktMy44LWZsYXNoIiwicmVzcG9uc2VJZCI6ICI8R09PR0xFX1JFU1BPTlNFX0lEPiJ9DQoNCmRhdGE6IHsiY2FuZGlkYXRlcyI6IFt7ImNvbnRlbnQiOiB7InBhcnRzIjogW3sidGV4dCI6ICIgIFxuVGhhdCBzcGlsbHMgYWNyb3NzIHRoZSB3aW5kb3dzaWxsICBcbkFuZCB3YXJtcyB3aGF0IG9uY2Ugd2FzIHBhbGUgYW5kIHN0aWxsLiAgXG5cbkFuZCBldmVyeSBzb3Jyb3cgdHVybnMgdG8gcnVuICAifV0sInJvbGUiOiAibW9kZWwifSwiaW5kZXgiOiAwfV0sInVzYWdlTWV0YWRhdGEiOiB7InByb21wdFRva2VuQ291bnQiOiA2LCJjYW5kaWRhdGVzVG9rZW5Db3VudCI6IDEyOCwidG90YWxUb2tlbkNvdW50IjogMTE4NiwicHJvbXB0VG9rZW5zRGV0YWlscyI6IFt7Im1vZGFsaXR5IjogIlRFWFQiLCJ0b2tlbkNvdW50IjogNn1dLCJ0aG91Z2h0c1Rva2VuQ291bnQiOiAxMDUyLCJzZXJ2aWNlVGllciI6ICJzdGFuZGFyZCJ9LCJtb2RlbFZlcnNpb24iOiAiZ2VtaW5pLTMuOC1mbGFzaCIsInJlc3BvbnNlSWQiOiAiPEdPT0dMRV9SRVNQT05TRV9JRD4ifQ0KDQpkYXRhOiB7ImNhbmRpZGF0ZXMiOiBbeyJjb250ZW50IjogeyJwYXJ0cyI6IFt7InRleHQiOiAiXG5CZW5lYXRoIHRoZSBwcm9taXNlIG9mIHRoZSBzdW47ICBcbkEgYnJhbmQtbmV3IHdvcmxkLCB1bndyaXR0ZW4sIGNsZWFuLCAgXG4ifV0sInJvbGUiOiAibW9kZWwifSwiaW5kZXgiOiAwfV0sInVzYWdlTWV0YWRhdGEiOiB7InByb21wdFRva2VuQ291bnQiOiA2LCJjYW5kaWRhdGVzVG9rZW5Db3VudCI6IDE1MiwidG90YWxUb2tlbkNvdW50IjogMTIxMCwicHJvbXB0VG9rZW5zRGV0YWlscyI6IFt7Im1vZGFsaXR5IjogIlRFWFQiLCJ0b2tlbkNvdW50IjogNn1dLCJ0aG91Z2h0c1Rva2VuQ291bnQiOiAxMDUyLCJzZXJ2aWNlVGllciI6ICJzdGFuZGFyZCJ9LCJtb2RlbFZlcnNpb24iOiAiZ2VtaW5pLTMuOC1mbGFzaCIsInJlc3BvbnNlSWQiOiAiPEdPT0dMRV9SRVNQT05TRV9JRD4ifQ0KDQpkYXRhOiB7ImNhbmRpZGF0ZXMiOiBbeyJjb250ZW50IjogeyJwYXJ0cyI6IFt7InRleHQiOiAiU3RlcHBpbmcgb3V0IGZyb20gd2hhdCBoYXMgYmVlbi4ifV0sInJvbGUiOiAibW9kZWwifSwiaW5kZXgiOiAwfV0sInVzYWdlTWV0YWRhdGEiOiB7InByb21wdFRva2VuQ291bnQiOiA2LCJjYW5kaWRhdGVzVG9rZW5Db3VudCI6IDE2MCwidG90YWxUb2tlbkNvdW50IjogMTIxOCwicHJvbXB0VG9rZW5zRGV0YWlscyI6IFt7Im1vZGFsaXR5IjogIlRFWFQiLCJ0b2tlbkNvdW50IjogNn1dLCJ0aG91Z2h0c1Rva2VuQ291bnQiOiAxMDUyLCJzZXJ2aWNlVGllciI6ICJzdGFuZGFyZCJ9LCJtb2RlbFZlcnNpb24iOiAiZ2VtaW5pLTMuOC1mbGFzaCIsInJlc3BvbnNlSWQiOiAiPEdPT0dMRV9SRVNQT05TRV9JRD4ifQ0KDQpkYXRhOiB7ImNhbmRpZGF0ZXMiOiBbeyJjb250ZW50IjogeyJwYXJ0cyI6IFt7InRleHQiOiAiIiwidGhvdWdodFNpZ25hdHVyZSI6ICI8R09PR0xFX1RIT1VHSFRfU0lHTkFUVVJFPiJ9XSwicm9sZSI6ICJtb2RlbCJ9LCJmaW5pc2hSZWFzb24iOiAiU1RPUCIsImluZGV4IjogMH1dLCJ1c2FnZU1ldGFkYXRhIjogeyJwcm9tcHRUb2tlbkNvdW50IjogNiwiY2FuZGlkYXRlc1Rva2VuQ291bnQiOiAxNjAsInRvdGFsVG9rZW5Db3VudCI6IDEyMTgsInByb21wdFRva2Vuc0RldGFpbHMiOiBbeyJtb2RhbGl0eSI6ICJURVhUIiwidG9rZW5Db3VudCI6IDZ9XSwidGhvdWdodHNUb2tlbkNvdW50IjogMTA1Miwic2VydmljZVRpZXIiOiAic3RhbmRhcmQifSwibW9kZWxWZXJzaW9uIjogImdlbWluaS0zLjgtZmxhc2giLCJyZXNwb25zZUlkIjogIjxHT09HTEVfUkVTUE9OU0VfSUQ+In0NCg0K
+  recorded_at: Thu, 12 Nov 2026 22:10:36 GMT
+recorded_with: VCR 6.4.1
