@@ -4,7 +4,8 @@ provider :x_ai do |p|
   p.references(
     models_doc: "https://docs.x.ai/developers/models",
     pricing: "https://docs.x.ai/developers/models",
-    deprecations: "https://docs.x.ai/developers/models"
+    deprecations: "https://docs.x.ai/developers/models",
+    docs_index: "https://docs.x.ai/llms.txt"
   )
 
   p.model(

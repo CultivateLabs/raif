@@ -5,7 +5,8 @@ provider :google do |p|
     models_doc: "https://aistudio.google.com/docs/models",
     pricing: "https://aistudio.google.com/docs/pricing",
     deprecations: "https://aistudio.google.com/docs/deprecations",
-    api_versions: "https://aistudio.google.com/api-reference/api-versions"
+    api_versions: "https://aistudio.google.com/api-reference/api-versions",
+    docs_index: "https://aistudio.google.com/llms.txt"
   )
 
   p.model(
