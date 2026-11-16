@@ -48,7 +48,7 @@ provider :open_router do |p|
       followed_by: { cache_read_per_million: 0.2, input_per_million: 4.0, output_per_million: 20.0 }
     },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
@@ -78,7 +78,7 @@ provider :open_router do |p|
       followed_by: { cache_read_per_million: 0.2, input_per_million: 4.0, output_per_million: 20.0 }
     },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
@@ -106,7 +106,7 @@ provider :open_router do |p|
       followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
@@ -377,7 +377,7 @@ provider :open_router do |p|
       followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
@@ -409,7 +409,7 @@ provider :open_router do |p|
       followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,
@@ -455,7 +455,7 @@ provider :open_router do |p|
     display_name: "Gemini 3.5 Flash-Lite (via OpenRouter)",
     pricing: { input_per_million: 0.3, output_per_million: 2.5 },
     capabilities: {
-      temperature: true,
+      temperature: false,
       structured_outputs: true,
       native_tool_use: true,
       streaming: true,

@@ -60,15 +60,15 @@ RSpec.describe Raif::Llms::Google, type: :model do
         model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], system_prompt: "You are a helpful assistant")
 
         expect(model_completion.raw_response).to eq("Hello! How can I help you today?")
-        # candidatesTokenCount (9) + thoughtsTokenCount (80) -- Gemini reports
+        # candidatesTokenCount (9) + thoughtsTokenCount (32) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(89)
+        expect(model_completion.completion_tokens).to eq(41)
         expect(model_completion.prompt_tokens).to eq(7)
-        expect(model_completion.total_tokens).to eq(96)
+        expect(model_completion.total_tokens).to eq(48)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([{ "role" => "user", "parts" => [{ "text" => "Hello" }] }])
         expect(model_completion.system_prompt).to eq("You are a helpful assistant")
-        expect(model_completion.temperature).to eq(0.7)
+        expect(model_completion.temperature).to be_nil
         expect(model_completion.max_completion_tokens).to eq(65_536)
         expect(model_completion.response_format).to eq("text")
         expect(model_completion.source).to be_nil
@@ -135,20 +135,17 @@ RSpec.describe Raif::Llms::Google, type: :model do
 
         model_completion = llm.chat(messages: messages, response_format: :json, system_prompt: system_prompt)
 
-        expected_raw_response = <<~RESPONSE.chomp
-          {
-            "joke": "Why do programmers prefer dark mode? Because light attracts bugs."
-          }
-        RESPONSE
-        expect(model_completion.raw_response).to eq(expected_raw_response)
+        expect(model_completion.raw_response).to eq(
+          %({"joke": "Why do we tell actors to 'break a leg'? Because every play has a cast."})
+        )
         expect(model_completion.parsed_response).to eq({
-          "joke" => "Why do programmers prefer dark mode? Because light attracts bugs."
+          "joke" => "Why do we tell actors to 'break a leg'? Because every play has a cast."
         })
-        # candidatesTokenCount (21) + thoughtsTokenCount (189) -- Gemini reports
+        # candidatesTokenCount (23) + thoughtsTokenCount (328) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(210)
+        expect(model_completion.completion_tokens).to eq(351)
         expect(model_completion.prompt_tokens).to eq(66)
-        expect(model_completion.total_tokens).to eq(276)
+        expect(model_completion.total_tokens).to eq(417)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([
           { "role" => "user", "parts" => [{ "text" => "Hello" }] },
@@ -156,7 +153,7 @@ RSpec.describe Raif::Llms::Google, type: :model do
           { "role" => "user", "parts" => [{ "text" => "Can you tell me a joke? Respond in json." }] }
         ])
         expect(model_completion.system_prompt).to eq(system_prompt)
-        expect(model_completion.temperature).to eq(0.7)
+        expect(model_completion.temperature).to be_nil
         expect(model_completion.max_completion_tokens).to eq(65_536)
         expect(model_completion.response_format).to eq("json")
         expect(model_completion.source).to be_nil
@@ -177,12 +174,12 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.response_tool_calls.first["name"]).to eq("fetch_url")
         expect(model_completion.response_tool_calls.first["arguments"]).to eq({ "url" => "https://www.wsj.com" })
         expect(model_completion.response_tool_calls.first["provider_tool_call_id"]).to be_present
-        # candidatesTokenCount (23) + thoughtsTokenCount (47) -- Gemini reports
+        # candidatesTokenCount (23) + thoughtsTokenCount (52) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(70)
+        expect(model_completion.completion_tokens).to eq(75)
         expect(model_completion.prompt_tokens).to eq(76)
         # total_tokens = prompt + candidates + thoughts
-        expect(model_completion.total_tokens).to eq(146)
+        expect(model_completion.total_tokens).to eq(151)
         # raw_response should be blank when only tool calls are returned
         expect(model_completion.raw_response).to be_blank
       end
@@ -216,20 +213,20 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.raw_response).to include("Ruby on Rails")
         expect(model_completion.raw_response).to include("Rails 8.0")
         expect(model_completion.available_model_tools).to eq(["Raif::ModelTools::ProviderManaged::WebSearch"])
-        # candidatesTokenCount (1376) + thoughtsTokenCount (926) -- Gemini reports
+        # candidatesTokenCount (1155) + thoughtsTokenCount (748) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(2302)
-        # promptTokenCount (186); this recording reports no separate toolUsePromptTokenCount.
-        expect(model_completion.prompt_tokens).to eq(186)
+        expect(model_completion.completion_tokens).to eq(1903)
+        # promptTokenCount (158); this recording reports no separate toolUsePromptTokenCount.
+        expect(model_completion.prompt_tokens).to eq(158)
         # total_tokens = prompt + candidates + thoughts
-        expect(model_completion.total_tokens).to eq(2488)
+        expect(model_completion.total_tokens).to eq(2061)
 
         # Test that citations are extracted from grounding metadata
         expect(model_completion.citations).to be_an(Array)
-        expect(model_completion.citations.length).to eq(7)
+        expect(model_completion.citations.length).to eq(6)
         expect(model_completion.citations.first).to have_key("url")
         expect(model_completion.citations.first).to have_key("title")
-        expect(model_completion.citations.first["title"]).to eq("rubyroidlabs.com")
+        expect(model_completion.citations.first["title"]).to eq("avohq.io")
 
         # Verify citation sources include expected domains
         citation_titles = model_completion.citations.map { |c| c["title"] }
@@ -251,23 +248,21 @@ RSpec.describe Raif::Llms::Google, type: :model do
         end
 
         expect(deltas).to eq([
-          "The edge of night begins",
-          " to fray,  \nIn threads of silver, then of gray.  \nThe stars fold up their quiet light,",
-          "  \nAnd slip beyond the reach of sight.  \n\nA breath of wind stirs through the pine,  \nWhere",
-          " shadows soften their design.  \nUpon the grass, the dew clings low,  \nTo catch the morning’s",
-          " earliest glow.  \n\nThen comes the amber, soft and wide,  \nA golden wave, a quiet tide,",
-          "  \nThat spills across the windowsill  \nAnd warms what once was pale and still.  \n\nAnd every sorrow turns to run  ",
-          "\nBeneath the promise of the sun;  \nA brand-new world, unwritten, clean,  \n",
-          "Stepping out from what has been."
+          "The quiet sits upon the sill,\nIn folds of slate and morning blue;\nThe waking world is standing",
+          " still,\nAnd keeps its heavy news from you.\n\nThe streetlights blink their weary eyes,\nA lone bird",
+          " tests the silver air;\nBefore the sun reclaims the skies,\nThere is no burden left to bear.\n\nThe kettle sighs with",
+          " rising steam,\nA warmth against the fading chill;\nYou hold the remnants of a dream,\nWhile shadows linger",
+          " on the hill.\n\nSo breathe it in, this unmade day,\nBefore the clock begins to run—\nThe night has washed the",
+          " slate away,\nAnd life waits softly for the sun."
         ])
 
-        expect(model_completion.raw_response).to eq("The edge of night begins to fray,  \nIn threads of silver, then of gray.  \nThe stars fold up their quiet light,  \nAnd slip beyond the reach of sight.  \n\nA breath of wind stirs through the pine,  \nWhere shadows soften their design.  \nUpon the grass, the dew clings low,  \nTo catch the morning’s earliest glow.  \n\nThen comes the amber, soft and wide,  \nA golden wave, a quiet tide,  \nThat spills across the windowsill  \nAnd warms what once was pale and still.  \n\nAnd every sorrow turns to run  \nBeneath the promise of the sun;  \nA brand-new world, unwritten, clean,  \nStepping out from what has been.") # rubocop:disable Layout/LineLength
-        # candidatesTokenCount (160) + thoughtsTokenCount (1052) -- Gemini reports
+        expect(model_completion.raw_response).to eq("The quiet sits upon the sill,\nIn folds of slate and morning blue;\nThe waking world is standing still,\nAnd keeps its heavy news from you.\n\nThe streetlights blink their weary eyes,\nA lone bird tests the silver air;\nBefore the sun reclaims the skies,\nThere is no burden left to bear.\n\nThe kettle sighs with rising steam,\nA warmth against the fading chill;\nYou hold the remnants of a dream,\nWhile shadows linger on the hill.\n\nSo breathe it in, this unmade day,\nBefore the clock begins to run—\nThe night has washed the slate away,\nAnd life waits softly for the sun.") # rubocop:disable Layout/LineLength
+        # candidatesTokenCount (139) + thoughtsTokenCount (896) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(1212)
+        expect(model_completion.completion_tokens).to eq(1035)
         expect(model_completion.prompt_tokens).to eq(6)
-        # total_tokens includes thoughtsTokenCount (1052) in addition to prompt + completion
-        expect(model_completion.total_tokens).to eq(1218)
+        # total_tokens includes thoughtsTokenCount (896) in addition to prompt + completion
+        expect(model_completion.total_tokens).to eq(1041)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([{ "role" => "user", "parts" => [{ "text" => "Please write me a poem" }] }])
       end
@@ -288,21 +283,18 @@ RSpec.describe Raif::Llms::Google, type: :model do
           deltas << delta
         end
 
-        expected_raw_response = <<~RESPONSE.chomp
-          {
-            "joke": "Why do programmers prefer dark mode? Because light attracts bugs."
-          }
-        RESPONSE
-        expect(model_completion.raw_response).to eq(expected_raw_response)
+        expect(model_completion.raw_response).to eq(
+          %({"joke": "Why do programmers prefer dark mode? Because light attracts bugs."})
+        )
         expect(model_completion.parsed_response).to eq({
           "joke" => "Why do programmers prefer dark mode? Because light attracts bugs."
         })
-        # candidatesTokenCount (21) + thoughtsTokenCount (225) -- Gemini reports
+        # candidatesTokenCount (17) + thoughtsTokenCount (208) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(246)
+        expect(model_completion.completion_tokens).to eq(225)
         expect(model_completion.prompt_tokens).to eq(54)
-        # total_tokens includes thoughtsTokenCount (225) in addition to prompt + completion
-        expect(model_completion.total_tokens).to eq(300)
+        # total_tokens includes thoughtsTokenCount (208) in addition to prompt + completion
+        expect(model_completion.total_tokens).to eq(279)
         expect(model_completion).to be_persisted
         expect(model_completion.messages).to eq([{
           "role" => "user",
@@ -326,12 +318,12 @@ RSpec.describe Raif::Llms::Google, type: :model do
         expect(model_completion.response_tool_calls.first["name"]).to eq("fetch_url")
         expect(model_completion.response_tool_calls.first["arguments"]).to eq({ "url" => "https://www.wsj.com" })
         expect(model_completion.response_tool_calls.first["provider_tool_call_id"]).to be_present
-        # candidatesTokenCount (23) + thoughtsTokenCount (42) -- Gemini reports
+        # candidatesTokenCount (23) + thoughtsTokenCount (47) -- Gemini reports
         # thinking tokens separately but bills them at the output rate.
-        expect(model_completion.completion_tokens).to eq(65)
+        expect(model_completion.completion_tokens).to eq(70)
         expect(model_completion.prompt_tokens).to eq(76)
         # total_tokens = prompt + candidates + thoughts
-        expect(model_completion.total_tokens).to eq(141)
+        expect(model_completion.total_tokens).to eq(146)
         # raw_response should be blank when only tool calls are returned
         expect(model_completion.raw_response).to be_blank
 
@@ -441,7 +433,6 @@ RSpec.describe Raif::Llms::Google, type: :model do
         it "includes system_instruction in the parameters" do
           expect(parameters[:contents]).to eq([{ "role" => "user", "content" => "Hello" }])
           expect(parameters[:system_instruction]).to eq({ parts: [{ text: "You are a helpful assistant" }] })
-          expect(parameters[:generationConfig][:temperature]).to eq(0.8)
         end
       end
 
@@ -451,6 +442,24 @@ RSpec.describe Raif::Llms::Google, type: :model do
         it "builds parameters without system_instruction" do
           expect(parameters[:contents]).to eq([{ "role" => "user", "content" => "Hello" }])
           expect(parameters).not_to have_key(:system_instruction)
+        end
+      end
+
+      context "on a model that claims temperature" do
+        let(:llm) { Raif.llm(:google_gemini_3_1_pro) }
+        let(:system_prompt) { nil }
+        let(:model_completion) do
+          Raif::ModelCompletion.new(
+            messages: [{ role: "user", content: "Hello" }],
+            llm_model_key: "google_gemini_3_1_pro",
+            model_api_name: "gemini-3.1-pro-preview",
+            temperature: 0.8,
+            response_format: "text"
+          )
+        end
+
+        it "sends the completion's temperature" do
+          expect(parameters[:generationConfig][:temperature]).to eq(0.8)
         end
       end
 
