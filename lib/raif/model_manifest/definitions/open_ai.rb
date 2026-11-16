@@ -2,9 +2,9 @@
 
 provider :open_ai do |p|
   p.references(
-    models_doc: "https://platform.openai.com/docs/models",
-    pricing: "https://platform.openai.com/docs/pricing",
-    deprecations: "https://platform.openai.com/docs/deprecations"
+    models_doc: "https://developers.openai.com/api/docs/models",
+    pricing: "https://developers.openai.com/api/docs/pricing",
+    deprecations: "https://developers.openai.com/api/docs/deprecations"
   )
 
   p.model(
