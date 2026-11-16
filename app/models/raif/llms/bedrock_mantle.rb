@@ -63,7 +63,7 @@ private
       model: model_completion.model_api_name,
       messages: chat_completions_messages(model_completion)
     }
-    params[:temperature] = model_completion.temperature.to_f if supports_temperature?
+    params[:temperature] = (model_completion.temperature || default_temperature).to_f if supports_temperature?
 
     max_tokens = model_completion.max_completion_tokens || default_max_completion_tokens
     params[:max_tokens] = max_tokens if max_tokens.present?

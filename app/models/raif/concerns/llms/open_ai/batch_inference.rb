@@ -288,10 +288,6 @@ private
         raise Raif::Errors::InvalidBatchError, "Raif::ModelCompletion ##{mc.id} has blank batch_custom_id"
       end
 
-      # Mirror perform_model_completion!'s temperature-coercion semantics so
-      # the batch body matches what the sync path would send.
-      mc.temperature ||= default_temperature if supports_temperature?
-
       {
         custom_id: mc.batch_custom_id,
         method: "POST",

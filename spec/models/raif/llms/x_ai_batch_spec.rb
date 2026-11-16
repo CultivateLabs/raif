@@ -173,6 +173,33 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       expect(batch.request_counts).to include("total" => 2, "pending" => 2)
     end
 
+    it "sends and saves the model default for a completion saved without a temperature" do
+      # e.g. built while the model did not accept a temperature, submitted after it started to
+      task1.raif_model_completion.update_column(:temperature, nil)
+
+      stub_request(:post, "#{base_url}/files").to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: { id: "file_xai_temp" }.to_json
+      )
+      stub_request(:post, "#{base_url}/batches").to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: { batch_id: "batch_xai_temp", state: { num_requests: 2, num_pending: 2 } }.to_json
+      )
+
+      llm.submit_batch!(batch)
+
+      files_signature = WebMock::RequestRegistry.instance.requested_signatures.hash.keys.find do |sig|
+        sig.uri.to_s.end_with?("/files") && sig.method == :post
+      end
+      jsonl = files_signature.body.to_s[/Content-Disposition: form-data; name="file".*?\r\n\r\n(.+?)\r\n--/m, 1].to_s.strip
+      temperatures = jsonl.lines.to_h { |line| JSON.parse(line).values_at("custom_id", "body").then { |id, body| [id, body["temperature"]] } }
+
+      expect(temperatures).to eq("task_a" => llm.default_temperature, "task_b" => 0.5)
+      expect(task1.raif_model_completion.reload.temperature).to eq(llm.default_temperature)
+    end
+
     it "raises without uploading or creating if the batch was already submitted" do
       batch.update!(status: "submitted", provider_batch_id: "batch_already_submitted", submitted_at: 1.minute.ago)
       files_stub = stub_request(:post, "#{base_url}/files")

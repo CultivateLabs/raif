@@ -256,6 +256,12 @@ RSpec.describe Raif::Llms::XAi, type: :model do
         expect(params[:messages].last["content"]).to eq("Hello")
         expect(params[:stream]).to eq(nil)
       end
+
+      it "sends the default temperature when the completion has none" do
+        model_completion.temperature = nil
+
+        expect(llm.send(:build_request_parameters, model_completion)[:temperature]).to eq(llm.default_temperature)
+      end
     end
 
     context "with model tools" do

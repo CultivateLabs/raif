@@ -32,6 +32,9 @@ module Raif
 
     VALID_RESPONSE_FORMATS = [:text, :json, :html].freeze
 
+    # [model key, temperature] pairs already warned about by #warn_unsent_temperature.
+    UNSENT_TEMPERATURE_WARNINGS = Concurrent::Set.new
+
     alias_method :supports_native_tool_use?, :supports_native_tool_use
 
     def initialize(
@@ -280,11 +283,7 @@ module Raif
         Raif.logger.warn("Raif::Llm - #{key} does not support native tool use, so these tools are not sent: #{tools.join(", ")}")
       end
 
-      # Raif::Task passes its temperature on every call, so asking for the default does not warn.
-      temperature = attributes[:temperature]
-      if !supports_temperature? && temperature.present? && temperature.to_f != default_temperature.to_f
-        Raif.logger.warn("Raif::Llm - #{key} does not accept a temperature, so the requested temperature (#{temperature}) is not sent")
-      end
+      warn_unsent_temperature(attributes[:temperature])
 
       model_completion = Raif::ModelCompletion.create!(pending_model_completion_attributes(**attributes))
       model_completion.allow_parallel_tool_calls = allow_parallel_tool_calls
@@ -536,6 +535,16 @@ module Raif
     # Provider finish reasons that mean the model declined the prompt. Override per provider.
     def refusal_finish_reasons
       []
+    end
+
+    # Raif::Task passes its llm_temperature on every call (0.7 by default, 0.0 for
+    # Raif::Evals::LlmJudge), so this skips the default and warns once per process
+    # for each model and temperature rather than on every request.
+    def warn_unsent_temperature(temperature)
+      return if supports_temperature? || temperature.blank? || temperature.to_f == default_temperature.to_f
+      return unless UNSENT_TEMPERATURE_WARNINGS.add?([key.to_s, temperature.to_f])
+
+      Raif.logger.warn("Raif::Llm - #{key} does not accept a temperature, so the requested temperature (#{temperature}) is not sent")
     end
 
     def streaming_chunk_handler(model_completion, &block)

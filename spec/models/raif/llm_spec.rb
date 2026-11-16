@@ -860,6 +860,7 @@ RSpec.describe Raif::Llm, type: :model do
     before do
       stub_raif_llm(test_llm) { |_messages| "hi" }
       allow(Raif.logger).to receive(:warn)
+      Raif::Llm::UNSENT_TEMPERATURE_WARNINGS.clear
     end
 
     context "when the model accepts a temperature" do
@@ -899,6 +900,14 @@ RSpec.describe Raif::Llm, type: :model do
         expect(Raif.logger).to have_received(:warn).with(
           "Raif::Llm - #{test_llm.key} does not accept a temperature, so the requested temperature (0.2) is not sent"
         )
+      end
+
+      it "warns once per process for each temperature" do
+        2.times { test_llm.chat(messages: messages, temperature: 0.0) }
+        test_llm.chat(messages: messages, temperature: 0.2)
+
+        expect(Raif.logger).to have_received(:warn).with(/requested temperature \(0\.0\)/).once
+        expect(Raif.logger).to have_received(:warn).with(/requested temperature \(0\.2\)/).once
       end
 
       it "does not warn when the caller passes no temperature or the default" do

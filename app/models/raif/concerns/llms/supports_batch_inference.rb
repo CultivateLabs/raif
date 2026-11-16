@@ -136,8 +136,9 @@ protected
   # attached later still carries the synchronous limit, which a provider whose
   # Batch API accepts fewer output tokens rejects, so the cap is applied again
   # here. A completion with no limit at all gets the cap too, since the provider
-  # default can exceed it. A temperature the model does not accept is cleared,
-  # since none is sent; completions built on an older Raif may still carry one.
+  # default can exceed it. The temperature is also matched to the model's
+  # current setting, which can change between build and submission: cleared if
+  # the model does not accept one, else defaulted if missing.
   # Both changes are made in memory only; the adapter saves them with
   # #persist_batch_completion_settings! once the provider accepts the batch.
   def submittable_batch_completions(batch)
@@ -153,7 +154,7 @@ protected
       end
     end
 
-    completions.each { |mc| mc.temperature = nil } unless supports_temperature?
+    completions.each { |mc| mc.temperature = supports_temperature? ? (mc.temperature || default_temperature) : nil }
 
     completions
   end
