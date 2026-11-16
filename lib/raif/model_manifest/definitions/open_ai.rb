@@ -4,7 +4,8 @@ provider :open_ai do |p|
   p.references(
     models_doc: "https://developers.openai.com/api/docs/models",
     pricing: "https://developers.openai.com/api/docs/pricing",
-    deprecations: "https://developers.openai.com/api/docs/deprecations"
+    deprecations: "https://developers.openai.com/api/docs/deprecations",
+    docs_index: "https://developers.openai.com/api/docs/llms.txt"
   )
 
   p.model(
