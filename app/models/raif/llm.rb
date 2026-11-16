@@ -280,7 +280,7 @@ module Raif
         Raif.logger.warn("Raif::Llm - #{key} does not support native tool use, so these tools are not sent: #{tools.join(", ")}")
       end
 
-      # Raif::Task passes its class temperature on every call, so a request for the default is not worth a warning.
+      # Raif::Task passes its temperature on every call, so asking for the default does not warn.
       temperature = attributes[:temperature]
       if !supports_temperature? && temperature.present? && temperature.to_f != default_temperature.to_f
         Raif.logger.warn("Raif::Llm - #{key} does not accept a temperature, so the requested temperature (#{temperature}) is not sent")
@@ -303,7 +303,6 @@ module Raif
       system_prompt: nil, temperature: nil, max_completion_tokens: nil, stop_sequences: nil, tool_choice: nil,
       stream_response: false, open_ai_store_responses: nil, open_router_data_collection: nil, open_router_zdr: nil,
       raif_model_completion_batch: nil, batch_custom_id: nil)
-      # A model that does not accept a temperature is sent none, so none is saved.
       temperature = supports_temperature? ? (temperature || default_temperature) : nil
       max_completion_tokens ||= default_max_completion_tokens
       # Some Batch APIs accept fewer output tokens than the synchronous endpoint for the
