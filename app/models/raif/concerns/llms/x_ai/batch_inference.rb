@@ -106,7 +106,7 @@ module Raif::Concerns::Llms::XAi::BatchInference
       )
 
       batch.raif_model_completions.where(started_at: nil).update_all(started_at: submitted_at)
-      persist_batch_completion_limits!(completions)
+      persist_batch_completion_settings!(completions)
     end
 
     batch

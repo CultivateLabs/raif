@@ -66,10 +66,33 @@ RSpec.describe Raif::Llms::Bedrock, type: :model do
         expect(model_completion.llm_model_key).to eq("bedrock_claude_5_sonnet")
         expect(model_completion.model_api_name).to eq("us.anthropic.claude-sonnet-5")
         expect(model_completion.response_format).to eq("text")
-        expect(model_completion.temperature).to eq(0.7)
+        expect(model_completion.temperature).to be_nil # this model does not accept a temperature
         expect(model_completion.system_prompt).to eq("You are a helpful assistant.")
         expect(model_completion.messages).to eq([{ "content" => [{ "text" => "Hello" }], "role" => "user" }])
         expect(model_completion.response_array).to eq([{ "text" => "Hi! How can I help you today?" }])
+      end
+    end
+
+    context "when the model does not accept a temperature" do
+      let(:client) { Aws::BedrockRuntime::Client.new(region: Raif.config.aws_bedrock_region, stub_responses: true) }
+
+      before do
+        client.stub_responses(:converse, {
+          output: { message: { role: "assistant", content: [{ text: "Hi" }] } },
+          usage: { input_tokens: 3, output_tokens: 1, total_tokens: 4 },
+          stop_reason: "end_turn",
+          metrics: { latency_ms: 1 }
+        })
+        allow(llm).to receive(:bedrock_client).and_return(client)
+      end
+
+      it "neither sends nor saves a temperature, even when the caller sets one" do
+        model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], temperature: 0.4)
+
+        sent_params = client.api_requests.last[:params]
+        expect(sent_params[:inference_config]).not_to have_key(:temperature)
+        expect(model_completion.raw_response).to eq("Hi")
+        expect(model_completion.reload.temperature).to be_nil
       end
     end
 

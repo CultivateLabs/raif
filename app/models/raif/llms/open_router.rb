@@ -7,12 +7,7 @@ class Raif::Llms::OpenRouter < Raif::Llm
   include Raif::Concerns::Llms::OpenAi::JsonSchemaValidation
 
   def perform_model_completion!(model_completion, &block)
-    if supports_temperature?
-      model_completion.temperature ||= default_temperature
-    else
-      Raif.logger.warn "Temperature is not supported for #{api_name}. Ignoring temperature parameter." if model_completion.temperature.present?
-      model_completion.temperature = nil
-    end
+    model_completion.temperature ||= default_temperature if supports_temperature?
 
     parameters = build_request_parameters(model_completion)
     response = connection.post("chat/completions") do |req|

@@ -203,6 +203,38 @@ RSpec.describe Raif::Llms::Anthropic, type: :model do
       end
     end
 
+    context "when the model does not accept a temperature" do
+      let(:llm) { Raif.llm(:anthropic_claude_5_5_opus) }
+      let(:sent_bodies) { [] }
+
+      before do
+        allow(llm).to receive(:connection).and_return(test_connection)
+
+        stubs.post("messages") do |env|
+          sent_bodies << JSON.parse(env.request_body)
+          [
+            200,
+            { "Content-Type" => "application/json" },
+            {
+              "id" => "msg_123",
+              "content" => [{ "type" => "text", "text" => "Hi" }],
+              "stop_reason" => "end_turn",
+              "usage" => { "input_tokens" => 3, "output_tokens" => 1 }
+            }
+          ]
+        end
+      end
+
+      it "neither sends nor saves a temperature, even when the caller sets one" do
+        model_completion = llm.chat(messages: [{ role: "user", content: "Hello" }], temperature: 0.4)
+
+        expect(sent_bodies.size).to eq(1)
+        expect(sent_bodies.first).not_to have_key("temperature")
+        expect(model_completion.raw_response).to eq("Hi")
+        expect(model_completion.reload.temperature).to be_nil
+      end
+    end
+
     context "when JSON response format is requested but content is nil" do
       let(:response_body) do
         {

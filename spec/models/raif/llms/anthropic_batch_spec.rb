@@ -122,6 +122,45 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       end
     end
 
+    context "when the model does not accept a temperature" do
+      let(:llm) { Raif.llm(:anthropic_claude_5_5_haiku) }
+      let(:batch) do
+        FB.create(
+          :raif_model_completion_batch_anthropic,
+          llm_model_key: "anthropic_claude_5_5_haiku",
+          model_api_name: "claude-haiku-5-5"
+        )
+      end
+      let!(:task1) do
+        Raif::TestTask.build_for_batch(batch: batch, batch_custom_id: "task_1", creator: creator, llm_model_key: "anthropic_claude_5_5_haiku")
+      end
+      let!(:task2) do
+        Raif::TestTask.build_for_batch(batch: batch, batch_custom_id: "task_2", creator: creator, llm_model_key: "anthropic_claude_5_5_haiku")
+      end
+
+      it "neither sends nor saves a temperature, including on a completion saved with one before this was fixed" do
+        expect(task1.raif_model_completion.reload.temperature).to be_nil
+        task2.raif_model_completion.update_column(:temperature, 0.7)
+
+        sent_body = nil
+        stub_request(:post, "https://api.anthropic.com/v1/messages/batches").to_return do |request|
+          sent_body = JSON.parse(request.body)
+          {
+            status: 200,
+            headers: { "Content-Type" => "application/json" },
+            body: { id: "msgbatch_temp", processing_status: "in_progress", request_counts: {} }.to_json
+          }
+        end
+
+        llm.submit_batch!(batch)
+
+        expect(sent_body["requests"].map { |r| r["params"] }).to all(satisfy { |params| !params.key?("temperature") })
+        [task1, task2].each do |t|
+          expect(t.raif_model_completion.reload.temperature).to be_nil
+        end
+      end
+    end
+
     it "raises if a child completion has a blank batch_custom_id" do
       bad = batch.raif_model_completions.first
       bad.update_columns(batch_custom_id: nil)

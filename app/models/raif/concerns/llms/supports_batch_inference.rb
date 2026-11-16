@@ -136,8 +136,10 @@ protected
   # attached later still carries the synchronous limit, which a provider whose
   # Batch API accepts fewer output tokens rejects, so the cap is applied again
   # here. A completion with no limit at all gets the cap too, since the provider
-  # default can exceed it. The cap is set in memory only; the adapter saves it
-  # with #persist_batch_completion_limits! once the provider accepts the batch.
+  # default can exceed it. A completion saved with a temperature the model does
+  # not accept, such as one built on an older Raif, has it cleared, since none
+  # is sent. Both changes are made in memory only; the adapter saves them with
+  # #persist_batch_completion_settings! once the provider accepts the batch.
   def submittable_batch_completions(batch)
     batch.assert_submittable!
 
@@ -151,15 +153,18 @@ protected
       end
     end
 
+    completions.each { |mc| mc.temperature = nil } unless supports_temperature?
+
     completions
   end
 
   # Called inside the adapter's post-submission transaction, so a submission that
-  # fails a local check or the provider call leaves each stored limit unchanged,
-  # and the stored value is always the limit that was sent.
-  def persist_batch_completion_limits!(completions)
+  # fails a local check or the provider call leaves each stored value unchanged,
+  # and the stored values are always the ones that were sent.
+  def persist_batch_completion_settings!(completions)
     completions.each do |mc|
-      mc.update_columns(max_completion_tokens: mc.max_completion_tokens) if mc.max_completion_tokens_changed?
+      changed = mc.changed & %w[max_completion_tokens temperature]
+      mc.update_columns(mc.slice(*changed)) if changed.any?
     end
   end
 end

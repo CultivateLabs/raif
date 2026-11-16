@@ -132,8 +132,9 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
         Raif::TestTask.build_for_batch(batch: batch, batch_custom_id: "task_2", creator: creator, llm_model_key: "google_gemini_4_hydrogen")
       end
 
-      it "neither sends nor saves a temperature" do
-        expect(task1.raif_model_completion.temperature).to be_present
+      it "neither sends nor saves a temperature, including on a completion saved with one before this was fixed" do
+        expect(task1.raif_model_completion.reload.temperature).to be_nil
+        task2.raif_model_completion.update_column(:temperature, 0.7)
 
         sent_body = nil
         stub_request(:post, "#{base_url}/models/gemini-4-hydrogen:batchGenerateContent").to_return do |request|

@@ -127,6 +127,52 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
       expect(batch.endpoint).to eq("/v1/responses")
     end
 
+    context "when the model does not accept a temperature" do
+      let(:llm) { Raif.llm(:open_ai_responses_gpt_6_1_terra) }
+      let(:batch) do
+        FB.create(
+          :raif_model_completion_batch_open_ai_responses,
+          llm_model_key: "open_ai_responses_gpt_6_1_terra",
+          model_api_name: llm.api_name
+        )
+      end
+      let!(:task1) do
+        Raif::TestTask.build_for_batch(batch: batch, batch_custom_id: "task_a", creator: creator, llm_model_key: "open_ai_responses_gpt_6_1_terra")
+      end
+      let!(:task2) do
+        Raif::TestTask.build_for_batch(batch: batch, batch_custom_id: "task_b", creator: creator, llm_model_key: "open_ai_responses_gpt_6_1_terra")
+      end
+
+      it "neither sends nor saves a temperature, including on a completion saved with one before this was fixed" do
+        expect(task1.raif_model_completion.reload.temperature).to be_nil
+        task2.raif_model_completion.update_column(:temperature, 0.7)
+
+        stub_request(:post, "#{base_url}/files").to_return(
+          status: 200,
+          headers: { "Content-Type" => "application/json" },
+          body: { id: "file-input-temp", object: "file", purpose: "batch" }.to_json
+        )
+        stub_request(:post, "#{base_url}/batches").to_return(
+          status: 200,
+          headers: { "Content-Type" => "application/json" },
+          body: { id: "batch_temp", status: "validating", request_counts: {} }.to_json
+        )
+
+        llm.submit_batch!(batch)
+
+        upload_signature = WebMock::RequestRegistry.instance.requested_signatures.hash.keys.find do |sig|
+          sig.uri.to_s.end_with?("/files") && sig.method == :post
+        end
+        jsonl = upload_signature.body[/Content-Disposition: form-data; name="file".*?\r\n\r\n(.+?)\r\n--/m, 1].to_s.strip
+        bodies = jsonl.lines.map { |line| JSON.parse(line)["body"] }
+        expect(bodies.size).to eq(2)
+        expect(bodies).to all(satisfy { |body| !body.key?("temperature") })
+        [task1, task2].each do |t|
+          expect(t.raif_model_completion.reload.temperature).to be_nil
+        end
+      end
+    end
+
     it "raises (without uploading or POSTing) if the batch was already submitted" do
       batch.update!(status: "submitted", provider_batch_id: "batch_already_submitted", submitted_at: 1.minute.ago)
       file_stub = stub_request(:post, "#{base_url}/files")
