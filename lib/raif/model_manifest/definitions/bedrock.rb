@@ -946,7 +946,7 @@ provider :bedrock do |p|
     pricing: { input_per_million: 0.07, output_per_million: 0.2 },
     capabilities: {
       temperature: true,
-      structured_outputs: true,
+      structured_outputs: false,
       native_tool_use: true,
       streaming: true,
       batch_inference: false,
