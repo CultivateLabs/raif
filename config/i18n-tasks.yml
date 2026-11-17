@@ -145,6 +145,10 @@ search:
 # - '{devise,simple_form}.*'
 
 ## Consider these keys used:
+# Raif::Languages looks up raif.languages.* with an interpolated key, which
+# strict search does not count as a use.
+ignore_unused:
+  - 'raif.languages.*'
 # ignore_unused:
 # - 'activerecord.attributes.*'
 # - '{devise,kaminari,will_paginate}.*'
