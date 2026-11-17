@@ -51,7 +51,6 @@ module Raif::Concerns::Llms::Google::BatchInference
         raise Raif::Errors::InvalidBatchError, "Raif::ModelCompletion ##{mc.id} has blank batch_custom_id"
       end
 
-      mc.temperature = nil unless supports_temperature?
       { request: build_request_parameters(mc), metadata: { key: mc.batch_custom_id } }
     end
 
@@ -101,8 +100,7 @@ module Raif::Concerns::Llms::Google::BatchInference
       # filtered in SQL so we can't stomp a started_at that was set by another
       # process between when we loaded `completions` and now.
       batch.raif_model_completions.where(started_at: nil).update_all(started_at: submitted_at)
-      persist_batch_completion_limits!(completions)
-      completions.each { |mc| mc.update_columns(temperature: nil) if mc.temperature_changed? }
+      persist_batch_completion_settings!(completions)
     end
 
     batch

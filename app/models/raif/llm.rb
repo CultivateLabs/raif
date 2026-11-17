@@ -32,6 +32,9 @@ module Raif
 
     VALID_RESPONSE_FORMATS = [:text, :json, :html].freeze
 
+    # [model key, temperature] pairs already warned about by #warn_unsent_temperature.
+    UNSENT_TEMPERATURE_WARNINGS = Concurrent::Set.new
+
     alias_method :supports_native_tool_use?, :supports_native_tool_use
 
     def initialize(
@@ -204,7 +207,6 @@ module Raif
 
       messages = [{ "role" => "user", "content" => message }] if message.present?
 
-      temperature ||= default_temperature
       max_completion_tokens ||= default_max_completion_tokens
 
       stream_response = block_given? && streaming_supported?
@@ -281,6 +283,8 @@ module Raif
         Raif.logger.warn("Raif::Llm - #{key} does not support native tool use, so these tools are not sent: #{tools.join(", ")}")
       end
 
+      warn_unsent_temperature(attributes[:temperature])
+
       model_completion = Raif::ModelCompletion.create!(pending_model_completion_attributes(**attributes))
       model_completion.allow_parallel_tool_calls = allow_parallel_tool_calls
       model_completion.anthropic_prompt_caching_enabled = anthropic_prompt_caching_enabled
@@ -298,7 +302,7 @@ module Raif
       system_prompt: nil, temperature: nil, max_completion_tokens: nil, stop_sequences: nil, tool_choice: nil,
       stream_response: false, open_ai_store_responses: nil, open_router_data_collection: nil, open_router_zdr: nil,
       raif_model_completion_batch: nil, batch_custom_id: nil)
-      temperature ||= default_temperature
+      temperature = supports_temperature? ? (temperature || default_temperature) : nil
       max_completion_tokens ||= default_max_completion_tokens
       # Some Batch APIs accept fewer output tokens than the synchronous endpoint for the
       # same model (Gemini 4 Argon: 32,768 vs 65,536), so batch entries are clamped here
@@ -531,6 +535,16 @@ module Raif
     # Provider finish reasons that mean the model declined the prompt. Override per provider.
     def refusal_finish_reasons
       []
+    end
+
+    # Raif::Task passes its llm_temperature on every call (0.7 by default, 0.0 for
+    # Raif::Evals::LlmJudge), so this skips the default and warns once per process
+    # for each model and temperature rather than on every request.
+    def warn_unsent_temperature(temperature)
+      return if supports_temperature? || temperature.blank? || temperature.to_f == default_temperature.to_f
+      return unless UNSENT_TEMPERATURE_WARNINGS.add?([key.to_s, temperature.to_f])
+
+      Raif.logger.warn("Raif::Llm - #{key} does not accept a temperature, so the requested temperature (#{temperature}) is not sent")
     end
 
     def streaming_chunk_handler(model_completion, &block)

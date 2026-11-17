@@ -105,6 +105,11 @@ RSpec.describe Raif::Llms::BedrockMantle, type: :model do
       expect(llm.send(:build_request_parameters, completion)).not_to have_key(:temperature)
     end
 
+    it "sends the default temperature when the completion has none" do
+      completion.temperature = nil
+      expect(llm.send(:build_request_parameters, completion)[:temperature]).to eq(llm.default_temperature)
+    end
+
     it "falls back to json_object when structured outputs are unsupported" do
       allow(llm).to receive(:supports_structured_outputs?).and_return(false)
       completion.response_format = :json

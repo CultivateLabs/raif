@@ -74,7 +74,7 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
       # filtered in SQL so we can't stomp a started_at that was set by another
       # process between when we loaded `completions` and now.
       batch.raif_model_completions.where(started_at: nil).update_all(started_at: submitted_at)
-      persist_batch_completion_limits!(completions)
+      persist_batch_completion_settings!(completions)
     end
 
     batch
@@ -287,11 +287,6 @@ private
       if mc.batch_custom_id.blank?
         raise Raif::Errors::InvalidBatchError, "Raif::ModelCompletion ##{mc.id} has blank batch_custom_id"
       end
-
-      # Mirror perform_model_completion!'s temperature-coercion semantics so
-      # the batch body matches what the sync path would send.
-      mc.temperature ||= default_temperature if supports_temperature?
-      mc.temperature = nil unless supports_temperature?
 
       {
         custom_id: mc.batch_custom_id,

@@ -845,4 +845,77 @@ RSpec.describe Raif::Llm, type: :model do
       end
     end
   end
+
+  describe "saved temperature" do
+    let(:messages) { [{ role: "user", content: "Hello" }] }
+    let(:supports_temperature) { true }
+    let(:test_llm) do
+      Raif::Llms::TestLlm.new(
+        key: :raif_test_llm,
+        api_name: "test_api",
+        model_provider_settings: { supports_temperature: supports_temperature }
+      )
+    end
+
+    before do
+      stub_raif_llm(test_llm) { |_messages| "hi" }
+      allow(Raif.logger).to receive(:warn)
+      Raif::Llm::UNSENT_TEMPERATURE_WARNINGS.clear
+    end
+
+    context "when the model accepts a temperature" do
+      it "saves the default when the caller passes none" do
+        expect(test_llm.chat(messages: messages).temperature).to eq(0.7)
+      end
+
+      it "saves the caller's temperature" do
+        expect(test_llm.chat(messages: messages, temperature: 0.2).temperature).to eq(0.2)
+      end
+
+      it "saves the default on a completion built for later submission" do
+        expect(test_llm.build_pending_model_completion(messages: messages).temperature).to eq(0.7)
+      end
+    end
+
+    context "when the model does not accept a temperature" do
+      let(:supports_temperature) { false }
+
+      it "saves no temperature when the caller passes none" do
+        expect(test_llm.chat(messages: messages).reload.temperature).to be_nil
+      end
+
+      it "saves no temperature when the caller passes one" do
+        expect(test_llm.chat(messages: messages, temperature: 0.2).reload.temperature).to be_nil
+      end
+
+      it "saves no temperature on a completion built for later submission" do
+        model_completion = test_llm.build_pending_model_completion(messages: messages, temperature: 0.2)
+
+        expect(model_completion.reload.temperature).to be_nil
+      end
+
+      it "warns when the caller asks for a temperature other than the default" do
+        test_llm.chat(messages: messages, temperature: 0.2)
+
+        expect(Raif.logger).to have_received(:warn).with(
+          "Raif::Llm - #{test_llm.key} does not accept a temperature, so the requested temperature (0.2) is not sent"
+        )
+      end
+
+      it "warns once per process for each temperature" do
+        2.times { test_llm.chat(messages: messages, temperature: 0.0) }
+        test_llm.chat(messages: messages, temperature: 0.2)
+
+        expect(Raif.logger).to have_received(:warn).with(/requested temperature \(0\.0\)/).once
+        expect(Raif.logger).to have_received(:warn).with(/requested temperature \(0\.2\)/).once
+      end
+
+      it "does not warn when the caller passes no temperature or the default" do
+        test_llm.chat(messages: messages)
+        test_llm.chat(messages: messages, temperature: 0.7)
+
+        expect(Raif.logger).not_to have_received(:warn).with(/does not accept a temperature/)
+      end
+    end
+  end
 end
