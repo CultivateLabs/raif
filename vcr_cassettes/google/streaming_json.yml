@@ -9,7 +9,7 @@ http_interactions:
         Respond in json."}]}],"system_instruction":{"parts":[{"text":"You are a helpful
         assistant who specializes in telling jokes. Your response should be a properly
         formatted JSON object containing a single `joke` key. Do not include any other
-        text in your response outside the JSON object."}]},"generationConfig":{"temperature":0.7,"maxOutputTokens":65536}}'
+        text in your response outside the JSON object."}]},"generationConfig":{"maxOutputTokens":65536}}'
     headers:
       X-Goog-Api-Key:
       - "<GOOGLE_API_KEY>"
@@ -37,7 +37,7 @@ http_interactions:
       Transfer-Encoding:
       - chunked
       Date:
-      - Thu, 12 Nov 2026 22:10:22 GMT
+      - Mon, 16 Nov 2026 22:07:07 GMT
       Server:
       - scaffolding on HTTPServer2
       X-Xss-Protection:
@@ -47,27 +47,27 @@ http_interactions:
       X-Content-Type-Options:
       - nosniff
       Server-Timing:
-      - gfet4t7; dur=3031
+      - gfet4t7; dur=2688
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
     body:
       encoding: UTF-8
-      string: "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"{\\n
-        \ \\\"joke\\\": \\\"Why do programmers prefer dark mode? Because light attracts
-        bugs.\\\"\\n\"}],\"role\": \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\":
-        54,\"candidatesTokenCount\": 20,\"totalTokenCount\": 299,\"promptTokensDetails\":
-        [{\"modality\": \"TEXT\",\"tokenCount\": 54}],\"thoughtsTokenCount\": 225,\"serviceTier\":
-        \"standard\"},\"modelVersion\": \"gemini-3.8-flash\",\"responseId\": \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\ndata:
-        {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"}\"}],\"role\":
+      string: "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"{\\\"\"}],\"role\":
         \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 54,\"candidatesTokenCount\":
-        21,\"totalTokenCount\": 300,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
-        54}],\"thoughtsTokenCount\": 225,\"serviceTier\": \"standard\"},\"modelVersion\":
+        1,\"totalTokenCount\": 263,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        54}],\"thoughtsTokenCount\": 208,\"serviceTier\": \"standard\"},\"modelVersion\":
+        \"gemini-3.8-flash\",\"responseId\": \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\ndata:
+        {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"joke\\\": \\\"Why
+        do programmers prefer dark mode? Because light attracts bugs.\\\"}\"}],\"role\":
+        \"model\"},\"index\": 0}],\"usageMetadata\": {\"promptTokenCount\": 54,\"candidatesTokenCount\":
+        17,\"totalTokenCount\": 279,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        54}],\"thoughtsTokenCount\": 208,\"serviceTier\": \"standard\"},\"modelVersion\":
         \"gemini-3.8-flash\",\"responseId\": \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\ndata:
         {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"\",\"thoughtSignature\":
         \"<GOOGLE_THOUGHT_SIGNATURE>\"}],\"role\": \"model\"},\"finishReason\": \"STOP\",\"index\":
         0}],\"usageMetadata\": {\"promptTokenCount\": 54,\"candidatesTokenCount\":
-        21,\"totalTokenCount\": 300,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
-        54}],\"thoughtsTokenCount\": 225,\"serviceTier\": \"standard\"},\"modelVersion\":
+        17,\"totalTokenCount\": 279,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        54}],\"thoughtsTokenCount\": 208,\"serviceTier\": \"standard\"},\"modelVersion\":
         \"gemini-3.8-flash\",\"responseId\": \"<GOOGLE_RESPONSE_ID>\"}\r\n\r\n"
-  recorded_at: Thu, 12 Nov 2026 22:10:22 GMT
+  recorded_at: Mon, 16 Nov 2026 22:07:07 GMT
 recorded_with: VCR 6.4.1
