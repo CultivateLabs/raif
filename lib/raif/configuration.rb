@@ -8,7 +8,9 @@ module Raif
     # active manifest entry, so deprecating this model fails the suite until the default changes.
     DEFAULT_LLM_MODEL_KEY = "open_ai_responses_gpt_6_1_terra"
 
-    attr_accessor :agent_types,
+    attr_accessor :agent_stalled_turn_resume_after,
+      :agent_turn_job_queue,
+      :agent_types,
       :anthropic_api_key,
       :archive_enabled,
       :archive_partition_column,
@@ -30,6 +32,7 @@ module Raif
       :conversations_controller,
       :current_user_method,
       :default_embedding_model_key,
+      :deferred_model_tool_invocation_deadline,
       :default_llm_model_key,
       :evals_capture_model_completions,
       :evals_concurrency,
@@ -51,6 +54,8 @@ module Raif
       :model_completion_batch_poll_schedule,
       :model_completion_retention_period,
       :model_superclass,
+      :model_tool_invocation_deadline,
+      :model_tool_invocation_job_queue,
       :open_ai_api_key,
       :open_ai_batch_completion_window,
       :open_ai_api_version,
@@ -89,6 +94,14 @@ module Raif
     alias_method :aws_bedrock_titan_embedding_models_enabled=, :bedrock_embedding_models_enabled=
 
     def initialize
+      # Raif::RecoverStalledRunsJob resumes an async agent run whose current turn
+      # has not changed for this long, which recovers a run whose job was lost by
+      # the queue backend. nil disables it. Keep it well above your slowest model
+      # call: resuming a turn whose model call is still in flight pays for a second call.
+      @agent_stalled_turn_resume_after = 30.minutes
+      # Queue for Raif::AgentTurnJob. nil uses the host's default queue. An agent
+      # class can override it with `self.turn_job_queue = :name`.
+      @agent_turn_job_queue = nil
       @agent_types = Set.new(["Raif::Agents::NativeToolCallingAgent"])
       @anthropic_api_key = default_disable_llm_api_requests? ? "placeholder-anthropic-api-key" : ENV["ANTHROPIC_API_KEY"]
       @anthropic_message_batches_beta_header = "message-batches-2024-09-24"
@@ -136,6 +149,10 @@ module Raif
       @conversations_controller = "Raif::ConversationsController"
       @current_user_method = :current_user
       @default_embedding_model_key = "open_ai_text_embedding_3_small"
+      # How long an agent or conversation waits for a tool that defers completion
+      # (Raif::ModelTool.defers_completion) before the model gets an error result
+      # for the call. A tool class can set its own deadline.
+      @deferred_model_tool_invocation_deadline = 30.minutes
       @default_llm_model_key = if default_disable_llm_api_requests?
         :raif_test_llm
       else
@@ -223,6 +240,11 @@ module Raif
       # from under an open billing window.
       @model_completion_retention_period = nil
       @model_superclass = "ApplicationRecord"
+      # How long a tool call that runs in a job may take before the model gets an
+      # error result for it. Also bounds the wait for a call whose job was lost.
+      @model_tool_invocation_deadline = 10.minutes
+      # Queue for Raif::ModelToolInvocationJob. nil uses the host's default queue.
+      @model_tool_invocation_job_queue = nil
       @open_ai_api_key = default_disable_llm_api_requests? ? "placeholder-open-ai-api-key" : ENV["OPENAI_API_KEY"]
       @open_ai_api_version = nil
       @open_ai_batch_completion_window = "24h"

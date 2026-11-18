@@ -8,11 +8,14 @@
 #  citations              :jsonb
 #  completed_at           :datetime
 #  creator_type           :string           not null
+#  execution_context      :jsonb
 #  failed_at              :datetime
 #  llm_model_key          :string
 #  model_response_message :text
 #  raw_response           :text
 #  started_at             :datetime
+#  tools_completed_at     :datetime
+#  tools_dispatched_at    :datetime
 #  user_message           :text
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
@@ -24,6 +27,7 @@
 #  index_raif_conversation_entries_on_created_at            (created_at)
 #  index_raif_conversation_entries_on_creator               (creator_type,creator_id)
 #  index_raif_conversation_entries_on_raif_conversation_id  (raif_conversation_id)
+#  index_raif_conversation_entries_on_tools_dispatched_at   (tools_dispatched_at)
 #
 # Foreign Keys
 #

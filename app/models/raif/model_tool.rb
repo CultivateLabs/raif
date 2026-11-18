@@ -178,6 +178,96 @@ class Raif::ModelTool
       false
     end
 
+    # Declares that the tool does not produce its result before `process_invocation`
+    # returns. `process_invocation` starts the work (enqueues a job, calls a slow
+    # service) and returns; the invocation stays unfinished, and the agent or
+    # conversation waits without making a model call, until host code calls
+    # `invocation.complete!(result)` or `invocation.fail!(message)`.
+    #
+    # `process_invocation` can run a second time if its job is retried before it
+    # returns, so start the work idempotently: `invocation.id` is a stable key.
+    #
+    #   class SlowLookup < Raif::ModelTool
+    #     defers_completion deadline: 45.minutes
+    #
+    #     def self.process_invocation(invocation)
+    #       SlowLookupJob.perform_later(invocation)
+    #     end
+    #   end
+    #
+    # @param deadline [ActiveSupport::Duration, nil] how long to wait before the model
+    #   gets an error result for the call. Defaults to
+    #   Raif.config.deferred_model_tool_invocation_deadline.
+    def defers_completion(deadline: nil)
+      @deferred_completion = true
+      @invocation_deadline = deadline if deadline.present?
+    end
+
+    # Declared on the class or inherited from a superclass.
+    def deferred_completion?
+      return @deferred_completion unless @deferred_completion.nil?
+
+      superclass.respond_to?(:deferred_completion?) && superclass.deferred_completion?
+    end
+
+    # Overrides the deadline of the tool's invocations.
+    def invocation_deadline(deadline = nil)
+      @invocation_deadline = deadline if deadline.present?
+      return @invocation_deadline if @invocation_deadline.present?
+
+      inherited = superclass.declared_invocation_deadline if superclass.respond_to?(:declared_invocation_deadline)
+      return inherited if inherited.present?
+
+      if deferred_completion?
+        Raif.config.deferred_model_tool_invocation_deadline
+      else
+        Raif.config.model_tool_invocation_deadline
+      end
+    end
+
+    # Declares that running the tool a second time for the same invocation is
+    # harmless (a read, or a write keyed on `invocation.id`). Raif then lets a
+    # later execution take over an invocation whose first execution was
+    # abandoned, once `lease` has passed since it started. The lease must be
+    # longer than the tool can run. Without this declaration Raif never runs a
+    # tool twice for one invocation.
+    def retry_safe(lease: 2.minutes)
+      @retry_safe = true
+      @execution_lease = lease
+    end
+
+    def retry_safe?
+      return @retry_safe unless @retry_safe.nil?
+
+      superclass.respond_to?(:retry_safe?) && superclass.retry_safe?
+    end
+
+    # How long one execution holds its claim on an invocation.
+    def execution_lease
+      return @execution_lease if @execution_lease.present?
+      return superclass.execution_lease if retry_safe? && superclass.respond_to?(:retry_safe?) && superclass.retry_safe?
+
+      invocation_deadline
+    end
+
+    def declared_invocation_deadline
+      return @invocation_deadline if @invocation_deadline.present?
+
+      superclass.declared_invocation_deadline if superclass.respond_to?(:declared_invocation_deadline)
+    end
+
+    # Builds the invocation row for a tool call without running the tool.
+    def build_invocation(provider_tool_call_id:, tool_arguments:, source:, **attributes)
+      Raif::ModelToolInvocation.new(
+        provider_tool_call_id: provider_tool_call_id,
+        source: source,
+        tool_type: name,
+        tool_arguments: prepare_tool_arguments_for_source(tool_arguments, source),
+        completion_mode: deferred_completion? ? "deferred" : "automatic",
+        **attributes
+      )
+    end
+
     def invoke_tool(provider_tool_call_id:, tool_arguments:, source:)
       prepared_arguments = prepare_tool_arguments_for_source(tool_arguments, source)
 

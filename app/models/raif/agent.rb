@@ -6,6 +6,7 @@
 #
 #  id                     :bigint           not null, primary key
 #  available_model_tools  :jsonb            not null
+#  canceled_at            :datetime
 #  completed_at           :datetime
 #  conversation_history   :jsonb            not null
 #  creator_type           :string           not null
@@ -16,6 +17,8 @@
 #  llm_model_key          :string           not null
 #  max_iterations         :integer          default(10), not null
 #  requested_language_key :string
+#  run_mode               :string
+#  run_token              :string
 #  run_with               :jsonb
 #  source_type            :string
 #  started_at             :datetime
@@ -46,6 +49,7 @@ module Raif
     include Raif::Concerns::LlmPromptCaching
     include Raif::Concerns::LlmDataRetention
     include Raif::Concerns::RunWith
+    include Raif::Concerns::DurableAgentRun
 
     # Whether the agent may make multiple tool calls in a single iteration. When
     # false, a completion containing more than one tool call is rejected and the
@@ -89,96 +93,6 @@ module Raif
       on: :create
 
     attr_accessor :on_conversation_history_entry
-
-    # Runs the agent and returns a Raif::Agent.
-    # If a block is given, it will be called each time a new entry is added to the agent's conversation history.
-    # The block will receive the Raif::Agent and the new entry as arguments:
-    # agent = Raif::Agent.new(
-    #   task: task,
-    #   tools: [Raif::ModelTools::WikipediaSearch, Raif::ModelTools::FetchUrl],
-    #   creator: creator
-    # )
-    #
-    # agent.run! do |conversation_history_entry|
-    #   Turbo::StreamsChannel.broadcast_append_to(
-    #     :my_agent_channel,
-    #     target: "agent-progress",
-    #     partial: "my_partial_displaying_agent_progress",
-    #     locals: { agent: agent, conversation_history_entry: conversation_history_entry }
-    #   )
-    # end
-    #
-    # The conversation_history_entry will be a hash with "role" and "content" keys:
-    # { "role" => "assistant", "content" => "a message here" }
-    #
-    # @param block [Proc] Optional block to be called each time a new entry to the agent's conversation history is generated
-    # @return [Raif::Agent] The agent that was created and run
-    def run!(&block)
-      self.on_conversation_history_entry = block_given? ? block : nil
-      self.started_at = Time.current
-      save!
-
-      logger.debug <<~DEBUG
-        --------------------------------
-        Starting Agent Run
-        --------------------------------
-        System Prompt:
-        #{system_prompt}
-
-        Task: #{task}
-      DEBUG
-
-      add_conversation_history_entry(Raif::Messages::UserMessage.new(content: task).to_h)
-
-      while iteration_count < max_iterations
-        update_columns(iteration_count: iteration_count + 1)
-
-        # Update the system prompt on each iteration in case it has changed since the last iteration
-        self.system_prompt = build_system_prompt
-
-        # Hook for subclasses to perform actions before the LLM chat (e.g., add warnings)
-        before_iteration_llm_chat
-
-        messages = messages_for_llm
-
-        model_completion = llm.chat(
-          messages: messages,
-          source: self,
-          system_prompt: system_prompt,
-          available_model_tools: native_model_tools,
-          tool_choice: tool_choice_for_iteration,
-          allow_parallel_tool_calls: allow_parallel_tool_calls?,
-          anthropic_prompt_caching_enabled: self.class.anthropic_prompt_caching_enabled,
-          bedrock_prompt_caching_enabled: self.class.bedrock_prompt_caching_enabled,
-          open_ai_store_responses: self.class.open_ai_store_responses,
-          open_router_data_collection: self.class.open_router_data_collection,
-          open_router_zdr: self.class.open_router_zdr
-        )
-
-        logger.debug <<~DEBUG
-          --------------------------------
-          Agent iteration #{iteration_count}
-          Messages:
-          #{JSON.pretty_generate(messages)}
-
-          Response:
-          #{model_completion.raw_response}
-          --------------------------------
-        DEBUG
-
-        process_iteration_model_completion(model_completion)
-        break if final_answer.present? || failed?
-      end
-
-      finalize_run!
-      final_answer
-    rescue StandardError => e
-      self.failed_at ||= Time.current
-      self.failure_reason ||= e.message
-      save!
-
-      raise
-    end
 
     def final_iteration?
       iteration_count == max_iterations
@@ -284,7 +198,11 @@ module Raif
       entry_stringified = strip_null_bytes(entry.stringify_keys)
       conversation_history << entry_stringified
       save!
-      on_conversation_history_entry.call(entry_stringified) if on_conversation_history_entry.present?
+
+      # Inside #run_transaction the callback waits for the commit, so host code
+      # never runs while the agent's row lock is held.
+      (@conversation_history_callback_queue ||= []) << entry_stringified
+      flush_conversation_history_callbacks unless @run_transaction_depth.to_i > 0
     end
 
     def strip_null_bytes(value)
