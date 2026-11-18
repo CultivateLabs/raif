@@ -29,6 +29,11 @@ module Raif::Concerns::DurableAgentRun
 
     boolean_timestamp :canceled_at
 
+    # Started and not over.
+    scope :in_progress, -> { where.not(started_at: nil).where(completed_at: nil, failed_at: nil, canceled_at: nil) }
+    # In progress, with a turn that waits for its tool calls to end.
+    scope :waiting, -> { in_progress.where(id: Raif::AgentTurn.where(status: "tools_dispatched").select(:raif_agent_id)) }
+
     # Queues for this agent class's turn jobs and tool jobs. nil uses
     # Raif.config.agent_turn_job_queue / Raif.config.model_tool_invocation_job_queue.
     class_attribute :turn_job_queue, instance_writer: false, default: nil
@@ -253,6 +258,10 @@ module Raif::Concerns::DurableAgentRun
     @run_transaction_depth = 1
     begin
       result = with_lock { yield }
+    rescue StandardError
+      # The transaction rolled back, so the entries it added were never saved.
+      @conversation_history_callback_queue = []
+      raise
     ensure
       @run_transaction_depth = 0
     end
@@ -286,14 +295,15 @@ module Raif::Concerns::DurableAgentRun
   # start are canceled; a call that is already running finishes, and its result
   # is saved but changes nothing.
   def fail_run_from_tool_error!(invocation, error)
-    run_transaction do
-      next if run_over?
+    failed = run_transaction do
+      next false if run_over?
 
       fail_run!(error.message)
       now = Time.current
       raif_model_tool_invocations.unfinished.where(started_at: nil).update_all(canceled_at: now, updated_at: now)
+      true
     end
-    after_run unless in_process_run?
+    after_run if failed
   end
 
   # Records the results of a turn's tool calls in the conversation history, in
@@ -350,7 +360,8 @@ private
   def enqueue_turn_job(turn)
     queue = self.class.turn_job_queue || Raif.config.agent_turn_job_queue
     job = queue.present? ? Raif::AgentTurnJob.set(queue: queue) : Raif::AgentTurnJob
-    job.perform_later(agent: self, turn_id: turn.id, run_token: run_token)
+    token = run_token
+    Raif::ApplicationJob.after_transaction_commit { job.perform_later(agent: self, turn_id: turn.id, run_token: token) }
   end
 
   # pending -> completion_saved
@@ -461,7 +472,7 @@ private
   def enqueue_tool_invocation_job(invocation)
     queue = self.class.tool_invocation_job_queue || Raif.config.model_tool_invocation_job_queue
     job = queue.present? ? Raif::ModelToolInvocationJob.set(queue: queue) : Raif::ModelToolInvocationJob
-    job.perform_later(model_tool_invocation: invocation)
+    Raif::ApplicationJob.after_transaction_commit { job.perform_later(model_tool_invocation: invocation) }
   end
 
   def record_run_failure(error)
@@ -471,6 +482,7 @@ private
     self.failed_at ||= Time.current
     self.failure_reason ||= error.message
     save!
+    after_run
   end
 
   def flush_conversation_history_callbacks

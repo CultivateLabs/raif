@@ -4,15 +4,7 @@
   <td><small class="text-muted"><%= agent.created_at.rfc822 %></small></td>
   <td><small class="text-muted"><%= truncate(agent.task, length: 100) %></small></td>
   <td>
-    <% if agent.completed_at? %>
-      <span class="badge bg-success"><%= t("raif.admin.common.completed") %></span>
-    <% elsif agent.failed_at? %>
-      <span class="badge bg-danger"><%= t("raif.admin.common.failed") %></span>
-    <% elsif agent.started_at? %>
-      <span class="badge bg-warning"><%= t("raif.admin.common.running") %></span>
-    <% else %>
-      <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
-    <% end %>
+    <%= render "raif/admin/agents/status_badge", agent: agent %>
   </td>
   <td><small class="text-muted"><%= agent.runtime_duration %></small></td>
   <td><%= agent.iteration_count %> / <%= agent.max_iterations %></td>

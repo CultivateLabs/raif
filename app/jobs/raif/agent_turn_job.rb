@@ -37,6 +37,9 @@ module Raif
         agent_id: agent.id
       })
 
+      # Drop whatever the failed step left unsaved in memory.
+      agent.reload
+
       failed = agent.run_transaction do
         next false unless agent.run_live?
 

@@ -2,6 +2,13 @@
 en:
   raif:
     admin:
+      agent_turns:
+        statuses:
+          completed: Completed
+          completion_saved: Completion saved
+          pending: Pending
+          tools_complete: Tools complete
+          tools_dispatched: Waiting for tool calls
       agents:
         show:
           back_to_agents: Back to Agents
@@ -38,6 +45,7 @@ en:
         batch_custom_id: Batch Custom ID
         cache_creation_input_tokens: Cache Creation Tokens
         cache_read_input_tokens: Cache Read Tokens
+        canceled: Canceled
         checksum_sha256: Checksum (SHA-256)
         citations: Citations
         completed: Completed
@@ -54,6 +62,7 @@ en:
         created_at: Created At
         creator: Creator
         cutoff_at: Cutoff
+        deadline: Deadline
         default: default
         description: Description
         details: Details
@@ -159,9 +168,12 @@ en:
         total: Total
         total_cost: Total Cost
         total_tokens: Total Tokens
+        turn: Turn
+        turns: Turns
         type: Type
         update: Update
         user_message: User Message
+        waiting: Waiting
       config:
         show:
           configuration_settings: Configuration Settings

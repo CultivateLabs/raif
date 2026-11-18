@@ -188,7 +188,9 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
   def schedule_deadline_job
     return if deadline_at.blank?
 
-    Raif::ModelToolInvocationDeadlineJob.set(wait_until: deadline_at).perform_later(model_tool_invocation: self)
+    Raif::ApplicationJob.after_transaction_commit do
+      Raif::ModelToolInvocationDeadlineJob.set(wait_until: deadline_at).perform_later(model_tool_invocation: self)
+    end
   end
 
   # Moves the deadline of an unfinished invocation, for example when the host

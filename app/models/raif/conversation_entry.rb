@@ -417,7 +417,9 @@ private
     else
       queue = Raif.config.model_tool_invocation_job_queue
       job = queue.present? ? Raif::ModelToolInvocationJob.set(queue: queue) : Raif::ModelToolInvocationJob
-      startable.each { |invocation| job.perform_later(model_tool_invocation: invocation) }
+      Raif::ApplicationJob.after_transaction_commit do
+        startable.each { |invocation| job.perform_later(model_tool_invocation: invocation) }
+      end
     end
 
     check_tool_barrier!

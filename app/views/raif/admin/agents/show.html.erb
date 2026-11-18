@@ -25,14 +25,17 @@
     <div class="row mb-3">
       <div class="col-md-3"><strong><%= t("raif.admin.common.status") %>:</strong></div>
       <div class="col-md-9">
-        <% if @agent.completed_at? %>
-          <span class="badge bg-success"><%= t("raif.admin.common.completed") %></span> <%= t("raif.admin.common.at") %> <%= @agent.completed_at.rfc822 %>
-        <% elsif @agent.failed_at? %>
-          <span class="badge bg-danger"><%= t("raif.admin.common.failed") %></span> <%= t("raif.admin.common.at") %> <%= @agent.failed_at.rfc822 %>
-        <% elsif @agent.started_at? %>
-          <span class="badge bg-warning"><%= t("raif.admin.common.running") %></span> <%= t("raif.admin.common.since") %> <%= @agent.started_at.rfc822 %>
-        <% else %>
-          <span class="badge bg-secondary"><%= t("raif.admin.common.pending") %></span>
+        <% agent_status = @agent.status %>
+        <%= render "raif/admin/agents/status_badge", agent: @agent, status: agent_status %>
+        <% case agent_status %>
+        <% when :completed %>
+          <%= t("raif.admin.common.at") %> <%= @agent.completed_at.rfc822 %>
+        <% when :failed %>
+          <%= t("raif.admin.common.at") %> <%= @agent.failed_at.rfc822 %>
+        <% when :canceled %>
+          <%= t("raif.admin.common.at") %> <%= @agent.canceled_at.rfc822 %>
+        <% when :waiting, :running %>
+          <%= t("raif.admin.common.since") %> <%= @agent.started_at.rfc822 %>
         <% end %>
       </div>
     </div>
@@ -99,6 +102,66 @@
 <%= render "raif/admin/model_tools/list",
       model_tools: @agent.available_model_tools_map,
       invocation_counts: @agent.model_tool_invocation_counts %>
+
+<% turns = @agent.turns.includes(:raif_model_completion, :raif_model_tool_invocations).to_a %>
+<%# i18n-tasks-use t("raif.admin.agent_turns.statuses.pending") %>
+<%# i18n-tasks-use t("raif.admin.agent_turns.statuses.completion_saved") %>
+<%# i18n-tasks-use t("raif.admin.agent_turns.statuses.tools_dispatched") %>
+<%# i18n-tasks-use t("raif.admin.agent_turns.statuses.tools_complete") %>
+<%# i18n-tasks-use t("raif.admin.agent_turns.statuses.completed") %>
+<% if turns.any? %>
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><%= t("raif.admin.common.turns") %></h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th><%= t("raif.admin.common.turn") %></th>
+            <th><%= t("raif.admin.common.status") %></th>
+            <th><%= t("raif.admin.common.model_completion") %></th>
+            <th><%= t("raif.admin.common.cache_read_input_tokens") %></th>
+            <th><%= t("raif.admin.common.cache_creation_input_tokens") %></th>
+            <th><%= t("raif.admin.common.tool_calls") %></th>
+            <th><%= t("raif.admin.common.started_at") %></th>
+            <th><%= t("raif.admin.common.completed_at") %></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% turns.each do |turn| %>
+            <tr>
+              <td><%= turn.iteration %></td>
+              <td><span class="badge bg-light text-dark border"><%= t("raif.admin.agent_turns.statuses.#{turn.status}") %></span></td>
+              <td>
+                <% if turn.raif_model_completion.present? %>
+                  <%= link_to "##{turn.raif_model_completion_id}", raif.admin_model_completion_path(turn.raif_model_completion) %>
+                <% else %>
+                  -
+                <% end %>
+              </td>
+              <td><%= turn.raif_model_completion&.cache_read_input_tokens || "-" %></td>
+              <td><%= turn.raif_model_completion&.cache_creation_input_tokens || "-" %></td>
+              <td>
+                <% turn.raif_model_tool_invocations.sort_by { |invocation| [invocation.position || 0, invocation.id] }.each do |invocation| %>
+                  <div>
+                    <%= link_to invocation.tool_name, raif.admin_model_tool_invocation_path(invocation) %>
+                    <%= render "raif/admin/model_tool_invocations/status_badge", model_tool_invocation: invocation %>
+                    <% if !invocation.finished? && invocation.deadline_at.present? %>
+                      <small class="text-muted"><%= t("raif.admin.common.deadline") %>: <%= invocation.deadline_at.rfc822 %></small>
+                    <% end %>
+                  </div>
+                <% end %>
+              </td>
+              <td><small class="text-muted"><%= turn.started_at&.rfc822 || "-" %></small></td>
+              <td><small class="text-muted"><%= turn.completed_at&.rfc822 || "-" %></small></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% end %>
 
 <div class="card mb-4">
   <div class="card-header">

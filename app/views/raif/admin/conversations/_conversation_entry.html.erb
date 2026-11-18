@@ -6,6 +6,8 @@
         <span class="badge bg-success"><%= t("raif.admin.common.completed") %></span>
       <% elsif entry.failed_at? %>
         <span class="badge bg-danger"><%= t("raif.admin.common.failed") %></span>
+      <% elsif entry.waiting_on_tools? %>
+        <span class="badge bg-info text-dark"><%= t("raif.admin.common.waiting") %></span>
       <% elsif entry.started_at? %>
         <span class="badge bg-warning text-dark"><%= t("raif.admin.common.in_progress") %></span>
       <% else %>
@@ -69,18 +71,12 @@
     <div class="mb-3">
       <strong><%= t("raif.admin.common.model_tool_invocations") %>:</strong>
       <div class="conversation-history ms-3 mt-2">
-        <% entry.raif_model_tool_invocations.each do |invocation| %>
+        <% entry.raif_model_tool_invocations.sort_by { |invocation| [invocation.position || 0, invocation.id] }.each do |invocation| %>
           <div class="message tool_call mb-3">
             <div class="message-header d-flex justify-content-between align-items-center mb-2 px-2">
               <strong class="text-warning">
                 <%= t("raif.admin.common.tool_call") %>: <%= link_to invocation.tool_name, raif.admin_model_tool_invocation_path(invocation) %>
-                <% if invocation.completed_at? %>
-                  <span class="badge bg-success ms-2"><%= t("raif.admin.common.completed") %></span>
-                <% elsif invocation.failed_at? %>
-                  <span class="badge bg-danger ms-2"><%= t("raif.admin.common.failed") %></span>
-                <% else %>
-                  <span class="badge bg-secondary ms-2"><%= t("raif.admin.common.pending") %></span>
-                <% end %>
+                <%= render "raif/admin/model_tool_invocations/status_badge", model_tool_invocation: invocation, extra_class: "ms-2" %>
               </strong>
               <small class="text-muted"><%= invocation.created_at.rfc822 %></small>
             </div>

@@ -1,0 +1,10 @@
+<%# locals: (agent:, status: agent.status) %>
+<% badge_class = {
+     completed: "bg-success",
+     failed: "bg-danger",
+     canceled: "bg-dark",
+     waiting: "bg-info text-dark",
+     running: "bg-warning",
+     pending: "bg-secondary"
+   }.fetch(status) %>
+<span class="badge <%= badge_class %>"><%= t("raif.admin.common.#{status}") %></span>

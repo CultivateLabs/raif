@@ -239,4 +239,57 @@ RSpec.describe "Admin::Agents", type: :feature do
       expect(page).to have_content("3: google_search_tool (2), google_news_search_tool")
     end
   end
+
+  describe "durable run states" do
+    include ActionView::RecordIdentifier
+
+    let(:tools) { ["Raif::DurableRunTestTool", "Raif::DurableRunDeferredTestTool"] }
+    let(:waiting_agent) do
+      FB.create(:raif_native_tool_calling_agent, creator: creator, task: "Waits for slow work", available_model_tools: tools,
+        started_at: 5.minutes.ago, run_mode: "async", run_token: "token", iteration_count: 1)
+    end
+    let!(:waiting_invocation) do
+      turn = waiting_agent.turns.create!(iteration: 1, status: "tools_dispatched", started_at: 5.minutes.ago)
+      FB.create(:raif_model_tool_invocation, source: waiting_agent, raif_agent_turn: turn, position: 0,
+        tool_type: "Raif::DurableRunDeferredTestTool", tool_arguments: { "query" => "slow" }, completion_mode: "deferred",
+        started_at: 4.minutes.ago, deadline_at: 40.minutes.from_now)
+    end
+    let!(:canceled_agent) do
+      FB.create(:raif_native_tool_calling_agent, creator: creator, task: "Was superseded", started_at: 5.minutes.ago,
+        canceled_at: 1.minute.ago)
+    end
+    let!(:running_agent) do
+      FB.create(:raif_native_tool_calling_agent, creator: creator, task: "Still thinking", started_at: 1.minute.ago)
+    end
+
+    it "shows and filters the waiting and canceled states on the index" do
+      visit raif.admin_agents_path
+
+      expect(page).to have_css("tr##{dom_id(waiting_agent)} .badge", text: I18n.t("raif.admin.common.waiting"))
+      expect(page).to have_css("tr##{dom_id(canceled_agent)} .badge", text: I18n.t("raif.admin.common.canceled"))
+      expect(page).to have_css("tr##{dom_id(running_agent)} .badge", text: I18n.t("raif.admin.common.running"))
+
+      visit raif.admin_agents_path(status: :waiting)
+      expect(page).to have_css("tr.raif-agent", count: 1)
+      expect(page).to have_css("tr##{dom_id(waiting_agent)}")
+
+      visit raif.admin_agents_path(status: :canceled)
+      expect(page).to have_css("tr.raif-agent", count: 1)
+      expect(page).to have_css("tr##{dom_id(canceled_agent)}")
+
+      visit raif.admin_agents_path(status: :running)
+      expect(page).to have_css("tr.raif-agent", count: 1)
+      expect(page).to have_css("tr##{dom_id(running_agent)}")
+    end
+
+    it "lists the turns with the invocations the run is waiting for" do
+      visit raif.admin_agent_path(waiting_agent)
+
+      expect(page).to have_content(I18n.t("raif.admin.common.turns"))
+      expect(page).to have_content(I18n.t("raif.admin.agent_turns.statuses.tools_dispatched"))
+      expect(page).to have_link("durable_run_deferred_test_tool", href: raif.admin_model_tool_invocation_path(waiting_invocation))
+      expect(page).to have_content(I18n.t("raif.admin.common.deadline"))
+      expect(page).to have_css(".badge", text: I18n.t("raif.admin.common.waiting"), minimum: 2)
+    end
+  end
 end

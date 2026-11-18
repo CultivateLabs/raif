@@ -337,6 +337,23 @@ module Raif
       @bedrock_mantle_base_url || "https://bedrock-mantle.#{aws_bedrock_region}.api.aws/openai/v1"
     end
 
+    # A deadline that is not a positive duration would end every tool call the
+    # moment it is dispatched.
+    def validate_durable_run_config!
+      [:model_tool_invocation_deadline, :deferred_model_tool_invocation_deadline].each do |setting|
+        value = public_send(setting)
+        next if value.is_a?(ActiveSupport::Duration) && value.positive?
+
+        raise Raif::Errors::InvalidConfigError, "Raif.config.#{setting} must be a positive duration (e.g. 10.minutes)"
+      end
+
+      resume_after = agent_stalled_turn_resume_after
+      return if resume_after.nil? || (resume_after.is_a?(ActiveSupport::Duration) && resume_after.positive?)
+
+      raise Raif::Errors::InvalidConfigError,
+        "Raif.config.agent_stalled_turn_resume_after must be nil or a positive duration (e.g. 30.minutes)"
+    end
+
     def validate!
       # Before the LLM-registry early return below: archive validation guards
       # a destructive path (culling), so a node with no LLM API keys (e.g. a
@@ -386,6 +403,8 @@ module Raif
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.default_embedding_model_key was set to #{default_embedding_model_key}, but must be one of: #{Raif.available_embedding_model_keys.join(", ")}" # rubocop:disable Layout/LineLength
       end
+
+      validate_durable_run_config!
 
       if authorize_controller_action.respond_to?(:call)
         authorize_controller_action.freeze
