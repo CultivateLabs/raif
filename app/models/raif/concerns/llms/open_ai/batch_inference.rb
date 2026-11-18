@@ -152,7 +152,7 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
   end
 
   def fetch_batch_results!(batch)
-    completions_by_id = batch.raif_model_completions.includes(:raif_inference_cost_event).index_by(&:batch_custom_id)
+    completions_by_id = batch.raif_model_completions.index_by(&:batch_custom_id)
 
     if batch.output_file_id.present?
       apply_batch_jsonl(batch, batch.output_file_id, completions_by_id)
@@ -178,6 +178,7 @@ module Raif::Concerns::Llms::OpenAi::BatchInference
       mc.failed!
     end
 
+    preload_inference_cost_events(completions_by_id.values)
     batch.recalculate_costs!
     batch
   end

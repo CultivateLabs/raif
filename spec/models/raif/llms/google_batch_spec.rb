@@ -556,6 +556,27 @@ RSpec.describe Raif::Llms::Google, "batch inference" do
       expect(task_success.raif_model_completion.reload.completed?).to be(true)
       expect(task_failure.raif_model_completion.reload.failed?).to be(true)
     end
+
+    it_behaves_like "a batch provider that preloads inference cost events" do
+      let(:stub_successful_batch_results) do
+        ->(custom_ids) do
+          entries = custom_ids.map do |custom_id|
+            {
+              "metadata" => { "key" => custom_id },
+              "response" => {
+                "candidates" => [{ "content" => { "parts" => [{ "text" => "ok" }] } }],
+                "usageMetadata" => { "promptTokenCount" => 1, "candidatesTokenCount" => 1, "totalTokenCount" => 2 }
+              }
+            }
+          end
+          batch.update!(
+            provider_response: batch.provider_response.merge(
+              "response" => { "inlinedResponses" => { "inlinedResponses" => entries } }
+            )
+          )
+        end
+      end
+    end
   end
   describe "batch_max_completion_tokens" do
     # Gemini 4 Argon declares max_completion_tokens 65,536 and batch_max_completion_tokens 32,768 in the manifest.

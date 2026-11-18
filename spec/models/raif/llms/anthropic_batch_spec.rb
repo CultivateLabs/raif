@@ -494,49 +494,27 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       expect(lose_mc.failure_reason).to include("not present in results stream")
     end
 
-    it "preloads inference cost events so the query count does not grow with the batch size" do
-      extra_tasks = Array.new(3) do |i|
-        Raif::TestTask.build_for_batch(
-          batch: batch,
-          batch_custom_id: "extra-#{i}",
-          creator: creator,
-          llm_model_key: "anthropic_claude_4_5_haiku"
-        )
+    it_behaves_like "a batch provider that preloads inference cost events" do
+      let(:stub_successful_batch_results) do
+        ->(custom_ids) do
+          body = custom_ids.map do |custom_id|
+            {
+              custom_id: custom_id,
+              result: {
+                type: "succeeded",
+                message: {
+                  id: "msg_#{custom_id}",
+                  type: "message",
+                  role: "assistant",
+                  content: [{ type: "text", text: "ok" }],
+                  usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
+                }
+              }
+            }.to_json
+          end.join("\n")
+          stub_request(:get, results_url).to_return(status: 200, body: body)
+        end
       end
-
-      succeeded = ->(custom_id) do
-        {
-          custom_id: custom_id,
-          result: {
-            type: "succeeded",
-            message: {
-              id: "msg_#{custom_id}",
-              type: "message",
-              role: "assistant",
-              content: [{ type: "text", text: "ok" }],
-              usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
-            }
-          }
-        }
-      end
-      body = ["win", "lose", *extra_tasks.map { |t| t.raif_model_completion.batch_custom_id }]
-        .map { |custom_id| succeeded.call(custom_id).to_json }
-        .join("\n")
-      stub_request(:get, results_url).to_return(status: 200, body: body)
-
-      cost_event_selects = []
-      callback = ->(*_args, payload) do
-        sql = payload[:sql].to_s
-        cost_event_selects << sql if sql.start_with?("SELECT") && sql.include?("raif_inference_cost_events")
-      end
-
-      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
-        llm.fetch_batch_results!(batch)
-      end
-
-      expect(batch.raif_model_completions.count).to eq(5)
-      expect(Raif::InferenceCostEvent.where(raif_model_completion_batch_id: batch.id).count).to eq(5)
-      expect(cost_event_selects.size).to eq(1)
     end
   end
 end
