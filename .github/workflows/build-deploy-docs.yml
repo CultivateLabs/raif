@@ -33,7 +33,7 @@ jobs:
       - name: Setup Ruby (root)
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ruby-3.4.2
+          ruby-version: ruby-3.4
           bundler-cache: true
 
       # Build YARD docs in root, output to docs/yard/
@@ -47,7 +47,7 @@ jobs:
       - name: Setup Ruby (docs)
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ruby-3.4.2
+          ruby-version: ruby-3.4
           bundler-cache: true
           working-directory: ./docs
 
