@@ -2,7 +2,7 @@
 
 provider :bedrock do |p|
   p.references(
-    mantle_api: "https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions-mantle.html",
+    mantle_api: "https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions.html",
     model_cards: "https://docs.aws.amazon.com/bedrock/latest/userguide/model-cards.html",
     regional_lifecycle: "https://docs.aws.amazon.com/bedrock/latest/userguide/models-region-compatibility.html",
     models_doc: "https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html",

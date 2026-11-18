@@ -2,9 +2,9 @@
 
 provider :x_ai do |p|
   p.references(
-    models_doc: "https://docs.x.ai/docs/models",
-    pricing: "https://docs.x.ai/docs/models",
-    deprecations: "https://docs.x.ai/docs/models"
+    models_doc: "https://docs.x.ai/developers/models",
+    pricing: "https://docs.x.ai/developers/models",
+    deprecations: "https://docs.x.ai/developers/models"
   )
 
   p.model(

@@ -4,7 +4,7 @@ provider :open_router do |p|
   p.references(
     models_doc: "https://openrouter.ai/models",
     pricing: "https://openrouter.ai/models",
-    deprecations: "https://openrouter.ai/docs/models"
+    deprecations: "https://openrouter.ai/docs/guides/overview/models"
   )
 
   p.model(
