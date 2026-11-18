@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_09_145838) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_18_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -49,8 +49,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_145838) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "raif_agent_turns", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.integer "iteration", null: false
+    t.bigint "raif_agent_id", null: false
+    t.bigint "raif_model_completion_id"
+    t.datetime "started_at"
+    t.string "status", default: "pending", null: false
+    t.datetime "tools_completed_at"
+    t.datetime "updated_at", null: false
+    t.index ["raif_agent_id", "iteration"], name: "index_raif_agent_turns_on_raif_agent_id_and_iteration", unique: true
+    t.index ["status", "updated_at"], name: "index_raif_agent_turns_on_status_and_updated_at"
+  end
+
   create_table "raif_agents", force: :cascade do |t|
     t.jsonb "available_model_tools", null: false
+    t.datetime "canceled_at"
     t.datetime "completed_at"
     t.jsonb "conversation_history", null: false
     t.datetime "created_at", null: false
@@ -63,6 +78,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_145838) do
     t.string "llm_model_key", null: false
     t.integer "max_iterations", default: 10, null: false
     t.string "requested_language_key"
+    t.string "run_mode"
+    t.string "run_token"
     t.jsonb "run_with"
     t.bigint "source_id"
     t.string "source_type"
@@ -100,18 +117,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_145838) do
     t.datetime "created_at", null: false
     t.bigint "creator_id", null: false
     t.string "creator_type", null: false
+    t.jsonb "execution_context"
     t.datetime "failed_at"
     t.string "llm_model_key"
     t.text "model_response_message"
     t.bigint "raif_conversation_id", null: false
     t.text "raw_response"
     t.datetime "started_at"
+    t.datetime "tools_completed_at"
+    t.datetime "tools_dispatched_at"
     t.datetime "updated_at", null: false
     t.text "user_message"
-    t.jsonb "execution_context"
     t.index ["created_at"], name: "index_raif_conversation_entries_on_created_at"
     t.index ["creator_type", "creator_id"], name: "index_raif_conversation_entries_on_creator"
     t.index ["raif_conversation_id"], name: "index_raif_conversation_entries_on_raif_conversation_id"
+    t.index ["tools_dispatched_at"], name: "index_raif_conversation_entries_on_tools_dispatched_at"
   end
 
   create_table "raif_conversations", force: :cascade do |t|
@@ -262,16 +282,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_145838) do
   end
 
   create_table "raif_model_tool_invocations", force: :cascade do |t|
+    t.datetime "canceled_at"
     t.datetime "completed_at"
+    t.string "completion_mode", default: "automatic", null: false
     t.datetime "created_at", null: false
+    t.datetime "deadline_at"
+    t.string "execution_token"
     t.datetime "failed_at"
+    t.text "failure_reason"
+    t.datetime "lease_expires_at"
+    t.integer "position"
     t.string "provider_tool_call_id"
+    t.bigint "raif_agent_turn_id"
     t.jsonb "result", null: false
     t.bigint "source_id", null: false
     t.string "source_type", null: false
+    t.datetime "started_at"
     t.jsonb "tool_arguments", null: false
     t.string "tool_type", null: false
     t.datetime "updated_at", null: false
+    t.index ["deadline_at"], name: "index_raif_model_tool_invocations_on_deadline_at"
+    t.index ["raif_agent_turn_id"], name: "index_raif_model_tool_invocations_on_raif_agent_turn_id"
     t.index ["source_type", "source_id"], name: "index_raif_model_tool_invocations_on_source"
   end
 
