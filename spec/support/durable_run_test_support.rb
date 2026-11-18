@@ -10,6 +10,10 @@ module Raif::DurableRunTestRecorder
     tool.tool_description { "Looks something up" }
   end
 
+  def renderable?
+    false
+  end
+
   def executions
     @executions ||= []
   end
@@ -90,7 +94,39 @@ class Raif::DurableRunTestAgent < Raif::Agents::NativeToolCallingAgent
   end
 end
 
+class Raif::DurableRunTestConversation < Raif::Conversation
+  class << self
+    def finalized_entry_ids
+      @finalized_entry_ids ||= []
+    end
+
+    def reset!
+      @finalized_entry_ids = []
+    end
+  end
+
+  before_create do
+    self.available_model_tools = [
+      "Raif::DurableRunTestTool",
+      "Raif::DurableRunSecondTestTool",
+      "Raif::DurableRunDeferredTestTool",
+    ]
+  end
+
+  def with_run_context(entry:)
+    Thread.current[:raif_durable_run_context] = "entry-#{entry.id}"
+    yield
+  ensure
+    Thread.current[:raif_durable_run_context] = nil
+  end
+
+  def on_entry_finalized(entry:)
+    self.class.finalized_entry_ids << entry.id
+  end
+end
+
 Raif.config.agent_types += ["Raif::DurableRunTestAgent"]
+Raif.config.conversation_types += ["Raif::DurableRunTestConversation"]
 
 RSpec.configure do |config|
   config.before do
@@ -99,7 +135,8 @@ RSpec.configure do |config|
       Raif::DurableRunSecondTestTool,
       Raif::DurableRunRetrySafeTestTool,
       Raif::DurableRunDeferredTestTool,
-      Raif::DurableRunTestAgent
+      Raif::DurableRunTestAgent,
+      Raif::DurableRunTestConversation
     ].each(&:reset!)
   end
 end

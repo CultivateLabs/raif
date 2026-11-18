@@ -25,5 +25,8 @@ class AddDurableRunColumns < ActiveRecord::Migration[7.1]
 
     add_column :raif_conversation_entries, :tools_dispatched_at, :datetime
     add_column :raif_conversation_entries, :tools_completed_at, :datetime
+    # Set once the continuation after the entry's tool calls ran (callbacks,
+    # follow-up entry). A completed entry without it still owes its continuation.
+    add_column :raif_conversation_entries, :finalized_at, :datetime
   end
 end

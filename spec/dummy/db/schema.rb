@@ -119,6 +119,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_000002) do
     t.string "creator_type", null: false
     t.jsonb "execution_context"
     t.datetime "failed_at"
+    t.datetime "finalized_at"
     t.string "llm_model_key"
     t.text "model_response_message"
     t.bigint "raif_conversation_id", null: false

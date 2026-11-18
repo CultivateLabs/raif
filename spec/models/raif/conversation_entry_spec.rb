@@ -515,6 +515,11 @@ RSpec.describe Raif::ConversationEntry, type: :model do
 
         entry.process_entry!
 
+        # Two calls each run in a job; the entry waits for both.
+        expect(entry.reload).to be_waiting_on_tools
+        expect(entry.raif_model_tool_invocations.pluck(:provider_tool_call_id)).to match_array(["tooluse_ok_1", "tooluse_ok_2"])
+        perform_enqueued_jobs(only: Raif::ModelToolInvocationJob)
+
         expect(entry.reload).to be_completed
         expect(entry.raif_model_tool_invocations.count).to eq(2)
         expect(entry.raif_model_tool_invocations.pluck(:provider_tool_call_id)).to match_array(["tooluse_ok_1", "tooluse_ok_2"])

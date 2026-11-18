@@ -9,8 +9,8 @@ module Raif
   # - tool invocations past their deadline whose deadline job never ran
   # - async agent runs whose current turn has not changed for
   #   Raif.config.agent_stalled_turn_resume_after
-  # - conversation entries whose tool calls all ended but whose continuation
-  #   never ran, or whose tool jobs were never queued
+  # - conversation entries whose tool jobs were never queued, or whose
+  #   continuation after the last tool call never ran
   #
   # Every action it takes is safe to repeat. Schedule it every few minutes with
   # the recurring-job mechanism of the host's queue adapter.
@@ -47,7 +47,7 @@ module Raif
       entries = Raif::ConversationEntry.arel_table
       Raif::ConversationEntry
         .where.not(tools_dispatched_at: nil)
-        .where(completed_at: nil, failed_at: nil)
+        .where(failed_at: nil, finalized_at: nil)
         .where(entries[:updated_at].lt(threshold.ago))
         .find_each do |entry|
           guarded("recover conversation entry", entry) { entry.recover_tool_calls! }

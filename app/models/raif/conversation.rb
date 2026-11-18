@@ -178,6 +178,20 @@ class Raif::Conversation < Raif::ApplicationRecord
     # no-op by default.
   end
 
+  # Restores host context around every step that works on an entry: generating
+  # its response, each of its tool jobs, and the continuation that a deadline or
+  # a host `complete!` call starts. Those steps run in jobs, outside the request
+  # that created the entry, so per-request state is gone unless this method sets
+  # it again. The entry carries its own `execution_context` for that purpose.
+  # Override it and yield:
+  #
+  #   def with_run_context(entry:)
+  #     Current.set(account_id: entry.execution_context["account_id"]) { yield }
+  #   end
+  def with_run_context(entry:)
+    yield
+  end
+
   def llm_messages
     messages = []
 
@@ -192,7 +206,7 @@ class Raif::Conversation < Raif::ApplicationRecord
 
       next unless entry.completed?
 
-      tool_invocations = entry.raif_model_tool_invocations.to_a
+      tool_invocations = entry.tool_invocations_in_call_order
 
       if tool_invocations.any?
         # First tool call includes the assistant's message (if any).
@@ -228,6 +242,8 @@ private
     # shape than `invocation.result` (or that want to render live state at
     # message-build time) override `format_result_for_llm` on the tool class.
     # Falls back to the raw persisted result when the formatter returns blank.
+    return tool_invocation.error_result_for_llm if tool_invocation.failed?
+
     tool_invocation.format_result_for_llm.presence || tool_invocation.result
   end
 

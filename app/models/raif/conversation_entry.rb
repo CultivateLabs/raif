@@ -10,6 +10,7 @@
 #  creator_type           :string           not null
 #  execution_context      :jsonb
 #  failed_at              :datetime
+#  finalized_at           :datetime
 #  llm_model_key          :string
 #  model_response_message :text
 #  raw_response           :text
@@ -37,6 +38,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   include Raif::Concerns::InvokesModelTools
   include Raif::Concerns::HasAvailableModelTools
   include Raif::Concerns::ToolCallValidation
+  include Raif::Concerns::ToolBarrier
 
   belongs_to :raif_conversation, counter_cache: true, class_name: "Raif::Conversation"
   belongs_to :creator, polymorphic: true
@@ -134,11 +136,147 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
     started? && !completed? && !failed?
   end
 
+  # True while the entry waits for its tool calls to end. The model response is
+  # saved; the entry completes when every call is terminal. No model call
+  # happens while it waits.
+  def waiting_on_tools?
+    tools_dispatched_at.present? && tools_completed_at.blank? && !failed?
+  end
+
+  # The entry's tool invocations in the order the model made the calls. The
+  # calls of one entry run concurrently, so row order is not call order. A
+  # canceled call belongs to a failed entry and is left out.
+  def tool_invocations_in_call_order
+    raif_model_tool_invocations.reject(&:canceled?).sort_by { |invocation| [invocation.position || 0, invocation.id] }
+  end
+
+  # The tool invocations the entry is waiting for.
+  def pending_tool_invocations
+    return Raif::ModelToolInvocation.none unless waiting_on_tools?
+
+    raif_model_tool_invocations.unfinished.in_call_order
+  end
+
   # Generate a model response for this entry, validating any returned
   # developer-managed tool calls and re-prompting with synthetic corrective
   # feedback when validation fails. Bounded by
   # {Raif.config.conversation_entry_max_retries}.
   def process_entry!
+    raif_conversation.with_run_context(entry: self) { generate_response! }
+  end
+
+  # Restarts whatever an entry that dispatched tool calls still owes: tool jobs
+  # that were never queued, a barrier check that never ran, or the continuation
+  # after the barrier. Every part is safe to repeat. Called by
+  # Raif::RecoverStalledRunsJob.
+  def recover_tool_calls!
+    return if tools_dispatched_at.blank? || failed? || finalized_at.present?
+
+    touch
+    if completed?
+      continue_after_tools!
+    else
+      raif_conversation.with_run_context(entry: self) { run_tool_invocations! }
+    end
+  end
+
+  # --- Raif::Concerns::ToolBarrier ---
+
+  def barrier_lock(&block)
+    with_lock(&block)
+  end
+
+  def awaiting_tool_results?
+    waiting_on_tools? && !completed?
+  end
+
+  def barrier_owner_live?
+    !reload.failed?
+  end
+
+  def barrier_tool_invocations
+    raif_model_tool_invocations
+  end
+
+  # The entry becomes completed here, so the conversation's next model request
+  # includes its tool results. The continuation is recorded separately in
+  # finalized_at.
+  def close_tool_barrier!
+    now = Time.current
+    update_columns(tools_completed_at: now, completed_at: now, updated_at: now)
+  end
+
+  # Runs what follows a completed entry: the conversation's on_entry_finalized
+  # hook, the follow-up entry and the UI update. Repeatable until finalized_at is
+  # set, so a crash in here is recovered; the hook can then run a second time.
+  def continue_after_tools!
+    return unless reload.completed? && tools_dispatched_at.present? && finalized_at.blank?
+
+    raif_conversation.with_run_context(entry: self) { finalize_completed_entry! }
+    update_columns(finalized_at: Time.current)
+    broadcast_entry_processed
+  end
+
+  def with_tool_run_context(&block)
+    raif_conversation.with_run_context(entry: self, &block)
+  end
+
+  # A tool exception fails the entry, as it always has. A deadline or a host
+  # `fail!` is different: the entry completes and the model sees an error result.
+  def recoverable_tool_error?(_error)
+    false
+  end
+
+  def tool_error_message_for_model(invocation, _error)
+    invocation.error_result_for_llm
+  end
+
+  def report_tool_error(invocation, error)
+    logger.error "Error processing conversation entry ##{id}. Error: #{error.message}"
+    logger.error error.backtrace.join("\n") if error.backtrace.present?
+    Rails.error.report(error, handled: true, severity: :error, context: {
+      component: "raif_conversation_entry",
+      action: "invoke_tool",
+      conversation_entry_id: id,
+      tool_name: invocation.tool_name
+    })
+  end
+
+  def fail_from_tool_error!(_invocation, _error)
+    failed = with_lock do
+      next false if failed? || completed?
+
+      now = Time.current
+      update_columns(failed_at: now, updated_at: now)
+      raif_model_tool_invocations.unfinished.where(started_at: nil).update_all(canceled_at: now, updated_at: now)
+      true
+    end
+    return unless failed
+
+    raif_conversation.update_columns(generating_entry_response: false)
+    broadcast_entry_processed
+  end
+
+  # True when at least one of this entry's tool invocations wants the model to
+  # be prompted again immediately in a follow-up turn — used to drive the
+  # synthetic next entry created by {#create_immediate_follow_up_entry!}.
+  def triggers_immediate_llm_follow_up?
+    return false unless completed?
+
+    # A call that ended without a result (its deadline passed, or the host failed
+    # it) always goes back to the model, so it can tell the user or try again.
+    raif_model_tool_invocations.any? { |invocation| invocation.failed? || invocation.triggers_immediate_llm_follow_up? }
+  end
+
+  def create_immediate_follow_up_entry!
+    follow_up_entry = raif_conversation.entries.create!(creator: creator)
+    Raif::ConversationEntryJob.perform_later(conversation_entry: follow_up_entry)
+    follow_up_entry.broadcast_append_to raif_conversation, target: ActionView::RecordIdentifier.dom_id(raif_conversation, :entries)
+  end
+
+private
+
+  def generate_response!
     self.model_response_message = ""
     extra_messages = []
     retries_remaining = Raif.config.conversation_entry_max_retries.to_i
@@ -186,23 +324,6 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
     self
   end
 
-  # True when at least one of this entry's tool invocations wants the model to
-  # be prompted again immediately in a follow-up turn — used to drive the
-  # synthetic next entry created by {#create_immediate_follow_up_entry!}.
-  def triggers_immediate_llm_follow_up?
-    return false unless completed?
-
-    raif_model_tool_invocations.any?(&:triggers_immediate_llm_follow_up?)
-  end
-
-  def create_immediate_follow_up_entry!
-    follow_up_entry = raif_conversation.entries.create!(creator: creator)
-    Raif::ConversationEntryJob.perform_later(conversation_entry: follow_up_entry)
-    follow_up_entry.broadcast_append_to raif_conversation, target: ActionView::RecordIdentifier.dom_id(raif_conversation, :entries)
-  end
-
-private
-
   def prompt_for_attempt(extra_messages:)
     raif_conversation.prompt_model_for_entry_response(entry: self, extra_messages: extra_messages) do |model_completion, _delta, _sse_event|
       self.raw_response = model_completion.raw_response
@@ -221,7 +342,13 @@ private
     end
   end
 
+  # Saves the winning response and creates one invocation row per tool call.
+  # An entry without tool calls completes here. An entry with tool calls waits
+  # behind its barrier: each call runs (in this job when there is only one,
+  # otherwise in a job of its own) and the entry completes when the last one ends.
   def finalize_entry!(model_completion:, validations:)
+    invocations = []
+
     transaction do
       self.raw_response = model_completion.raw_response
       self.model_response_message = raif_conversation.process_model_response_message(
@@ -241,23 +368,32 @@ private
         validation = validations[index]
         next if validation&.tool_klass.nil?
 
-        validation.tool_klass.invoke_tool(
+        invocation = validation.tool_klass.build_invocation(
           provider_tool_call_id: tool_call["provider_tool_call_id"],
           tool_arguments: validation.prepared_arguments,
-          source: self
+          source: self,
+          position: index
         )
+        invocation.deadline_at = Time.current + invocation.tool.invocation_deadline
+        invocation.save!
+        invocations << invocation
       end
 
-      completed!
+      if invocations.empty?
+        completed!
+      else
+        update!(tools_dispatched_at: Time.current)
+      end
     end
 
-    # Fire post-finalize hook once, outside the transaction, so that
-    # persistent side-effect code in subclasses (e.g. creating dependent
-    # records, broadcasting UI updates) never runs for discarded retry
-    # attempts. See {Raif::Conversation#on_entry_finalized}.
-    raif_conversation.on_entry_finalized(entry: self)
-
-    create_immediate_follow_up_entry! if triggers_immediate_llm_follow_up?
+    if invocations.empty?
+      finalize_completed_entry!
+    else
+      # The conversation stays in its "generating" state until the barrier opens.
+      raif_conversation.update_columns(generating_entry_response: true)
+      invocations.each(&:schedule_deadline_job)
+      run_tool_invocations!
+    end
   rescue StandardError => e
     # Do not re-raise: the caller is ConversationEntryJob via Sidekiq and we
     # don't want the job to retry on top of our in-process retry budget. Mark
@@ -265,6 +401,57 @@ private
     logger.error "Error processing conversation entry ##{id}. Error: #{e.message}"
     logger.error e.backtrace.join("\n")
     failed! unless failed?
+  end
+
+  # Starts every tool call that has not started, then checks the barrier.
+  def run_tool_invocations!
+    invocations = raif_model_tool_invocations.in_call_order.to_a
+    startable = invocations.reject(&:finished?).select { |invocation| invocation.started_at.blank? || invocation.tool.retry_safe? }
+
+    # One call gains nothing from a job of its own, so it runs right here.
+    if invocations.one?
+      startable.each do |invocation|
+        invocation.barrier_owner = self
+        invocation.execute!(context_established: true)
+      end
+    else
+      queue = Raif.config.model_tool_invocation_job_queue
+      job = queue.present? ? Raif::ModelToolInvocationJob.set(queue: queue) : Raif::ModelToolInvocationJob
+      startable.each { |invocation| job.perform_later(model_tool_invocation: invocation) }
+    end
+
+    check_tool_barrier!
+  end
+
+  # Fire the post-finalize hook once the entry is completed, outside any
+  # transaction, so that persistent side-effect code in subclasses (e.g.
+  # creating dependent records, broadcasting UI updates) never runs for
+  # discarded retry attempts. See {Raif::Conversation#on_entry_finalized}.
+  def finalize_completed_entry!
+    raif_conversation.update_columns(generating_entry_response: false) if raif_conversation.generating_entry_response?
+    raif_conversation.on_entry_finalized(entry: self)
+
+    create_immediate_follow_up_entry! if triggers_immediate_llm_follow_up?
+  rescue StandardError => e
+    logger.error "Error processing conversation entry ##{id}. Error: #{e.message}"
+    logger.error e.backtrace.join("\n")
+    failed! unless failed?
+  end
+
+  # The entry's state is already saved, so a failed UI update is reported and
+  # must not undo or fail anything.
+  def broadcast_entry_processed
+    conversation = raif_conversation
+    Turbo::StreamsChannel.broadcast_render_to conversation,
+      partial: "raif/conversations/entry_processed",
+      locals: { conversation: conversation, conversation_entry: self }
+  rescue StandardError => e
+    logger.error "Error broadcasting conversation entry ##{id}. Error: #{e.message}"
+    Rails.error.report(e, handled: true, severity: :warning, context: {
+      component: "raif_conversation_entry",
+      action: "broadcast_entry_processed",
+      conversation_entry_id: id
+    })
   end
 
   # Build the in-memory messages appended to the next attempt's LLM request.
