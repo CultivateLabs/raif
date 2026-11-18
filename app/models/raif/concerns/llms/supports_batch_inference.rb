@@ -128,6 +128,14 @@ protected
     Raif::Utils::TransientRetry.call(label: label, &block)
   end
 
+  # Loads each completion's cost event in one query, for the cost event sync
+  # that runs when each completion's save commits. Adapters call this after the
+  # missing-entry sweep: the sweep's reload clears association caches, and under
+  # Raif::ModelCompletionBatch#finalize!'s lock the syncs run only after it.
+  def preload_inference_cost_events(completions)
+    ActiveRecord::Associations::Preloader.new(records: completions, associations: :raif_inference_cost_event).call
+  end
+
   # The batch's child completions, checked and ready to serialize. Each
   # adapter's #submit_batch! starts here.
   #

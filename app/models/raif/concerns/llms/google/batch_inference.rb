@@ -216,6 +216,7 @@ module Raif::Concerns::Llms::Google::BatchInference
       mc.failed!
     end
 
+    preload_inference_cost_events(completions_by_id.values)
     batch.recalculate_costs!
     batch
   end

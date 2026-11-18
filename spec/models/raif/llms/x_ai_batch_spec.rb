@@ -585,5 +585,28 @@ RSpec.describe Raif::Llms::XAi, "batch inference" do
       expect { llm.fetch_batch_results!(batch) }.not_to raise_error
       expect(Raif.logger).to have_received(:warn).with(a_string_matching(/did not match/))
     end
+
+    it_behaves_like "a batch provider that preloads inference cost events" do
+      let(:stub_successful_batch_results) do
+        ->(custom_ids) do
+          results = custom_ids.map do |custom_id|
+            {
+              batch_request_id: custom_id,
+              batch_result: {
+                response: {
+                  chat_get_completion: {
+                    id: "chatcmpl_#{custom_id}",
+                    choices: [{ message: { role: "assistant", content: "ok" } }],
+                    usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+                  }
+                }
+              }
+            }
+          end
+          stub_request(:get, "#{base_url}/batches/batch_results_target/results")
+            .to_return(status: 200, body: { results: results }.to_json, headers: { "Content-Type" => "application/json" })
+        end
+      end
+    end
   end
 end

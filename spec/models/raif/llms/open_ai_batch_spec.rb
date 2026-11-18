@@ -423,6 +423,30 @@ RSpec.describe Raif::Llms::OpenAiBase, "batch inference" do
       expect(task_failure.raif_model_completion.reload.failed?).to be(true)
       expect(Raif.logger).to have_received(:error).with(a_string_matching(/skipping malformed JSONL/))
     end
+
+    it_behaves_like "a batch provider that preloads inference cost events" do
+      let(:stub_successful_batch_results) do
+        ->(custom_ids) do
+          body = custom_ids.map do |custom_id|
+            {
+              id: "batch_req_#{custom_id}",
+              custom_id: custom_id,
+              response: {
+                status_code: 200,
+                request_id: "req_#{custom_id}",
+                body: {
+                  id: "resp_#{custom_id}",
+                  output: [{ type: "message", content: [{ type: "output_text", text: "ok" }] }],
+                  usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }
+                }
+              },
+              error: nil
+            }.to_json
+          end.join("\n")
+          stub_request(:get, "#{base_url}/files/file-out/content").to_return(status: 200, body: body)
+        end
+      end
+    end
   end
 
   describe "JSONL body shape (Completions)" do

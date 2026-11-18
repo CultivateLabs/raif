@@ -493,5 +493,28 @@ RSpec.describe Raif::Llms::Anthropic, "batch inference" do
       expect(lose_mc.failure_error).to include("missing")
       expect(lose_mc.failure_reason).to include("not present in results stream")
     end
+
+    it_behaves_like "a batch provider that preloads inference cost events" do
+      let(:stub_successful_batch_results) do
+        ->(custom_ids) do
+          body = custom_ids.map do |custom_id|
+            {
+              custom_id: custom_id,
+              result: {
+                type: "succeeded",
+                message: {
+                  id: "msg_#{custom_id}",
+                  type: "message",
+                  role: "assistant",
+                  content: [{ type: "text", text: "ok" }],
+                  usage: { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
+                }
+              }
+            }.to_json
+          end.join("\n")
+          stub_request(:get, results_url).to_return(status: 200, body: body)
+        end
+      end
+    end
   end
 end
