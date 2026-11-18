@@ -21,7 +21,8 @@ RSpec.shared_examples "a batch provider that preloads inference cost events" do
       next if payload[:name] == "SCHEMA"
 
       sql = payload[:sql].to_s
-      cost_event_selects << sql if sql.start_with?("SELECT") && sql.include?('FROM "raif_inference_cost_events"')
+      # MySQL quotes table names with backticks, PostgreSQL with double quotes.
+      cost_event_selects << sql if sql.match?(/\ASELECT .* FROM [`"]raif_inference_cost_events[`"]/m)
     end
 
     # finalize! is the poll job's path. It fetches inside with_lock, so each
