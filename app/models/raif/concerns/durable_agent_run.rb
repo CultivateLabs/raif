@@ -255,6 +255,10 @@ module Raif::Concerns::DurableAgentRun
       return yield
     end
 
+    # Locking reloads the row, which Rails refuses while attributes are unsaved.
+    # A subclass hook may have assigned some, so they are saved first.
+    save! if changed?
+
     @run_transaction_depth = 1
     begin
       result = with_lock { yield }

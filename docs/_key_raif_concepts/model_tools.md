@@ -162,6 +162,22 @@ When the LLM invokes your tool, Raif will call your tool's `process_invocation` 
 
 You should implement `process_invocation` to perform whatever actions are appropriate for your tool and store the results in the `tool_invocation.result` JSON column.
 
+## Tools That Complete Later
+
+If your tool starts work that finishes later (a background job, a slow export, a callback from another system), declare `defers_completion`. `process_invocation` starts the work and returns, and the agent or conversation waits, without making a model call, until your code calls `invocation.complete!(result)` or `invocation.fail!(message)`:
+
+```ruby
+class SlowLookup < Raif::ModelTool
+  defers_completion deadline: 45.minutes
+
+  def self.process_invocation(invocation)
+    SlowLookupJob.perform_later(invocation)
+  end
+end
+```
+
+Every invocation has a deadline; when it passes, the model gets an error result for the call. See [Durable Agent Runs](../learn_more/durable_agent_runs#deferred-completion) for deadlines, the at-most-once execution guarantee, and `retry_safe`.
+
 ## Model Tool Results
 
 When your tool is being invoked in a [conversation](conversations) or [agent](agents), the result of the tool invocation is sent back to the LLM via the standard tool-call-result message on every subsequent turn.

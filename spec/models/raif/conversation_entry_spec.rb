@@ -10,6 +10,7 @@
 #  creator_type           :string           not null
 #  execution_context      :jsonb
 #  failed_at              :datetime
+#  finalized_at           :datetime
 #  llm_model_key          :string
 #  model_response_message :text
 #  raw_response           :text

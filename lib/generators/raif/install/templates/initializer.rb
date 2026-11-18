@@ -161,6 +161,23 @@ Raif.configure do |config|
   # LLM request. Defaults to 2 (up to 3 ModelCompletion rows per entry: initial + 2 retries).
   # config.conversation_entry_max_retries = 2
 
+  # Queues for the jobs of agent runs started with `run_later!`: one Raif::AgentTurnJob per turn and one
+  # Raif::ModelToolInvocationJob per tool call. nil uses your default queue.
+  # config.agent_turn_job_queue = nil
+  # config.model_tool_invocation_job_queue = nil
+
+  # How long a tool call that runs in a job may take before the model gets an error result for it.
+  # Defaults to 10.minutes
+  # config.model_tool_invocation_deadline = 10.minutes
+
+  # How long an agent or conversation waits for a tool that declares `defers_completion` before the
+  # model gets an error result for the call. Defaults to 30.minutes
+  # config.deferred_model_tool_invocation_deadline = 30.minutes
+
+  # Raif::RecoverStalledRunsJob resumes an async agent run whose current turn has not changed for this
+  # long. Keep it well above your slowest model call. nil disables it. Defaults to 30.minutes
+  # config.agent_stalled_turn_resume_after = 30.minutes
+
   # The method to call to get the current user. Defaults to :current_user
   # config.current_user_method = :current_user
 

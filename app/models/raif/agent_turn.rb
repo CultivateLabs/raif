@@ -1,5 +1,25 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: raif_agent_turns
+#
+#  id                       :bigint           not null, primary key
+#  completed_at             :datetime
+#  iteration                :integer          not null
+#  started_at               :datetime
+#  status                   :string           default("pending"), not null
+#  tools_completed_at       :datetime
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  raif_agent_id            :bigint           not null
+#  raif_model_completion_id :bigint
+#
+# Indexes
+#
+#  index_raif_agent_turns_on_raif_agent_id_and_iteration  (raif_agent_id,iteration) UNIQUE
+#  index_raif_agent_turns_on_status_and_updated_at        (status,updated_at)
+#
 # One turn of an agent run: one model completion and the tool calls it asked for.
 #
 # The status is the durable record of how far the turn got. Every job that works

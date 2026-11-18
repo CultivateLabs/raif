@@ -35,7 +35,15 @@ module Raif
       return if threshold.blank?
 
       turns = Raif::AgentTurn.arel_table
-      Raif::AgentTurn.unfinished.where(turns[:updated_at].lt(threshold.ago)).includes(:raif_agent).find_each do |turn|
+      # Only turns of runs that can still move: a run that failed or was canceled
+      # leaves its last turn unfinished for good.
+      live_async_runs = Raif::Agent.in_progress.where(run_mode: "async")
+      stalled_turns = Raif::AgentTurn.unfinished
+        .where(turns[:updated_at].lt(threshold.ago))
+        .where(raif_agent_id: live_async_runs.select(:id))
+        .includes(:raif_agent)
+
+      stalled_turns.find_each do |turn|
         guarded("resume agent", turn) { turn.raif_agent.resume! }
       end
     end
