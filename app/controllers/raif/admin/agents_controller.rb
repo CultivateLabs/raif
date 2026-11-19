@@ -22,7 +22,11 @@ module Raif
           when :failed
             agents = agents.failed
           when :running
-            agents = agents.started.where(completed_at: nil, failed_at: nil)
+            agents = agents.in_progress.where.not(id: Raif::Agent.waiting)
+          when :waiting
+            agents = agents.waiting
+          when :canceled
+            agents = agents.canceled
           when :pending
             agents = agents.where(started_at: nil)
           end

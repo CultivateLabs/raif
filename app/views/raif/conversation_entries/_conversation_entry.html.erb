@@ -27,7 +27,7 @@
           content: conversation_entry.model_response_message,
           message_type: :model_response if conversation_entry.model_response_message.present? %>
 
-    <% conversation_entry.raif_model_tool_invocations.select(&:renderable?).each do |ti| %>
+    <% conversation_entry.tool_invocations_in_call_order.select(&:renderable?).each do |ti| %>
       <%= render ti, conversation_entry: conversation_entry %>
     <% end %>
   <% end %>

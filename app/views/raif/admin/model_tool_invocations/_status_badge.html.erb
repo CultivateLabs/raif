@@ -1,0 +1,14 @@
+<%# locals: (model_tool_invocation:, extra_class: nil) %>
+<% if model_tool_invocation.completed_at? %>
+  <span class="badge bg-success <%= extra_class %>"><%= t("raif.admin.common.completed") %></span>
+<% elsif model_tool_invocation.failed_at? %>
+  <span class="badge bg-danger <%= extra_class %>"><%= t("raif.admin.common.failed") %></span>
+<% elsif model_tool_invocation.canceled_at? %>
+  <span class="badge bg-dark <%= extra_class %>"><%= t("raif.admin.common.canceled") %></span>
+<% elsif model_tool_invocation.deferred_completion? && model_tool_invocation.started_at? %>
+  <span class="badge bg-info text-dark <%= extra_class %>"><%= t("raif.admin.common.waiting") %></span>
+<% elsif model_tool_invocation.started_at? %>
+  <span class="badge bg-warning <%= extra_class %>"><%= t("raif.admin.common.running") %></span>
+<% else %>
+  <span class="badge bg-secondary <%= extra_class %>"><%= t("raif.admin.common.pending") %></span>
+<% end %>

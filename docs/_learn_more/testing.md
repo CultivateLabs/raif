@@ -86,3 +86,35 @@ Raif also provides FactoryBot factories for its models. You can use them to crea
 ---
 
 **Read next:** [Demo App](demo_app)
+
+## Agent runs in jobs and tool jobs
+
+`agent.run!` performs a whole run in the calling process, so a spec that only needs the outcome can keep using it with `stub_raif_agent`.
+
+To test a run started with `run_later!`, or a conversation entry whose response contains several tool calls, perform the jobs with `perform_raif_run_jobs`. It performs turn jobs and tool jobs until none are left, and needs `ActiveJob::TestHelper`:
+
+```ruby
+RSpec.configure do |config|
+  config.include ActiveJob::TestHelper
+  config.include Raif::RspecHelpers
+end
+
+it "waits for a tool that completes later" do
+  # Pass the class: jobs load their own instance of the agent.
+  stub_raif_agent(ResearchAgent) do |messages, model_completion|
+    # set model_completion.response_tool_calls for each turn
+  end
+
+  agent = ResearchAgent.new(task: "Find the figures", creator: user)
+  agent.run_later!
+  perform_raif_run_jobs
+
+  expect(agent.reload.status).to eq(:waiting)
+  agent.pending_tool_invocations.first.complete!("rows" => [1, 2])
+  perform_raif_run_jobs
+
+  expect(agent.reload).to be_completed
+end
+```
+
+With the `:test` queue adapter, an entry with two or more tool calls stays in `waiting_on_tools?` until its tool jobs are performed. An entry with one tool call still completes inside `process_entry!`.

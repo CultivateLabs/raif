@@ -157,25 +157,45 @@ class Raif::Conversation < Raif::ApplicationRecord
     # IMPORTANT: this method is invoked on every streaming chunk and on every
     # retry attempt made by {Raif::ConversationEntry#process_entry!}. Do NOT
     # put persistent side effects (DB writes, broadcasts, external calls) in
-    # here — those belong in {#on_entry_finalized}, which runs exactly once
-    # per entry after validation and tool invocation have succeeded.
+    # here — those belong in {#on_entry_finalized}, which runs once the entry
+    # is finalized and never for a discarded retry attempt.
     message
   end
 
-  # Called exactly once per {Raif::ConversationEntry} immediately after the
-  # entry has been successfully finalized (model response saved, all developer-
-  # managed tool calls validated and invoked, entry transitioned to
-  # `completed!`). This is the correct place for per-entry side effects such
-  # as creating dependent records, enqueuing follow-up work, or broadcasting
-  # UI updates tied to the final response — anything you do NOT want
-  # re-executing for attempts that were discarded by the retry loop, or for
-  # intermediate streaming callbacks.
+  # Called after a {Raif::ConversationEntry} has been successfully finalized
+  # (model response saved, all developer-managed tool calls validated and
+  # ended, entry transitioned to `completed!`). This is the correct place for
+  # per-entry side effects such as creating dependent records, enqueuing
+  # follow-up work, or broadcasting UI updates tied to the final response —
+  # anything you do NOT want re-executing for attempts that were discarded by
+  # the retry loop, or for intermediate streaming callbacks.
+  #
+  # For an entry that dispatched tool calls, the hook runs in a transaction that
+  # holds the entry's row lock, with the follow-up entry and the finalized_at
+  # write. If the process stops before that transaction commits, its database
+  # writes roll back and recovery runs the hook again. Effects outside the
+  # database (an API call, an email) can then happen twice, so keep the hook
+  # idempotent.
   #
   # No-op by default. Subclasses may override.
   #
   # @param entry [Raif::ConversationEntry] the freshly-finalized entry.
   def on_entry_finalized(entry:)
     # no-op by default.
+  end
+
+  # Restores host context around every step that works on an entry: generating
+  # its response, each of its tool jobs, and the continuation that a deadline or
+  # a host `complete!` call starts. Those steps run in jobs, outside the request
+  # that created the entry, so per-request state is gone unless this method sets
+  # it again. The entry carries its own `execution_context` for that purpose.
+  # Override it and yield:
+  #
+  #   def with_run_context(entry:)
+  #     Current.set(account_id: entry.execution_context["account_id"]) { yield }
+  #   end
+  def with_run_context(entry:)
+    yield
   end
 
   def llm_messages
@@ -192,7 +212,7 @@ class Raif::Conversation < Raif::ApplicationRecord
 
       next unless entry.completed?
 
-      tool_invocations = entry.raif_model_tool_invocations.to_a
+      tool_invocations = entry.tool_invocations_in_call_order
 
       if tool_invocations.any?
         # First tool call includes the assistant's message (if any).
@@ -228,6 +248,8 @@ private
     # shape than `invocation.result` (or that want to render live state at
     # message-build time) override `format_result_for_llm` on the tool class.
     # Falls back to the raw persisted result when the formatter returns blank.
+    return tool_invocation.error_result_for_llm if tool_invocation.failed?
+
     tool_invocation.format_result_for_llm.presence || tool_invocation.result
   end
 
