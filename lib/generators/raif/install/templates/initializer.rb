@@ -217,6 +217,15 @@ Raif.configure do |config|
   #   raise MyApp::UsageLimitExceededError if account && !account.within_llm_usage_limits?
   # }
 
+  # Optional lambda called with an invocation: keyword arg (a Raif::ModelToolInvocation)
+  # immediately before every tool execution, in tasks, agents, conversations, and tool
+  # jobs. Raise from it to veto the call; return values are ignored. Useful for checking
+  # whether the invocation's source may use the tool. Does not apply to provider-managed
+  # tools. Defaults to nil (all tool calls allowed).
+  # config.model_tool_invocation_authorizer = ->(invocation:) {
+  #   raise MyApp::ToolNotAllowedError unless MyApp::ToolPolicy.allowed?(invocation.tool, invocation.source)
+  # }
+
   # Whether Raif creates a durable Raif::InferenceCostEvent for each model
   # completion that reaches a terminal state (completed or failed). Cost
   # events are slim rows that survive deletion of the completion, so cost

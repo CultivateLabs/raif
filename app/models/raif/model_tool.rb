@@ -67,6 +67,30 @@ class Raif::ModelTool
       raise NotImplementedError, "#{name}#process_invocation is not implemented"
     end
 
+    # Runs the tool for an invocation. Every tool execution goes through here,
+    # whatever started it: a task, an agent turn, a conversation entry, a tool
+    # job, a tool that defers completion, or a `retry_safe` takeover. Tool
+    # classes implement `process_invocation` and do not override this method.
+    #
+    # Raif.config.model_tool_invocation_authorizer is called first, at execution
+    # time, with the invocation (its tool, arguments and source). It vetoes the
+    # call by raising. The exception is tagged with
+    # Raif::Errors::ModelToolInvocationAuthorizationError and then handled like
+    # any other tool exception by the caller.
+    def execute_invocation(invocation)
+      authorizer = Raif.config.model_tool_invocation_authorizer
+      if authorizer
+        begin
+          authorizer.call(invocation: invocation)
+        rescue StandardError => e
+          e.extend(Raif::Errors::ModelToolInvocationAuthorizationError) unless e.is_a?(Raif::Errors::ModelToolInvocationAuthorizationError)
+          raise
+        end
+      end
+
+      process_invocation(invocation)
+    end
+
     def invocation_partial_name
       name.gsub("Raif::ModelTools::", "").underscore
     end
@@ -284,7 +308,7 @@ class Raif::ModelTool
       # transaction open for their whole duration, and on PostgreSQL one failed
       # statement inside it aborts every later query the tool makes. A tool that
       # needs its writes to be atomic opens its own transaction.
-      process_invocation(tool_invocation)
+      execute_invocation(tool_invocation)
       # Skip validation: a source-aware schema can change during the run, and a
       # silently failed write breaks the agent's pairing of results to invocations.
       # save! (not update_columns) also persists a result the tool set in memory.

@@ -104,6 +104,20 @@ A deadline stops the wait. It does not stop tool code or host work that is still
 
 The rules of `recover_from_tool_errors` apply in jobs as they do in `run!`: an exception raised by a tool becomes an error result for the model, and the run continues. An error that `recoverable_tool_error?` rejects fails the run. Calls of the same turn that have not started are canceled. A call that is already running finishes, and its result is saved, but it does not advance the run.
 
+## Authorizing tool calls {#authorizing-tool-calls}
+
+Every tool execution goes through one method, `Raif::ModelTool.execute_invocation`, whatever started it: a task, an agent turn, a conversation entry, a tool job, a tool that defers completion, or a `retry_safe` takeover. To check each call before it runs, set `model_tool_invocation_authorizer`. It receives the `Raif::ModelToolInvocation` at execution time, inside the [run context](#restoring-host-context), and vetoes the call by raising:
+
+```ruby
+Raif.configure do |config|
+  config.model_tool_invocation_authorizer = ->(invocation:) {
+    ToolPolicy.authorize!(invocation.tool, invocation.source)
+  }
+end
+```
+
+A veto is tagged with `Raif::Errors::ModelToolInvocationAuthorizationError` and then handled like a tool exception. An agent fails the run by default, in `run!` and in jobs, because the model must not be invited to work around a refusal; override `recoverable_tool_error?` to send the model an error result instead. A conversation entry fails. `Raif::ModelTool.invoke_tool` re-raises it to the caller. Provider-managed tools are run by the provider and are not covered.
+
 # Tool execution guarantee
 
 Raif runs a tool **at most once** per invocation. If a worker stops while a tool runs, Raif does not run the tool again, because it cannot know whether the first execution already had an effect outside the database. The invocation ends at its deadline with an error result, and the model can make the call again.

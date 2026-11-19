@@ -123,9 +123,9 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
 
     begin
       if context_established || owner.nil?
-        tool.process_invocation(self)
+        tool.execute_invocation(self)
       else
-        owner.with_tool_run_context { tool.process_invocation(self) }
+        owner.with_tool_run_context { tool.execute_invocation(self) }
       end
     rescue StandardError => e
       handle_execution_error(e, token: token, raise_fatal: raise_fatal)

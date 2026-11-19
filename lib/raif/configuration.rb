@@ -54,6 +54,7 @@ module Raif
       :model_completion_batch_poll_schedule,
       :model_completion_retention_period,
       :model_superclass,
+      :model_tool_invocation_authorizer,
       :model_tool_invocation_deadline,
       :model_tool_invocation_job_queue,
       :open_ai_api_key,
@@ -222,6 +223,15 @@ module Raif
       # to the caller. Return values are ignored. Does not apply to embedding
       # generation or batch API submissions.
       @model_completion_authorizer = nil
+      # Optional lambda called with an invocation: keyword arg (a
+      # Raif::ModelToolInvocation) immediately before every tool execution: in a
+      # task, an agent turn, a conversation entry, or a tool job. Raise from it to
+      # veto the call (e.g. a host app that checks whether the invocation's
+      # source may use the tool). Return values are ignored. It runs at execution
+      # time, inside the run context of the agent or conversation, so it sees the
+      # state the tool would see. Does not apply to provider-managed tools, which
+      # the provider runs.
+      @model_tool_invocation_authorizer = nil
       # Hard ceiling for any non-terminal Raif::ModelCompletionBatch. Older
       # batches are expired by the hourly safety sweep
       # (Raif::ExpireStuckModelCompletionBatchesJob) and the polling job's
@@ -418,6 +428,13 @@ module Raif
       else
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.authorize_admin_controller_action must respond to :call and return a boolean"
+      end
+
+      if model_tool_invocation_authorizer.nil? || model_tool_invocation_authorizer.respond_to?(:call)
+        model_tool_invocation_authorizer&.freeze
+      else
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.model_tool_invocation_authorizer must be nil or respond to :call"
       end
 
       if model_completion_authorizer.nil? || model_completion_authorizer.respond_to?(:call)
