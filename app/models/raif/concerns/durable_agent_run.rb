@@ -274,19 +274,7 @@ module Raif::Concerns::DurableAgentRun
     # A subclass hook may have assigned some, so they are saved first.
     save! if changed?
 
-    @run_transaction_depth = 1
-    begin
-      result = with_lock { yield }
-    rescue StandardError
-      # The transaction rolled back, so the entries it added were never saved.
-      @conversation_history_callback_queue = []
-      raise
-    ensure
-      @run_transaction_depth = 0
-    end
-
-    flush_conversation_history_callbacks
-    result
+    holding_history_callbacks { with_lock { yield } }
   end
 
   # Whether this process may still change the run. Call it inside #run_transaction.
@@ -349,19 +337,20 @@ private
       raise Raif::Errors::AgentRunError, "#{self.class.name}##{id} was already started. Use #resume! to continue an async run."
     end
 
-    transaction do
-      # Creating the record runs populate_default_model_tools, so the tool set
-      # is complete only after this save.
-      save!
-      ensure_no_deferred_tools! if mode == "in_process"
+    holding_history_callbacks do
+      transaction do
+        # Creating the record runs populate_default_model_tools, so the tool set
+        # is complete only after this save.
+        save!
+        ensure_no_deferred_tools! if mode == "in_process"
+        lock!
 
-      self.started_at = Time.current
-      self.run_mode = mode
-      self.run_token = SecureRandom.hex(16)
-      save!
-      hold_run_token(run_token)
+        self.started_at = Time.current
+        self.run_mode = mode
+        self.run_token = SecureRandom.hex(16)
+        save!
+        hold_run_token(run_token)
 
-      run_transaction do
         add_conversation_history_entry(Raif::Messages::UserMessage.new(content: task).to_h)
         open_turn!(1)
       end
@@ -469,17 +458,30 @@ private
   # this step and no tool jobs are dispatched. The hook runs outside the agent's
   # lock, because the tools it runs would otherwise hold the lock for as long as
   # they take and block every other writer of the run. If the process stops
-  # before the turn moves on, the hook runs again.
+  # before the turn moves on, or a second job passes the same check, the hook
+  # runs again. The entries it adds are saved only by the run that moves the
+  # turn on, so they reach the history once.
   def process_turn_completion!(turn)
     return unless run_transaction { run_live? && turn.reload.completion_saved? }
 
-    process_iteration_model_completion(turn.raif_model_completion)
+    entries = buffering_history_entries { process_iteration_model_completion(turn.raif_model_completion) }
 
     run_transaction do
       next unless run_live?
+      next unless turn.transition!(from: "completion_saved", to: "tools_complete", tools_completed_at: Time.current)
 
-      turn.transition!(from: "completion_saved", to: "tools_complete", tools_completed_at: Time.current)
+      entries.each { |entry| add_conversation_history_entry(entry) }
     end
+  end
+
+  # Collects the conversation history entries that the block adds instead of
+  # saving them, and returns them.
+  def buffering_history_entries
+    @buffered_history_entries = []
+    yield
+    @buffered_history_entries
+  ensure
+    @buffered_history_entries = nil
   end
 
   # tools_dispatched: start every tool call that has not started, then check the
@@ -515,6 +517,25 @@ private
     self.failure_reason ||= error.message
     save!
     after_run
+  end
+
+  # Holds the conversation history callbacks of the block until it returns, so
+  # host code never runs while the block's transaction is open. A nested
+  # #run_transaction joins the block instead of taking the lock again.
+  def holding_history_callbacks
+    @run_transaction_depth = 1
+    begin
+      result = yield
+    rescue StandardError
+      # The transaction rolled back, so the entries it added were never saved.
+      @conversation_history_callback_queue = []
+      raise
+    ensure
+      @run_transaction_depth = 0
+    end
+
+    flush_conversation_history_callbacks
+    result
   end
 
   def flush_conversation_history_callbacks

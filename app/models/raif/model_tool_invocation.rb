@@ -336,8 +336,8 @@ private
 
   # Every write that can make an invocation terminal takes the owner's lock
   # first, the same order Raif::Concerns::ToolBarrier#check_tool_barrier! uses.
-  # Without it, two host transactions that each complete one call deadlock on
-  # the barrier's locking read of the other's invocation.
+  # Without it, on MySQL, two host transactions that each complete one call
+  # deadlock on the barrier's locking read of the other's invocation.
   def with_barrier_lock(&block)
     owner = barrier_owner
     owner.present? ? owner.barrier_lock(&block) : yield

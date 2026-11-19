@@ -62,6 +62,10 @@ RSpec.describe "Durable agent run concurrency", type: :model do
     threads.map(&:value)
   end
 
+  def mysql?
+    ActiveRecord::Base.connection.adapter_name.downcase.in?(["mysql2", "trilogy"])
+  end
+
   def turn_jobs
     enqueued_jobs.select { |job| job["job_class"] == "Raif::AgentTurnJob" }
   end
@@ -136,6 +140,53 @@ RSpec.describe "Durable agent run concurrency", type: :model do
     expect(turn.reload).to be_completed
     expect(agent.turns.pluck(:iteration)).to eq([1, 2])
     expect(turn_jobs.length).to eq(1)
+
+    results = agent.reload.conversation_history.select { |entry| entry["type"] == "tool_call_result" }
+    expect(results.map { |entry| entry["provider_tool_call_id"] }).to eq(["call_0", "call_1"])
+    expect(results).to all(satisfy { |entry| !entry.key?("tool_error") })
+  end
+
+  it "does not deadlock when a host transaction writes its invocation before completing it" do
+    skip "MySQL needs the barrier's locking read, so host code must not write the invocation first" if mysql?
+
+    first, second = Array.new(2) { |position| create_invocation(position, tool: Raif::DurableRunDeferredTestTool, started_at: Time.current) }
+    first_written = Queue.new
+    second_at_barrier = Queue.new
+
+    # The second transaction holds the agent's lock at its barrier check while
+    # the first one, holding its own invocation row, asks for that lock.
+    allow_any_instance_of(Raif::AgentTurn).to receive(:check_tool_barrier!).and_wrap_original do |method|
+      if Thread.current[:barrier_role] == :second
+        second_at_barrier << true
+        sleep 0.3
+      end
+      method.call
+    end
+
+    outcomes = race(
+      lambda do
+        Raif::ModelToolInvocation.transaction do
+          invocation = Raif::ModelToolInvocation.find(first.id)
+          invocation.update!(result: { "position" => 0 })
+          first_written << true
+          second_at_barrier.pop(timeout: 2)
+          invocation.complete!
+        end
+      end,
+      lambda do
+        Thread.current[:barrier_role] = :second
+        first_written.pop(timeout: 2)
+        Raif::ModelToolInvocation.transaction do
+          Raif::ModelToolInvocation.find(second.id).complete!("position" => 1)
+        end
+      end
+    )
+
+    expect(outcomes).to eq([true, true])
+    expect(turn.reload).to be_completed
+    results = agent.reload.conversation_history.select { |entry| entry["type"] == "tool_call_result" }
+    expect(results.map { |entry| entry["provider_tool_call_id"] }).to eq(["call_0", "call_1"])
+    expect(results).to all(satisfy { |entry| !entry.key?("tool_error") })
   end
 
   it "never advances a run that is canceled while its last tool call ends" do

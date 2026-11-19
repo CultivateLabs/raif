@@ -28,6 +28,19 @@
 module Raif::Concerns::ToolBarrier
   extend ActiveSupport::Concern
 
+  # Reads the latest committed rows of the relation inside the barrier.
+  #
+  # Postgres at READ COMMITTED gives every statement a fresh snapshot, so a
+  # plain read is enough. MySQL at REPEATABLE READ reads the transaction's
+  # snapshot, which can predate the commit of the caller that finished the
+  # previous call, so it needs a locking read. A locking read there waits on any
+  # invocation row the host locked in its own transaction, and that host then
+  # waits for the owner's lock: on MySQL, host code must not write or lock an
+  # invocation before it calls #complete! or #fail! in the same transaction.
+  def self.current_rows(relation)
+    relation.connection.adapter_name.downcase.in?(["mysql2", "trilogy"]) ? relation.lock : relation
+  end
+
   # Runs inside the owner's host context, because opening the barrier runs host
   # hooks (the agent's conversation history callbacks, the continuation).
   #
@@ -41,11 +54,7 @@ private
   def check_tool_barrier_in_context!
     opened = barrier_lock do
       next false unless awaiting_tool_results? && barrier_owner_live?
-      # A locking read sees the latest committed rows. A plain read under MySQL
-      # REPEATABLE READ uses the transaction's snapshot, so two host transactions
-      # that each complete one of the last two calls could both see the other
-      # still unfinished.
-      next false if barrier_tool_invocations.unfinished.lock.exists?
+      next false if Raif::Concerns::ToolBarrier.current_rows(barrier_tool_invocations.unfinished).exists?
 
       close_tool_barrier!
       true

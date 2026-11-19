@@ -285,6 +285,39 @@ RSpec.describe "Durable agent runs", type: :model do
       expect(hook_agent.final_answer).to eq("The answer.")
       expect(Raif::DurableRunHookAgent.open_transactions_in_hook).to eq([outside])
     end
+
+    it "calls the history callback after the start commits under run!" do
+      outside = Raif::Agent.connection.open_transactions
+
+      hook_agent.run!
+
+      expect(Raif::DurableRunHookAgent.open_transactions_in_history_callback).to all(eq(outside))
+      expect(Raif::DurableRunHookAgent.open_transactions_in_history_callback.length).to eq(2)
+    end
+
+    it "calls the history callback after the start commits under run_later!" do
+      outside = Raif::Agent.connection.open_transactions
+
+      hook_agent.run_later!
+
+      expect(Raif::DurableRunHookAgent.open_transactions_in_history_callback).to eq([outside])
+    end
+
+    it "adds the hook's entries once when the hook runs again after the process stops" do
+      Raif::DurableRunHookAgent.hook_failures_left = 1
+      hook_agent.run_later!
+      turn = hook_agent.current_turn
+
+      stopped = Raif::Agent.find(hook_agent.id)
+      stopped.hold_run_token(stopped.run_token)
+      expect { stopped.perform_turn!(turn) }.to raise_error(/stopped after adding its entry/)
+      expect(turn.reload).to be_completion_saved
+
+      drain_jobs
+
+      expect(hook_agent.reload).to be_completed
+      expect(hook_agent.conversation_history.count { |entry| entry["role"] == "assistant" }).to eq(1)
+    end
   end
 
   describe "job retries" do

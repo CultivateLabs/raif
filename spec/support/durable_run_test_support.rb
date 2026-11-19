@@ -126,9 +126,23 @@ class Raif::DurableRunHookAgent < Raif::Agent
       @open_transactions_in_hook ||= []
     end
 
+    def open_transactions_in_history_callback
+      @open_transactions_in_history_callback ||= []
+    end
+
+    # How many more hook runs raise after adding their entry.
+    attr_accessor :hook_failures_left
+
     def reset!
       @open_transactions_in_hook = []
+      @open_transactions_in_history_callback = []
+      @hook_failures_left = 0
     end
+  end
+
+  def after_conversation_history_entry(entry)
+    self.class.open_transactions_in_history_callback << self.class.connection.open_transactions
+    super
   end
 
 private
@@ -141,6 +155,11 @@ private
     self.class.open_transactions_in_hook << self.class.connection.open_transactions
     add_conversation_history_entry({ "role" => "assistant", "content" => model_completion.raw_response })
     self.final_answer = model_completion.raw_response
+
+    if self.class.hook_failures_left.to_i > 0
+      self.class.hook_failures_left -= 1
+      raise "The hook stopped after adding its entry"
+    end
   end
 end
 

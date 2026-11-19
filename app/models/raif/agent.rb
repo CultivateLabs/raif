@@ -196,6 +196,11 @@ module Raif
       # jsonb column. Strip them before persisting so a single poisoned tool
       # result doesn't abort the whole agent run.
       entry_stringified = strip_null_bytes(entry.stringify_keys)
+      if @buffered_history_entries
+        @buffered_history_entries << entry_stringified
+        return
+      end
+
       conversation_history << entry_stringified
       save!
 

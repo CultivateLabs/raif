@@ -288,7 +288,8 @@ module Raif
         tool_calls = model_completion&.response_tool_calls || []
         assistant_response_message = model_completion&.parsed_response.presence
 
-        turn.raif_model_tool_invocations.in_call_order.each_with_index do |invocation, index|
+        invocations = Raif::Concerns::ToolBarrier.current_rows(turn.raif_model_tool_invocations.in_call_order)
+        invocations.each_with_index do |invocation, index|
           tool_call = tool_calls[invocation.position] || {}
           tool_call_message = Raif::Messages::ToolCall.new(
             provider_tool_call_id: invocation.provider_tool_call_id,
