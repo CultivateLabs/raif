@@ -360,12 +360,24 @@ private
       terminate!({ failed_at: Time.current, failure_reason: owner.tool_error_message_for_model(self, error) }, scope: claimed)
       owner.check_tool_barrier!
     else
-      unless terminate!({ failed_at: Time.current, failure_reason: error.message }, scope: claimed)
+      # The invocation and the owner fail in one transaction. Otherwise a sibling
+      # call that ends in between opens the barrier and completes the owner.
+      ended = false
+      owner_failed = with_barrier_lock do
+        now = Time.current
+        next false unless claimed.where(id: id).update_all(failed_at: now, failure_reason: error.message, updated_at: now) == 1
+
+        ended = true
+        owner.fail_from_tool_error!(self, error)
+      end
+      reload
+
+      unless ended
         owner.report_tool_error(self, error)
         return
       end
 
-      owner.fail_from_tool_error!(self, error)
+      owner.after_failed_from_tool_error if owner_failed
       raise error if raise_fatal
 
       owner.report_tool_error(self, error)

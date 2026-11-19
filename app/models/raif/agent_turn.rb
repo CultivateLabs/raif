@@ -130,4 +130,8 @@ class Raif::AgentTurn < Raif::ApplicationRecord
   def fail_from_tool_error!(invocation, error)
     raif_agent.fail_run_from_tool_error!(invocation, error)
   end
+
+  def after_failed_from_tool_error
+    raif_agent.run_after_run_hook
+  end
 end

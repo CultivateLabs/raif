@@ -198,7 +198,10 @@ module Raif::Concerns::DurableAgentRun
   # calls the block given to #run!.
   #
   # This hook and #after_tool_calls_dispatched, #after_turn and #after_run run
-  # after the step they report has committed. In a job, an error they raise is
+  # after the step they report has committed. The exception is a host
+  # Raif::ModelToolInvocation#complete! or #fail! call inside the host's own
+  # transaction: Raif's commit is then a savepoint, and the hooks run before the
+  # host transaction commits. In a job, an error they raise is
   # reported to Rails.error and the run continues. Under #run! it is raised to
   # the caller and fails the run.
   def after_conversation_history_entry(entry)
@@ -256,9 +259,29 @@ module Raif::Concerns::DurableAgentRun
     end
     return unless continued
 
-    enqueue_turn_job(next_turn) if next_turn.present? && !in_process_run?
+    enqueue_next_turn_job(next_turn) if next_turn.present? && !in_process_run?
     run_host_hook(:after_turn) { after_turn(turn) }
-    run_host_hook(:after_run) { after_run } if next_turn.nil? && run_over?
+    run_after_run_hook if next_turn.nil? && run_over?
+  end
+
+  # Runs #after_run inside the host context. Failure paths call it after the
+  # step's own context has exited, so the hook enters it again here.
+  def run_after_run_hook
+    run_host_hook(:after_run) { within_run_context { after_run } }
+  end
+
+  # Fails an async run whose turn job raised. Called by Raif::AgentTurnJob.
+  def fail_run_from_turn_error!(error)
+    # Drop whatever the failed step left unsaved in memory.
+    reload
+
+    failed = run_transaction do
+      next false unless run_live?
+
+      fail_run!(error.message)
+      true
+    end
+    run_after_run_hook if failed
   end
 
   # Runs the block in a transaction that holds the agent's row lock, on the
@@ -300,9 +323,10 @@ module Raif::Concerns::DurableAgentRun
 
   # A tool error the model cannot work around ends the run. Calls that did not
   # start are canceled; a call that is already running finishes, and its result
-  # is saved but changes nothing.
-  def fail_run_from_tool_error!(invocation, error)
-    failed = run_transaction do
+  # is saved but changes nothing. The caller holds #run_transaction and runs
+  # #run_after_run_hook after it returns true.
+  def fail_run_from_tool_error!(_invocation, error)
+    run_transaction do
       next false if run_over?
 
       fail_run!(error.message)
@@ -310,7 +334,6 @@ module Raif::Concerns::DurableAgentRun
       raif_model_tool_invocations.unfinished.where(started_at: nil).update_all(canceled_at: now, updated_at: now)
       true
     end
-    run_host_hook(:after_run) { after_run } if failed
   end
 
   # Records the results of a turn's tool calls in the conversation history, in
@@ -370,6 +393,15 @@ private
   def open_turn!(iteration)
     update_columns(iteration_count: iteration)
     turns.create!(iteration: iteration)
+  end
+
+  # The next turn is already committed. If queueing its job raises, the run is
+  # healthy and Raif::RecoverStalledRunsJob resumes the turn, so the error is
+  # reported instead of failing the run.
+  def enqueue_next_turn_job(turn)
+    enqueue_turn_job(turn)
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, severity: :error, context: { component: "raif_agent", action: "enqueue_turn_job", agent_id: id })
   end
 
   def enqueue_turn_job(turn)

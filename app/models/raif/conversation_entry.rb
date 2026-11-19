@@ -261,8 +261,10 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
     })
   end
 
+  # The caller holds the entry's lock and runs #after_failed_from_tool_error
+  # after it returns true.
   def fail_from_tool_error!(_invocation, _error)
-    failed = with_lock do
+    with_lock do
       next false if failed? || completed?
 
       now = Time.current
@@ -270,8 +272,9 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
       raif_model_tool_invocations.unfinished.where(started_at: nil).update_all(canceled_at: now, updated_at: now)
       true
     end
-    return unless failed
+  end
 
+  def after_failed_from_tool_error
     raif_conversation.update_columns(generating_entry_response: false)
     broadcast_entry_processed
   end
@@ -284,7 +287,10 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
 
     # A call that ended without a result (its deadline passed, or the host failed
     # it) always goes back to the model, so it can tell the user or try again.
-    raif_model_tool_invocations.any? { |invocation| invocation.failed? || invocation.triggers_immediate_llm_follow_up? }
+    # Read through the barrier's current rows: on MySQL a plain read can miss a
+    # call that another transaction failed just before the barrier opened.
+    invocations = Raif::Concerns::ToolBarrier.current_rows(raif_model_tool_invocations).to_a
+    invocations.any? { |invocation| invocation.failed? || invocation.triggers_immediate_llm_follow_up? }
   end
 
   def create_immediate_follow_up_entry!

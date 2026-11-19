@@ -204,8 +204,9 @@ module Raif
       conversation_history << entry_stringified
       save!
 
-      # Inside #run_transaction the callback waits for the commit, so host code
-      # never runs while the agent's row lock is held.
+      # Inside #run_transaction the callback waits for the block to return, so
+      # host code does not run while Raif holds the agent's row lock. A host
+      # transaction around #complete! or #fail! keeps the lock until it commits.
       (@conversation_history_callback_queue ||= []) << entry_stringified
       flush_conversation_history_callbacks unless @run_transaction_depth.to_i > 0
     end

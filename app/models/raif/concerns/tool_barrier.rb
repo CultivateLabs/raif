@@ -24,7 +24,9 @@
 #   continue_after_tools!       repeatable; does nothing unless the owner is "tools complete"
 #   with_tool_run_context       restore host context around tool code and the barrier; reentrant
 #   recoverable_tool_error?     whether a tool exception becomes an error result
-#   tool_error_message_for_model, fail_from_tool_error!
+#   tool_error_message_for_model
+#   fail_from_tool_error!         fail the owner inside the caller's barrier_lock; true when it failed
+#   after_failed_from_tool_error  host hooks and UI after that lock is released
 module Raif::Concerns::ToolBarrier
   extend ActiveSupport::Concern
 

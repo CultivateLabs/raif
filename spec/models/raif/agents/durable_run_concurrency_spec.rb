@@ -189,6 +189,33 @@ RSpec.describe "Durable agent run concurrency", type: :model do
     expect(results).to all(satisfy { |entry| !entry.key?("tool_error") })
   end
 
+  it "fails the run before a sibling that ends during a fatal tool error can open the barrier" do
+    allow(Rails.error).to receive(:report)
+    Raif::DurableRunTestTool.behavior do |invocation|
+      raise StandardError.new("over budget").extend(Raif::Errors::ModelCompletionAuthorizationError) if invocation.position.zero?
+    end
+    failing, sibling = Array.new(2) { |position| create_invocation(position) }
+    sibling_thread = nil
+    sibling_blocked = nil
+
+    # The sibling ends after the failing call is marked failed, but before the run fails.
+    allow_any_instance_of(Raif::AgentTurn).to receive(:fail_from_tool_error!).and_wrap_original do |method, *args|
+      sibling_thread = Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection { Raif::ModelToolInvocation.find(sibling.id).execute! }
+      end
+      sibling_blocked = sibling_thread.join(0.3).nil?
+      method.call(*args)
+    end
+
+    Raif::ModelToolInvocation.find(failing.id).execute!
+    sibling_thread.join
+
+    expect(sibling_blocked).to be(true)
+    expect(agent.reload.status).to eq(:failed)
+    expect(turn.reload).not_to be_completed
+    expect(agent.turns.count).to eq(1)
+  end
+
   it "never advances a run that is canceled while its last tool call ends" do
     invocation = create_invocation(0)
 

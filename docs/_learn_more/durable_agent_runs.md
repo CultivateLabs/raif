@@ -84,6 +84,7 @@ invocation.fail!("The source returned no data for that query.")
 - `complete!(result)` stores the result. `fail!(message)` sends `message` to the model as the error result of the call, so write it for the model. In both cases the run continues once every invocation of the turn has ended.
 - Both return `false` and change nothing when the invocation has already ended, for example because its deadline passed. A late callback is harmless.
 - Pass the result to `complete!` rather than saving it on the invocation in the same transaction. On MySQL, a transaction that writes or locks the invocation and then calls `complete!` or `fail!` can deadlock with the caller that ends another call of the same turn. On Postgres, Raif assumes the default READ COMMITTED isolation level.
+- If `complete!` or `fail!` ends the last call of a turn, the continuation runs inside that call: `after_conversation_history_entry`, `after_turn`, `after_run` and, for conversations, `on_entry_finalized` and the entry broadcast. When you call it inside your own transaction, those hooks run before your transaction commits, and they still run if it rolls back. Only the jobs that Raif queues wait for the commit. Call `complete!` and `fail!` after your transaction commits if a hook has effects outside the database.
 - `process_invocation` can run a second time if its job is retried before it returns. Start the work idempotently; `invocation.id` is a stable key.
 
 ## Deadlines

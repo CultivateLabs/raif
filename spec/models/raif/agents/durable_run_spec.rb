@@ -525,6 +525,37 @@ RSpec.describe "Durable agent runs", type: :model do
       expect { drain_jobs }.not_to raise_error
       expect(agent.reload.status).to eq(:failed)
       expect(agent.failure_reason).to eq("bad request")
+      expect(Raif::DurableRunTestAgent.run_contexts).to eq(["agent-#{agent.id}"])
+      expect(Thread.current[:raif_durable_run_context]).to be_nil
+    end
+
+    it "calls after_run inside the run context when a tool job fails the run" do
+      Raif::DurableRunTestTool.behavior do
+        raise StandardError.new("over budget").extend(Raif::Errors::ModelCompletionAuthorizationError)
+      end
+      allow(Rails.error).to receive(:report)
+      script_model(
+        [tool_call("durable_run_test_tool", "a", "call_1"), tool_call("durable_run_second_test_tool", "b", "call_2")]
+      )
+      agent.run_later!
+      drain_jobs
+
+      expect(agent.reload.status).to eq(:failed)
+      expect(Raif::DurableRunTestAgent.run_contexts).to eq(["agent-#{agent.id}"])
+      expect(Thread.current[:raif_durable_run_context]).to be_nil
+    end
+
+    it "keeps the run going when queueing the next turn's job raises after the turn committed" do
+      allow(Rails.error).to receive(:report)
+      script_model([tool_call("durable_run_test_tool", "a", "call_1")])
+      agent.run_later!
+      allow_any_instance_of(Raif::DurableRunTestAgent).to receive(:enqueue_turn_job).and_raise("queue down")
+
+      expect { perform_jobs(Raif::AgentTurnJob) }.not_to raise_error
+
+      expect(agent.reload.status).not_to eq(:failed)
+      expect(agent.turns.order(:iteration).pluck(:status)).to eq(["completed", "pending"])
+      expect(Rails.error).to have_received(:report).with(an_object_having_attributes(message: "queue down"), anything)
     end
   end
 

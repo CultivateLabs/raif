@@ -26,29 +26,11 @@ module Raif
     rescue StandardError => e
       # Same outcome as an error raised out of Raif::Agent#run!: the run fails.
       # Transient provider errors were already retried inside Raif::Llm#chat.
-      fail_run(agent, e)
-    end
-
-  private
-
-    def fail_run(agent, error)
-      Rails.error.report(error, handled: true, severity: :error, context: {
+      Rails.error.report(e, handled: true, severity: :error, context: {
         component: "raif_agent_turn_job",
         agent_id: agent.id
       })
-
-      # Drop whatever the failed step left unsaved in memory.
-      agent.reload
-
-      failed = agent.run_transaction do
-        next false unless agent.run_live?
-
-        agent.failed_at = Time.current
-        agent.failure_reason = error.message
-        agent.save!
-        true
-      end
-      agent.after_run if failed
+      agent.fail_run_from_turn_error!(e)
     end
 
   end

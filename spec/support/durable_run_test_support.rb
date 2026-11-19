@@ -76,9 +76,15 @@ class Raif::DurableRunTestAgent < Raif::Agents::NativeToolCallingAgent
       @history_contexts ||= []
     end
 
+    # The host context seen by each after_run call.
+    def run_contexts
+      @run_contexts ||= []
+    end
+
     def reset!
       @events = []
       @history_contexts = []
+      @run_contexts = []
     end
   end
 
@@ -105,6 +111,7 @@ class Raif::DurableRunTestAgent < Raif::Agents::NativeToolCallingAgent
 
   def after_run
     self.class.events << [:run, status]
+    self.class.run_contexts << Thread.current[:raif_durable_run_context]
   end
 end
 
