@@ -163,6 +163,41 @@ RSpec.describe "Durable agent runs", type: :model do
       ])
     end
 
+    it "commits the started run and its first turn together" do
+      script_model
+      agent.save!
+      allow(agent).to receive(:open_turn!).and_raise(ActiveRecord::StatementInvalid, "connection lost")
+
+      expect { agent.run_later! }.to raise_error(ActiveRecord::StatementInvalid)
+
+      expect(Raif::Agent.find(agent.id).started_at).to be_nil
+      expect(agent.turns).to be_empty
+    end
+
+    [1, 2].each do |call_count|
+      it "keeps the run going when after_turn raises after a turn with #{call_count} tool call(s)" do
+        allow_any_instance_of(Raif::DurableRunTestAgent).to receive(:after_turn).and_raise("hook broke")
+        allow(Rails.error).to receive(:report)
+        calls = [tool_call("durable_run_test_tool", "a", "call_1"), tool_call("durable_run_second_test_tool", "b", "call_2")]
+        script_model(calls.first(call_count))
+        agent.run_later!
+
+        perform_jobs(Raif::AgentTurnJob)
+        perform_jobs(Raif::ModelToolInvocationJob) if call_count > 1
+
+        expect(agent.reload.status).to eq(:running)
+        expect(agent.current_turn.iteration).to eq(2)
+        expect(enqueued(Raif::AgentTurnJob).length).to eq(1)
+        expect(Rails.error).to have_received(:report).with(
+          an_object_having_attributes(message: "hook broke"),
+          hash_including(context: hash_including(action: "after_turn"))
+        )
+
+        drain_jobs
+        expect(agent.reload).to be_completed
+      end
+    end
+
     it "refuses to start a run a second time" do
       script_model
       agent.run_later!
@@ -195,6 +230,46 @@ RSpec.describe "Durable agent runs", type: :model do
       expect { agent.run! }.to raise_error(Raif::Errors::AgentRunError, /durable_run_deferred_test_tool.*run_later!/)
       expect(model_calls).to be_empty
       expect(agent).not_to be_persisted
+    end
+
+    it "raises for a deferred tool that only populate_default_model_tools adds, and saves nothing" do
+      agent = Raif::DurableRunDefaultDeferredToolAgent.new(
+        creator: creator,
+        task: "Answer the question",
+        llm_model_key: "open_ai_responses_gpt_4_1"
+      )
+
+      expect { agent.run! }.to raise_error(Raif::Errors::AgentRunError, /durable_run_deferred_test_tool.*run_later!/)
+      expect(agent).not_to be_persisted
+      expect(Raif::Agent.where(type: "Raif::DurableRunDefaultDeferredToolAgent")).to be_empty
+    end
+  end
+
+  describe "agent classes that implement process_iteration_model_completion" do
+    let(:hook_agent) do
+      Raif::DurableRunHookAgent.new(creator: creator, task: "Answer the question", llm_model_key: "open_ai_responses_gpt_4_1")
+    end
+
+    before do
+      stub_raif_agent(Raif::DurableRunHookAgent) { "The answer." }
+    end
+
+    it "runs the hook outside the agent's lock under run!" do
+      outside = Raif::Agent.connection.open_transactions
+
+      expect(hook_agent.run!).to eq("The answer.")
+      expect(Raif::DurableRunHookAgent.open_transactions_in_hook).to eq([outside])
+    end
+
+    it "runs the hook outside the agent's lock under run_later!" do
+      outside = Raif::Agent.connection.open_transactions
+
+      hook_agent.run_later!
+      drain_jobs
+
+      expect(hook_agent.reload).to be_completed
+      expect(hook_agent.final_answer).to eq("The answer.")
+      expect(Raif::DurableRunHookAgent.open_transactions_in_hook).to eq([outside])
     end
   end
 
@@ -372,6 +447,29 @@ RSpec.describe "Durable agent runs", type: :model do
       expect(Raif::DurableRunTestAgent.events.last).to eq([:run, :failed])
     end
 
+    it "does not fail the run for a fatal error from an execution whose invocation already ended" do
+      Raif::DurableRunTestTool.behavior do |invocation|
+        # The deadline passes while the tool runs.
+        Raif::ModelToolInvocation.where(id: invocation.id).update_all(failed_at: Time.current, failure_reason: "deadline")
+        raise StandardError.new("over budget").extend(Raif::Errors::ModelCompletionAuthorizationError)
+      end
+      allow(Rails.error).to receive(:report)
+      script_model(
+        [tool_call("durable_run_test_tool", "a", "call_1"), tool_call("durable_run_second_test_tool", "b", "call_2")]
+      )
+      agent.run_later!
+      perform_jobs(Raif::AgentTurnJob)
+      late, sibling = agent.raif_model_tool_invocations.in_call_order.to_a
+
+      expect(late.execute!).to be(true)
+      expect(late.reload.failure_reason).to eq("deadline")
+      expect(agent.reload.status).to eq(:waiting)
+
+      expect(sibling.execute!).to be(true)
+      drain_jobs
+      expect(agent.reload).to be_completed
+    end
+
     it "fails the run when the model call raises in a turn job" do
       allow(Rails.error).to receive(:report)
       stub_raif_agent(Raif::DurableRunTestAgent) { |_messages, _completion| raise Faraday::ClientError, "bad request" }
@@ -467,6 +565,35 @@ RSpec.describe "Durable agent runs", type: :model do
         expect(agent.conversation_history[2]["result"]).to include("did not return a result before its deadline")
         expect(invocation.complete!("late" => true)).to be(false)
         expect(invocation.reload.result).to eq({})
+      end
+    end
+
+    it "does not run a retry_safe deferred tool again while it waits for the host" do
+      agent.available_model_tools = [Raif::DurableRunTestTool, Raif::DurableRunRetrySafeDeferredTestTool]
+      script_model([tool_call("durable_run_retry_safe_deferred_test_tool", "slow", "call_slow")])
+      agent.run_later!
+      drain_jobs
+      invocation = agent.raif_model_tool_invocations.sole
+      expect(invocation.lease_expires_at).to be_nil
+
+      travel_to(10.minutes.from_now) do
+        expect(agent.resume!).to be(true)
+        drain_jobs
+        Raif::ModelToolInvocationJob.perform_now(model_tool_invocation: invocation)
+      end
+
+      expect(Raif::DurableRunRetrySafeDeferredTestTool.executions).to eq([invocation.id])
+      expect(invocation.reload).not_to be_finished
+    end
+
+    it "does not expire an invocation from a stale deadline after extend_deadline! committed" do
+      invocation = start_deferred_run
+      stale = Raif::ModelToolInvocation.find(invocation.id)
+      invocation.extend_deadline!(2.hours.from_now)
+
+      travel_to(46.minutes.from_now) do
+        expect(stale.expire!).to be(false)
+        expect(invocation.reload).not_to be_finished
       end
     end
 

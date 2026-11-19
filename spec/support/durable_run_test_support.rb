@@ -58,6 +58,13 @@ class Raif::DurableRunDeferredTestTool < Raif::ModelTool
   defers_completion deadline: 45.minutes
 end
 
+class Raif::DurableRunRetrySafeDeferredTestTool < Raif::ModelTool
+  extend Raif::DurableRunTestRecorder
+
+  retry_safe lease: 2.minutes
+  defers_completion deadline: 45.minutes
+end
+
 class Raif::DurableRunTestAgent < Raif::Agents::NativeToolCallingAgent
   class << self
     def events
@@ -94,6 +101,42 @@ class Raif::DurableRunTestAgent < Raif::Agents::NativeToolCallingAgent
   end
 end
 
+# Adds a deferred tool only through populate_default_model_tools, which runs when
+# the record is created.
+class Raif::DurableRunDefaultDeferredToolAgent < Raif::DurableRunTestAgent
+private
+
+  def populate_default_model_tools
+    self.available_model_tools = [Raif::DurableRunTestTool, Raif::DurableRunDeferredTestTool]
+  end
+end
+
+# Subclasses Raif::Agent directly and processes each completion in the hook,
+# recording how many transactions are open while the hook runs.
+class Raif::DurableRunHookAgent < Raif::Agent
+  class << self
+    def open_transactions_in_hook
+      @open_transactions_in_hook ||= []
+    end
+
+    def reset!
+      @open_transactions_in_hook = []
+    end
+  end
+
+private
+
+  def build_system_prompt
+    "You are a test agent."
+  end
+
+  def process_iteration_model_completion(model_completion)
+    self.class.open_transactions_in_hook << self.class.connection.open_transactions
+    add_conversation_history_entry({ "role" => "assistant", "content" => model_completion.raw_response })
+    self.final_answer = model_completion.raw_response
+  end
+end
+
 class Raif::DurableRunTestConversation < Raif::Conversation
   class << self
     def finalized_entry_ids
@@ -125,7 +168,7 @@ class Raif::DurableRunTestConversation < Raif::Conversation
   end
 end
 
-Raif.config.agent_types += ["Raif::DurableRunTestAgent"]
+Raif.config.agent_types += ["Raif::DurableRunTestAgent", "Raif::DurableRunDefaultDeferredToolAgent", "Raif::DurableRunHookAgent"]
 Raif.config.conversation_types += ["Raif::DurableRunTestConversation"]
 
 RSpec.configure do |config|
@@ -135,7 +178,9 @@ RSpec.configure do |config|
       Raif::DurableRunSecondTestTool,
       Raif::DurableRunRetrySafeTestTool,
       Raif::DurableRunDeferredTestTool,
+      Raif::DurableRunRetrySafeDeferredTestTool,
       Raif::DurableRunTestAgent,
+      Raif::DurableRunHookAgent,
       Raif::DurableRunTestConversation
     ].each(&:reset!)
   end

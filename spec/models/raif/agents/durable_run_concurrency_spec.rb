@@ -108,6 +108,36 @@ RSpec.describe "Durable agent run concurrency", type: :model do
     expect(agent.reload.conversation_history.count { |entry| entry["type"] == "tool_call_result" }).to eq(1)
   end
 
+  it "opens the barrier once when two host transactions each complete one of the last two calls" do
+    invocations = Array.new(2) { |position| create_invocation(position, tool: Raif::DurableRunDeferredTestTool, started_at: Time.current) }
+
+    # Holds each transaction at the barrier check until the other one has ended
+    # its call too, or for a second when the lock order keeps the other waiting.
+    arrived = Queue.new
+    allow_any_instance_of(Raif::AgentTurn).to receive(:check_tool_barrier!).and_wrap_original do |method|
+      arrived << true
+      20.times do
+        break if arrived.size >= 2
+
+        sleep 0.05
+      end
+      method.call
+    end
+
+    outcomes = race(*invocations.map do |invocation|
+      lambda do
+        Raif::ModelToolInvocation.transaction do
+          Raif::ModelToolInvocation.find(invocation.id).complete!("position" => invocation.position)
+        end
+      end
+    end)
+
+    expect(outcomes).to eq([true, true])
+    expect(turn.reload).to be_completed
+    expect(agent.turns.pluck(:iteration)).to eq([1, 2])
+    expect(turn_jobs.length).to eq(1)
+  end
+
   it "never advances a run that is canceled while its last tool call ends" do
     invocation = create_invocation(0)
 

@@ -186,6 +186,8 @@ class Raif::ModelTool
     #
     # `process_invocation` can run a second time if its job is retried before it
     # returns, so start the work idempotently: `invocation.id` is a stable key.
+    # A tool that is also `retry_safe` can be taken over only while
+    # `process_invocation` runs, never during the wait for the host.
     #
     #   class SlowLookup < Raif::ModelTool
     #     defers_completion deadline: 45.minutes

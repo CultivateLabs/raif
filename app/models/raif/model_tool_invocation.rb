@@ -133,7 +133,11 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
     end
 
     # A deferred invocation stays unfinished until the host calls #complete! or #fail!.
-    finish!(execution_token: token) unless deferred_completion?
+    if deferred_completion?
+      release_execution_claim!(token)
+    else
+      finish!(execution_token: token)
+    end
     owner&.check_tool_barrier!
     true
   end
@@ -157,7 +161,7 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
   #
   # @return [Boolean] false when the invocation was already terminal
   def fail!(message)
-    return false unless terminate!(failed_at: Time.current, failure_reason: message.to_s)
+    return false unless terminate!({ failed_at: Time.current, failure_reason: message.to_s })
 
     barrier_owner&.check_tool_barrier!
     true
@@ -169,11 +173,11 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
   #
   # @return [Boolean] false when the invocation was already terminal or is not overdue
   def expire!(now: Time.current)
-    return false if deadline_at.blank? || deadline_at > now
-
     reason = "Error: The #{tool_name} tool did not return a result before its deadline. " \
       "Try different arguments or another tool."
-    return false unless terminate!(failed_at: now, failure_reason: reason)
+    # The stored deadline decides, not the loaded one: a committed extend_deadline! wins.
+    overdue = self.class.unfinished.where(self.class.arel_table[:deadline_at].lteq(now))
+    return false unless terminate!({ failed_at: now, failure_reason: reason }, scope: overdue)
 
     barrier_owner&.check_tool_barrier!
     true
@@ -181,7 +185,7 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
 
   # Ends an invocation that must not run or count any more (its run failed or was canceled).
   def cancel!
-    terminate!(canceled_at: Time.current)
+    terminate!({ canceled_at: Time.current })
   end
 
   # Queues the job that ends the invocation if it is still unfinished at its deadline.
@@ -196,7 +200,9 @@ class Raif::ModelToolInvocation < Raif::ApplicationRecord
   # Moves the deadline of an unfinished invocation, for example when the host
   # learns how long the deferred work will take.
   def extend_deadline!(new_deadline_at)
-    updated = self.class.unfinished.where(id: id).update_all(deadline_at: new_deadline_at, updated_at: Time.current)
+    updated = with_barrier_lock do
+      self.class.unfinished.where(id: id).update_all(deadline_at: new_deadline_at, updated_at: Time.current)
+    end
     reload
     return false unless updated == 1
 
@@ -295,48 +301,70 @@ private
     token
   end
 
+  # A deferred invocation waits for the host once process_invocation returns.
+  # Ending the lease keeps a retry_safe tool from being run again during that wait.
+  def release_execution_claim!(token)
+    self.class.unfinished.where(id: id, execution_token: token).update_all(lease_expires_at: nil, updated_at: Time.current)
+    self.lease_expires_at = nil
+    clear_attribute_changes([:lease_expires_at])
+  end
+
   # Marks the invocation completed, unless it is already terminal or another
   # execution took it over. Persists a result the tool set in memory.
   def finish!(result: NO_RESULT, execution_token: nil)
-    transaction do
-      current = self.class.lock.find(id)
-      next false if current.finished?
-      next false if execution_token.present? && current.execution_token != execution_token
+    with_barrier_lock do
+      transaction do
+        current = self.class.lock.find(id)
+        next false if current.finished?
+        next false if execution_token.present? && current.execution_token != execution_token
 
-      self.result = result unless result.equal?(NO_RESULT)
-      self.completed_at = Time.current
-      # Skip validation: a source-aware schema can change during the run, and a
-      # silently failed write would leave the barrier closed forever.
-      save!(validate: false)
-      true
+        self.result = result unless result.equal?(NO_RESULT)
+        self.completed_at = Time.current
+        # Skip validation: a source-aware schema can change during the run, and a
+        # silently failed write would leave the barrier closed forever.
+        save!(validate: false)
+        true
+      end
     end
   end
 
-  def terminate!(attributes)
-    updated = self.class.unfinished.where(id: id).update_all(attributes.merge(updated_at: Time.current))
+  def terminate!(attributes, scope: self.class.unfinished)
+    updated = with_barrier_lock { scope.where(id: id).update_all(attributes.merge(updated_at: Time.current)) }
     reload
     updated == 1
+  end
+
+  # Every write that can make an invocation terminal takes the owner's lock
+  # first, the same order Raif::Concerns::ToolBarrier#check_tool_barrier! uses.
+  # Without it, two host transactions that each complete one call deadlock on
+  # the barrier's locking read of the other's invocation.
+  def with_barrier_lock(&block)
+    owner = barrier_owner
+    owner.present? ? owner.barrier_lock(&block) : yield
   end
 
   def handle_execution_error(error, token:, raise_fatal:)
     owner = barrier_owner
 
     if owner.nil?
-      terminate!(failed_at: Time.current, failure_reason: error.message)
+      terminate!({ failed_at: Time.current, failure_reason: error.message })
       raise error
     end
 
+    # A deadline, a cancel, or a takeover may have ended this execution's claim
+    # while the tool ran. The error then belongs to nothing that is still waiting.
+    claimed = self.class.unfinished.where(execution_token: token)
+
     if owner.recoverable_tool_error?(error)
       owner.report_tool_error(self, error)
-      self.class.unfinished.where(id: id, execution_token: token).update_all(
-        failed_at: Time.current,
-        failure_reason: owner.tool_error_message_for_model(self, error),
-        updated_at: Time.current
-      )
-      reload
+      terminate!({ failed_at: Time.current, failure_reason: owner.tool_error_message_for_model(self, error) }, scope: claimed)
       owner.check_tool_barrier!
     else
-      terminate!(failed_at: Time.current, failure_reason: error.message)
+      unless terminate!({ failed_at: Time.current, failure_reason: error.message }, scope: claimed)
+        owner.report_tool_error(self, error)
+        return
+      end
+
       owner.fail_from_tool_error!(self, error)
       raise error if raise_fatal
 

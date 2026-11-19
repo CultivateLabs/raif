@@ -110,6 +110,24 @@ RSpec.describe "Conversation entry tool jobs", type: :model do
     expect(conversation.llm_messages.select { |message| message["type"] == "tool_call" }).to be_empty
   end
 
+  it "does not fail the entry for an error from an execution that lost its claim" do
+    Raif::DurableRunTestTool.behavior do |invocation|
+      # Another execution takes the call over while this one runs.
+      Raif::ModelToolInvocation.where(id: invocation.id).update_all(execution_token: "taken over")
+      raise "tool exploded"
+    end
+    allow(Rails.error).to receive(:report)
+    script_model(two_calls)
+    entry.process_entry!
+    first = entry.raif_model_tool_invocations.in_call_order.first
+
+    expect(first.execute!).to be(true)
+
+    expect(entry.reload).not_to be_failed
+    expect(first.reload).not_to be_finished
+    expect(Rails.error).to have_received(:report).with(an_object_having_attributes(message: "tool exploded"), anything)
+  end
+
   describe "deferred completion" do
     let(:deferred_call) { [tool_call("durable_run_deferred_test_tool", "slow", "call_slow")] }
 

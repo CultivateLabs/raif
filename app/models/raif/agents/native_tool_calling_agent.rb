@@ -188,7 +188,7 @@ module Raif
         return unless dispatched
 
         invocations.each(&:schedule_deadline_job)
-        after_tool_calls_dispatched(turn)
+        run_host_hook(:after_tool_calls_dispatched) { after_tool_calls_dispatched(turn) }
       end
 
       # Decides which tool calls of a completion to run.

@@ -157,19 +157,23 @@ class Raif::Conversation < Raif::ApplicationRecord
     # IMPORTANT: this method is invoked on every streaming chunk and on every
     # retry attempt made by {Raif::ConversationEntry#process_entry!}. Do NOT
     # put persistent side effects (DB writes, broadcasts, external calls) in
-    # here — those belong in {#on_entry_finalized}, which runs exactly once
-    # per entry after validation and tool invocation have succeeded.
+    # here — those belong in {#on_entry_finalized}, which runs once the entry
+    # is finalized and never for a discarded retry attempt.
     message
   end
 
-  # Called exactly once per {Raif::ConversationEntry} immediately after the
-  # entry has been successfully finalized (model response saved, all developer-
-  # managed tool calls validated and invoked, entry transitioned to
-  # `completed!`). This is the correct place for per-entry side effects such
-  # as creating dependent records, enqueuing follow-up work, or broadcasting
-  # UI updates tied to the final response — anything you do NOT want
-  # re-executing for attempts that were discarded by the retry loop, or for
-  # intermediate streaming callbacks.
+  # Called after a {Raif::ConversationEntry} has been successfully finalized
+  # (model response saved, all developer-managed tool calls validated and
+  # ended, entry transitioned to `completed!`). This is the correct place for
+  # per-entry side effects such as creating dependent records, enqueuing
+  # follow-up work, or broadcasting UI updates tied to the final response —
+  # anything you do NOT want re-executing for attempts that were discarded by
+  # the retry loop, or for intermediate streaming callbacks.
+  #
+  # For an entry that dispatched tool calls, the hook can run more than once:
+  # if the process stops after the hook and before the entry records that it
+  # was finalized, recovery runs the hook again, and the immediate follow-up
+  # entry can be created a second time. Keep the hook idempotent.
   #
   # No-op by default. Subclasses may override.
   #

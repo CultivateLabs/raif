@@ -32,7 +32,11 @@ module Raif::Concerns::ToolBarrier
   def check_tool_barrier!
     opened = barrier_lock do
       next false unless awaiting_tool_results? && barrier_owner_live?
-      next false if barrier_tool_invocations.unfinished.exists?
+      # A locking read sees the latest committed rows. A plain read under MySQL
+      # REPEATABLE READ uses the transaction's snapshot, so two host transactions
+      # that each complete one of the last two calls could both see the other
+      # still unfinished.
+      next false if barrier_tool_invocations.unfinished.lock.exists?
 
       close_tool_barrier!
       true

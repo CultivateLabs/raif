@@ -182,6 +182,11 @@ module Raif::Concerns::DurableAgentRun
 
   # Called after each entry is added to the conversation history. The default
   # calls the block given to #run!.
+  #
+  # This hook and #after_tool_calls_dispatched, #after_turn and #after_run run
+  # after the step they report has committed. In a job, an error they raise is
+  # reported to Rails.error and the run continues. Under #run! it is raised to
+  # the caller and fails the run.
   def after_conversation_history_entry(entry)
     on_conversation_history_entry&.call(entry)
   end
@@ -237,13 +242,9 @@ module Raif::Concerns::DurableAgentRun
     end
     return unless continued
 
-    after_turn(turn)
-
-    if next_turn.present?
-      enqueue_turn_job(next_turn) unless in_process_run?
-    elsif run_over?
-      after_run
-    end
+    enqueue_turn_job(next_turn) if next_turn.present? && !in_process_run?
+    run_host_hook(:after_turn) { after_turn(turn) }
+    run_host_hook(:after_run) { after_run } if next_turn.nil? && run_over?
   end
 
   # Runs the block in a transaction that holds the agent's row lock, on the
@@ -307,7 +308,7 @@ module Raif::Concerns::DurableAgentRun
       raif_model_tool_invocations.unfinished.where(started_at: nil).update_all(canceled_at: now, updated_at: now)
       true
     end
-    after_run if failed
+    run_host_hook(:after_run) { after_run } if failed
   end
 
   # Records the results of a turn's tool calls in the conversation history, in
@@ -326,19 +327,31 @@ private
       "#{self.class.name}#run! cannot wait for tools that defer completion (#{deferred.map(&:tool_name).join(", ")}). Use #run_later!."
   end
 
-  # Refusals raise before anything is saved, so they leave no failed run behind.
+  # One transaction, so a crash cannot leave a started run without its first
+  # turn, which neither #resume! nor the recovery sweep could continue. A refusal
+  # rolls it back and leaves no failed run behind.
   def start_run!(mode)
     if persisted? && (started_at? || turns.exists?)
       raise Raif::Errors::AgentRunError, "#{self.class.name}##{id} was already started. Use #resume! to continue an async run."
     end
 
-    ensure_no_deferred_tools! if mode == "in_process"
+    transaction do
+      # Creating the record runs populate_default_model_tools, so the tool set
+      # is complete only after this save.
+      save!
+      ensure_no_deferred_tools! if mode == "in_process"
 
-    self.started_at = Time.current
-    self.run_mode = mode
-    self.run_token = SecureRandom.hex(16)
-    save!
-    hold_run_token(run_token)
+      self.started_at = Time.current
+      self.run_mode = mode
+      self.run_token = SecureRandom.hex(16)
+      save!
+      hold_run_token(run_token)
+
+      run_transaction do
+        add_conversation_history_entry(Raif::Messages::UserMessage.new(content: task).to_h)
+        open_turn!(1)
+      end
+    end
 
     logger.debug <<~DEBUG
       --------------------------------
@@ -349,11 +362,6 @@ private
 
       Task: #{task}
     DEBUG
-
-    run_transaction do
-      add_conversation_history_entry(Raif::Messages::UserMessage.new(content: task).to_h)
-      open_turn!(1)
-    end
   end
 
   def open_turn!(iteration)
@@ -444,12 +452,18 @@ private
   #
   # The default serves agent classes that implement
   # #process_iteration_model_completion: the whole completion is processed in
-  # this step and no tool jobs are dispatched.
+  # this step and no tool jobs are dispatched. The hook runs outside the agent's
+  # lock, because the tools it runs would otherwise hold the lock for as long as
+  # they take and block every other writer of the run. If the process stops
+  # before the turn moves on, the hook runs again.
   def process_turn_completion!(turn)
-    run_transaction do
-      next unless run_live? && turn.reload.completion_saved?
+    return unless run_transaction { run_live? && turn.reload.completion_saved? }
 
-      process_iteration_model_completion(turn.raif_model_completion)
+    process_iteration_model_completion(turn.raif_model_completion)
+
+    run_transaction do
+      next unless run_live?
+
       turn.transition!(from: "completion_saved", to: "tools_complete", tools_completed_at: Time.current)
     end
   end
@@ -494,6 +508,17 @@ private
     return if entries.blank?
 
     @conversation_history_callback_queue = []
-    entries.each { |entry| after_conversation_history_entry(entry) }
+    entries.each { |entry| run_host_hook(:after_conversation_history_entry) { after_conversation_history_entry(entry) } }
+  end
+
+  # A step whose hook raises has already committed. In a job, failing the run
+  # for it would end a run that is healthy, so the error is reported instead.
+  def run_host_hook(name)
+    yield
+  rescue StandardError => e
+    raise if in_process_run?
+
+    Rails.error.report(e, handled: true, severity: :error, context: { component: "raif_agent", action: name.to_s, agent_id: id })
+    nil
   end
 end
