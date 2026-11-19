@@ -16,6 +16,17 @@ module Raif
       conversation = conversation_entry.raif_conversation
       conversation_entry.process_entry!
 
+      # Tool calls end on other instances of the entry and its conversation (the
+      # ones the invocation loads), and possibly in other jobs, so the records
+      # held here can be behind the database.
+      conversation_entry.reload
+
+      # An entry that dispatched tool calls gets its final UI update from the
+      # barrier, once the last call has ended. Rendering it here as well could
+      # overwrite that update with an older state.
+      return if conversation_entry.tools_dispatched_at.present? && !conversation_entry.failed?
+
+      conversation = conversation_entry.raif_conversation
       Turbo::StreamsChannel.broadcast_render_to conversation,
         partial: "raif/conversations/entry_processed",
         locals: { conversation: conversation, conversation_entry: conversation_entry }
