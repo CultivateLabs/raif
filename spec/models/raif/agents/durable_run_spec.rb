@@ -141,6 +141,20 @@ RSpec.describe "Durable agent runs", type: :model do
       expect(Thread.current[:raif_durable_run_context]).to be_nil
     end
 
+    it "restores the run context around history hooks when a tool job opens the barrier" do
+      script_model(
+        [tool_call("durable_run_test_tool", "a", "call_1"), tool_call("durable_run_second_test_tool", "b", "call_2")]
+      )
+      agent.run_later!
+      drain_jobs
+
+      # The user entry is added by run_later! in the caller, which has its own context.
+      contexts = Raif::DurableRunTestAgent.history_contexts
+      expect(contexts.length).to eq(6)
+      expect(contexts.drop(1).uniq).to eq(["agent-#{agent.id}"])
+      expect(Thread.current[:raif_durable_run_context]).to be_nil
+    end
+
     it "reports progress through the overridable hooks" do
       script_model(
         [tool_call("durable_run_test_tool", "a", "call_1"), tool_call("durable_run_second_test_tool", "b", "call_2")]

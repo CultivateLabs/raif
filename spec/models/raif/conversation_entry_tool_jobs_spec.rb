@@ -82,6 +82,7 @@ RSpec.describe "Conversation entry tool jobs", type: :model do
     expect(entry.reload).to be_completed
     expect(entry).not_to be_waiting_on_tools
     expect(seen).to eq(["entry-#{entry.id}"])
+    expect(Raif::DurableRunTestConversation.finalized_contexts).to eq(["entry-#{entry.id}"])
     expect(conversation.reload.generating_entry_response).to be(false)
     expect(Raif::DurableRunTestConversation.finalized_entry_ids).to eq([entry.id])
 
@@ -108,6 +109,15 @@ RSpec.describe "Conversation entry tool jobs", type: :model do
     expect(Raif::DurableRunSecondTestTool.executions).to be_empty
     expect(Raif::DurableRunTestConversation.finalized_entry_ids).to be_empty
     expect(conversation.llm_messages.select { |message| message["type"] == "tool_call" }).to be_empty
+  end
+
+  it "fails the entry and clears the generating flag when dispatching the tool calls raises" do
+    allow_any_instance_of(Raif::ModelToolInvocation).to receive(:schedule_deadline_job).and_raise("queue down")
+    script_model(two_calls)
+    entry.process_entry!
+
+    expect(entry.reload).to be_failed
+    expect(conversation.reload.generating_entry_response).to be(false)
   end
 
   it "does not fail the entry for an error from an execution that lost its claim" do
@@ -162,6 +172,19 @@ RSpec.describe "Conversation entry tool jobs", type: :model do
       end
     end
 
+    it "queues the follow-up entry job only after the host's transaction commits" do
+      script_model(deferred_call)
+      entry.process_entry!
+      clear_enqueued_jobs
+
+      ActiveRecord::Base.transaction do
+        entry.raif_model_tool_invocations.first.fail!("No data for that query.")
+        expect(enqueued(Raif::ConversationEntryJob)).to be_empty
+      end
+
+      expect(enqueued(Raif::ConversationEntryJob).length).to eq(1)
+    end
+
     it "sends the host's message to the model when the host fails the call" do
       script_model(deferred_call)
       entry.process_entry!
@@ -173,6 +196,22 @@ RSpec.describe "Conversation entry tool jobs", type: :model do
       expect(result["result"]).to eq("No data for that query.")
       expect(conversation.entries.count).to eq(2)
     end
+  end
+
+  it "queues a job for a lost single call instead of running the tool in the recovery sweep" do
+    script_model([tool_call("durable_run_test_tool", "only", "call_1")])
+    allow_any_instance_of(Raif::ConversationEntry).to receive(:run_tool_invocations!)
+    entry.process_entry!
+    allow_any_instance_of(Raif::ConversationEntry).to receive(:run_tool_invocations!).and_call_original
+    expect(entry.reload).to be_waiting_on_tools
+
+    entry.update_columns(updated_at: 31.minutes.ago)
+    Raif::RecoverStalledRunsJob.perform_now
+
+    expect(Raif::DurableRunTestTool.executions).to be_empty
+    expect(enqueued(Raif::ModelToolInvocationJob).length).to eq(1)
+    perform_tool_jobs
+    expect(entry.reload).to be_completed
   end
 
   describe "recovery" do

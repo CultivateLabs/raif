@@ -180,6 +180,20 @@ module Raif::Concerns::DurableAgentRun
     yield
   end
 
+  # Enters #with_run_context unless this process is already inside it, so a
+  # step that a turn job starts (the barrier, the continuation) does not enter
+  # the host context a second time.
+  def within_run_context
+    return yield if @within_run_context
+
+    begin
+      @within_run_context = true
+      with_run_context { yield }
+    ensure
+      @within_run_context = false
+    end
+  end
+
   # Called after each entry is added to the conversation history. The default
   # calls the block given to #run!.
   #
@@ -213,7 +227,7 @@ module Raif::Concerns::DurableAgentRun
   def perform_turn!(turn)
     turn.bind_agent(self)
 
-    with_run_context do
+    within_run_context do
       request_turn_completion!(turn) if turn.pending?
       process_turn_completion!(turn) if turn.completion_saved?
       run_turn_tool_invocations!(turn) if turn.tools_dispatched?

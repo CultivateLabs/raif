@@ -71,8 +71,14 @@ class Raif::DurableRunTestAgent < Raif::Agents::NativeToolCallingAgent
       @events ||= []
     end
 
+    # The host context seen by each after_conversation_history_entry call.
+    def history_contexts
+      @history_contexts ||= []
+    end
+
     def reset!
       @events = []
+      @history_contexts = []
     end
   end
 
@@ -85,6 +91,7 @@ class Raif::DurableRunTestAgent < Raif::Agents::NativeToolCallingAgent
 
   def after_conversation_history_entry(entry)
     self.class.events << [:entry, entry["type"] || entry["role"]]
+    self.class.history_contexts << Thread.current[:raif_durable_run_context]
     super
   end
 
@@ -143,8 +150,14 @@ class Raif::DurableRunTestConversation < Raif::Conversation
       @finalized_entry_ids ||= []
     end
 
+    # The host context seen by each on_entry_finalized call.
+    def finalized_contexts
+      @finalized_contexts ||= []
+    end
+
     def reset!
       @finalized_entry_ids = []
+      @finalized_contexts = []
     end
   end
 
@@ -165,6 +178,7 @@ class Raif::DurableRunTestConversation < Raif::Conversation
 
   def on_entry_finalized(entry:)
     self.class.finalized_entry_ids << entry.id
+    self.class.finalized_contexts << Thread.current[:raif_durable_run_context]
   end
 end
 

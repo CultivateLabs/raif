@@ -162,7 +162,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   # feedback when validation fails. Bounded by
   # {Raif.config.conversation_entry_max_retries}.
   def process_entry!
-    raif_conversation.with_run_context(entry: self) { generate_response! }
+    within_run_context { generate_response! }
   end
 
   # Restarts whatever an entry that dispatched tool calls still owes: tool jobs
@@ -176,7 +176,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
     if completed?
       continue_after_tools!
     else
-      raif_conversation.with_run_context(entry: self) { run_tool_invocations! }
+      within_run_context { run_tool_invocations!(run_inline: false) }
     end
   end
 
@@ -207,18 +207,37 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
   end
 
   # Runs what follows a completed entry: the conversation's on_entry_finalized
-  # hook, the follow-up entry and the UI update. Repeatable until finalized_at is
-  # set, so a crash in here is recovered; the hook can then run a second time.
+  # hook, the follow-up entry and the UI update. The row lock lets only one
+  # caller run it (the barrier and a recovery sweep can overlap). Repeatable
+  # until finalized_at commits, so a crash in here is recovered; the hook can
+  # then run a second time.
   def continue_after_tools!
-    return unless reload.completed? && tools_dispatched_at.present? && finalized_at.blank?
+    continued = with_lock do
+      next false unless completed? && tools_dispatched_at.present? && finalized_at.blank?
 
-    raif_conversation.with_run_context(entry: self) { finalize_completed_entry! }
-    update_columns(finalized_at: Time.current)
-    broadcast_entry_processed
+      within_run_context { finalize_completed_entry! }
+      update_columns(finalized_at: Time.current)
+      true
+    end
+
+    broadcast_entry_processed if continued
   end
 
   def with_tool_run_context(&block)
-    raif_conversation.with_run_context(entry: self, &block)
+    within_run_context(&block)
+  end
+
+  # Enters the conversation's #with_run_context unless this process is already
+  # inside it for this entry, so the host context is not entered a second time.
+  def within_run_context
+    return yield if @within_run_context
+
+    begin
+      @within_run_context = true
+      raif_conversation.with_run_context(entry: self) { yield }
+    ensure
+      @within_run_context = false
+    end
   end
 
   # A tool exception fails the entry, as it always has. A deadline or a host
@@ -270,7 +289,7 @@ class Raif::ConversationEntry < Raif::ApplicationRecord
 
   def create_immediate_follow_up_entry!
     follow_up_entry = raif_conversation.entries.create!(creator: creator)
-    Raif::ConversationEntryJob.perform_later(conversation_entry: follow_up_entry)
+    Raif::ApplicationJob.after_transaction_commit { Raif::ConversationEntryJob.perform_later(conversation_entry: follow_up_entry) }
     follow_up_entry.broadcast_append_to raif_conversation, target: ActionView::RecordIdentifier.dom_id(raif_conversation, :entries)
   end
 
@@ -401,15 +420,20 @@ private
     logger.error "Error processing conversation entry ##{id}. Error: #{e.message}"
     logger.error e.backtrace.join("\n")
     failed! unless failed?
+    # The dispatch above set the generating flag again; a failed entry must clear it.
+    raif_conversation.update_columns(generating_entry_response: false) if raif_conversation.generating_entry_response?
   end
 
   # Starts every tool call that has not started, then checks the barrier.
-  def run_tool_invocations!
+  #
+  # @param run_inline [Boolean] run a single call in this process. Recovery passes
+  #   false, so a slow tool does not hold up the sweep.
+  def run_tool_invocations!(run_inline: true)
     invocations = raif_model_tool_invocations.in_call_order.to_a
     startable = invocations.reject(&:finished?).select { |invocation| invocation.started_at.blank? || invocation.tool.retry_safe? }
 
     # One call gains nothing from a job of its own, so it runs right here.
-    if invocations.one?
+    if run_inline && invocations.one?
       startable.each do |invocation|
         invocation.barrier_owner = self
         invocation.execute!(context_established: true)

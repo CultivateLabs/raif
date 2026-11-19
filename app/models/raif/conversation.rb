@@ -170,10 +170,12 @@ class Raif::Conversation < Raif::ApplicationRecord
   # anything you do NOT want re-executing for attempts that were discarded by
   # the retry loop, or for intermediate streaming callbacks.
   #
-  # For an entry that dispatched tool calls, the hook can run more than once:
-  # if the process stops after the hook and before the entry records that it
-  # was finalized, recovery runs the hook again, and the immediate follow-up
-  # entry can be created a second time. Keep the hook idempotent.
+  # For an entry that dispatched tool calls, the hook runs in a transaction that
+  # holds the entry's row lock, with the follow-up entry and the finalized_at
+  # write. If the process stops before that transaction commits, its database
+  # writes roll back and recovery runs the hook again. Effects outside the
+  # database (an API call, an email) can then happen twice, so keep the hook
+  # idempotent.
   #
   # No-op by default. Subclasses may override.
   #

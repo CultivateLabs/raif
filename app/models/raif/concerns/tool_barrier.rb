@@ -22,14 +22,23 @@
 #   barrier_tool_invocations    relation of the invocations behind this barrier
 #   close_tool_barrier!         record the results in call order and mark "tools complete"
 #   continue_after_tools!       repeatable; does nothing unless the owner is "tools complete"
-#   with_tool_run_context       restore host context around tool code
+#   with_tool_run_context       restore host context around tool code and the barrier; reentrant
 #   recoverable_tool_error?     whether a tool exception becomes an error result
 #   tool_error_message_for_model, fail_from_tool_error!
 module Raif::Concerns::ToolBarrier
   extend ActiveSupport::Concern
 
+  # Runs inside the owner's host context, because opening the barrier runs host
+  # hooks (the agent's conversation history callbacks, the continuation).
+  #
   # @return [Boolean] true when this call opened the barrier
   def check_tool_barrier!
+    with_tool_run_context { check_tool_barrier_in_context! }
+  end
+
+private
+
+  def check_tool_barrier_in_context!
     opened = barrier_lock do
       next false unless awaiting_tool_results? && barrier_owner_live?
       # A locking read sees the latest committed rows. A plain read under MySQL

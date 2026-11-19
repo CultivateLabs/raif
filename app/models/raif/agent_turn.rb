@@ -101,11 +101,11 @@ class Raif::AgentTurn < Raif::ApplicationRecord
   end
 
   def continue_after_tools!
-    raif_agent.with_run_context { raif_agent.continue_after_turn!(self) }
+    raif_agent.within_run_context { raif_agent.continue_after_turn!(self) }
   end
 
   def with_tool_run_context(&block)
-    raif_agent.with_run_context(&block)
+    raif_agent.within_run_context(&block)
   end
 
   # Whether an exception raised by a tool becomes an error result for the model
