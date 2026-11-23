@@ -9,6 +9,32 @@ provider :google do |p|
   )
 
   p.model(
+    key: :google_gemini_4_neon,
+    api_name: "gemini-4-neon",
+    display_name: "Google Gemini 4 Neon",
+    max_completion_tokens: 65_536,
+    pricing: {
+      cache_read_per_million: 0.15,
+      input_per_million: 3.0,
+      output_per_million: 15.0
+    },
+    capabilities: {
+      temperature: false,
+      structured_outputs: true,
+      native_tool_use: true,
+      streaming: true,
+      batch_inference: true,
+      images: true,
+      pdfs: true,
+      provider_managed_tools: %i[web_search code_execution]
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 23)
+    }
+  )
+
+  p.model(
     key: :google_gemini_4_hydrogen,
     api_name: "gemini-4-hydrogen",
     display_name: "Google Gemini 4 Hydrogen",
