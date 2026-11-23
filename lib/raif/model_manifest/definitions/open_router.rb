@@ -323,7 +323,12 @@ provider :open_router do |p|
     key: :open_router_deepseek_v4_pro,
     api_name: "deepseek/deepseek-v4-pro-0813",
     display_name: "DeepSeek V4 Pro (via OpenRouter)",
-    pricing: { cache_read_per_million: 0.022, input_per_million: 0.66, output_per_million: 1.98 },
+    pricing: {
+      cache_read_per_million: 0.022,
+      input_per_million: 0.66,
+      output_per_million: 1.98,
+      note: "Rate of the DeepSeek endpoint on OpenRouter. OpenRouter can route a request to another host at a different rate."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -559,7 +564,12 @@ provider :open_router do |p|
     key: :open_router_glm_5_2,
     api_name: "z-ai/glm-5.2",
     display_name: "GLM 5.2 (via OpenRouter)",
-    pricing: { cache_read_per_million: 0.26, input_per_million: 1.4, output_per_million: 4.4 },
+    pricing: {
+      cache_read_per_million: 0.26,
+      input_per_million: 1.4,
+      output_per_million: 4.4,
+      note: "Rate of the Z.AI endpoint on OpenRouter. OpenRouter can route a request to another host at a different rate."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -666,7 +676,12 @@ provider :open_router do |p|
     key: :open_router_kimi_k2_6,
     api_name: "moonshotai/kimi-k2.6",
     display_name: "Kimi K2.6 (via OpenRouter)",
-    pricing: { cache_read_per_million: 0.16, input_per_million: 0.95, output_per_million: 4.0 },
+    pricing: {
+      cache_read_per_million: 0.16,
+      input_per_million: 0.95,
+      output_per_million: 4.0,
+      note: "Rate of the Moonshot AI endpoint on OpenRouter. OpenRouter can route a request to another host at a different rate."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -687,7 +702,12 @@ provider :open_router do |p|
     key: :open_router_kimi_k3,
     api_name: "moonshotai/kimi-k3",
     display_name: "Kimi K3 (via OpenRouter)",
-    pricing: { cache_read_per_million: 0.3, input_per_million: 3.0, output_per_million: 15.0 },
+    pricing: {
+      cache_read_per_million: 0.3,
+      input_per_million: 3.0,
+      output_per_million: 15.0,
+      note: "Rate of the Moonshot AI endpoint on OpenRouter. OpenRouter can route a request to another host at a different rate."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -1179,7 +1199,12 @@ provider :open_router do |p|
     api_name: "qwen/qwen3.8-27b",
     display_name: "Qwen3.8 27B (via OpenRouter)",
     max_completion_tokens: 32_768,
-    pricing: { cache_read_per_million: 0.085, input_per_million: 0.425, output_per_million: 2.55 },
+    pricing: {
+      cache_read_per_million: 0.085,
+      input_per_million: 0.425,
+      output_per_million: 2.55,
+      note: "Rate of the Alibaba endpoint on OpenRouter. OpenRouter can route a request to another host at a different rate."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
