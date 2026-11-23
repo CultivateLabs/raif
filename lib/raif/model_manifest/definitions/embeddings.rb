@@ -28,7 +28,7 @@ embeddings do |e|
       key: :open_ai_text_embedding_ada_002,
       api_name: "text-embedding-ada-002",
       display_name: "OpenAI Text Embedding Ada 002",
-      input_per_million: 0.01,
+      input_per_million: 0.1,
       default_output_vector_size: 1536,
       lifecycle: {
         status: :active
@@ -41,7 +41,7 @@ embeddings do |e|
       key: :bedrock_titan_embed_text_v2,
       api_name: "amazon.titan-embed-text-v2:0",
       display_name: "AWS Bedrock Titan Text Embeddings v2",
-      input_per_million: 0.01,
+      input_per_million: 0.02,
       default_output_vector_size: 1024,
       lifecycle: {
         status: :active

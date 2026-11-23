@@ -15,7 +15,7 @@ RSpec.describe Raif::EmbeddingModels::Bedrock, type: :model do
     it "sets the correct attributes" do
       expect(model.key).to eq(:bedrock_titan_embed_text_v2)
       expect(model.api_name).to eq("amazon.titan-embed-text-v2:0")
-      expect(model.input_token_cost).to eq(0.01 / 1_000_000)
+      expect(model.input_token_cost).to eq(0.02 / 1_000_000)
     end
   end
 
