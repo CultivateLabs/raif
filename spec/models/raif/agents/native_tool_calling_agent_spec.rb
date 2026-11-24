@@ -6,6 +6,7 @@
 #
 #  id                     :bigint           not null, primary key
 #  available_model_tools  :jsonb            not null
+#  canceled_at            :datetime
 #  completed_at           :datetime
 #  conversation_history   :jsonb            not null
 #  creator_type           :string           not null
@@ -16,6 +17,8 @@
 #  llm_model_key          :string           not null
 #  max_iterations         :integer          default(10), not null
 #  requested_language_key :string
+#  run_mode               :string
+#  run_token              :string
 #  run_with               :jsonb
 #  source_type            :string
 #  started_at             :datetime
@@ -141,8 +144,10 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
           expect(replayed).to be(true)
           expect(agent.reload).to be_completed
           expect(agent.final_answer).to eq("Paris is the capital of France.")
-          expect(agent.conversation_history[1, 2]).to eq(expected_messages)
           invocation = agent.raif_model_tool_invocations.find_by!(tool_type: "Raif::ModelTools::WikipediaSearch")
+          stored_call, stored_result = agent.conversation_history[1, 2]
+          expect(stored_call).to eq(expected_messages.first)
+          expect(stored_result).to eq(expected_messages.last.merge("invocation_id" => invocation.id))
           expect(invocation.result).to eq(raw_result)
         end
       end

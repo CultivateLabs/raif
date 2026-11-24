@@ -65,6 +65,24 @@ module Raif
       end
     end
 
+    # Performs the jobs of agent runs started with `run_later!`, and of
+    # conversation entries with several tool calls, until none are left. Deadline
+    # jobs stay queued. A run that waits for a tool with deferred completion stops
+    # here: complete the invocation and call this again. Needs
+    # ActiveJob::TestHelper.
+    def perform_raif_run_jobs(max_rounds: 50)
+      job_classes = [Raif::AgentTurnJob, Raif::ModelToolInvocationJob]
+
+      max_rounds.times do
+        pending = enqueued_jobs.select { |job| job_classes.map(&:name).include?(job["job_class"] || job[:job].to_s) }
+        return if pending.empty?
+
+        perform_enqueued_jobs(only: job_classes)
+      end
+
+      raise "Raif run jobs were still being queued after #{max_rounds} rounds"
+    end
+
     def stub_raif_llm(llm, &block)
       llm.chat_handler = block
       allow(Raif.config).to receive(:llm_api_requests_enabled){ true }

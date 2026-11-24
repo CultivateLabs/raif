@@ -186,6 +186,28 @@ class Raif::ModelTools::GoogleSearch < Raif::ModelTool
 end
 ```
 
+## Tool Jobs {#tool-jobs}
+
+When the model's response contains tool calls, the entry saves the response, creates one `Raif::ModelToolInvocation` per call, and waits for them:
+
+- A single tool call runs in the entry's job.
+- Several tool calls each run in their own `Raif::ModelToolInvocationJob`, in parallel. The entry stays in its "generating" state (`entry.waiting_on_tools?`) and completes when the last call ends. The results are sent to the model in call order.
+- A tool that declares [`defers_completion`](model_tools#tools-that-complete-later) keeps the entry waiting until your code calls `invocation.complete!` or `invocation.fail!`.
+
+A tool that raises fails the entry. A call whose deadline passes, or that your code fails with `fail!(message)`, completes the entry with an error result for that call, and Raif prompts the model again so it can tell the user.
+
+Tool code runs in a job, outside the request that created the entry, and no longer inside one transaction with the other calls of the entry. A tool that needs its writes to be atomic opens its own transaction. To restore per-request state for tool code, override `with_run_context` on your conversation class; the entry carries its own [`execution_context`](#host-execution-context):
+
+```ruby
+class MyConversation < Raif::ApplicationConversation
+  def with_run_context(entry:)
+    Current.set(account_id: entry.execution_context["account_id"]) { yield }
+  end
+end
+```
+
+Schedule [`Raif::RecoverStalledRunsJob`](../learn_more/durable_agent_runs#recovery) so an entry whose tool job was lost does not wait forever.
+
 # Pre-processing Conversation Entry Responses
 
 You may want to manipulate the LLM's response before it's displayed to the user. For example, say your system prompt instructs the LLM to include citations in its response, formatted like `[DocumentID 123]`. You then want to replace those citations with links to the relevant documents.
@@ -205,7 +227,7 @@ end
 
 # Post-finalization Side Effects {#post-finalization-side-effects}
 
-For per-entry side effects — creating dependent records, enqueuing follow-up work, broadcasting UI updates tied to the final response, etc. — override `on_entry_finalized` in your conversation class. This hook is called exactly once per `Raif::ConversationEntry`, immediately after the entry has been successfully finalized (model response saved, tool calls validated and invoked, entry transitioned to `completed`). It is never invoked for attempts that were discarded by the retry loop.
+For per-entry side effects — creating dependent records, enqueuing follow-up work, broadcasting UI updates tied to the final response, etc. — override `on_entry_finalized` in your conversation class. This hook is called once per `Raif::ConversationEntry`, immediately after the entry has been successfully finalized (model response saved, tool calls validated and invoked, entry transitioned to `completed`). It is never invoked for attempts that were discarded by the retry loop.
 
 ```ruby
 class Raif::Conversations::CustomerSupport < Raif::Conversation

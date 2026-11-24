@@ -33,7 +33,16 @@ agent.run! do |conversation_history_entry|
 end
 ```
 
-On each step of the agent loop, an entry will be added to the `Raif::Agent#conversation_history` and, if you pass a block to the `run!` method, the block will be called with the `conversation_history_entry` as an argument. You can use this to monitor and display the agent's progress in real-time.
+`run!` runs the agent in the calling process and returns when the run ends. To run the agent in background jobs instead, with the tool calls of a turn in parallel and without holding a worker for the whole run, call `run_later!`:
+
+```ruby
+agent.run_later!
+agent.status # => :running
+```
+
+See [Durable Agent Runs](../learn_more/durable_agent_runs) for `run_later!`, tools that complete later, deadlines, and recovery.
+
+On each step of the agent loop, entries are added to the `Raif::Agent#conversation_history` and, if you pass a block to the `run!` method, the block will be called with each `conversation_history_entry` as an argument. You can use this to monitor and display the agent's progress in real-time. The entries of one step are added together once all of the step's tool calls have ended, so a tool call entry arrives with its result.
 
 The conversation_history_entry will be a hash with "role" and "content" keys:
 ```ruby

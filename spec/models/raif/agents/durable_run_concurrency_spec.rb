@@ -1,0 +1,237 @@
+# frozen_string_literal: true
+
+require "rails_helper"
+
+# The barrier, the execution claim and the terminal writes are only correct if
+# they hold when several database connections race. Transactional tests share
+# one connection, so this group runs without them and cleans up after itself.
+RSpec.describe "Durable agent run concurrency", type: :model do
+  self.use_transactional_tests = false
+
+  let(:creator) { FB.create(:raif_test_user) }
+  let(:agent) do
+    Raif::DurableRunTestAgent.create!(
+      creator: creator,
+      task: "Answer the question",
+      available_model_tools: [Raif::DurableRunTestTool, Raif::DurableRunDeferredTestTool],
+      llm_model_key: "open_ai_responses_gpt_4_1",
+      started_at: Time.current,
+      run_mode: "async",
+      run_token: "token",
+      iteration_count: 1,
+      conversation_history: [{ "role" => "user", "content" => "Answer the question" }]
+    )
+  end
+  let(:turn) { agent.turns.create!(iteration: 1, status: "tools_dispatched", started_at: Time.current) }
+
+  after do
+    Raif::ModelToolInvocation.delete_all
+    Raif::AgentTurn.delete_all
+    Raif::Agent.delete_all
+    Raif::TestUser.delete_all
+  end
+
+  def create_invocation(position, tool: Raif::DurableRunTestTool, **attributes)
+    tool.build_invocation(
+      provider_tool_call_id: "call_#{position}",
+      tool_arguments: { "query" => "q#{position}" },
+      source: agent,
+      raif_agent_turn: turn,
+      position: position,
+      **attributes
+    ).tap(&:save!)
+  end
+
+  # Runs each block in its own thread and database connection, releasing them together.
+  def race(*blocks)
+    ready = Queue.new
+    go = Queue.new
+
+    threads = blocks.map do |block|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ready << true
+          go.pop
+          block.call
+        end
+      end
+    end
+
+    blocks.length.times { ready.pop }
+    blocks.length.times { go << true }
+    threads.map(&:value)
+  end
+
+  def mysql?
+    ActiveRecord::Base.connection.adapter_name.downcase.in?(["mysql2", "trilogy"])
+  end
+
+  def turn_jobs
+    enqueued_jobs.select { |job| job["job_class"] == "Raif::AgentTurnJob" }
+  end
+
+  it "opens the barrier once when all tool calls of a turn end at the same moment" do
+    invocations = Array.new(4) { |position| create_invocation(position) }
+
+    race(*invocations.map { |invocation| -> { Raif::ModelToolInvocation.find(invocation.id).execute! } })
+
+    expect(Raif::DurableRunTestTool.executions.sort).to eq(invocations.map(&:id).sort)
+    expect(turn.reload).to be_completed
+    expect(agent.turns.pluck(:iteration)).to eq([1, 2])
+    expect(turn_jobs.length).to eq(1)
+
+    results = agent.reload.conversation_history.select { |entry| entry["type"] == "tool_call_result" }
+    expect(results.map { |entry| entry["provider_tool_call_id"] }).to eq(["call_0", "call_1", "call_2", "call_3"])
+    expect(agent.conversation_history.length).to eq(9)
+  end
+
+  it "runs a tool once when the same invocation is executed concurrently" do
+    invocation = create_invocation(0)
+    create_invocation(1, tool: Raif::DurableRunDeferredTestTool, started_at: Time.current)
+
+    outcomes = race(*Array.new(4) { -> { Raif::ModelToolInvocation.find(invocation.id).execute! } })
+
+    expect(outcomes.count(true)).to eq(1)
+    expect(Raif::DurableRunTestTool.executions).to eq([invocation.id])
+    expect(invocation.reload).to be_completed
+  end
+
+  it "lets exactly one of a host completion and a deadline expiry end an invocation" do
+    invocation = create_invocation(0, tool: Raif::DurableRunDeferredTestTool, started_at: 1.hour.ago, deadline_at: 1.minute.ago)
+
+    outcomes = race(
+      -> { Raif::ModelToolInvocation.find(invocation.id).complete!("rows" => [1]) },
+      -> { Raif::ModelToolInvocation.find(invocation.id).expire! }
+    )
+
+    expect(outcomes.count(true)).to eq(1)
+    invocation.reload
+    expect([invocation.completed?, invocation.failed?].count(true)).to eq(1)
+    expect(turn.reload).to be_completed
+    expect(turn_jobs.length).to eq(1)
+    expect(agent.reload.conversation_history.count { |entry| entry["type"] == "tool_call_result" }).to eq(1)
+  end
+
+  it "opens the barrier once when two host transactions each complete one of the last two calls" do
+    invocations = Array.new(2) { |position| create_invocation(position, tool: Raif::DurableRunDeferredTestTool, started_at: Time.current) }
+
+    # Holds each transaction at the barrier check until the other one has ended
+    # its call too, or for a second when the lock order keeps the other waiting.
+    arrived = Queue.new
+    allow_any_instance_of(Raif::AgentTurn).to receive(:check_tool_barrier!).and_wrap_original do |method|
+      arrived << true
+      20.times do
+        break if arrived.size >= 2
+
+        sleep 0.05
+      end
+      method.call
+    end
+
+    outcomes = race(*invocations.map do |invocation|
+      lambda do
+        Raif::ModelToolInvocation.transaction do
+          Raif::ModelToolInvocation.find(invocation.id).complete!("position" => invocation.position)
+        end
+      end
+    end)
+
+    expect(outcomes).to eq([true, true])
+    expect(turn.reload).to be_completed
+    expect(agent.turns.pluck(:iteration)).to eq([1, 2])
+    expect(turn_jobs.length).to eq(1)
+
+    results = agent.reload.conversation_history.select { |entry| entry["type"] == "tool_call_result" }
+    expect(results.map { |entry| entry["provider_tool_call_id"] }).to eq(["call_0", "call_1"])
+    expect(results).to all(satisfy { |entry| !entry.key?("tool_error") })
+  end
+
+  it "does not deadlock when a host transaction writes its invocation before completing it" do
+    skip "MySQL needs the barrier's locking read, so host code must not write the invocation first" if mysql?
+
+    first, second = Array.new(2) { |position| create_invocation(position, tool: Raif::DurableRunDeferredTestTool, started_at: Time.current) }
+    first_written = Queue.new
+    second_at_barrier = Queue.new
+
+    # The second transaction holds the agent's lock at its barrier check while
+    # the first one, holding its own invocation row, asks for that lock.
+    allow_any_instance_of(Raif::AgentTurn).to receive(:check_tool_barrier!).and_wrap_original do |method|
+      if Thread.current[:barrier_role] == :second
+        second_at_barrier << true
+        sleep 0.3
+      end
+      method.call
+    end
+
+    outcomes = race(
+      lambda do
+        Raif::ModelToolInvocation.transaction do
+          invocation = Raif::ModelToolInvocation.find(first.id)
+          invocation.update!(result: { "position" => 0 })
+          first_written << true
+          second_at_barrier.pop(timeout: 2)
+          invocation.complete!
+        end
+      end,
+      lambda do
+        Thread.current[:barrier_role] = :second
+        first_written.pop(timeout: 2)
+        Raif::ModelToolInvocation.transaction do
+          Raif::ModelToolInvocation.find(second.id).complete!("position" => 1)
+        end
+      end
+    )
+
+    expect(outcomes).to eq([true, true])
+    expect(turn.reload).to be_completed
+    results = agent.reload.conversation_history.select { |entry| entry["type"] == "tool_call_result" }
+    expect(results.map { |entry| entry["provider_tool_call_id"] }).to eq(["call_0", "call_1"])
+    expect(results).to all(satisfy { |entry| !entry.key?("tool_error") })
+  end
+
+  it "fails the run before a sibling that ends during a fatal tool error can open the barrier" do
+    allow(Rails.error).to receive(:report)
+    Raif::DurableRunTestTool.behavior do |invocation|
+      raise StandardError.new("over budget").extend(Raif::Errors::ModelCompletionAuthorizationError) if invocation.position.zero?
+    end
+    failing, sibling = Array.new(2) { |position| create_invocation(position) }
+    sibling_thread = nil
+    sibling_blocked = nil
+
+    # The sibling ends after the failing call is marked failed, but before the run fails.
+    allow_any_instance_of(Raif::AgentTurn).to receive(:fail_from_tool_error!).and_wrap_original do |method, *args|
+      sibling_thread = Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection { Raif::ModelToolInvocation.find(sibling.id).execute! }
+      end
+      sibling_blocked = sibling_thread.join(0.3).nil?
+      method.call(*args)
+    end
+
+    Raif::ModelToolInvocation.find(failing.id).execute!
+    sibling_thread.join
+
+    expect(sibling_blocked).to be(true)
+    expect(agent.reload.status).to eq(:failed)
+    expect(turn.reload).not_to be_completed
+    expect(agent.turns.count).to eq(1)
+  end
+
+  it "never advances a run that is canceled while its last tool call ends" do
+    invocation = create_invocation(0)
+
+    race(
+      -> { Raif::ModelToolInvocation.find(invocation.id).execute! },
+      -> { Raif::Agent.find(agent.id).cancel! }
+    )
+
+    expect(agent.reload.status).to eq(:canceled)
+    statuses = agent.turns.pluck(:iteration, :status)
+
+    # Whatever was queued before the cancel carries the old token and does nothing.
+    perform_enqueued_jobs(only: [Raif::AgentTurnJob, Raif::ModelToolInvocationJob])
+
+    expect(agent.turns.pluck(:iteration, :status)).to eq(statuses)
+    expect(agent.raif_model_completions).to be_empty
+    expect(agent.reload.status).to eq(:canceled)
+  end
+end

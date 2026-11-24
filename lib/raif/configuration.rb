@@ -8,7 +8,9 @@ module Raif
     # active manifest entry, so deprecating this model fails the suite until the default changes.
     DEFAULT_LLM_MODEL_KEY = "open_ai_responses_gpt_6_1_terra"
 
-    attr_accessor :agent_types,
+    attr_accessor :agent_stalled_turn_resume_after,
+      :agent_turn_job_queue,
+      :agent_types,
       :anthropic_api_key,
       :archive_enabled,
       :archive_partition_column,
@@ -30,6 +32,7 @@ module Raif
       :conversations_controller,
       :current_user_method,
       :default_embedding_model_key,
+      :deferred_model_tool_invocation_deadline,
       :default_llm_model_key,
       :evals_capture_model_completions,
       :evals_concurrency,
@@ -51,6 +54,9 @@ module Raif
       :model_completion_batch_poll_schedule,
       :model_completion_retention_period,
       :model_superclass,
+      :model_tool_invocation_authorizer,
+      :model_tool_invocation_deadline,
+      :model_tool_invocation_job_queue,
       :open_ai_api_key,
       :open_ai_batch_completion_window,
       :open_ai_api_version,
@@ -89,6 +95,14 @@ module Raif
     alias_method :aws_bedrock_titan_embedding_models_enabled=, :bedrock_embedding_models_enabled=
 
     def initialize
+      # Raif::RecoverStalledRunsJob resumes an async agent run whose current turn
+      # has not changed for this long, which recovers a run whose job was lost by
+      # the queue backend. nil disables it. Keep it well above your slowest model
+      # call: resuming a turn whose model call is still in flight pays for a second call.
+      @agent_stalled_turn_resume_after = 30.minutes
+      # Queue for Raif::AgentTurnJob. nil uses the host's default queue. An agent
+      # class can override it with `self.turn_job_queue = :name`.
+      @agent_turn_job_queue = nil
       @agent_types = Set.new(["Raif::Agents::NativeToolCallingAgent"])
       @anthropic_api_key = default_disable_llm_api_requests? ? "placeholder-anthropic-api-key" : ENV["ANTHROPIC_API_KEY"]
       @anthropic_message_batches_beta_header = "message-batches-2024-09-24"
@@ -136,6 +150,10 @@ module Raif
       @conversations_controller = "Raif::ConversationsController"
       @current_user_method = :current_user
       @default_embedding_model_key = "open_ai_text_embedding_3_small"
+      # How long an agent or conversation waits for a tool that defers completion
+      # (Raif::ModelTool.defers_completion) before the model gets an error result
+      # for the call. A tool class can set its own deadline.
+      @deferred_model_tool_invocation_deadline = 30.minutes
       @default_llm_model_key = if default_disable_llm_api_requests?
         :raif_test_llm
       else
@@ -205,6 +223,15 @@ module Raif
       # to the caller. Return values are ignored. Does not apply to embedding
       # generation or batch API submissions.
       @model_completion_authorizer = nil
+      # Optional lambda called with an invocation: keyword arg (a
+      # Raif::ModelToolInvocation) immediately before every tool execution: in a
+      # task, an agent turn, a conversation entry, or a tool job. Raise from it to
+      # veto the call (e.g. a host app that checks whether the invocation's
+      # source may use the tool). Return values are ignored. It runs at execution
+      # time, inside the run context of the agent or conversation, so it sees the
+      # state the tool would see. Does not apply to provider-managed tools, which
+      # the provider runs.
+      @model_tool_invocation_authorizer = nil
       # Hard ceiling for any non-terminal Raif::ModelCompletionBatch. Older
       # batches are expired by the hourly safety sweep
       # (Raif::ExpireStuckModelCompletionBatchesJob) and the polling job's
@@ -223,6 +250,11 @@ module Raif
       # from under an open billing window.
       @model_completion_retention_period = nil
       @model_superclass = "ApplicationRecord"
+      # How long a tool call that runs in a job may take before the model gets an
+      # error result for it. Also bounds the wait for a call whose job was lost.
+      @model_tool_invocation_deadline = 10.minutes
+      # Queue for Raif::ModelToolInvocationJob. nil uses the host's default queue.
+      @model_tool_invocation_job_queue = nil
       @open_ai_api_key = default_disable_llm_api_requests? ? "placeholder-open-ai-api-key" : ENV["OPENAI_API_KEY"]
       @open_ai_api_version = nil
       @open_ai_batch_completion_window = "24h"
@@ -315,6 +347,23 @@ module Raif
       @bedrock_mantle_base_url || "https://bedrock-mantle.#{aws_bedrock_region}.api.aws/openai/v1"
     end
 
+    # A deadline that is not a positive duration would end every tool call the
+    # moment it is dispatched.
+    def validate_durable_run_config!
+      [:model_tool_invocation_deadline, :deferred_model_tool_invocation_deadline].each do |setting|
+        value = public_send(setting)
+        next if value.is_a?(ActiveSupport::Duration) && value.positive?
+
+        raise Raif::Errors::InvalidConfigError, "Raif.config.#{setting} must be a positive duration (e.g. 10.minutes)"
+      end
+
+      resume_after = agent_stalled_turn_resume_after
+      return if resume_after.nil? || (resume_after.is_a?(ActiveSupport::Duration) && resume_after.positive?)
+
+      raise Raif::Errors::InvalidConfigError,
+        "Raif.config.agent_stalled_turn_resume_after must be nil or a positive duration (e.g. 30.minutes)"
+    end
+
     def validate!
       # Before the LLM-registry early return below: archive validation guards
       # a destructive path (culling), so a node with no LLM API keys (e.g. a
@@ -365,6 +414,8 @@ module Raif
           "Raif.config.default_embedding_model_key was set to #{default_embedding_model_key}, but must be one of: #{Raif.available_embedding_model_keys.join(", ")}" # rubocop:disable Layout/LineLength
       end
 
+      validate_durable_run_config!
+
       if authorize_controller_action.respond_to?(:call)
         authorize_controller_action.freeze
       else
@@ -377,6 +428,13 @@ module Raif
       else
         raise Raif::Errors::InvalidConfigError,
           "Raif.config.authorize_admin_controller_action must respond to :call and return a boolean"
+      end
+
+      if model_tool_invocation_authorizer.nil? || model_tool_invocation_authorizer.respond_to?(:call)
+        model_tool_invocation_authorizer&.freeze
+      else
+        raise Raif::Errors::InvalidConfigError,
+          "Raif.config.model_tool_invocation_authorizer must be nil or respond to :call"
       end
 
       if model_completion_authorizer.nil? || model_completion_authorizer.respond_to?(:call)

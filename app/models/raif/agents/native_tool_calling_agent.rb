@@ -6,6 +6,7 @@
 #
 #  id                     :bigint           not null, primary key
 #  available_model_tools  :jsonb            not null
+#  canceled_at            :datetime
 #  completed_at           :datetime
 #  conversation_history   :jsonb            not null
 #  creator_type           :string           not null
@@ -16,6 +17,8 @@
 #  llm_model_key          :string           not null
 #  max_iterations         :integer          default(10), not null
 #  requested_language_key :string
+#  run_mode               :string
+#  run_token              :string
 #  run_with               :jsonb
 #  source_type            :string
 #  started_at             :datetime
@@ -150,7 +153,50 @@ module Raif
         nil
       end
 
-      def process_iteration_model_completion(model_completion)
+      # completion_saved -> tools_dispatched when the completion holds usable tool
+      # calls, or -> tools_complete when it was rejected with corrective feedback.
+      # The invocation rows and the status change commit together, so a job that
+      # runs again never creates the calls a second time.
+      def process_turn_completion!(turn)
+        invocations = []
+
+        dispatched = run_transaction do
+          next false unless run_live? && turn.reload.completion_saved?
+
+          accepted_calls = accept_tool_calls(turn.raif_model_completion)
+          if accepted_calls.nil?
+            turn.transition!(from: "completion_saved", to: "tools_complete", tools_completed_at: Time.current)
+            next false
+          end
+
+          accepted_calls.each do |position, tool_call, validation|
+            invocation = validation.tool_klass.build_invocation(
+              provider_tool_call_id: tool_call["provider_tool_call_id"],
+              tool_arguments: validation.prepared_arguments,
+              source: self,
+              raif_agent_turn: turn,
+              position: position
+            )
+            # An in-process run executes each call before it continues, so there is no wait to bound.
+            invocation.deadline_at = Time.current + invocation.tool.invocation_deadline unless in_process_run?
+            invocation.save!
+            invocations << invocation
+          end
+
+          turn.transition!(from: "completion_saved", to: "tools_dispatched")
+        end
+        return unless dispatched
+
+        invocations.each(&:schedule_deadline_job)
+        run_host_hook(:after_tool_calls_dispatched) { after_tool_calls_dispatched(turn) }
+      end
+
+      # Decides which tool calls of a completion to run.
+      #
+      # @return [Array<Array(Integer, Hash, ValidationResult)>, nil] position in the
+      #   response, tool call and validation for each call to run, or nil when the
+      #   completion was rejected (the corrective feedback is already in the history).
+      def accept_tool_calls(model_completion)
         required_tool = current_iteration_required_tool
         assistant_response_message = model_completion.parsed_response if model_completion.parsed_response.present?
 
@@ -180,6 +226,7 @@ module Raif
         end
 
         tool_calls = model_completion.response_tool_calls
+        positions = (0...tool_calls.length).to_a
 
         # Parallel tool calls disabled (agent class opted out, or the model doesn't
         # support them): only one call per step.
@@ -215,6 +262,7 @@ module Raif
         if final_answer_index && tool_call_rejection_error(validations[final_answer_index], required_tool).nil?
           tool_calls = [tool_calls[final_answer_index]]
           validations = [validations[final_answer_index]]
+          positions = [final_answer_index]
         else
           # Atomic validation: if any call is invalid, none are invoked or persisted. A
           # rejected call replayed to the provider on the next request would be rejected
@@ -228,43 +276,49 @@ module Raif
           end
         end
 
-        # Invoke each valid call in order, interleaving its result with the call so the
-        # provider sees correctly paired tool_call/tool_call_result messages on replay.
-        # Only the first call carries the assistant's prose for this turn.
-        tool_calls.each_with_index do |tool_call, index|
-          validation = validations[index]
+        positions.zip(tool_calls, validations)
+      end
 
+      # Appends the turn's tool calls and their results to the conversation history
+      # in call order, each call followed by its result, whatever order the calls
+      # ended in. The provider then sees correctly paired messages on replay. Only
+      # the first call carries the assistant's prose for the turn.
+      def record_turn_tool_results!(turn)
+        model_completion = turn.raif_model_completion
+        tool_calls = model_completion&.response_tool_calls || []
+        assistant_response_message = model_completion&.parsed_response.presence
+
+        invocations = Raif::Concerns::ToolBarrier.current_rows(turn.raif_model_tool_invocations.in_call_order)
+        invocations.each_with_index do |invocation, index|
+          tool_call = tool_calls[invocation.position] || {}
           tool_call_message = Raif::Messages::ToolCall.new(
-            provider_tool_call_id: tool_call["provider_tool_call_id"],
-            name: tool_call["name"],
-            arguments: validation.prepared_arguments,
+            provider_tool_call_id: invocation.provider_tool_call_id,
+            name: invocation.tool_name,
+            arguments: invocation.tool_arguments,
             assistant_message: (index.zero? ? assistant_response_message : nil),
             provider_metadata: tool_call["provider_metadata"]
           )
           add_conversation_history_entry(tool_call_message.to_h)
 
-          begin
-            tool_invocation = validation.tool_klass.invoke_tool(
-              provider_tool_call_id: tool_call["provider_tool_call_id"],
-              tool_arguments: validation.prepared_arguments,
-              source: self
-            )
-          rescue StandardError => e
-            raise unless self.class.recover_from_tool_errors && recoverable_tool_error?(e)
-
-            record_tool_error!(tool_call, validation.tool_name, e)
-            next
-          end
-
-          if validation.tool_name == "agent_final_answer"
-            self.final_answer = tool_invocation.result
-            break
+          if !invocation.completed?
+            # The tool raised, the host failed the call, or its deadline passed.
+            result_message = Raif::Messages::ToolCallResult.new(
+              provider_tool_call_id: invocation.provider_tool_call_id,
+              name: invocation.tool_name,
+              result: invocation.error_result_for_llm
+            ).to_h
+            add_conversation_history_entry(result_message.merge("tool_error" => true))
+          elsif invocation.tool_name == "agent_final_answer"
+            self.final_answer = invocation.result
+            save!
           else
             # Store the raw result. `messages_for_llm` formats it on every turn.
-            add_conversation_history_entry(tool_invocation.as_tool_call_result_message)
+            add_conversation_history_entry(invocation.as_tool_call_result_message.merge("invocation_id" => invocation.id))
           end
         end
       end
+      # Called by the turn's barrier.
+      public :record_turn_tool_results!
 
       # Build each tool result on every turn rather than replaying the stored value.
       # `format_result_for_llm` is documented as a lazy, per-turn call, so an override
@@ -275,21 +329,27 @@ module Raif
         history = conversation_history
         return history unless history.any?{ |entry| entry["type"] == "tool_call_result" }
 
-        # Pair by position rather than by provider_tool_call_id: a provider may reuse an
-        # ID across calls, and every result entry is appended right after the invocation
-        # that produced it. The tool name check makes a mismatch fall back to the stored
-        # value instead of sending another tool's result. Only a completed invocation
-        # gets a result entry, so a failed call (an error entry and a failed invocation
-        # or none) is on neither side of the pairing.
-        invocations = raif_model_tool_invocations.where.not(completed_at: nil).order(:id).to_a
-        result_index = -1
+        # Pair each result with its invocation by the invocation id stored in the
+        # entry. Tool calls of one turn run concurrently, so neither their ids nor
+        # their completion order say which call a result belongs to, and a provider
+        # may reuse a provider_tool_call_id. Entries written before the id was stored
+        # are paired by position among the older invocations; the tool name check
+        # makes a mismatch fall back to the stored value.
+        invocation_ids = history.filter_map { |entry| entry["invocation_id"] if entry["type"] == "tool_call_result" }
+        invocations_by_id = invocation_ids.any? ? raif_model_tool_invocations.where(id: invocation_ids).index_by(&:id) : {}
+        positional_invocations = nil
+        positional_index = -1
 
         history.map do |entry|
           next entry unless entry["type"] == "tool_call_result"
           next entry if entry["tool_error"]
 
-          result_index += 1
-          invocation = invocations[result_index]
+          invocation = if entry.key?("invocation_id")
+            invocations_by_id[entry["invocation_id"]]
+          else
+            positional_invocations ||= raif_model_tool_invocations.where.not(completed_at: nil).where(raif_agent_turn_id: nil).order(:id).to_a
+            positional_invocations[positional_index += 1]
+          end
           next entry if invocation.nil? || invocation.tool_name != entry["name"]
 
           result = invocation.format_result_for_llm.presence || invocation.result
@@ -299,11 +359,14 @@ module Raif
 
       # Whether a tool exception becomes an error result for the model instead of
       # failing the run. A model_completion_authorizer veto from inside a tool (a
-      # nested task, say) always propagates, as it does from Raif::Task.run. Override
-      # to fail the run on other errors the model cannot work around; call super to
-      # keep the veto behavior.
+      # nested task, say) always propagates, as it does from Raif::Task.run. A
+      # model_tool_invocation_authorizer veto fails the run too: the host refused the
+      # call, so the model must not be invited to try another way. Override to fail
+      # the run on other errors the model cannot work around; call super to keep the
+      # veto behavior.
       def recoverable_tool_error?(error)
-        !error.is_a?(Raif::Errors::ModelCompletionAuthorizationError)
+        !error.is_a?(Raif::Errors::ModelCompletionAuthorizationError) &&
+          !error.is_a?(Raif::Errors::ModelToolInvocationAuthorizationError)
       end
 
       # The tool result the model receives for a call whose tool raised. Generic by
@@ -312,22 +375,6 @@ module Raif
       def tool_error_result_message(tool_name, _error)
         "Error: The #{tool_name} tool failed and returned no result. " \
           "Try different arguments or another tool. Do not retry the same call unchanged."
-      end
-
-      def record_tool_error!(tool_call, tool_name, error)
-        Rails.error.report(error, handled: true, severity: :error, context: {
-          component: "raif_agent",
-          action: "invoke_tool",
-          agent_id: id,
-          tool_name: tool_name
-        })
-
-        result_message = Raif::Messages::ToolCallResult.new(
-          provider_tool_call_id: tool_call["provider_tool_call_id"],
-          name: tool_name,
-          result: tool_error_result_message(tool_name, error)
-        ).to_h
-        add_conversation_history_entry(result_message.merge("tool_error" => true))
       end
 
       # Permit parallel tool calls unless they're disallowed, or this iteration requires a

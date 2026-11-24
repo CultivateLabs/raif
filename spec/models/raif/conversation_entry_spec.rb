@@ -8,11 +8,15 @@
 #  citations              :jsonb
 #  completed_at           :datetime
 #  creator_type           :string           not null
+#  execution_context      :jsonb
 #  failed_at              :datetime
+#  finalized_at           :datetime
 #  llm_model_key          :string
 #  model_response_message :text
 #  raw_response           :text
 #  started_at             :datetime
+#  tools_completed_at     :datetime
+#  tools_dispatched_at    :datetime
 #  user_message           :text
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
@@ -24,6 +28,7 @@
 #  index_raif_conversation_entries_on_created_at            (created_at)
 #  index_raif_conversation_entries_on_creator               (creator_type,creator_id)
 #  index_raif_conversation_entries_on_raif_conversation_id  (raif_conversation_id)
+#  index_raif_conversation_entries_on_tools_dispatched_at   (tools_dispatched_at)
 #
 # Foreign Keys
 #
@@ -510,6 +515,11 @@ RSpec.describe Raif::ConversationEntry, type: :model do
         end
 
         entry.process_entry!
+
+        # Two calls each run in a job; the entry waits for both.
+        expect(entry.reload).to be_waiting_on_tools
+        expect(entry.raif_model_tool_invocations.pluck(:provider_tool_call_id)).to match_array(["tooluse_ok_1", "tooluse_ok_2"])
+        perform_enqueued_jobs(only: Raif::ModelToolInvocationJob)
 
         expect(entry.reload).to be_completed
         expect(entry.raif_model_tool_invocations.count).to eq(2)

@@ -5,20 +5,31 @@
 # Table name: raif_model_tool_invocations
 #
 #  id                    :bigint           not null, primary key
+#  canceled_at           :datetime
 #  completed_at          :datetime
+#  completion_mode       :string           default("automatic"), not null
+#  deadline_at           :datetime
+#  execution_token       :string
 #  failed_at             :datetime
+#  failure_reason        :text
+#  lease_expires_at      :datetime
+#  position              :integer
 #  result                :jsonb            not null
 #  source_type           :string           not null
+#  started_at            :datetime
 #  tool_arguments        :jsonb            not null
 #  tool_type             :string           not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  provider_tool_call_id :string
+#  raif_agent_turn_id    :bigint
 #  source_id             :bigint           not null
 #
 # Indexes
 #
-#  index_raif_model_tool_invocations_on_source  (source_type,source_id)
+#  index_raif_model_tool_invocations_on_deadline_at         (deadline_at)
+#  index_raif_model_tool_invocations_on_raif_agent_turn_id  (raif_agent_turn_id)
+#  index_raif_model_tool_invocations_on_source              (source_type,source_id)
 #
 require "rails_helper"
 

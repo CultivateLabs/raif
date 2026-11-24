@@ -91,6 +91,25 @@ Notes:
 - Conversation responses run in a background job (`Raif::ConversationEntryJob`), so there is no host caller to receive a raise. A veto there surfaces as a failed `Raif::ConversationEntry` (marked `failed` and broadcast to the UI) rather than propagating.
 - It does not apply to embedding generation or batch API submissions, which do not go through `Raif::Llm#chat`.
 
+
+# Authorizing Tool Calls
+
+You can register a lambda that is called immediately before every tool execution, whether the tool runs in a task, an agent, a conversation, or a tool job. It receives `invocation:`, the `Raif::ModelToolInvocation`, so it can check the tool (`invocation.tool`), the arguments (`invocation.tool_arguments`), and the source (`invocation.source`). To veto the call, raise an exception. Return values are ignored.
+
+```ruby
+Raif.configure do |config|
+  config.model_tool_invocation_authorizer = ->(invocation:) {
+    raise MyApp::ToolNotAllowedError unless MyApp::ToolPolicy.allowed?(invocation.tool, invocation.source)
+  }
+end
+```
+
+Notes:
+
+- The authorizer runs at execution time, inside [`with_run_context`](durable_agent_runs#restoring-host-context), so it sees the state the tool would see.
+- A veto fails an agent run by default and fails a conversation entry. See [Authorizing tool calls](durable_agent_runs#authorizing-tool-calls).
+- Provider-managed tools are run by the provider and are not covered.
+
 # Inference Cost Events
 
 Each time a `Raif::ModelCompletion` reaches a terminal state (completed or failed), Raif creates a durable `Raif::InferenceCostEvent` - a slim record of the completion's token counts and costs. Cost events survive deletion of the completion row (and, later, its source), so cost reporting keeps working even after old completions are culled. This is enabled by default and can be disabled:
