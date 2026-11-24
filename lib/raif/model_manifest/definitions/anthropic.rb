@@ -2,9 +2,9 @@
 
 provider :anthropic do |p|
   p.references(
-    models_doc: "https://docs.claude.com/en/docs/about-claude/models",
+    models_doc: "https://platform.claude.com/docs/en/about-claude/models",
     pricing: "https://claude.com/pricing",
-    deprecations: "https://docs.claude.com/en/docs/about-claude/model-deprecations",
+    deprecations: "https://platform.claude.com/docs/en/about-claude/model-deprecations",
     api_versions: "https://platform.claude.com/docs/en/api/versioning"
   )
 
@@ -37,7 +37,7 @@ provider :anthropic do |p|
     api_name: "claude-sonnet-5-5",
     display_name: "Anthropic Claude 5.5 Sonnet",
     max_completion_tokens: 128_000,
-    pricing: { cache_read_per_million: 0.2, input_per_million: 2.0, output_per_million: 10.0 },
+    pricing: { cache_read_per_million: 0.1, input_per_million: 2.0, output_per_million: 10.0 },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -88,7 +88,7 @@ provider :anthropic do |p|
     api_name: "claude-opus-5",
     display_name: "Anthropic Claude 5 Opus",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 5.0, output_per_million: 25.0 },
+    pricing: { cache_read_per_million: 0.5, input_per_million: 5.0, output_per_million: 25.0 },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -134,7 +134,7 @@ provider :anthropic do |p|
     api_name: "claude-fable-5",
     display_name: "Anthropic Claude Fable 5",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 10.0, output_per_million: 50.0 },
+    pricing: { cache_read_per_million: 1.0, input_per_million: 10.0, output_per_million: 50.0 },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -155,7 +155,7 @@ provider :anthropic do |p|
     api_name: "claude-opus-4-8",
     display_name: "Anthropic Claude 4.8 Opus",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 5.0, output_per_million: 25.0 },
+    pricing: { cache_read_per_million: 0.5, input_per_million: 5.0, output_per_million: 25.0 },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -176,7 +176,7 @@ provider :anthropic do |p|
     api_name: "claude-sonnet-5",
     display_name: "Anthropic Claude 5 Sonnet",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 2.0, output_per_million: 10.0 },
+    pricing: { cache_read_per_million: 0.2, input_per_million: 2.0, output_per_million: 10.0 },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -197,7 +197,7 @@ provider :anthropic do |p|
     api_name: "claude-opus-4-7",
     display_name: "Anthropic Claude 4.7 Opus",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 5.0, output_per_million: 25.0 },
+    pricing: { cache_read_per_million: 0.5, input_per_million: 5.0, output_per_million: 25.0 },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -218,7 +218,7 @@ provider :anthropic do |p|
     api_name: "claude-opus-4-6",
     display_name: "Anthropic Claude 4.6 Opus",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 5.0, output_per_million: 25.0 },
+    pricing: { cache_read_per_million: 0.5, input_per_million: 5.0, output_per_million: 25.0 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -239,7 +239,7 @@ provider :anthropic do |p|
     api_name: "claude-sonnet-4-6",
     display_name: "Anthropic Claude 4.6 Sonnet",
     max_completion_tokens: 64_000,
-    pricing: { input_per_million: 3.0, output_per_million: 15.0 },
+    pricing: { cache_read_per_million: 0.3, input_per_million: 3.0, output_per_million: 15.0 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -260,7 +260,7 @@ provider :anthropic do |p|
     api_name: "claude-opus-4-5",
     display_name: "Anthropic Claude 4.5 Opus",
     max_completion_tokens: 64_000,
-    pricing: { input_per_million: 5.0, output_per_million: 25.0 },
+    pricing: { cache_read_per_million: 0.5, input_per_million: 5.0, output_per_million: 25.0 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -281,7 +281,7 @@ provider :anthropic do |p|
     api_name: "claude-sonnet-4-5",
     display_name: "Anthropic Claude 4.5 Sonnet",
     max_completion_tokens: 64_000,
-    pricing: { input_per_million: 3.0, output_per_million: 15.0 },
+    pricing: { cache_read_per_million: 0.3, input_per_million: 3.0, output_per_million: 15.0 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -307,7 +307,7 @@ provider :anthropic do |p|
     api_name: "claude-haiku-4-5",
     display_name: "Anthropic Claude 4.5 Haiku",
     max_completion_tokens: 64_000,
-    pricing: { input_per_million: 1.0, output_per_million: 5.0 },
+    pricing: { cache_read_per_million: 0.1, input_per_million: 1.0, output_per_million: 5.0 },
     capabilities: {
       temperature: true,
       structured_outputs: true,

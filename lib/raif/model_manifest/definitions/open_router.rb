@@ -99,11 +99,12 @@ provider :open_router do |p|
     display_name: "Gemini 3.8 Flash (via OpenRouter)",
     max_completion_tokens: 65_536,
     pricing: {
+      cache_read_per_million: 0.075,
       input_per_million: 0.75,
       output_per_million: 3.75,
       note: "Mirrors Google's introductory rate through 2026-12-31; followed_by is Google's standard rate from 2027-01-01",
       valid_until: Date.new(2026, 12, 31),
-      followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
+      followed_by: { cache_read_per_million: 0.15, input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
       temperature: true,
@@ -173,7 +174,7 @@ provider :open_router do |p|
     key: :open_router_claude_5_fable,
     api_name: "anthropic/claude-fable-5",
     display_name: "Anthropic Claude Fable 5 (via OpenRouter)",
-    pricing: { input_per_million: 10.0, output_per_million: 50.0 },
+    pricing: { cache_read_per_million: 1.0, input_per_million: 10.0, output_per_million: 50.0 },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -193,7 +194,7 @@ provider :open_router do |p|
     key: :open_router_claude_4_8_opus,
     api_name: "anthropic/claude-opus-4.8",
     display_name: "Anthropic Claude 4.8 Opus (via OpenRouter)",
-    pricing: { input_per_million: 5.0, output_per_million: 25.0 },
+    pricing: { cache_read_per_million: 0.5, input_per_million: 5.0, output_per_million: 25.0 },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -213,7 +214,7 @@ provider :open_router do |p|
     key: :open_router_claude_5_sonnet,
     api_name: "anthropic/claude-sonnet-5",
     display_name: "Anthropic Claude 5 Sonnet (via OpenRouter)",
-    pricing: { input_per_million: 2.0, output_per_million: 10.0 },
+    pricing: { cache_read_per_million: 0.2, input_per_million: 2.0, output_per_million: 10.0 },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -322,7 +323,12 @@ provider :open_router do |p|
     key: :open_router_deepseek_v4_pro,
     api_name: "deepseek/deepseek-v4-pro-0813",
     display_name: "DeepSeek V4 Pro (via OpenRouter)",
-    pricing: { input_per_million: 0.9834, output_per_million: 2.9502 },
+    pricing: {
+      cache_read_per_million: 0.022,
+      input_per_million: 0.66,
+      output_per_million: 1.98,
+      note: "Rate of the DeepSeek endpoint on OpenRouter. OpenRouter can route a request to another host at a different rate."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -343,7 +349,7 @@ provider :open_router do |p|
     key: :open_router_gemini_2_5_flash,
     api_name: "google/gemini-2.5-flash",
     display_name: "Gemini 2.5 Flash (via OpenRouter)",
-    pricing: { input_per_million: 0.3, output_per_million: 2.5 },
+    pricing: { cache_read_per_million: 0.03, input_per_million: 0.3, output_per_million: 2.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -369,12 +375,13 @@ provider :open_router do |p|
     api_name: "google/gemini-3.7-flash",
     display_name: "Gemini 3.7 Flash (via OpenRouter)",
     pricing: {
+      cache_read_per_million: 0.075,
       input_per_million: 0.75,
       output_per_million: 3.75,
       note: "Mirrors Google's introductory rate through 2026-12-31 (followed_by is Google's standard rate from 2027-01-01); " \
         "OpenRouter's Vertex-backed endpoint is currently discounted a further 75% to 0.375 / 1.875 depending on routing",
       valid_until: Date.new(2026, 12, 31),
-      followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
+      followed_by: { cache_read_per_million: 0.15, input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
       temperature: true,
@@ -393,7 +400,8 @@ provider :open_router do |p|
       retirement_date: Date.new(2026, 12, 1),
       replacement_key: :open_router_gemini_3_8_flash,
       migration_note: "OpenRouter serves this model through Google. As of 2026-11-10, Google's deprecations page says requests to " \
-        "gemini-3.7-flash are routed to gemini-3.8-flash, and its pricing page no longer lists gemini-3.7-flash."
+        "gemini-3.7-flash are routed to gemini-3.8-flash, and its pricing page no longer lists gemini-3.7-flash. " \
+        "Google gives no shutdown date; Raif removes this key after 2026-12-01."
     }
   )
 
@@ -402,11 +410,12 @@ provider :open_router do |p|
     api_name: "google/gemini-3.6-flash",
     display_name: "Gemini 3.6 Flash (via OpenRouter)",
     pricing: {
+      cache_read_per_million: 0.075,
       input_per_million: 0.75,
       output_per_million: 3.75,
       note: "Mirrors Google's introductory rate through 2026-12-31; followed_by is Google's standard rate from 2027-01-01",
       valid_until: Date.new(2026, 12, 31),
-      followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
+      followed_by: { cache_read_per_million: 0.15, input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
       temperature: true,
@@ -428,7 +437,7 @@ provider :open_router do |p|
     key: :open_router_gemini_3_5_flash,
     api_name: "google/gemini-3.5-flash",
     display_name: "Gemini 3.5 Flash (via OpenRouter)",
-    pricing: { input_per_million: 1.5, output_per_million: 9.0 },
+    pricing: { cache_read_per_million: 0.15, input_per_million: 1.5, output_per_million: 9.0 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -445,7 +454,8 @@ provider :open_router do |p|
       retirement_date: Date.new(2026, 12, 1),
       replacement_key: :open_router_gemini_3_6_flash,
       migration_note: "OpenRouter serves this model through Google. As of 2026-11-10, Google's deprecations page says requests to " \
-        "gemini-3.5-flash are routed to gemini-3.6-flash, and its pricing page no longer lists gemini-3.5-flash."
+        "gemini-3.5-flash are routed to gemini-3.6-flash, and its pricing page no longer lists gemini-3.5-flash. " \
+        "Google gives no shutdown date; Raif removes this key after 2026-12-01."
     }
   )
 
@@ -453,7 +463,7 @@ provider :open_router do |p|
     key: :open_router_gemini_3_5_flash_lite,
     api_name: "google/gemini-3.5-flash-lite",
     display_name: "Gemini 3.5 Flash-Lite (via OpenRouter)",
-    pricing: { input_per_million: 0.3, output_per_million: 2.5 },
+    pricing: { cache_read_per_million: 0.03, input_per_million: 0.3, output_per_million: 2.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -531,7 +541,7 @@ provider :open_router do |p|
     key: :open_router_gemini_3_1_flash_lite_preview,
     api_name: "google/gemini-3.1-flash-lite-preview",
     display_name: "Gemini 3.1 Flash-Lite Preview (via OpenRouter)",
-    pricing: { input_per_million: 0.25, output_per_million: 1.5 },
+    pricing: { cache_read_per_million: 0.025, input_per_million: 0.25, output_per_million: 1.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -555,9 +565,10 @@ provider :open_router do |p|
     api_name: "z-ai/glm-5.2",
     display_name: "GLM 5.2 (via OpenRouter)",
     pricing: {
-      input_per_million: 0.4186,
-      output_per_million: 1.316,
-      note: "70% off promotional price shown on openrouter.ai as of 2026-09-01 (base 1.19 in / 3.74 out); no end date documented"
+      cache_read_per_million: 0.26,
+      input_per_million: 1.4,
+      output_per_million: 4.4,
+      note: "Rate of the Z.AI endpoint on OpenRouter. OpenRouter can route a request to another host at a different rate."
     },
     capabilities: {
       temperature: true,
@@ -579,7 +590,7 @@ provider :open_router do |p|
     key: :open_router_glm_5_3,
     api_name: "z-ai/glm-5.3",
     display_name: "GLM 5.3 (via OpenRouter)",
-    pricing: { input_per_million: 1.4, output_per_million: 4.4 },
+    pricing: { cache_read_per_million: 0.26, input_per_million: 1.4, output_per_million: 4.4 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -600,7 +611,7 @@ provider :open_router do |p|
     key: :open_router_glm_5_3_flash,
     api_name: "z-ai/glm-5.3-flash",
     display_name: "GLM 5.3 Flash (via OpenRouter)",
-    pricing: { input_per_million: 0.15, output_per_million: 0.5 },
+    pricing: { cache_read_per_million: 0.03, input_per_million: 0.15, output_per_million: 0.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -666,9 +677,10 @@ provider :open_router do |p|
     api_name: "moonshotai/kimi-k2.6",
     display_name: "Kimi K2.6 (via OpenRouter)",
     pricing: {
-      input_per_million: 0.5292,
-      output_per_million: 2.228,
-      note: "44% off promotional price shown on openrouter.ai as of 2026-09-01; no end date documented"
+      cache_read_per_million: 0.16,
+      input_per_million: 0.95,
+      output_per_million: 4.0,
+      note: "Rate of the Moonshot AI endpoint on OpenRouter. OpenRouter can route a request to another host at a different rate."
     },
     capabilities: {
       temperature: true,
@@ -690,7 +702,12 @@ provider :open_router do |p|
     key: :open_router_kimi_k3,
     api_name: "moonshotai/kimi-k3",
     display_name: "Kimi K3 (via OpenRouter)",
-    pricing: { input_per_million: 2.55, output_per_million: 12.75 },
+    pricing: {
+      cache_read_per_million: 0.3,
+      input_per_million: 3.0,
+      output_per_million: 15.0,
+      note: "Rate of the Moonshot AI endpoint on OpenRouter. OpenRouter can route a request to another host at a different rate."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -857,7 +874,7 @@ provider :open_router do |p|
     key: :open_router_mistral_large_3_2512,
     api_name: "mistralai/mistral-large-2512",
     display_name: "Mistral Large 3 (via OpenRouter)",
-    pricing: { input_per_million: 0.5, output_per_million: 1.5 },
+    pricing: { cache_read_per_million: 0.05, input_per_million: 0.5, output_per_million: 1.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -889,8 +906,12 @@ provider :open_router do |p|
       provider_managed_tools: []
     },
     lifecycle: {
-      status: :active,
-      added_on: Date.new(2026, 9, 1)
+      status: :deprecated,
+      added_on: Date.new(2026, 9, 1),
+      deprecated_on: Date.new(2026, 11, 23),
+      retirement_date: Date.new(2027, 1, 31),
+      migration_note: "OpenRouter lists an expiration date of 2027-01-31 for mistralai/mistral-medium-3-5 and names no " \
+        "direct successor."
     }
   )
 
@@ -898,7 +919,7 @@ provider :open_router do |p|
     key: :open_router_mistral_small_4,
     api_name: "mistralai/mistral-small-2603",
     display_name: "Mistral Small 4 (via OpenRouter)",
-    pricing: { input_per_million: 0.15, output_per_million: 0.6 },
+    pricing: { cache_read_per_million: 0.015, input_per_million: 0.15, output_per_million: 0.6 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -1067,7 +1088,7 @@ provider :open_router do |p|
 
   p.model(
     key: :open_router_open_ai_gpt_oss_20b,
-    api_name: "gpt-oss-20b",
+    api_name: "openai/gpt-oss-20b",
     display_name: "OpenAI GPT-OSS 20B (via OpenRouter)",
     pricing: { input_per_million: 0.05, output_per_million: 0.2 },
     capabilities: {
@@ -1089,7 +1110,7 @@ provider :open_router do |p|
     key: :open_router_grok_4_20,
     api_name: "x-ai/grok-4.20",
     display_name: "Grok 4.20 (via OpenRouter)",
-    pricing: { input_per_million: 2.0, output_per_million: 6.0 },
+    pricing: { cache_read_per_million: 0.2, input_per_million: 1.25, output_per_million: 2.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -1109,7 +1130,7 @@ provider :open_router do |p|
     key: :open_router_grok_4_5,
     api_name: "x-ai/grok-4.5",
     display_name: "Grok 4.5 (via OpenRouter)",
-    pricing: { input_per_million: 2.0, output_per_million: 6.0 },
+    pricing: { cache_read_per_million: 0.3, input_per_million: 2.0, output_per_million: 6.0 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -1130,6 +1151,7 @@ provider :open_router do |p|
     api_name: "x-ai/grok-4.6",
     display_name: "Grok 4.6 (via OpenRouter)",
     pricing: {
+      cache_read_per_million: 0.5,
       input_per_million: 2.0,
       output_per_million: 6.0,
       note: "Rates are for OpenRouter default routing to the standard xAI endpoint. The xAI priority endpoint is $4.00 / $12.00 " \
@@ -1177,7 +1199,12 @@ provider :open_router do |p|
     api_name: "qwen/qwen3.8-27b",
     display_name: "Qwen3.8 27B (via OpenRouter)",
     max_completion_tokens: 32_768,
-    pricing: { input_per_million: 0.214, output_per_million: 2.55 },
+    pricing: {
+      cache_read_per_million: 0.085,
+      input_per_million: 0.425,
+      output_per_million: 2.55,
+      note: "Rate of the Alibaba endpoint on OpenRouter. OpenRouter can route a request to another host at a different rate."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,

@@ -2,9 +2,9 @@
 
 provider :google do |p|
   p.references(
-    models_doc: "https://ai.google.dev/gemini-api/docs/models",
-    pricing: "https://ai.google.dev/gemini-api/docs/pricing",
-    deprecations: "https://ai.google.dev/gemini-api/docs/deprecations",
+    models_doc: "https://aistudio.google.com/docs/models",
+    pricing: "https://aistudio.google.com/docs/pricing",
+    deprecations: "https://aistudio.google.com/docs/deprecations",
     api_versions: "https://aistudio.google.com/api-reference/api-versions"
   )
 
@@ -129,11 +129,12 @@ provider :google do |p|
     display_name: "Google Gemini 3.8 Flash",
     max_completion_tokens: 65_536,
     pricing: {
+      cache_read_per_million: 0.075,
       input_per_million: 0.75,
       output_per_million: 3.75,
       note: "Introductory rate through 2026-12-31; followed_by is Google's standard rate from 2027-01-01",
       valid_until: Date.new(2026, 12, 31),
-      followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
+      followed_by: { cache_read_per_million: 0.15, input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
       temperature: true,
@@ -179,7 +180,8 @@ provider :google do |p|
       retirement_date: Date.new(2026, 12, 1),
       replacement_key: :google_gemini_3_8_flash,
       migration_note: "As of 2026-11-10, Google's deprecations page says requests to gemini-3.7-flash are routed to gemini-3.8-flash, " \
-        "and its pricing page no longer lists gemini-3.7-flash, so recorded costs may not match the bill."
+        "and its pricing page no longer lists gemini-3.7-flash, so recorded costs may not match the bill. " \
+        "Google gives no shutdown date; Raif removes this key after 2026-12-01."
     }
   )
 
@@ -188,11 +190,12 @@ provider :google do |p|
     api_name: "gemini-3.6-flash",
     display_name: "Google Gemini 3.6 Flash",
     pricing: {
+      cache_read_per_million: 0.075,
       input_per_million: 0.75,
       output_per_million: 3.75,
       note: "Introductory rate through 2026-12-31; followed_by is Google's standard rate from 2027-01-01",
       valid_until: Date.new(2026, 12, 31),
-      followed_by: { input_per_million: 1.5, output_per_million: 7.5 }
+      followed_by: { cache_read_per_million: 0.15, input_per_million: 1.5, output_per_million: 7.5 }
     },
     capabilities: {
       temperature: true,
@@ -231,7 +234,8 @@ provider :google do |p|
       retirement_date: Date.new(2026, 12, 1),
       replacement_key: :google_gemini_3_6_flash,
       migration_note: "As of 2026-11-10, Google's deprecations page says requests to gemini-3.5-flash are routed to gemini-3.6-flash, " \
-        "and its pricing page no longer lists gemini-3.5-flash, so recorded costs may not match the bill."
+        "and its pricing page no longer lists gemini-3.5-flash, so recorded costs may not match the bill. " \
+        "Google gives no shutdown date; Raif removes this key after 2026-12-01."
     }
   )
 
@@ -239,7 +243,7 @@ provider :google do |p|
     key: :google_gemini_3_5_flash_lite,
     api_name: "gemini-3.5-flash-lite",
     display_name: "Google Gemini 3.5 Flash-Lite",
-    pricing: { input_per_million: 0.3, output_per_million: 2.5 },
+    pricing: { cache_read_per_million: 0.03, input_per_million: 0.3, output_per_million: 2.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -286,7 +290,7 @@ provider :google do |p|
     key: :google_gemini_3_1_flash_lite,
     api_name: "gemini-3.1-flash-lite",
     display_name: "Google Gemini 3.1 Flash-Lite",
-    pricing: { input_per_million: 0.25, output_per_million: 1.5 },
+    pricing: { cache_read_per_million: 0.025, input_per_million: 0.25, output_per_million: 1.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -309,7 +313,7 @@ provider :google do |p|
     key: :google_gemini_3_0_flash,
     api_name: "gemini-3-flash-preview",
     display_name: "Google Gemini 3 Flash",
-    pricing: { input_per_million: 0.5, output_per_million: 3.0 },
+    pricing: { cache_read_per_million: 0.05, input_per_million: 0.5, output_per_million: 3.0 },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -360,7 +364,7 @@ provider :google do |p|
     key: :google_gemini_2_5_flash,
     api_name: "gemini-2.5-flash",
     display_name: "Google Gemini 2.5 Flash",
-    pricing: { input_per_million: 0.3, output_per_million: 2.5 },
+    pricing: { cache_read_per_million: 0.03, input_per_million: 0.3, output_per_million: 2.5 },
     capabilities: {
       temperature: true,
       structured_outputs: true,

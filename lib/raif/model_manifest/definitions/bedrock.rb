@@ -45,7 +45,7 @@ provider :bedrock do |p|
     display_name: "Anthropic Claude 5.5 Sonnet (via AWS Bedrock)",
     max_completion_tokens: 128_000,
     pricing: {
-      cache_read_per_million: 0.2,
+      cache_read_per_million: 0.1,
       input_per_million: 2.0,
       output_per_million: 10.0,
       note: "Global cross-region inference rate. Bedrock offers no US geo or in-region profile for this model on bedrock-runtime, " \
@@ -103,6 +103,7 @@ provider :bedrock do |p|
     display_name: "Anthropic Claude 5 Opus (via AWS Bedrock)",
     max_completion_tokens: 128_000,
     pricing: {
+      cache_read_per_million: 0.55,
       input_per_million: 5.5,
       output_per_million: 27.5,
       note: "Regional inference rate including the 10% premium; global routing costs 5.00 / 25.00 per million."
@@ -229,7 +230,12 @@ provider :bedrock do |p|
     api_name: "anthropic.claude-fable-5",
     display_name: "Anthropic Claude Fable 5 (via AWS Bedrock)",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 10.0, output_per_million: 50.0 },
+    pricing: {
+      cache_read_per_million: 1.1,
+      input_per_million: 11.0,
+      output_per_million: 55.0,
+      note: "Regional inference rate including the 10% premium; global routing costs 10.00 / 50.00 per million."
+    },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -250,7 +256,12 @@ provider :bedrock do |p|
     api_name: "anthropic.claude-opus-4-8",
     display_name: "Anthropic Claude 4.8 Opus (via AWS Bedrock)",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 5.0, output_per_million: 25.0 },
+    pricing: {
+      cache_read_per_million: 0.55,
+      input_per_million: 5.5,
+      output_per_million: 27.5,
+      note: "Regional inference rate including the 10% premium; global routing costs 5.00 / 25.00 per million."
+    },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -297,7 +308,12 @@ provider :bedrock do |p|
     api_name: "anthropic.claude-opus-4-7",
     display_name: "Anthropic Claude 4.7 Opus (via AWS Bedrock)",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 5.0, output_per_million: 25.0 },
+    pricing: {
+      cache_read_per_million: 0.55,
+      input_per_million: 5.5,
+      output_per_million: 27.5,
+      note: "Regional inference rate including the 10% premium; global routing costs 5.00 / 25.00 per million."
+    },
     capabilities: {
       temperature: false,
       structured_outputs: true,
@@ -318,7 +334,12 @@ provider :bedrock do |p|
     api_name: "anthropic.claude-opus-4-6-v1",
     display_name: "Anthropic Claude 4.6 Opus (via AWS Bedrock)",
     max_completion_tokens: 128_000,
-    pricing: { input_per_million: 5.0, output_per_million: 25.0 },
+    pricing: {
+      cache_read_per_million: 0.55,
+      input_per_million: 5.5,
+      output_per_million: 27.5,
+      note: "Regional inference rate including the 10% premium; global routing costs 5.00 / 25.00 per million."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -339,7 +360,12 @@ provider :bedrock do |p|
     api_name: "anthropic.claude-sonnet-4-6",
     display_name: "Anthropic Claude 4.6 Sonnet (via AWS Bedrock)",
     max_completion_tokens: 64_000,
-    pricing: { input_per_million: 3.0, output_per_million: 15.0 },
+    pricing: {
+      cache_read_per_million: 0.33,
+      input_per_million: 3.3,
+      output_per_million: 16.5,
+      note: "Regional inference rate including the 10% premium; global routing costs 3.00 / 15.00 per million."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -360,7 +386,12 @@ provider :bedrock do |p|
     api_name: "anthropic.claude-opus-4-5-20251101-v1:0",
     display_name: "Anthropic Claude 4.5 Opus (via AWS Bedrock)",
     max_completion_tokens: 64_000,
-    pricing: { input_per_million: 5.0, output_per_million: 25.0 },
+    pricing: {
+      cache_read_per_million: 0.55,
+      input_per_million: 5.5,
+      output_per_million: 27.5,
+      note: "Regional inference rate including the 10% premium; global routing costs 5.00 / 25.00 per million."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -381,7 +412,12 @@ provider :bedrock do |p|
     api_name: "anthropic.claude-sonnet-4-5-20250929-v1:0",
     display_name: "Anthropic Claude 4.5 Sonnet (via AWS Bedrock)",
     max_completion_tokens: 64_000,
-    pricing: { input_per_million: 3.0, output_per_million: 15.0 },
+    pricing: {
+      cache_read_per_million: 0.33,
+      input_per_million: 3.3,
+      output_per_million: 16.5,
+      note: "Regional inference rate including the 10% premium; global routing costs 3.00 / 15.00 per million."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -409,7 +445,12 @@ provider :bedrock do |p|
     api_name: "anthropic.claude-haiku-4-5-20251001-v1:0",
     display_name: "Anthropic Claude 4.5 Haiku (via AWS Bedrock)",
     max_completion_tokens: 64_000,
-    pricing: { input_per_million: 1.0, output_per_million: 5.0 },
+    pricing: {
+      cache_read_per_million: 0.11,
+      input_per_million: 1.1,
+      output_per_million: 5.5,
+      note: "Regional inference rate including the 10% premium; global routing costs 1.00 / 5.00 per million."
+    },
     capabilities: {
       temperature: true,
       structured_outputs: true,
@@ -430,7 +471,7 @@ provider :bedrock do |p|
     api_name: "anthropic.claude-opus-4-1-20250805-v1:0",
     display_name: "Claude 4.1 Opus (via AWS Bedrock)",
     max_completion_tokens: 32_000,
-    pricing: { input_per_million: 15.0, output_per_million: 75.0 },
+    pricing: { cache_read_per_million: 1.5, input_per_million: 15.0, output_per_million: 75.0 },
     capabilities: {
       temperature: true,
       structured_outputs: false,
@@ -447,8 +488,8 @@ provider :bedrock do |p|
       retirement_date: Date.new(2027, 1, 8),
       replacement_key: :bedrock_claude_4_8_opus,
       migration_note: "Claude Opus 4.1 has been Legacy on Bedrock since 2026-07-08 and reaches end of life on 2027-01-08. " \
-        "While it is Legacy, an account that stops calling it can lose access. Claude Opus 4.8 on Bedrock costs 5.00 " \
-        "input / 25.00 output per million, against 15.00 / 75.00. Claude Opus 4.8 does not claim temperature, so Raif " \
+        "While it is Legacy, an account that stops calling it can lose access. Claude Opus 4.8 on Bedrock costs 5.50 " \
+        "input / 27.50 output per million, against 15.00 / 75.00. Claude Opus 4.8 does not claim temperature, so Raif " \
         "does not send one."
     }
   )
@@ -534,7 +575,7 @@ provider :bedrock do |p|
     api_name: "amazon.nova-micro-v1:0",
     display_name: "Amazon Nova Micro (via AWS Bedrock)",
     max_completion_tokens: 4096,
-    pricing: { input_per_million: 0.0115, output_per_million: 0.184 },
+    pricing: { input_per_million: 0.035, output_per_million: 0.14 },
     capabilities: {
       temperature: true,
       structured_outputs: false,
@@ -555,7 +596,7 @@ provider :bedrock do |p|
     api_name: "amazon.nova-lite-v1:0",
     display_name: "Amazon Nova Lite (via AWS Bedrock)",
     max_completion_tokens: 4096,
-    pricing: { input_per_million: 0.0195, output_per_million: 0.312 },
+    pricing: { input_per_million: 0.06, output_per_million: 0.24 },
     capabilities: {
       temperature: true,
       structured_outputs: false,
@@ -576,7 +617,7 @@ provider :bedrock do |p|
     api_name: "amazon.nova-pro-v1:0",
     display_name: "Amazon Nova Pro (via AWS Bedrock)",
     max_completion_tokens: 4096,
-    pricing: { input_per_million: 0.2625, output_per_million: 4.2 },
+    pricing: { input_per_million: 0.8, output_per_million: 3.2 },
     capabilities: {
       temperature: true,
       structured_outputs: false,
