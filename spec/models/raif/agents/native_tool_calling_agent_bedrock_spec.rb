@@ -114,7 +114,7 @@ RSpec.describe Raif::Agents::NativeToolCallingAgent, type: :model do
       # Provider tool-call ids in request bodies are normalized to stable placeholders by the
       # VCR before_record hook so the recorded request matches the replayed one.
       it "processes multiple iterations until finding an answer",
-        vcr: { cassette_name: "native_tool_calling_agent/bedrock", allow_playback_repeats: true } do
+        vcr: { cassette_name: "native_tool_calling_agent/bedrock", allow_playback_repeats: true, match_requests_on: [:method, :uri] } do
         expect(agent.started_at).to be_nil
         expect(agent.completed_at).to be_nil
         expect(agent.failed_at).to be_nil
