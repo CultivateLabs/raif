@@ -262,6 +262,15 @@ RSpec.describe Raif::ModelCompletion, type: :model do
           model_completion.save(validate: false)
           expect(model_completion.prompt_token_cost).to eq(expected_cost)
         end
+
+        it "uses the manifest cache read rate for OpenRouter models, which have no default cache multiplier" do
+          completion = described_class.new(
+            llm_model_key: "open_router_claude_5_sonnet", model_api_name: "anthropic/claude-sonnet-5",
+            prompt_tokens: 1000, cache_read_input_tokens: 600
+          )
+          completion.save(validate: false)
+          expect(completion.prompt_token_cost).to be_within(1e-10).of((400 * 2.0 + 600 * 0.2) / 1_000_000)
+        end
       end
 
       context "with cached tokens (provider where prompt_tokens excludes cached)" do

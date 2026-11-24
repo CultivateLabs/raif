@@ -2,9 +2,99 @@
 
 provider :open_ai do |p|
   p.references(
-    models_doc: "https://platform.openai.com/docs/models",
-    pricing: "https://platform.openai.com/docs/pricing",
-    deprecations: "https://platform.openai.com/docs/deprecations"
+    models_doc: "https://developers.openai.com/api/docs/models",
+    pricing: "https://developers.openai.com/api/docs/pricing",
+    deprecations: "https://developers.openai.com/api/docs/deprecations"
+  )
+
+  p.model(
+    key_base: :gpt_6_2_astra,
+    api_name: "gpt-6.2-astra",
+    display_name: "OpenAI GPT-6.2 Astra",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.4,
+      input_per_million: 8.0,
+      output_per_million: 40.0,
+      note: "Above 272K input tokens, input and cache rates double to 16.00 input / 0.80 cached input per million " \
+        "and output rises to 60.00 per million."
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 23)
+    },
+    endpoints: {
+      completions: {
+        capabilities: {
+          temperature: false,
+          structured_outputs: true,
+          native_tool_use: false,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: false,
+          provider_managed_tools: []
+        }
+      },
+      responses: {
+        capabilities: {
+          temperature: false,
+          encrypted_reasoning: true,
+          structured_outputs: true,
+          native_tool_use: true,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: true,
+          provider_managed_tools: %i[web_search code_execution image_generation]
+        }
+      }
+    }
+  )
+
+  p.model(
+    key_base: :gpt_6_2_sol,
+    api_name: "gpt-6.2-sol",
+    display_name: "OpenAI GPT-6.2 Sol",
+    max_completion_tokens: 128_000,
+    pricing: {
+      cache_read_per_million: 0.1,
+      input_per_million: 2.0,
+      output_per_million: 10.0,
+      note: "Above 272K input tokens, input and cache rates double to 4.00 input / 0.20 cached input per million " \
+        "and output rises to 15.00 per million."
+    },
+    lifecycle: {
+      status: :active,
+      added_on: Date.new(2026, 11, 23)
+    },
+    endpoints: {
+      completions: {
+        capabilities: {
+          temperature: false,
+          structured_outputs: true,
+          native_tool_use: false,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: false,
+          provider_managed_tools: []
+        }
+      },
+      responses: {
+        capabilities: {
+          temperature: false,
+          encrypted_reasoning: true,
+          structured_outputs: true,
+          native_tool_use: true,
+          streaming: true,
+          batch_inference: true,
+          images: true,
+          pdfs: true,
+          provider_managed_tools: %i[web_search code_execution image_generation]
+        }
+      }
+    }
   )
 
   p.model(
@@ -279,7 +369,7 @@ provider :open_ai do |p|
     key_base: :gpt_5_6_terra,
     api_name: "gpt-5.6-terra",
     display_name: "OpenAI GPT-5.6 Terra",
-    pricing: { input_per_million: 2.0, output_per_million: 12.0 },
+    pricing: { cache_read_per_million: 0.2, input_per_million: 2.0, output_per_million: 12.0 },
     lifecycle: {
       status: :active
     },
@@ -316,7 +406,7 @@ provider :open_ai do |p|
     key_base: :gpt_5_6_luna,
     api_name: "gpt-5.6-luna",
     display_name: "OpenAI GPT-5.6 Luna",
-    pricing: { input_per_million: 0.2, output_per_million: 1.2 },
+    pricing: { cache_read_per_million: 0.02, input_per_million: 0.2, output_per_million: 1.2 },
     lifecycle: {
       status: :active
     },
@@ -353,7 +443,13 @@ provider :open_ai do |p|
     key_base: :gpt_5_5,
     api_name: "gpt-5.5",
     display_name: "OpenAI GPT-5.5",
-    pricing: { input_per_million: 5.0, output_per_million: 30.0 },
+    pricing: {
+      cache_read_per_million: 0.5,
+      input_per_million: 5.0,
+      output_per_million: 30.0,
+      note: "Above 272K input tokens, input and cache rates double to 10.00 input / 1.00 cached input per million " \
+        "and output rises to 45.00 per million."
+    },
     lifecycle: {
       status: :active
     },
@@ -390,7 +486,13 @@ provider :open_ai do |p|
     key_base: :gpt_5_4,
     api_name: "gpt-5.4",
     display_name: "OpenAI GPT-5.4",
-    pricing: { input_per_million: 2.5, output_per_million: 15.0 },
+    pricing: {
+      cache_read_per_million: 0.25,
+      input_per_million: 2.5,
+      output_per_million: 15.0,
+      note: "Above 272K input tokens, input and cache rates double to 5.00 input / 0.50 cached input per million " \
+        "and output rises to 22.50 per million."
+    },
     lifecycle: {
       status: :active
     },
@@ -427,7 +529,7 @@ provider :open_ai do |p|
     key_base: :gpt_5_2,
     api_name: "gpt-5.2",
     display_name: "OpenAI GPT-5.2",
-    pricing: { input_per_million: 1.75, output_per_million: 14.0 },
+    pricing: { cache_read_per_million: 0.175, input_per_million: 1.75, output_per_million: 14.0 },
     lifecycle: {
       status: :active
     },
@@ -504,7 +606,7 @@ provider :open_ai do |p|
     key_base: :gpt_5_1,
     api_name: "gpt-5.1",
     display_name: "OpenAI GPT-5.1",
-    pricing: { input_per_million: 1.25, output_per_million: 10.0 },
+    pricing: { cache_read_per_million: 0.125, input_per_million: 1.25, output_per_million: 10.0 },
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 10, 1),
@@ -547,7 +649,7 @@ provider :open_ai do |p|
     key_base: :gpt_5,
     api_name: "gpt-5",
     display_name: "OpenAI GPT-5",
-    pricing: { input_per_million: 1.25, output_per_million: 10.0 },
+    pricing: { cache_read_per_million: 0.125, input_per_million: 1.25, output_per_million: 10.0 },
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 6, 11),
@@ -590,7 +692,7 @@ provider :open_ai do |p|
     key_base: :gpt_5_4_mini,
     api_name: "gpt-5.4-mini",
     display_name: "OpenAI GPT-5.4 Mini",
-    pricing: { input_per_million: 0.75, output_per_million: 4.5 },
+    pricing: { cache_read_per_million: 0.075, input_per_million: 0.75, output_per_million: 4.5 },
     lifecycle: {
       status: :active
     },
@@ -627,7 +729,7 @@ provider :open_ai do |p|
     key_base: :gpt_5_4_nano,
     api_name: "gpt-5.4-nano",
     display_name: "OpenAI GPT-5.4 Nano",
-    pricing: { input_per_million: 0.2, output_per_million: 1.25 },
+    pricing: { cache_read_per_million: 0.02, input_per_million: 0.2, output_per_million: 1.25 },
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 10, 1),
@@ -670,7 +772,7 @@ provider :open_ai do |p|
     key_base: :gpt_5_mini,
     api_name: "gpt-5-mini",
     display_name: "OpenAI GPT-5 Mini",
-    pricing: { input_per_million: 0.25, output_per_million: 2.0 },
+    pricing: { cache_read_per_million: 0.025, input_per_million: 0.25, output_per_million: 2.0 },
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 6, 11),
@@ -713,7 +815,7 @@ provider :open_ai do |p|
     key_base: :gpt_5_nano,
     api_name: "gpt-5-nano",
     display_name: "OpenAI GPT-5 Nano",
-    pricing: { input_per_million: 0.05, output_per_million: 0.4 },
+    pricing: { cache_read_per_million: 0.005, input_per_million: 0.05, output_per_million: 0.4 },
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 6, 11),
@@ -756,7 +858,7 @@ provider :open_ai do |p|
     key_base: :gpt_4o_mini,
     api_name: "gpt-4o-mini",
     display_name: "OpenAI GPT-4o Mini",
-    pricing: { input_per_million: 0.15, output_per_million: 0.6 },
+    pricing: { cache_read_per_million: 0.075, input_per_million: 0.15, output_per_million: 0.6 },
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 10, 14),
@@ -798,7 +900,7 @@ provider :open_ai do |p|
     key_base: :gpt_4o,
     api_name: "gpt-4o",
     display_name: "OpenAI GPT-4o",
-    pricing: { input_per_million: 2.5, output_per_million: 10.0 },
+    pricing: { cache_read_per_million: 1.25, input_per_million: 2.5, output_per_million: 10.0 },
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 10, 14),
@@ -881,7 +983,7 @@ provider :open_ai do |p|
     key_base: :gpt_4_1,
     api_name: "gpt-4.1",
     display_name: "OpenAI GPT-4.1",
-    pricing: { input_per_million: 2.0, output_per_million: 8.0 },
+    pricing: { cache_read_per_million: 0.5, input_per_million: 2.0, output_per_million: 8.0 },
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 10, 14),
@@ -923,7 +1025,7 @@ provider :open_ai do |p|
     key_base: :gpt_4_1_mini,
     api_name: "gpt-4.1-mini",
     display_name: "OpenAI GPT-4.1 Mini",
-    pricing: { input_per_million: 0.4, output_per_million: 1.6 },
+    pricing: { cache_read_per_million: 0.1, input_per_million: 0.4, output_per_million: 1.6 },
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 10, 14),
@@ -1048,7 +1150,7 @@ provider :open_ai do |p|
     key_base: :o3,
     api_name: "o3",
     display_name: "OpenAI o3",
-    pricing: { input_per_million: 2.0, output_per_million: 8.0 },
+    pricing: { cache_read_per_million: 0.5, input_per_million: 2.0, output_per_million: 8.0 },
     lifecycle: {
       status: :deprecated,
       deprecated_on: Date.new(2026, 6, 11),
